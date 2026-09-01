@@ -1,0 +1,13 @@
+{
+  "formats": {
+    "shortDate": "{value, date, short}",
+    "longDate": "{value, date, long}",
+    "dateTime": "{value, date, short} {value, time, short}"
+  },
+  "relative": {
+    "justNow": "Upravo sada",
+    "minutesAgo": "{count, plural, one {prije # minutu} few {prije # minute} other {prije # minuta}}",
+    "hoursAgo": "{count, plural, one {prije # sat} few {prije # sata} other {prije # sati}}",
+    "daysAgo": "{count, plural, one {prije # dan} few {prije # dana} other {prije # dana}}"
+  }
+}

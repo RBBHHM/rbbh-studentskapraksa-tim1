@@ -1,0 +1,34 @@
+{
+  "hero": {
+    "eyebrow": "Raiffeisen Bank International",
+    "lead": "Enterprise dizajn sistem na zvaničnom RBI brendu — prava paleta, Amalia, odobreni logo, tipizirani API.",
+    "exploreFoundations": "Istražite temelje",
+    "browseComponents": "Pregledajte komponente"
+  },
+  "entryPoints": {
+    "heading": "Počnite ovdje",
+    "open": "Otvori",
+    "items": {
+      "foundations": {
+        "label": "Temelji",
+        "body": "Tokeni boje, tipografije, prostora, elevacije i pokreta, prikazani živo."
+      },
+      "components": {
+        "label": "Komponente",
+        "body": "Dugmad, forme, tabele, overlayi — svaki sa kodom i tastaturnim ugovorom."
+      },
+      "patterns": {
+        "label": "Obrasci",
+        "body": "Gotove sekcije stranica i standardni ekrani aplikacije."
+      },
+      "applications": {
+        "label": "Aplikacije",
+        "body": "Admin panel sa CRUD-om i isti podaci preko tipiziranog HTTP ugovora."
+      },
+      "architecture": {
+        "label": "Arhitektura",
+        "body": "Slojevi, mapa foldera, tok zahtjeva i spoj sa ASP.NET Core."
+      }
+    }
+  }
+}

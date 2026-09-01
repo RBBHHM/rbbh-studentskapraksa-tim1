@@ -1,0 +1,20 @@
+{
+  "labels": {
+    "accountName": "Account name",
+    "iban": "IBAN",
+    "currency": "Currency",
+    "segment": "Segment",
+    "status": "Status",
+    "search": "Search",
+    "email": "Email address",
+    "fullName": "Full name"
+  },
+  "placeholders": {
+    "search": "Search accounts",
+    "selectSegment": "All segments"
+  },
+  "hints": {
+    "iban": "Enter the IBAN without spaces.",
+    "search": "Matches account name and IBAN."
+  }
+}

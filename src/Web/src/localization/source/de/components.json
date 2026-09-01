@@ -1,0 +1,405 @@
+{
+  "nav": {
+    "sectionsLabel": "Komponentenbereiche",
+    "onThisPage": "Auf dieser Seite",
+    "items": {
+      "typography": "Typografie",
+      "buttons": "Schaltflächen",
+      "forms": "Formularelemente",
+      "feedback": "Rückmeldung",
+      "data": "Datenanzeige",
+      "statistics": "Statistiken",
+      "navigation": "Navigation",
+      "status": "Status & Fortschritt",
+      "disclosure": "Ein-/Ausblenden",
+      "overlays": "Overlays",
+      "surfaces": "Oberflächenkontexte"
+    }
+  },
+  "page": {
+    "eyebrow": "Komponenten",
+    "title": "Die Komponentenbibliothek",
+    "description": "Jedes Beispiel unten ist die echte Komponente, gerendert aus demselben Code, der ausgeliefert wird. Jeder Eintrag dokumentiert sein Tastatur- und Screenreader-Verhalten, denn eine Komponente, die richtig aussieht, aber ohne Maus nicht bedienbar ist, ist nicht fertig."
+  },
+  "example": {
+    "showCode": "Code anzeigen",
+    "hideCode": "Code ausblenden",
+    "copyAriaLabel": "Code in die Zwischenablage kopieren",
+    "codeCopied": "Code in die Zwischenablage kopiert"
+  },
+  "a11yNotes": {
+    "heading": "Tastatur- und Screenreader-Verhalten"
+  },
+  "sections": {
+    "typography": {
+      "title": "Typografie",
+      "description": "Überschriftenebene und visuelle Größe sind getrennte Eigenschaften. Wählen Sie zuerst die Ebene für die Dokumentstruktur, dann die Größe für das Erscheinungsbild – so wird eine Gliederung nie zugunsten des Layouts gebrochen.",
+      "example": {
+        "title": "Display und Überschriften"
+      },
+      "content": {
+        "eyebrow": "Firmenkundengeschäft",
+        "display": "Machen Sie es möglich",
+        "heading": "Eine Überschrift der Ebene 2, gerendert in visueller Größe 3",
+        "lead": "Einleitungsabsätze verwenden Amalia Light bei 22px. Das leichtere Gewicht in größerer Schrift hebt eine Einleitung vom Fließtext ab, ohne auf Farbe zurückzugreifen.",
+        "body": "Fließtext ist Amalia Regular bei 16px mit 1,6-facher Zeilenhöhe. Er fällt nie unter 16px, und die Zeilenlänge ist auf 68 Zeichen begrenzt, damit langer Text angenehm lesbar bleibt."
+      }
+    },
+    "buttons": {
+      "title": "Schaltflächen",
+      "description": "Es gibt genau eine primäre Aktion pro Ansicht, und sie ist immer gelb mit fast schwarzem Text. Sekundär – der fast schwarze Rahmen – ist das Arbeitspferd für alles andere.",
+      "variants": {
+        "title": "Varianten",
+        "primary": "Konto eröffnen",
+        "secondary": "Entwurf speichern",
+        "tertiary": "Abbrechen",
+        "corporate": "Nachhaltigkeitsbericht",
+        "ghost": "Verwerfen",
+        "destructive": "Löschen",
+        "link": "Richtlinien lesen"
+      },
+      "sizes": {
+        "title": "Größen, Symbole und Zustand",
+        "description": "Symbole sind stets dekorativ und mit einer Textbeschriftung kombiniert, oder die Schaltfläche trägt ein aria-label. Die Standardhöhe von 44px erfüllt die WCAG-2.2-Mindestgröße für Zielobjekte.",
+        "continue": "Weiter",
+        "export": "Exportieren",
+        "filter": "Filtern",
+        "searchAriaLabel": "Suchen",
+        "submitting": "Wird übermittelt",
+        "loadingLabel": "Ihr Antrag wird übermittelt",
+        "unavailable": "Nicht verfügbar"
+      },
+      "a11y": {
+        "tab": "Verschiebt den Fokus zur Schaltfläche; ein 2px fast schwarzer Ring erscheint mit 2px Abstand.",
+        "space": "Aktiviert die Schaltfläche. Native Button-Semantik bleibt erhalten.",
+        "ariaBusy": "Wird während des Ladens gesetzt. Das Element bleibt in der Tab-Reihenfolge, und ein optisch verborgener Status beschreibt den Vorgang, sodass der Fokus während der Übermittlung nie verloren geht."
+      }
+    },
+    "forms": {
+      "title": "Formularelemente",
+      "description": "Jedes Element hat eine sichtbare, programmatisch verknüpfte Beschriftung. Hilfetext und Fehlertext sind über aria-describedby verdrahtet, und Fehler werden angesagt, nicht nur farblich markiert.",
+      "a11y": {
+        "tab": "Bewegt sich zwischen Elementen in DOM-Reihenfolge, die der visuellen Reihenfolge entspricht.",
+        "space": "Schaltet ein Kontrollkästchen oder einen Schalter um; wählt die fokussierte Optionsschaltfläche aus.",
+        "arrowKeys": "Bewegt sich zwischen Optionsschaltflächen und innerhalb einer geöffneten Auswahlliste.",
+        "ariaInvalid": "Wird bei einem Feld gesetzt, das die Validierung nicht besteht, wobei die Meldung über aria-describedby referenziert und in einer Live-Region angezeigt wird."
+      }
+    },
+    "feedback": {
+      "title": "Rückmeldung",
+      "description": "Status wird nie allein durch Farbe vermittelt: Jeder Ton hat ein eigenes Symbol und eine Textbeschriftung, sodass die Bedeutung auch in Graustufen und bei Farbsehschwäche erhalten bleibt.",
+      "callouts": {
+        "title": "Hinweiskästen",
+        "maintenanceTitle": "Geplante Wartung",
+        "maintenanceBody": "Das Online-Banking ist am Sonntag zwischen 02:00 und 04:00 Uhr MEZ nicht verfügbar.",
+        "paymentTitle": "Zahlung übermittelt",
+        "paymentBody": "Ihre Überweisung über EUR 12.500,00 wurde zur Bearbeitung angenommen.",
+        "verificationTitle": "Verifizierung ausstehend",
+        "verificationBody": "Es werden noch zwei Dokumente benötigt, bevor dieses Konto aktiviert werden kann.",
+        "transferTitle": "Überweisung fehlgeschlagen",
+        "transferBody": "Die IBAN des Begünstigten konnte nicht validiert werden. Es wurden keine Mittel von Ihrem Konto abgebucht."
+      },
+      "badges": {
+        "title": "Statusabzeichen",
+        "draft": "Entwurf",
+        "inReview": "In Prüfung",
+        "settled": "Abgewickelt",
+        "pending": "Ausstehend",
+        "rejected": "Abgelehnt",
+        "priority": "Priorität",
+        "esg": "ESG"
+      }
+    },
+    "data": {
+      "title": "Datenanzeige",
+      "description": "Unternehmensanwendungen stehen und fallen mit Tabellen. Kopfzeilen verwenden scope, numerische Spalten sind rechtsbündig und tabellarisch, und die Beschriftung beschreibt die Tabelle für Screenreader-Nutzer.",
+      "cards": {
+        "title": "Karten",
+        "currentAccountTitle": "Geschäftsgirokonto",
+        "currentAccountIban": "AT61 1904 3002 3457 3201",
+        "availableBalance": "Verfügbarer Saldo",
+        "pendingApprovalsTitle": "Ausstehende Freigaben",
+        "pendingApprovalsDescription": "Wartet auf Ihre Autorisierung",
+        "dueToday": "Zwei sind heute fällig",
+        "viewStatements": "Kontoauszüge ansehen",
+        "reviewQueue": "Prüfwarteschlange"
+      },
+      "table": {
+        "title": "Tabelle",
+        "caption": "Aktuelle Transaktionen mit Gegenpartei, Datum, Status und Betrag",
+        "counterparty": "Gegenpartei",
+        "valueDate": "Wertstellungsdatum",
+        "status": "Status",
+        "amount": "Betrag",
+        "statusSettled": "Abgewickelt",
+        "statusPending": "Ausstehend",
+        "statusRejected": "Abgelehnt"
+      }
+    },
+    "disclosure": {
+      "title": "Ein-/Ausblenden und Navigation",
+      "description": "Tabs und Akkordeons sind die beiden zugelassenen Möglichkeiten, dichte Inhalte zu gliedern. Beide sind vollständig per Tastatur bedienbar und geben ihren erweiterten Zustand an assistive Technologien weiter.",
+      "tabs": {
+        "title": "Tabs",
+        "overview": "Übersicht",
+        "limits": "Limits",
+        "documents": "Dokumente",
+        "overviewBody": "Eine Zusammenfassung des Mandats, seiner Zeichnungsberechtigten und der betroffenen Produkte.",
+        "limitsBody": "Tages- und Transaktionslimits nach Produkt und autorisiertem Nutzer.",
+        "documentsBody": "Unterzeichnete Mandate, KYC-Nachweise und die aktuelle Gebührenordnung."
+      },
+      "accordion": {
+        "title": "Akkordeon",
+        "q1": "Wann ist das primäre Gelb angemessen?",
+        "a1": "Für das Logo, die einzige primäre Aktion in einer Ansicht und bewusste Markenmomente wie ein Hero-Panel oder eine Statistik. Es ist kein Hintergrund für dichte Inhalte und niemals eine Textfarbe.",
+        "q2": "Wie funktionieren invertierte Abschnitte?",
+        "a2": "Setzen Sie data-surface=\"inverse\" auf einem Wrapper. Das weist die semantischen Farbtokens für den gesamten Teilbaum neu zu, sodass Komponenten darin ohne dunkle Variante markenkonform werden.",
+        "q3": "Kann ich eine Farbe hinzufügen, die nicht in der Palette ist?",
+        "a3": "Nein. Fügen Sie stattdessen ein semantisches Token hinzu, das ein bestehendes Primitiv aliasiert. Wird tatsächlich ein neuer Wert benötigt, durchläuft er die Markensteuerung und landet zuerst in der Primitivschicht."
+      },
+      "a11y": {
+        "arrowKeys": "Bewegt sich zwischen Tabs in der Tab-Liste; das Panel folgt automatisch.",
+        "tab": "Bewegt sich vom aktiven Tab in dessen Panel und überspringt inaktive Tabs.",
+        "enterSpace": "Schaltet ein Akkordeon-Element um; aria-expanded spiegelt den neuen Zustand wider."
+      }
+    },
+    "overlays": {
+      "title": "Overlays",
+      "description": "Dialoge fangen den Fokus ein, geben ihn beim Schließen an den Auslöser zurück und sind mit Escape schließbar. Jeder Dialog hat einen Titel, der ihn für assistive Technologien benennt.",
+      "dialog": {
+        "title": "Dialog",
+        "revokeMandate": "Mandat widerrufen",
+        "confirmTitle": "Dieses Mandat widerrufen?",
+        "confirmDescription": "Der Widerruf entfernt alle Autorisierungen für die vier Zeichnungsberechtigten dieses Kontos. Ausstehende Aufträge werden storniert. Dies kann nicht rückgängig gemacht werden.",
+        "keepMandate": "Mandat behalten"
+      },
+      "a11y": {
+        "escape": "Schließt den Dialog und gibt den Fokus an das auslösende Element zurück.",
+        "tabShiftTab": "Wechselt nur innerhalb des Dialogs; die dahinterliegende Seite ist inert.",
+        "roleDialog": "Wird durch seinen Titel beschriftet und durch seine Beschreibung beschrieben, beides automatisch verdrahtet."
+      }
+    },
+    "surfaces": {
+      "title": "Oberflächenkontexte",
+      "description": "Dasselbe Markup, viermal, nur das Attribut data-surface ändert sich. Keine Komponente darunter weiß, in welchem Kontext sie sich befindet.",
+      "exampleTitle": "data-surface=\"{surface}\"",
+      "heading": "Machen Sie es möglich",
+      "body": "Fließtext, ein sekundärer Ton und Bedienelemente – alle aus den semantischen Tokens abgeleitet, die dieser Oberflächenkontext neu zuweist.",
+      "primaryAction": "Primäre Aktion",
+      "secondary": "Sekundär",
+      "settled": "Abgewickelt"
+    }
+  },
+  "formExample": {
+    "title": "Zahlungsformular",
+    "description": "Ein realistischer Satz von Bedienelementen: Texteingabe mit Hilfetext, eine Live-Validierungsfehlermeldung, ein Auswahlfeld, ein Textbereich, Kontrollkästchen, Optionsgruppe und Schalter.",
+    "ibanLabel": "IBAN des Begünstigten",
+    "ibanHelp": "Geben Sie die vollständige IBAN ohne Leerzeichen ein. Pflichtfelder sind mit einem Sternchen gekennzeichnet.",
+    "ibanError": "Die IBAN des Begünstigten ist erforderlich.",
+    "ibanPlaceholder": "AT611904300234573201",
+    "currencyLabel": "Währung",
+    "currencyPlaceholder": "Wählen Sie eine Währung",
+    "currencyEur": "EUR — Euro",
+    "currencyUsd": "USD — US-Dollar",
+    "currencyCzk": "CZK — Tschechische Krone",
+    "currencyRon": "RON — Rumänischer Leu",
+    "referenceLabel": "Zahlungsreferenz",
+    "referencePlaceholder": "Rechnung 2026-0417",
+    "executionLegend": "Ausführung",
+    "executionStandard": "Standard — nächster Geschäftstag",
+    "executionExpress": "Express — gleicher Tag, zusätzliche Gebühr fällt an",
+    "confirmLabel": "Ich bestätige, dass die Angaben zum Begünstigten korrekt sind",
+    "notifyLabel": "Benachrichtigen Sie mich per E-Mail, wenn diese Zahlung abgewickelt wird",
+    "submit": "Zahlung übermitteln",
+    "reset": "Zurücksetzen"
+  },
+  "navigationSection": {
+    "title": "Navigation",
+    "description": "Die drei Navigationsoberflächen, die eine Unternehmensanwendung benötigt: eine Seitenleiste für die Anwendung, ein Breadcrumb-Pfad für die Tiefe und eine Seitennummerierung für lange Ergebnislisten.",
+    "sideNav": {
+      "title": "Seitennavigation",
+      "description": "Segmentierte, einklappbare Seitennavigation im normalen Dokumentfluss, sodass sie eine Seitenleiste oder die linke Spalte einer Dashboard-Hülle sein kann. Das Einklappen hinterlässt eine beschriftete Symbolleiste, statt die Navigation zu verbergen.",
+      "ariaLabel": "Back-Office-Navigation",
+      "headerTitle": "Back Office",
+      "headerSubtitle": "Konzernbetrieb",
+      "footerName": "Hana Mahmutović",
+      "footerRole": "Administratorin",
+      "selectedItem": "Ausgewähltes Element",
+      "expandRail": "Leiste erweitern",
+      "collapseToIcons": "Auf Symbole reduzieren",
+      "sections": {
+        "operate": "Betrieb",
+        "govern": "Steuerung",
+        "dashboard": "Dashboard",
+        "accounts": "Konten",
+        "payments": "Zahlungen",
+        "lending": "Kreditgeschäft",
+        "lendingPipeline": "Pipeline",
+        "lendingLimits": "Limits",
+        "lendingCollateral": "Sicherheiten",
+        "users": "Nutzer und Rollen",
+        "compliance": "Compliance",
+        "reports": "Berichte",
+        "settings": "Einstellungen"
+      }
+    },
+    "drawer": {
+      "title": "Drawer-Navigation",
+      "description": "Dasselbe Navigationsmodell auf einem kleinen Bildschirm: ein Sheet vom linken Rand, fokusgefangen und mit Escape schließbar.",
+      "open": "Navigation öffnen",
+      "sheetTitle": "Back Office",
+      "sheetDescription": "Konzernbetrieb"
+    },
+    "breadcrumb": {
+      "title": "Breadcrumb",
+      "overview": "Übersicht",
+      "corporateBanking": "Firmenkundengeschäft",
+      "account": "Konto RBI-0042"
+    },
+    "pagination": {
+      "title": "Seitennummerierung"
+    },
+    "a11y": {
+      "ariaCurrent": "Wird auf dem aktiven Seitennavigationselement, der aktuellen Breadcrumb-Seite und der aktuellen Seite der Seitennummerierung gesetzt, sodass die Position nie allein durch Farbe vermittelt wird.",
+      "enterSpace": "Aktiviert ein Seitennavigationselement; bei einer Gruppe schaltet es die Anzeige um und aktualisiert aria-expanded.",
+      "escape": "Schließt die Drawer-Variante und gibt den Fokus an den Auslöser zurück."
+    },
+    "dock": {
+      "title": "Zentriertes Dock",
+      "description": "Ein pillenförmiger Umschalter, der sich an seinen Inhalt anpasst statt den Container zu füllen — für wenige Geschwisteransichten auf einem Bildschirm.",
+      "ariaLabel": "Dock-Beispiel",
+      "items": {
+        "admin": "Adminbereich",
+        "api": "API-Demo",
+        "audit": "Auditprotokoll"
+      }
+    }
+  },
+  "statisticsSection": {
+    "title": "Statistiken",
+    "description": "Eine Statistikkomponente, vier Ausprägungen. Jede erbt den umgebenden Oberflächenkontext, sodass das invertierte Band, die helle Dashboard-Kachel und das Firmenkundenpanel dieselbe Komponente sind – nicht vier Kopien.",
+    "variantsTitle": "Varianten auf heller Oberfläche",
+    "portfolioLabel": "Portfoliostatistiken",
+    "markets": "Märkte",
+    "marketsHint": "Mittel- und Osteuropa",
+    "exposure": "Exponierung",
+    "customers": "Kunden",
+    "since": "Raiffeisen seit",
+    "sinceHint": "Gegründet in Österreich",
+    "subsectionTitle": "Dieselbe Komponente über Oberflächen hinweg",
+    "subsectionDescription": "Unten ändert sich nur der Oberflächenkontext. Keine Statistik weiß, in welchem Abschnitt sie sich befindet.",
+    "surfaceLabel": "Statistiken auf der Oberfläche {surface}",
+    "employees": "Mitarbeitende",
+    "employeesHint": "Konzernweit",
+    "marketsHintShort": "CEE-Präsenz",
+    "a11y": {
+      "grouping": "Eine StatGroup ist ein beschrifteter Bereich, sodass ein Screenreader das Band ansagt, bevor er die Zahlen liest.",
+      "trend": "Die Richtung wird durch ein Pfeilsymbol und eine vorzeichenbehaftete Zahl vermittelt, nicht allein durch Rot und Grün.",
+      "numerals": "Zahlen verwenden tabellarische Ziffern, sodass eine Zahlenspalte bei Wertänderungen ausgerichtet bleibt."
+    }
+  },
+  "statusSection": {
+    "title": "Status und Fortschritt",
+    "description": "Die kleinen Bausteine, die letztlich jede Ansicht braucht: bestimmter Fortschritt, Ladeplatzhalter, Identität und ein Hinweis bei Hover oder Fokus.",
+    "progress": {
+      "title": "Fortschritt",
+      "label": "Abschluss der Kontoeröffnung",
+      "ariaLabel": "Abschluss der Kontoeröffnung: 68 Prozent"
+    },
+    "skeleton": {
+      "title": "Skelett"
+    },
+    "avatar": {
+      "title": "Avatar, Trenner und Tooltip",
+      "name": "Hana Mahmutović",
+      "role": "Administratorin · Konzernbetrieb",
+      "active": "Aktiv",
+      "details": "Details",
+      "tooltip": "Erscheint bei Hover und bei Tastaturfokus und bleibt sichtbar, solange darauf gezeigt wird."
+    },
+    "a11y": {
+      "roleProgressbar": "Fortschritt gibt seinen Wert weiter; der sichtbare Prozentsatz wird im barrierefreien Namen dupliziert.",
+      "skeletons": "Mit aria-hidden markiert und andernorts mit einer freundlichen Live-Region gekoppelt, sodass Laden einmal angesagt wird statt als Wand leerer Kästen.",
+      "focus": "Tooltips öffnen sich bei Tastaturfokus, nicht nur bei Hover, und enthalten niemals interaktive Inhalte."
+    }
+  },
+  "bentoBuilder": {
+    "blueprintLegend": "Entwurf",
+    "gapLabel": "Abstand",
+    "gapTight": "eng",
+    "gapDefault": "Standard",
+    "gapLoose": "weit",
+    "rowHeightLabel": "Zeilenhöhe",
+    "densityUniform": "einheitlich",
+    "densityTall": "hoch",
+    "addTile": "Kachel hinzufügen",
+    "reset": "Zurücksetzen",
+    "showCode": "Code anzeigen",
+    "hideCode": "Code ausblenden",
+    "copied": "Kopiert",
+    "copyCode": "Code kopieren",
+    "width": "Breite {span}/12",
+    "rows": "Zeilen {rowSpan}",
+    "accentOn": "Akzent an",
+    "accentOff": "Akzent aus",
+    "removeTile": "{title} entfernen",
+    "codeCopiedStatus": "Bento-Layout-Code in die Zwischenablage kopiert",
+    "emptyState": "Jede Kachel wurde entfernt. Fügen Sie eine hinzu oder setzen Sie den Entwurf zurück.",
+    "presets": {
+      "heroSplit": {
+        "label": "Hero-Split",
+        "description": "1 groß + 1 hoch + 3 klein. Landingpages."
+      },
+      "featureMosaic": {
+        "label": "Feature-Mosaik",
+        "description": "5 Karten in gemischten Breiten. Feature-Listen."
+      },
+      "dashboard": {
+        "label": "Dashboard",
+        "description": "4 Kennzahlen + Chart + Aktivitätsleiste. Back Office."
+      },
+      "editorial": {
+        "label": "Editorial",
+        "description": "Banner über volle Breite + 2 Spalten. Lange Texte."
+      }
+    },
+    "newTile": {
+      "eyebrow": "Neu",
+      "title": "Kachel {index}",
+      "body": "Ersetzen Sie diesen Text und legen Sie dann Breite und Ton mit den Bedienelementen über der Kachel fest."
+    }
+  },
+  "contrastChecker": {
+    "textOrIcon": "Text oder Symbol",
+    "background": "Hintergrund",
+    "swap": "Tauschen",
+    "sampleHeadline": "Machen Sie es möglich",
+    "sampleBody": "Fließtext in 14px auf diesem Paar, damit das Urteil unten an etwas Echtem gemessen werden kann.",
+    "usableEverywhere": "Überall einsetzbar",
+    "restrictedUse": "Eingeschränkte Verwendung",
+    "passesAllAa": "Dieses Paar erfüllt jeden AA-Schwellenwert, einschließlich kleinem Fließtext.",
+    "failsAa": "Dieses Paar erfüllt mindestens einen AA-Schwellenwert nicht. Prüfen Sie die Zeilen unten, wo es dennoch verwendet werden kann.",
+    "liveRegion": "{pair} beträgt {ratio}, {result} AA für Fließtext.",
+    "passing": "bestehend",
+    "failing": "nicht bestehend",
+    "verdicts": {
+      "aaa": "AAA",
+      "aa": "AA",
+      "fail": "Nicht bestanden"
+    },
+    "requirements": {
+      "bodyText": {
+        "label": "Fließtext",
+        "description": "Text unter 24px, oder unter 19px bei Fettschrift — SC 1.4.3 / 1.4.6."
+      },
+      "largeText": {
+        "label": "Großer Text",
+        "description": "Text ab 24px, oder 19px fett und größer — SC 1.4.3 / 1.4.6."
+      },
+      "uiComponent": {
+        "label": "UI und Grafiken",
+        "description": "Rahmen, Symbole, Fokusringe und Bedienelementgrenzen — SC 1.4.11."
+      }
+    }
+  }
+}

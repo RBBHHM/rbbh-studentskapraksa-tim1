@@ -1,0 +1,540 @@
+{
+  "page": {
+    "eyebrow": "Arhitektura",
+    "title": "Kako se cijela aplikacija uklapa",
+    "description": "Vizuelan vodič običnim jezikom: šta radi u pregledniku, šta na serveru i kako se objavljuje jedan paket."
+  },
+  "recipes": {
+    "heading": "Želim dodati X — gdje to stavljam?",
+    "tasks": {
+      "addPage": {
+        "goal": "Dodati novu stranicu",
+        "steps": {
+          "0": "Kreirajte jedan fajl; njegov naziv je URL.",
+          "1": "Izvezite Route pomoću createFileRoute i head() naslova.",
+          "2": "Dodajte link u zaglavlje i podnožje.",
+          "3": "Dodajte oznaku u svaku jezičku datoteku."
+        }
+      },
+      "addComponent": {
+        "goal": "Dodati komponentu za višekratnu upotrebu",
+        "steps": {
+          "0": "Kreirajte je samo sa semantičkim klasama, nikad hex.",
+          "1": "Držite logiku ili mapu oznaka pored, ne unutar.",
+          "2": "Prikažite je u biblioteci."
+        }
+      },
+      "addText": {
+        "goal": "Dodati tekst koji korisnik čita",
+        "steps": {
+          "0": "Dodajte ključ i engleski tekst.",
+          "1": "Dodajte isti ključ u svaki jezik.",
+          "2": "Pročitajte ga pomoću t(\"vas.kljuc\")."
+        }
+      },
+      "addColor": {
+        "goal": "Dodati boju, veličinu ili sjenu",
+        "steps": {
+          "0": "Dodajte vrijednost brenda jednom kao primitivu.",
+          "1": "Imenujte je u semantičkom sloju, pa koristite taj naziv.",
+          "2": "Provjerite da kombinacija prolazi AA."
+        }
+      },
+      "addBackendData": {
+        "goal": "Dodati podatke sa backenda",
+        "steps": {
+          "0": "Dodajte endpoint i njegove request/response modele u .NET.",
+          "1": "Generišite TypeScript tipove iz OpenAPI dokumenta.",
+          "2": "Izložite malu, čitljivu operaciju kroz zajednički API klijent."
+        }
+      }
+    }
+  },
+  "layers": {
+    "heading": "Pet slojeva, jedan smjer zavisnosti",
+    "description": "Svaki sloj čita samo onaj ispod sebe.",
+    "items": {
+      "brandPrimitives": {
+        "title": "1 · Primitivi brenda",
+        "body": "Zvanične RBI vrijednosti, definisane jednom."
+      },
+      "semanticTokens": {
+        "title": "2 · Semantički tokeni",
+        "body": "Aliasi po namjeri; njihovo mijenjanje mijenja cijelu površinu odjednom."
+      },
+      "tailwindBridge": {
+        "title": "3 · Tailwind theme most",
+        "body": "@theme inline pretvara tokene u utility klase."
+      },
+      "components": {
+        "title": "4 · Komponente",
+        "body": "shadcn primitivi plus RBI varijante, samo sa semantičkim tokenima."
+      },
+      "patternsAndScreens": {
+        "title": "5 · Obrasci i ekrani",
+        "body": "Kompozicije poput hero, feature grid, admin panel. Bez novih odluka o bojama."
+      }
+    }
+  },
+  "structure": {
+    "heading": "Gdje ide datoteka",
+    "description": "Ime foldera je odgovor.",
+    "never": "Nikada ovdje",
+    "folders": {
+      "stylesCss": "Primitivi, semantički tokeni, @theme most, bazni sloj",
+      "designSystem": "Sloj tokena tipiziran za TypeScript",
+      "tokensFoundations": "Metapodaci o boji, skali, paleti i logotipu",
+      "components": "Sve što se renderuje",
+      "ui": "Primitivi i RBI varijante",
+      "layout": "AppShell, Container, Section, Grid, Stack",
+      "brand": "Logo, slogan i signature kompozicije",
+      "catalog": "Dokumentacijska mašinerija: Example, CodePanel, builderi",
+      "adminComposites": "Kompozicije za ekrane admin panela",
+      "lib": "Logika bez JSX-a",
+      "libApi": "Zajednički ugovor, tipizirani klijent, referentni podaci",
+      "libAdmin": "Hook za direktorij i metapodaci prezentacije",
+      "routesDir": "Rute po fajlovima; folder je mapa URL-ova",
+      "applicationsShell": "Zajednička ljuska za dva primjera aplikacija",
+      "applicationsScreens": "Ta dva ekrana",
+      "program": "Ulazna tačka i sastavljanje cijele .NET aplikacije",
+      "server": "Serverska infrastruktura i neutralni primjeri",
+      "serverContracts": "Jedinstveni API odgovor i podesive opcije",
+      "serverInfrastructure": "HTTP klijenti, prijava, cookieji, greške i praćenje",
+      "serverExamples": "Minimalni primjeri povezivanja, bez domenskih pravila",
+      "localization": "Izvorni prijevodi i runtime isporuka",
+      "docs": "Upute za ljude i AI saradnike"
+    },
+    "callout": {
+      "title": "Dosljednost je ugovor",
+      "before": "Pratite strukturu iznad. Puna pravila:",
+      "strong": "Gdje ide koji fajl",
+      "after": "."
+    }
+  },
+  "placementRules": {
+    "styles": {
+      "owns": "Primitivi brenda, semantički tokeni, @theme most.",
+      "never": [
+        "Selektori specifični za komponentu",
+        "Bukvalni hex u komponenti",
+        "Utility klase za jedan ekran"
+      ]
+    },
+    "designSystem": {
+      "owns": "Tipizirani sloj tokena: metapodaci palete, skale, deskriptori loga.",
+      "never": ["JSX", "React hookovi", "Bilo šta što uvozi komponentu"]
+    },
+    "uiComponents": {
+      "owns": "Primitivi bez domenske logike i njihove varijante.",
+      "never": [
+        "Domenski pojmovi poput računa ili fakture",
+        "Dohvatanje podataka",
+        "Fiksno kodirane boje"
+      ]
+    },
+    "domainComponents": {
+      "owns": "Kompozicije jedne domene; poznaju račune, ne dohvataju ih.",
+      "never": [
+        "Poslovna pravila",
+        "Direktni fetch pozivi",
+        "Duplicirane oznake — čitati iz lib/<domain>"
+      ]
+    },
+    "layoutComponents": {
+      "owns": "Strukturne ljuske: AppShell, Container, Section, Grid, Stack.",
+      "never": ["Tekst stranice", "Stanje domene"]
+    },
+    "libDomain": {
+      "owns": "Logika bez JSX-a: hookovi, reduceri, validatori, codebook-ovi.",
+      "never": ["JSX", "Tekst koji bi ekran trebao prevesti", "Pristup DOM-u izvan hooka"]
+    },
+    "libApi": {
+      "owns": "Generisani OpenAPI tipovi i jedini HTTP klijent u pregledniku.",
+      "never": ["React uvozi", "Ručno prepisan generisani DTO", "URL ugrađen u ekran"]
+    },
+    "localization": {
+      "owns": "Codebook jezika i vrijednosti, plus izvršno okruženje prevoda.",
+      "never": ["Poziv za prevođenje ka eksternom API-ju", "Vidljiv tekst izvan datoteke poruka"]
+    },
+    "routes": {
+      "owns": "Struktura URL-a; komponuje komponente, samo čita podatke.",
+      "never": ["Poslovna pravila", "Komponente definisane inline", "Uređivanje routeTree.gen.ts"]
+    },
+    "serverEndpoints": {
+      "owns": "Neutralni primjeri .NET endpointa i njihovi request/response modeli.",
+      "never": [
+        "Dozvole specifične za projekat",
+        "Drugi oblik API odgovora",
+        "Tajne ili poslovna pravila u pregledniku"
+      ]
+    }
+  },
+  "conventions": {
+    "heading": "Kako se piše kod",
+    "description": "Prikaz u komponentama, orkestracija u rutama, pravila u src/lib."
+  },
+  "codeConventions": {
+    "semanticTokensOnly": {
+      "rule": "Komponente koriste isključivo semantičke tokene",
+      "why": "Primitiv ili hex vrijednost narušava temu svuda."
+    },
+    "noHardcodedCopy": {
+      "rule": "Nema korisnički vidljivog teksta unutar komponente",
+      "why": "Svaki tekst je ključ; novo tržište je samo fajl."
+    },
+    "noBusinessLogicInUi": {
+      "rule": "Nema poslovne logike u rutama ili komponentama",
+      "why": "Pravila žive u src/lib — testabilna i ponovo upotrebljiva."
+    },
+    "singleSourceOfTruth": {
+      "rule": "Jedan izvor istine po činjenici",
+      "why": "Generisani OpenAPI tipovi u api/generated, prezentacijske oznake uz feature, jezici u izvornim lokalizacijskim fajlovima."
+    },
+    "dataFirstMarkupSecond": {
+      "rule": "Prvo podaci, zatim markup",
+      "why": "Ekrani renderuju deklarisane liste; novi red ne dira JSX."
+    },
+    "deterministicFormatting": {
+      "rule": "Determinističko formatiranje",
+      "why": "Eksplicitne opcije i UTC drže server i preglednik identičnim."
+    },
+    "mechanicalNaming": {
+      "rule": "Imenovanje je mehaničko",
+      "why": "kebab-case datoteke, PascalCase komponente — naziv govori folder."
+    },
+    "accessibilityPartOfDone": {
+      "rule": "Pristupačnost je dio definicije završenog",
+      "why": "AA parovi, vidljiv fokus prsten, ciljevi od 44px, status nikad samo bojom."
+    }
+  },
+  "flowSection": {
+    "heading": "Kako ekran dobija svoje podatke",
+    "description": "Dva toka: API demo ide preko mreže, admin panel ostaje lokalan. Odaberi korak za fajl.",
+    "callout": {
+      "title": "Povezivanje ASP.NET Core servisa",
+      "before": "Frontend poznaje jedan URL, u",
+      "after": ". Usmjerite ga na .NET kontroler; obje strane već dijele isti ugovor."
+    }
+  },
+  "rendering": {
+    "heading": "Kako se aplikacija pokreće",
+    "steps": {
+      "build": {
+        "title": "Build",
+        "body": "Webpack pretvara React u statičke fajlove za preglednik."
+      },
+      "shell": {
+        "title": "Posluživanje",
+        "body": ".NET iz jednog procesa poslužuje te fajlove i izlaže API."
+      },
+      "browser": {
+        "title": "Otvaranje",
+        "body": "Preglednik učitava React; router mijenja stranice bez punog osvježavanja."
+      },
+      "api": {
+        "title": "Čitanje podataka",
+        "body": "React zove /api; razvojni Webpack server prosljeđuje taj poziv .NET API-ju na portu 5000."
+      }
+    }
+  },
+  "stack": {
+    "heading": "Šta je u stacku i zašto",
+    "rows": {
+      "uiRuntime": {
+        "area": "UI runtime",
+        "choice": "React 19",
+        "because": "Konkurentno renderovanje i stabilan Suspense."
+      },
+      "framework": {
+        "area": "Framework",
+        "choice": "React 19 + TanStack Router",
+        "because": "Tipizirano rutiranje po fajlovima u SPA načinu rada."
+      },
+      "build": {
+        "area": "Build",
+        "choice": "Webpack 5",
+        "because": "Brz HMR; ?raw uvozi citiraju pravi kod."
+      },
+      "styling": {
+        "area": "Stilizacija",
+        "choice": "Tailwind CSS v4",
+        "because": "CSS-first konfiguracija; sloj tokena je konfiguracija."
+      },
+      "data": {
+        "area": "Podaci",
+        "choice": "TanStack Query",
+        "because": "Ključevi keša, ponavljanja i paginacija besplatno."
+      },
+      "serverData": {
+        "area": "Serverski dio",
+        "choice": "ASP.NET Core (.NET 10)",
+        "because": "Jedan host za API, sigurnost, logove i React fajlove."
+      },
+      "types": {
+        "area": "API tipovi",
+        "choice": "OpenAPI → TypeScript",
+        "because": "Generisani tipovi drže React i .NET ugovor usklađenim bez ručnog mapiranja."
+      },
+      "typography": {
+        "area": "Tipografija",
+        "choice": "Samostalno hostovan Amalia",
+        "because": "Vjernost brendu bez zahtjeva ka fontu trećeg dobavljača."
+      }
+    },
+    "accessibilityNote": "Pristupačnost živi u baznom sloju — fokus prsten, AA parovi, ciljevi od 44px — ekrani je nasljeđuju."
+  },
+  "flows": {
+    "zones": {
+      "browser": "Preglednik",
+      "server": "Server",
+      "service": "Servis za podatke"
+    },
+    "labels": {
+      "responsibleFor": "Odgovoran za",
+      "handsOff": "Predaje",
+      "inCode": "U kodu",
+      "stepsAriaLabel": "Koraci za {title}"
+    },
+    "read": {
+      "title": "Put čitanja — API demo",
+      "summary": "Ekran ne posjeduje podatke; svaki filter je parametar zahtjeva.",
+      "steps": {
+        "read-route": {
+          "label": "Komponenta rute",
+          "detail": "useQuery ključan po stranici, pretrazi, segmentu i scenariju",
+          "responsibilities": [
+            "Drži parametre upita kao stanje",
+            "Renderuje stanja učitavanja, praznog, greške i uspjeha",
+            "Bez logike filtriranja; server odlučuje"
+          ],
+          "handsOff": "AccountQuery — stranica, veličina, pretraga, segment, status, scenario"
+        },
+        "read-client": {
+          "label": "Tipizirani klijent",
+          "detail": "accounts-client.ts gradi URL i sužava JSON",
+          "responsibilities": [
+            "Jedino mjesto koje poznaje bazni URL",
+            "Serijalizuje upit, baca tipizirani problem pri neuspjehu",
+            "Uvozi ugovor umjesto ponovnog deklarisanja tipova"
+          ],
+          "handsOff": "Paged<Account> ili bačen ProblemDetails"
+        },
+        "read-handler": {
+          "label": ".NET endpoint",
+          "detail": "GET /api/public/accounts filtrira, paginira i mjeri vrijeme",
+          "responsibilities": [
+            "Validira upit prije dodirivanja podataka",
+            "Primjenjuje filtere, zatim paginira rezultat",
+            "Vraća isti omotač kao .NET kontroler"
+          ],
+          "handsOff": "JSON: { items, page, pageSize, total, tookMs }",
+          "responsibility": "Neutralni primjeri .NET endpointa i njihovi request/response modeli.",
+          "handoff": ".NET endpoint"
+        },
+        "read-source": {
+          "label": "Izvor podataka",
+          "detail": "Danas seed skup; EF Core iza ASP.NET Core u produkciji",
+          "responsibilities": [
+            "Isporučuje redove samo u obliku ugovora",
+            "Zamjenjuje se pravim servisom transparentno",
+            "Poslovna pravila žive ovdje, nikad u komponenti"
+          ],
+          "handsOff": "Account[] u obliku ugovora"
+        }
+      }
+    },
+    "write": {
+      "title": "Put pisanja — admin panel",
+      "summary": "Ekran posjeduje zapise; svaka promjena je jedna imenovana akcija reducera.",
+      "steps": {
+        "write-form": {
+          "label": "Dijalog forme",
+          "detail": "Prikuplja nacrt i pokreće zajednički validator",
+          "responsibilities": [
+            "Samo prezentacija i povratna informacija polja",
+            "Validira zajedničkim validatorom",
+            "Predaje nacrt naviše; nikad sam ne mijenja store"
+          ],
+          "handsOff": "AccountDraft, već validiran"
+        },
+        "write-reducer": {
+          "label": "Reducer direktorija",
+          "detail": "Jedna eksplicitna akcija po izmjeni: create, update, setStatus, delete",
+          "responsibilities": [
+            "Jedini pisac stanja računa",
+            "Akcije imenovane po namjeri, audit ili API se uklapaju nepromijenjeno",
+            "Vraća izvedene prikaze; nikad se ne preračunavaju"
+          ],
+          "handsOff": "Sljedeći niz zapisa plus izvedeni redovi i metrike"
+        },
+        "write-derived": {
+          "label": "Izvedeno stanje",
+          "detail": "Filtriranje, sortiranje i metrike se preračunavaju iz zapisa",
+          "responsibilities": [
+            "Memoizirani selektori čine re-render jeftinim",
+            "Metrike se izračunavaju, nikad ne skladište",
+            "Oznake i tonovi dolaze iz account-presentation.ts"
+          ],
+          "handsOff": "rows, metrics, activeFilterCount"
+        },
+        "write-swap": {
+          "label": "Tačka zamjene",
+          "detail": "Zamijenite tijelo hooka server funkcijama — bez izmjena ekrana",
+          "responsibilities": [
+            "Svaka akcija postaje server funkcija ili endpoint",
+            "Povratni tip hooka ostaje identičan",
+            "Autorizacija i audit pripadaju ovdje, nikad u komponenti"
+          ],
+          "handsOff": "Trajno sačuvani redovi putem ASP.NET Core servisa"
+        }
+      }
+    }
+  },
+  "setup": {
+    "title": "Postavljanje svježeg klona",
+    "description": "Sedam koraka, po redu. Sve ostalo može čekati.",
+    "steps": {
+      "install": {
+        "label": "Instalirajte zavisnosti i pokrenite dev server."
+      },
+      "brandColours": {
+        "label": "Zamijenite primitive brenda; semantički sloj ostaje netaknut."
+      },
+      "brandAssets": {
+        "label": "Zamijenite font i varijante logotipa."
+      },
+      "wording": {
+        "label": "Prepišite engleski tekst — on je izvor istine."
+      },
+      "backend": {
+        "label": "Usmjerite HTTP klijent na pravi API."
+      },
+      "removeDemos": {
+        "label": "Izbrišite nepotrebne demo i katalog stranice."
+      },
+      "verify": {
+        "label": "Pokrenite lint, testove i provjeru ključeva prije prvog commita."
+      }
+    }
+  },
+  "mobile": {
+    "title": "Mobilno",
+    "description": "Svaka stranica već radi na telefonu. Track birate samo za aplikaciju.",
+    "tracks": {
+      "responsive": {
+        "title": "Responzivna web stranica",
+        "effort": "Uključeno",
+        "items": [
+          "Mobile-first breakpointi na svakoj stranici",
+          "Tabele se skroluju umjesto da se gušu",
+          "Kontrole su visine najmanje 40px",
+          "Novi UI provjerite na širini 375px"
+        ]
+      },
+      "pwa": {
+        "title": "Instalabilna aplikacija (PWA)",
+        "effort": "Dani",
+        "items": [
+          "Web manifest sa ikonicama i bojom teme",
+          "Service worker za offline ljusku",
+          "Safe-area padding i donja tab traka",
+          "Koristi gotovo cijeli ovaj kod"
+        ]
+      },
+      "native": {
+        "title": "Nativna aplikacija",
+        "effort": "Sedmice",
+        "items": [
+          "Ponovno koristite tokene, logiku i pakete prevoda",
+          "Komponente se grade na nativnim primitivima",
+          "Expo Router zamjenjuje web router",
+          "API ostaje potpuno isti"
+        ]
+      }
+    }
+  },
+  "localization": {
+    "title": "Lokalizacija",
+    "description": "Tekst je runtime sadržaj, objavljen bez ponovnog build-a.",
+    "sourceBundlesLabel": "Izvorni paketi (pregledani)",
+    "activeReleaseBefore": "Aktivno izdanje",
+    "activeReleaseAfter": ", učitano iz manifesta okruženja.",
+    "runtimeDeliveryLabel": "Dostava u toku rada",
+    "calloutTitle": "Dodavanje ili promjena teksta",
+    "calloutSteps": {
+      "0": "Uredite i odobrite tekst u sistemu za upravljanje prevodima.",
+      "1": "Pokrenite node scripts/localization/build-release.mjs da validirate i objavite.",
+      "2": "Usmjerite manifest okruženja na novi ID izdanja."
+    }
+  },
+  "pipeline": {
+    "heading": "Put zahtjeva",
+    "description": "Jedno čitanje, od početka do kraja. Četiri koraka, četiri fajla.",
+    "nodes": {
+      "screen": {
+        "title": "Ekran",
+        "body": "Zove hook. Ne zna nijedan URL."
+      },
+      "client": {
+        "title": "Tipizirani klijent",
+        "body": "Jedino mjesto gdje postoji URL."
+      },
+      "route": {
+        "title": ".NET endpoint",
+        "body": "Validira zahtjev i vraća jedinstveni odgovor."
+      },
+      "service": {
+        "title": "Vanjski servis",
+        "body": "Opcionalan; poziva se kroz jedan podešeni HTTP klijent."
+      }
+    }
+  },
+  "systemMap": {
+    "heading": "Cijeli sistem u tri dijela",
+    "description": "Pratite zahtjev od ekrana do .NET-a. Svaki dio ima jednu jasnu odgovornost.",
+    "parts": {
+      "browser": {
+        "title": "1. React interfejs",
+        "body": "Stranice, dugmad i forme rade u korisnikovom pregledniku. React prikazuje podatke; ne čuva serverska pravila ni tajne."
+      },
+      "host": {
+        "title": "2. .NET aplikacijski host",
+        "body": "ASP.NET Core prima API pozive, upravlja cookiejima i sesijom, bilježi zahtjeve i poslužuje izgrađenu React aplikaciju."
+      },
+      "external": {
+        "title": "3. Vanjski servisi (opcionalno)",
+        "body": "Podešeni HTTP klijent je jedino mjesto preko kojeg .NET zove bankarski ili drugi backend servis."
+      }
+    },
+    "artifact": {
+      "title": "Šta je artifact?",
+      "body": "To je rezultat naredbe dotnet publish spreman za objavu: .NET aplikacija i kompajlirani React fajlovi zajedno u jednom folderu."
+    }
+  },
+  "glossary": {
+    "react": {
+      "term": "React",
+      "meaning": "Dio koji korisnik vidi i koristi u pregledniku."
+    },
+    "dotnet": {
+      "term": ".NET / ASP.NET Core",
+      "meaning": "Serverski dio zadužen za sigurnost, integracije i ponašanje API-ja."
+    },
+    "api": {
+      "term": "API",
+      "meaning": "Dokumentovani ulaz kroz koji preglednik traži podatke od servera."
+    },
+    "openapi": {
+      "term": "OpenAPI",
+      "meaning": "Mašinski čitljiv opis API-ja iz kojeg se generišu usklađeni TypeScript tipovi."
+    },
+    "artifact": {
+      "term": "Artifact",
+      "meaning": "Testirani rezultat builda spreman za server ili deployment pipeline."
+    },
+    "session": {
+      "term": "Cookie i sesija",
+      "meaning": "Siguran način da server između zahtjeva prepozna prijavljeni preglednik."
+    }
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "hero": {
+    "eyebrow": "Raiffeisen Bank International",
+    "lead": "An enterprise design system on the official RBI brand — real palette, Amalia typeface, approved logo, typed API.",
+    "exploreFoundations": "Explore the foundations",
+    "browseComponents": "Browse components"
+  },
+  "entryPoints": {
+    "heading": "Start here",
+    "open": "Open",
+    "items": {
+      "foundations": {
+        "label": "Foundations",
+        "body": "Colour, type, spacing, elevation and motion tokens, rendered live."
+      },
+      "components": {
+        "label": "Components",
+        "body": "Buttons, forms, tables, overlays — each with source and keyboard contract."
+      },
+      "patterns": {
+        "label": "Patterns",
+        "body": "Ready page sections and the standard app screens."
+      },
+      "applications": {
+        "label": "Applications",
+        "body": "Admin panel with CRUD, plus the same data over a typed HTTP contract."
+      },
+      "architecture": {
+        "label": "Architecture",
+        "body": "Layers, folder map, request flow and the ASP.NET Core seam."
+      }
+    }
+  }
+}

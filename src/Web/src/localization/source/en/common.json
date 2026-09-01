@@ -1,0 +1,67 @@
+{
+  "brand": {
+    "name": "Raiffeisen Bank International",
+    "slogan": {
+      "lead": "Make",
+      "accent": "design",
+      "tail": "happen"
+    }
+  },
+  "locales": {
+    "en": "English",
+    "de": "Deutsch",
+    "bs": "Bosanski",
+    "en-XA": "Pseudo (development)",
+    "ar-XB": "RTL pseudo (development)"
+  },
+  "language": {
+    "label": "Language",
+    "switcherAria": "Change language",
+    "current": "Current language: {language}",
+    "changed": "Language changed to {language}"
+  },
+  "theme": {
+    "label": "Theme",
+    "switcherAria": "Change theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "footer": {
+    "groups": {
+      "designSystem": "Design system",
+      "engineering": "Engineering"
+    },
+    "blurb": "A connected-parties register for secure business-data management and regulatory obligations.",
+    "signatureAlt": "Handwritten signature of Hana Mahmutović",
+    "signatureCredit": "Designed, built and documented by Hana Mahmutović",
+    "signatureNote": "Carefully designed for clear, accessible and dependable everyday use.",
+    "legal": "Brand assets, colour palette and the Amalia typeface are the property of Raiffeisen Bank International AG and are used under the official brand guidelines. Internal business application."
+  },
+  "actions": {
+    "save": "Save",
+    "saveChanges": "Save changes",
+    "cancel": "Cancel",
+    "retry": "Try again",
+    "clear": "Clear",
+    "copy": "Copy",
+    "refresh": "Refresh",
+    "close": "Close",
+    "confirmAccountDeletion": "Confirm permanent deletion of this account"
+  },
+  "states": {
+    "loading": "Loading",
+    "empty": "Nothing to show",
+    "error": "Something went wrong"
+  },
+  "localization": {
+    "activeRelease": "Active localization release {releaseId}",
+    "publishedAt": "Published {publishedAt}",
+    "fallbackNotice": "Some wording is shown in the fallback language.",
+    "selectedItems": "{count, plural, =0 {No items selected} one {# item selected} other {# items selected}}",
+    "unreadNotifications": "{count, plural, =0 {No new notifications} one {One new notification} other {# new notifications}}",
+    "accountStatus": "{status, select, active {Active} review {In review} blocked {Blocked} other {Unknown}}",
+    "welcomeUser": "Welcome back, {userName}",
+    "lastUpdated": "Last updated {timestamp}"
+  }
+}

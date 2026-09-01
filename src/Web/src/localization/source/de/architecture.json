@@ -1,0 +1,551 @@
+{
+  "page": {
+    "eyebrow": "Architektur",
+    "title": "Wie die gesamte Anwendung zusammenspielt",
+    "description": "Eine visuelle Erklärung in Alltagssprache: was im Browser, was auf dem Server läuft und wie ein Paket bereitgestellt wird."
+  },
+  "recipes": {
+    "heading": "Ich möchte X hinzufügen – wo lege ich es ab?",
+    "tasks": {
+      "addPage": {
+        "goal": "Eine neue Seite hinzufügen",
+        "steps": {
+          "0": "Erstellen Sie eine Datei; ihr Name ist die URL.",
+          "1": "Exportieren Sie Route mit createFileRoute und head()-Titel.",
+          "2": "Fügen Sie den Link zu Kopf- und Fußzeile hinzu.",
+          "3": "Fügen Sie die Bezeichnung in jede Sprachdatei hinzu."
+        }
+      },
+      "addComponent": {
+        "goal": "Eine wiederverwendbare Komponente hinzufügen",
+        "steps": {
+          "0": "Erstellen Sie sie nur mit semantischen Klassen, nie mit Hex.",
+          "1": "Halten Sie Logik oder Label-Maps daneben, nicht darin.",
+          "2": "Zeigen Sie sie in der Bibliothek."
+        }
+      },
+      "addText": {
+        "goal": "Text hinzufügen, den ein Nutzer liest",
+        "steps": {
+          "0": "Fügen Sie den Schlüssel und den englischen Text hinzu.",
+          "1": "Fügen Sie denselben Schlüssel in jeder Sprache hinzu.",
+          "2": "Lesen Sie ihn mit t(\"ihr.schluessel\")."
+        }
+      },
+      "addColor": {
+        "goal": "Eine Farbe, Größe oder einen Schatten hinzufügen",
+        "steps": {
+          "0": "Fügen Sie den Markenwert einmal als Primitive hinzu.",
+          "1": "Benennen Sie ihn in der semantischen Ebene und nutzen Sie diesen Namen.",
+          "2": "Prüfen Sie, ob die Kombination AA besteht."
+        }
+      },
+      "addBackendData": {
+        "goal": "Daten vom Backend hinzufügen",
+        "steps": {
+          "0": "Endpoint und Request-/Response-Modelle in .NET ergänzen.",
+          "1": "TypeScript-Typen aus dem OpenAPI-Dokument erzeugen.",
+          "2": "Eine kleine lesbare Operation über den gemeinsamen API-Client bereitstellen."
+        }
+      }
+    }
+  },
+  "layers": {
+    "heading": "Fünf Schichten, eine Abhängigkeitsrichtung",
+    "description": "Jede Schicht darf nur die darunterliegende lesen.",
+    "items": {
+      "brandPrimitives": {
+        "title": "1 · Markenprimitive",
+        "body": "Offizielle RBI-Werte, einmal definiert."
+      },
+      "semanticTokens": {
+        "title": "2 · Semantische Tokens",
+        "body": "Nach Bedeutung benannte Aliasse; ihre Neuzuweisung wechselt eine ganze Oberfläche."
+      },
+      "tailwindBridge": {
+        "title": "3 · Tailwind-Theme-Brücke",
+        "body": "@theme inline macht aus Tokens Utility-Klassen."
+      },
+      "components": {
+        "title": "4 · Komponenten",
+        "body": "shadcn-Primitive plus RBI-Varianten, nur mit semantischen Tokens."
+      },
+      "patternsAndScreens": {
+        "title": "5 · Muster und Bildschirme",
+        "body": "Kompositionen wie Hero, Feature-Grid, Admin-Panel. Keine neuen Farbentscheidungen."
+      }
+    }
+  },
+  "structure": {
+    "heading": "Wohin eine Datei gehört",
+    "description": "Der Ordnername ist die Antwort.",
+    "never": "Niemals hier",
+    "folders": {
+      "stylesCss": "Primitive, semantische Tokens, @theme-Brücke, Basisschicht",
+      "designSystem": "Für TypeScript typisierte Token-Ebene",
+      "tokensFoundations": "Farb-, Skalen-, Paletten- und Logo-Metadaten",
+      "components": "Alles Darstellbare",
+      "ui": "Primitive und RBI-Varianten",
+      "layout": "AppShell, Container, Section, Grid, Stack",
+      "brand": "Logo-, Slogan- und Signatur-Lock-ups",
+      "catalog": "Dokumentationswerkzeuge: Example, CodePanel, Builder",
+      "adminComposites": "Bildschirmspezifische Admin-Panel-Kompositionen",
+      "lib": "Logik ohne JSX",
+      "libApi": "Gemeinsamer Vertrag, typisierter Client, Referenzdaten",
+      "libAdmin": "Verzeichnis-Hook und Präsentationsmetadaten",
+      "routesDir": "Dateibasierte Routen; Ordner ist die URL-Karte",
+      "applicationsShell": "Gemeinsame Hülle für die zwei Beispielanwendungen",
+      "applicationsScreens": "Die beiden Bildschirme",
+      "program": "Einstiegspunkt und Zusammensetzung der .NET-Anwendung",
+      "server": "Serverinfrastruktur und neutrale Beispiele",
+      "serverContracts": "Einheitliche API-Antwort und konfigurierbare Optionen",
+      "serverInfrastructure": "HTTP-Clients, Anmeldung, Cookies, Fehler und Ablaufverfolgung",
+      "serverExamples": "Minimale Integrationsbeispiele ohne Domänenregeln",
+      "localization": "Quellübersetzungen und Laufzeitbereitstellung",
+      "docs": "Anleitungen für Menschen und KI-Mitarbeiter"
+    },
+    "callout": {
+      "title": "Konsistenz ist der Vertrag",
+      "before": "Folgen Sie dem Baum oben. Vollständige Regeln:",
+      "strong": "Wohin eine Datei gehört",
+      "after": "."
+    }
+  },
+  "placementRules": {
+    "styles": {
+      "owns": "Markenprimitive, semantische Tokens, die @theme-Brücke.",
+      "never": [
+        "Komponentenspezifische Selektoren",
+        "Ein Hex-Literal in einer Komponente",
+        "Utility-Klassen für einen Bildschirm"
+      ]
+    },
+    "designSystem": {
+      "owns": "Typisierte Token-Ebene: Palettenmetadaten, Skalen, Logo-Deskriptoren.",
+      "never": ["JSX", "React-Hooks", "Alles, was eine Komponente importiert"]
+    },
+    "uiComponents": {
+      "owns": "Wiederverwendbare, domänenfreie Primitive und Varianten.",
+      "never": ["Domänenbegriffe wie Konto oder Rechnung", "Datenabruf", "Fest codierte Farben"]
+    },
+    "domainComponents": {
+      "owns": "Kompositionen einer Domäne; kennen Konten, rufen sie nicht ab.",
+      "never": [
+        "Geschäftsregeln",
+        "Direkte Fetch-Aufrufe",
+        "Doppelte Bezeichnungen – aus lib/<domain> lesen"
+      ]
+    },
+    "layoutComponents": {
+      "owns": "Strukturelle Hüllen: AppShell, Container, Section, Grid, Stack.",
+      "never": ["Seitentext", "Domänenzustand"]
+    },
+    "libDomain": {
+      "owns": "Logik ohne JSX: Hooks, Reducer, Validatoren, Codebücher.",
+      "never": [
+        "JSX",
+        "Text, den ein Bildschirm übersetzen sollte",
+        "DOM-Zugriff außerhalb eines Hooks"
+      ]
+    },
+    "libApi": {
+      "owns": "Generierte OpenAPI-Typen und der einzige Browser-HTTP-Client.",
+      "never": [
+        "React-Importe",
+        "Eine handgeschriebene Kopie eines generierten DTO",
+        "Eine URL direkt im Bildschirm"
+      ]
+    },
+    "localization": {
+      "owns": "Sprach- und Wert-Codebücher plus Übersetzungslaufzeit.",
+      "never": [
+        "Ein Übersetzungsaufruf an eine externe API",
+        "Ein sichtbarer Text außerhalb einer Nachrichtendatei"
+      ]
+    },
+    "routes": {
+      "owns": "URL-Struktur; komponiert Komponenten, liest nur Daten.",
+      "never": [
+        "Geschäftsregeln",
+        "Inline definierte, wiederverwendbare Komponenten",
+        "Bearbeiten von routeTree.gen.ts"
+      ]
+    },
+    "serverEndpoints": {
+      "owns": "Neutrale .NET-Endpunktbeispiele und ihre Request-/Response-Modelle.",
+      "never": [
+        "Projektspezifische Berechtigungen",
+        "Eine zweite API-Antwortform",
+        "Geheimnisse oder Geschäftsregeln im Browser"
+      ]
+    }
+  },
+  "conventions": {
+    "heading": "Wie der Code geschrieben wird",
+    "description": "Darstellung in Komponenten, Orchestrierung in Routen, Regeln in src/lib."
+  },
+  "codeConventions": {
+    "semanticTokensOnly": {
+      "rule": "Komponenten verwenden ausschließlich semantische Tokens",
+      "why": "Ein Primitiv oder Hex-Wert bricht das Theming überall."
+    },
+    "noHardcodedCopy": {
+      "rule": "Kein sichtbarer Text innerhalb einer Komponente",
+      "why": "Jeder Text ist ein Schlüssel, ein neuer Markt ist nur eine Datei."
+    },
+    "noBusinessLogicInUi": {
+      "rule": "Keine Geschäftslogik in Routen oder Komponenten",
+      "why": "Regeln leben in src/lib – testbar und wiederverwendbar."
+    },
+    "singleSourceOfTruth": {
+      "rule": "Eine Quelle der Wahrheit pro Sachverhalt",
+      "why": "Generierte OpenAPI-Typen in api/generated, Präsentationsbezeichnungen bei Features, Sprachen in den Lokalisierungsquellen."
+    },
+    "dataFirstMarkupSecond": {
+      "rule": "Erst Daten, dann Markup",
+      "why": "Bildschirme rendern deklarierte Listen; eine neue Zeile erfordert kein JSX."
+    },
+    "deterministicFormatting": {
+      "rule": "Deterministische Formatierung",
+      "why": "Explizite Optionen und UTC halten Server und Browser identisch."
+    },
+    "mechanicalNaming": {
+      "rule": "Benennung ist mechanisch",
+      "why": "kebab-case-Dateien, PascalCase-Komponenten – der Name verrät den Ordner."
+    },
+    "accessibilityPartOfDone": {
+      "rule": "Barrierefreiheit gehört zur Definition von fertig",
+      "why": "AA-Paarungen, sichtbarer Fokusring, 44-px-Ziele, Status nie nur über Farbe."
+    }
+  },
+  "flowSection": {
+    "heading": "Wie ein Bildschirm zu seinen Daten kommt",
+    "description": "Zwei Flows: API-Demo geht übers Netzwerk, Admin-Panel bleibt lokal. Schritt wählen zeigt die Datei.",
+    "callout": {
+      "title": "Anbindung des ASP.NET-Core-Dienstes",
+      "before": "Das Frontend kennt eine URL, in",
+      "after": ". Richten Sie sie auf den .NET-Controller; beide Seiten teilen bereits denselben Vertrag."
+    }
+  },
+  "rendering": {
+    "heading": "Wie die Anwendung startet",
+    "steps": {
+      "build": {
+        "title": "Build",
+        "body": "Webpack kompiliert React zu statischen Browserdateien."
+      },
+      "shell": {
+        "title": "Ausliefern",
+        "body": ".NET liefert diese Dateien und die API aus einem Prozess."
+      },
+      "browser": {
+        "title": "Öffnen",
+        "body": "Der Browser lädt React; der Router wechselt Seiten ohne vollständiges Neuladen."
+      },
+      "api": {
+        "title": "Daten lesen",
+        "body": "React ruft /api auf; in der Entwicklung leitet der Webpack-Server den Aufruf an die .NET-API auf Port 5000 weiter."
+      }
+    }
+  },
+  "stack": {
+    "heading": "Was im Stack steckt, und warum",
+    "rows": {
+      "uiRuntime": {
+        "area": "UI-Laufzeit",
+        "choice": "React 19",
+        "because": "Nebenläufiges Rendering und stabiles Suspense."
+      },
+      "framework": {
+        "area": "Framework",
+        "choice": "React 19 + TanStack Router",
+        "because": "Typisiertes dateibasiertes Routing im SPA-Modus."
+      },
+      "build": {
+        "area": "Build",
+        "choice": "Webpack 5",
+        "because": "Schnelles HMR; ?raw-Importe zitieren echten Code."
+      },
+      "styling": {
+        "area": "Styling",
+        "choice": "Tailwind CSS v4",
+        "because": "CSS-first Konfiguration; die Token-Ebene ist die Konfiguration."
+      },
+      "data": {
+        "area": "Daten",
+        "choice": "TanStack Query",
+        "because": "Cache-Schlüssel, Retries und Paging kostenlos."
+      },
+      "serverData": {
+        "area": "Serverteil",
+        "choice": "ASP.NET Core (.NET 10)",
+        "because": "Ein Host für API, Sicherheit, Protokolle und React-Dateien."
+      },
+      "types": {
+        "area": "API-Typen",
+        "choice": "OpenAPI → TypeScript",
+        "because": "Generierte Typen halten React und .NET ohne manuelles Mapping synchron."
+      },
+      "typography": {
+        "area": "Typografie",
+        "choice": "Selbst gehostetes Amalia",
+        "because": "Markentreue ohne Drittanbieter-Fontanfrage."
+      }
+    },
+    "accessibilityNote": "Barrierefreiheit lebt in der Basisschicht – Fokusring, AA-Paarungen, 44-px-Ziele – Bildschirme erben sie."
+  },
+  "flows": {
+    "zones": {
+      "browser": "Browser",
+      "server": "Server",
+      "service": "Datendienst"
+    },
+    "labels": {
+      "responsibleFor": "Zuständig für",
+      "handsOff": "Übergibt",
+      "inCode": "Im Code",
+      "stepsAriaLabel": "Schritte für {title}"
+    },
+    "read": {
+      "title": "Lesepfad – API-Demo",
+      "summary": "Der Bildschirm besitzt keine Daten; jeder Filter ist ein Anfrageparameter.",
+      "steps": {
+        "read-route": {
+          "label": "Routenkomponente",
+          "detail": "useQuery, geschlüsselt nach Seite, Suche, Segment und Szenario",
+          "responsibilities": [
+            "Hält Abfrageparameter als Zustand",
+            "Rendert Lade-, Leer-, Fehler- und Erfolgszustände",
+            "Keine Filterlogik – der Server entscheidet"
+          ],
+          "handsOff": "AccountQuery – Seite, Seitengröße, Suche, Segment, Status, Szenario"
+        },
+        "read-client": {
+          "label": "Typisierter Client",
+          "detail": "accounts-client.ts erstellt die URL und verengt das JSON",
+          "responsibilities": [
+            "Einziger Ort, der die Basis-URL kennt",
+            "Serialisiert die Abfrage, wirft bei Fehlschlag ein typisiertes Problem",
+            "Importiert den Vertrag statt Typen neu zu deklarieren"
+          ],
+          "handsOff": "Paged<Account> oder ein geworfenes ProblemDetails"
+        },
+        "read-handler": {
+          "label": ".NET-Endpunkt",
+          "detail": "GET /api/public/accounts filtert, paginiert und misst sich selbst",
+          "responsibilities": [
+            "Validiert die Abfrage vor Datenzugriff",
+            "Wendet Filter an, paginiert dann das Ergebnis",
+            "Gibt dieselbe Hülle wie der .NET-Controller zurück"
+          ],
+          "handsOff": "JSON: { items, page, pageSize, total, tookMs }",
+          "responsibility": "Neutrale .NET-Endpunktbeispiele und ihre Request-/Response-Modelle.",
+          "handoff": ".NET-Endpunkt"
+        },
+        "read-source": {
+          "label": "Datenquelle",
+          "detail": "Heute ein Seed-Datensatz; in Produktion EF Core hinter ASP.NET Core",
+          "responsibilities": [
+            "Liefert Zeilen nur in der Vertragsform",
+            "Wird transparent gegen den echten Dienst ausgetauscht",
+            "Geschäftsregeln leben hier, nie in einer Komponente"
+          ],
+          "handsOff": "Account[] in Vertragsform"
+        }
+      }
+    },
+    "write": {
+      "title": "Schreibpfad – Admin-Panel",
+      "summary": "Der Bildschirm besitzt seine Datensätze; jede Änderung ist eine Reducer-Aktion.",
+      "steps": {
+        "write-form": {
+          "label": "Formulardialog",
+          "detail": "Sammelt einen Entwurf und führt den gemeinsamen Validator aus",
+          "responsibilities": [
+            "Nur Präsentation und Feld-Feedback",
+            "Validiert mit dem gemeinsamen Validator",
+            "Gibt einen Entwurf weiter; ändert den Store nie selbst"
+          ],
+          "handsOff": "AccountDraft, bereits validiert"
+        },
+        "write-reducer": {
+          "label": "Verzeichnis-Reducer",
+          "detail": "Eine explizite Aktion pro Änderung: create, update, setStatus, delete",
+          "responsibilities": [
+            "Einziger Schreiber des Kontenzustands",
+            "Aktionen sind nach Absicht benannt, Audit oder API passt unverändert",
+            "Gibt abgeleitete Ansichten zurück; nie neu berechnet"
+          ],
+          "handsOff": "Nächstes Datensatzarray plus abgeleitete Zeilen und Kennzahlen"
+        },
+        "write-derived": {
+          "label": "Abgeleiteter Zustand",
+          "detail": "Filterung, Sortierung und Kennzahlen werden aus Datensätzen berechnet",
+          "responsibilities": [
+            "Gemerkte Selektoren machen Re-Renders günstig",
+            "Kennzahlen werden berechnet, nie gespeichert",
+            "Bezeichnungen und Töne stammen aus account-presentation.ts"
+          ],
+          "handsOff": "rows, metrics, activeFilterCount"
+        },
+        "write-swap": {
+          "label": "Übergabepunkt",
+          "detail": "Ersetzen Sie den Hook-Körper durch Serverfunktionen – keine Bildschirmänderungen",
+          "responsibilities": [
+            "Jede Aktion wird zu einer Serverfunktion oder einem Endpunkt",
+            "Der Rückgabetyp des Hooks bleibt identisch",
+            "Autorisierung und Audit gehören hierher, nie in die Komponente"
+          ],
+          "handsOff": "Persistierte Zeilen über den ASP.NET-Core-Dienst"
+        }
+      }
+    }
+  },
+  "setup": {
+    "title": "Ein frischer Klon einrichten",
+    "description": "Sieben Schritte, in dieser Reihenfolge. Alles andere kann warten.",
+    "steps": {
+      "install": {
+        "label": "Abhängigkeiten installieren und den Dev-Server starten."
+      },
+      "brandColours": {
+        "label": "Marken-Primitive ersetzen; semantische Ebene unberührt lassen."
+      },
+      "brandAssets": {
+        "label": "Schriftart und Logo-Varianten austauschen."
+      },
+      "wording": {
+        "label": "Englische Texte neu schreiben — sie sind die Quelle der Wahrheit."
+      },
+      "backend": {
+        "label": "Den HTTP-Client auf die echte API richten."
+      },
+      "removeDemos": {
+        "label": "Nicht benötigte Demo- und Katalogseiten löschen."
+      },
+      "verify": {
+        "label": "Lint, Tests und die Schlüsselprüfung vor dem ersten Commit ausführen."
+      }
+    }
+  },
+  "mobile": {
+    "title": "Mobil",
+    "description": "Jede Seite funktioniert bereits auf dem Telefon. Ein Track nur für eine echte App.",
+    "tracks": {
+      "responsive": {
+        "title": "Responsive Website",
+        "effort": "Enthalten",
+        "items": [
+          "Mobile-first Breakpoints auf jeder Seite",
+          "Tabellen scrollen statt zu quetschen",
+          "Bedienelemente sind mindestens 40px hoch",
+          "Neue UI bei 375px Breite prüfen"
+        ]
+      },
+      "pwa": {
+        "title": "Installierbare App (PWA)",
+        "effort": "Tage",
+        "items": [
+          "Web-Manifest mit Icons und Theme-Farbe",
+          "Service Worker für die Offline-Hülle",
+          "Safe-Area-Abstand und untere Tab-Leiste",
+          "Nutzt diesen Code fast vollständig weiter"
+        ]
+      },
+      "native": {
+        "title": "Native App",
+        "effort": "Wochen",
+        "items": [
+          "Tokens, Logik und Übersetzungspakete weiterverwenden",
+          "Komponenten auf native Primitive neu aufbauen",
+          "Expo Router ersetzt den Web-Router",
+          "Die API bleibt unverändert"
+        ]
+      }
+    }
+  },
+  "localization": {
+    "title": "Lokalisierung",
+    "description": "Wortwahl ist Runtime-Inhalt, veröffentlicht ohne Rebuild.",
+    "sourceBundlesLabel": "Quell-Bundles (geprüft)",
+    "activeReleaseBefore": "Aktives Release",
+    "activeReleaseAfter": ", geladen aus dem Umgebungsmanifest.",
+    "runtimeDeliveryLabel": "Laufzeitbereitstellung",
+    "calloutTitle": "Wortwahl hinzufügen oder ändern",
+    "calloutSteps": {
+      "0": "Text im Translation Management System bearbeiten und genehmigen.",
+      "1": "node scripts/localization/build-release.mjs ausführen, um zu validieren und zu veröffentlichen.",
+      "2": "Das Umgebungsmanifest auf die neue Release-ID verweisen."
+    }
+  },
+  "pipeline": {
+    "heading": "Request-Pipeline",
+    "description": "Ein Lesevorgang, Ende zu Ende. Vier Schritte, vier Dateien.",
+    "nodes": {
+      "screen": {
+        "title": "Seite",
+        "body": "Ruft einen Hook auf. Kennt keine URL."
+      },
+      "client": {
+        "title": "Typisierter Client",
+        "body": "Der einzige Ort mit einer URL."
+      },
+      "route": {
+        "title": ".NET endpoint",
+        "body": "Validiert die Anfrage und liefert die einheitliche Antwort."
+      },
+      "service": {
+        "title": "Externer Dienst",
+        "body": "Optional; Aufruf über einen konfigurierten HTTP-Client."
+      }
+    }
+  },
+  "systemMap": {
+    "heading": "Das gesamte System in drei Teilen",
+    "description": "Folgen Sie der Anfrage vom Bildschirm bis zu .NET. Jeder Teil hat eine klare Aufgabe.",
+    "parts": {
+      "browser": {
+        "title": "1. React-Oberfläche",
+        "body": "Seiten, Schaltflächen und Formulare laufen im Browser. React zeigt Daten an; Serverregeln und Geheimnisse gehören nicht hierher."
+      },
+      "host": {
+        "title": "2. .NET-Anwendungshost",
+        "body": "ASP.NET Core empfängt API-Aufrufe, verwaltet Cookies und Sitzungen, protokolliert Anfragen und liefert die gebaute React-Anwendung aus."
+      },
+      "external": {
+        "title": "3. Externe Dienste (optional)",
+        "body": "Ein konfigurierter HTTP-Client ist die einzige Stelle, an der .NET einen Bank- oder anderen Backend-Dienst aufruft."
+      }
+    },
+    "artifact": {
+      "title": "Was ist ein Artefakt?",
+      "body": "Das bereitstellbare Ergebnis von dotnet publish: die .NET-Anwendung und die kompilierten React-Dateien gemeinsam in einem Ordner."
+    }
+  },
+  "glossary": {
+    "react": {
+      "term": "React",
+      "meaning": "Der Teil, den Nutzer im Browser sehen und bedienen."
+    },
+    "dotnet": {
+      "term": ".NET / ASP.NET Core",
+      "meaning": "Der Serverteil für Sicherheit, Integration und API-Verhalten."
+    },
+    "api": {
+      "term": "API",
+      "meaning": "Ein dokumentierter Eingang, über den der Browser Daten vom Server anfordert."
+    },
+    "openapi": {
+      "term": "OpenAPI",
+      "meaning": "Eine maschinenlesbare API-Beschreibung zur Erzeugung passender TypeScript-Typen."
+    },
+    "artifact": {
+      "term": "Artefakt",
+      "meaning": "Ein getestetes Build-Ergebnis für Server oder Deployment-Pipeline."
+    },
+    "session": {
+      "term": "Cookie und Sitzung",
+      "meaning": "Damit erkennt der Server einen angemeldeten Browser sicher über mehrere Anfragen."
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "heading": "API-Demo",
+  "provenance": {
+    "title": "Woher diese Daten kommen",
+    "body": "Gelesen über den zentralen API-Client vom ASP.NET-Core-Konten-Endpunkt."
+  },
+  "table": {
+    "name": "Konto",
+    "iban": "IBAN",
+    "balance": "Saldo",
+    "segment": "Segment",
+    "status": "Status",
+    "updated": "Aktualisiert"
+  },
+  "results": "{total, plural, =0 {Keine Konten} one {# Konto} other {# Konten}} in {elapsedMs, number} ms",
+  "pagination": {
+    "page": "Seite {page} von {totalPages}",
+    "previous": "Vorherige Seite",
+    "next": "Nächste Seite"
+  },
+  "scenario": {
+    "label": "Szenario",
+    "ok": "Erfolg",
+    "slow": "Langsame Antwort",
+    "empty": "Leeres Ergebnis",
+    "error": "Serverfehler"
+  }
+}

@@ -1,0 +1,410 @@
+{
+  "nav": {
+    "sectionsLabel": "Musterbereiche",
+    "items": {
+      "hero": "Marken-Hero",
+      "statistics": "Statistikband",
+      "bento": "Bento-Baukasten",
+      "features": "Feature-Raster",
+      "corporate": "Corporate-Band",
+      "audit": "Prüfprotokoll",
+      "profile": "Mein Profil",
+      "releases": "Versionshinweise",
+      "empty": "Leerzustand",
+      "auth": "Auth & RBAC",
+      "notifications": "Benachrichtigungen",
+      "wizard": "Assistent",
+      "upload": "Datei-Upload",
+      "datagrid": "Datenraster"
+    }
+  },
+  "page": {
+    "eyebrow": "Muster",
+    "title": "Komposition statt Dekoration",
+    "description": "Muster sind die anerkannten Wege, Komponenten zu vollständigen Seitenabschnitten zu kombinieren. Sie sorgen dafür, dass zwei Teams, die zwei Produkte bauen, denselben Rhythmus, dieselbe Verwendung von Gelb und dieselbe Lesereihenfolge erreichen."
+  },
+  "groupFigures": {
+    "markets": "Märkte in Mittel- und Osteuropa",
+    "employees": "Mitarbeitende in der Gruppe",
+    "customers": "Betreute Kundinnen und Kunden",
+    "since": "Raiffeisen in Österreich seit"
+  },
+  "quarterlyFigures": {
+    "operatingIncome": "Betriebserträge",
+    "costIncomeRatio": "Cost-Income-Ratio",
+    "cet1Ratio": "CET1-Quote",
+    "newMandates": "Neue Firmenkundenmandate",
+    "vsQ3": "ggü. Q3"
+  },
+  "sections": {
+    "hero": {
+      "title": "Marken-Hero",
+      "description": "Der einzige Ort, an dem das Primärgelb eine große Fläche füllt. Die Display-Schrift ist Amalia Black mit engem Zeichenabstand; die primäre Aktion innerhalb eines gelben Panels wird zur schwarzen Outline, da Gelb auf Gelb keinen Kontrast bietet.",
+      "exampleTitle": "Gelber Hero",
+      "eyebrow": "Corporate & Investment Banking",
+      "display": "Machen Sie es möglich",
+      "body": "Eine Designsprache über siebzehn Märkte hinweg — damit ein Firmenkunde Raiffeisen erkennt, bevor er ein einziges Wort liest.",
+      "explore": "System entdecken",
+      "readGuidelines": "Richtlinien lesen",
+      "calloutTitle": "Dieses Muster nicht umkehren",
+      "calloutBody": "Ein gelbes Panel ist eine Aussage, kein Behälter für dichte Inhalte. Tabellen, Formulare und lange Fließtexte gehören auf die Standard- oder dezente Fläche, wo Textkontrast und Lesekomfort am höchsten sind."
+    },
+    "statistics": {
+      "title": "Statistikband",
+      "description": "Zahlen in Amalia Black mit tabellarischen Ziffern auf der Umkehrfläche, sodass sie als bewusste Pause zwischen helleren Abschnitten wirken.",
+      "inverseTitle": "Statistikband auf Umkehrfläche",
+      "groupFiguresLabel": "Konzernkennzahlen",
+      "cardTitle": "Kartenstatistiken auf heller Fläche",
+      "quarterlyLabel": "Quartalsergebnisse"
+    },
+    "bento": {
+      "title": "Bento-Baukasten",
+      "description": "Stellen Sie ein Bento-Layout manuell zusammen und kopieren Sie anschließend das JSX. Der Baukasten schreibt dieselben BentoGrid- und BentoCard-Komponenten, die die Bibliothek liefert, sodass das Eingefügte produktionsreifer Code ist und kein Screenshot zum Nachbauen."
+    },
+    "features": {
+      "title": "Feature-Raster",
+      "description": "Drei oder vier Karten, jede mit einer führenden gelben Linie statt einer Illustration. Kartentitel sind h3 unter der Abschnitts-h2, wodurch die Gliederung intakt bleibt.",
+      "exampleTitle": "Feature-Karten",
+      "tokenDrivenTitle": "Token-gesteuert",
+      "tokenDrivenBody": "Farbe, Typografie, Abstände und Bewegung lösen sich alle in Tokens auf, die aus der offiziellen Palette übertragen wurden. Ein Rebranding einer Fläche ist eine Token-Änderung, keine Komponentenneuschreibung.",
+      "accessibleTitle": "Von Grund auf barrierefrei",
+      "accessibleBody": "Kontrastpaare, ein nie entfernter Fokusring, 44-px-Ziele und dokumentiertes Tastaturverhalten sind in die Grundbausteine eingebaut, nicht nachträglich ergänzt.",
+      "fullStackTitle": "Vollständiger Stack",
+      "fullStackBody": "Derselbe Vertrag läuft durch eine typisierte API, sodass ein Formularfeld und seine serverseitige Validierungsregel nicht auseinanderdriften können."
+    },
+    "corporate": {
+      "title": "Corporate-Band",
+      "description": "Corporate-Grün ist der anerkannte Akzent für ESG-, Nachhaltigkeits- und Unternehmensverantwortungsinhalte. Es steht neben Gelb — niemals an dessen Stelle.",
+      "exampleTitle": "Grünes ESG-Band",
+      "badge": "Nachhaltigkeit",
+      "heading": "Den Übergang finanzieren, Markt für Markt",
+      "body": "Grün erscheint dort, wo der Inhalt tatsächlich von Nachhaltigkeit handelt. Eine dekorative Verwendung verwässert das Signal und erschwert es einem Kunden mit der Zeit, die Aussage zu glauben.",
+      "transitionTitle": "Transformationsfinanzierung",
+      "transitionBody": "Grüne Anleihen und nachhaltigkeitsgebundene Kredite.",
+      "reportingTitle": "Geprüfte Berichterstattung",
+      "reportingBody": "Extern verifizierte Offenlegung gemäß CSRD."
+    },
+    "audit": {
+      "title": "Prüfprotokoll",
+      "description": "Jede Anwendung mit Berechtigungen benötigt eines: ein unveränderliches Protokoll, wer was geändert hat, filterbar und exportierbar, wobei das Ergebnis durch ein beschriftetes Badge und nicht allein durch Farbe vermittelt wird.",
+      "exampleTitle": "Prüfprotokoll-Bildschirm"
+    },
+    "profile": {
+      "title": "Mein Profil",
+      "description": "Identität links, Fakten in der Mitte, Schalter, die der Nutzer tatsächlich selbst kontrolliert, unten. Von der Organisation kontrollierte Felder sind als schreibgeschützt gekennzeichnet, statt stillschweigend deaktiviert zu werden.",
+      "exampleTitle": "Profilbildschirm"
+    },
+    "releases": {
+      "title": "Versionshinweise",
+      "description": "Ein datiertes Änderungsprotokoll, in dem jede Zeile angibt, um welche Art von Änderung es sich handelte. Die neueste Version steht auf der dezenten Fläche, damit die aktuelle Version auf einen Blick erkennbar ist.",
+      "exampleTitle": "Änderungsprotokoll"
+    },
+    "empty": {
+      "title": "Leerzustand",
+      "description": "Ein Leerzustand benennt, was fehlt, erklärt warum und bietet genau einen Weg nach vorn. Er ist weder eine Entschuldigung noch eine Sackgasse.",
+      "exampleTitle": "Keine Ergebnisse",
+      "heading": "Keine ausstehenden Freigaben",
+      "body": "Alles, was Ihnen zugewiesen wurde, wurde autorisiert. Neue Anweisungen erscheinen hier, sobald eine Kollegin oder ein Kollege sie einreicht.",
+      "action": "Abgewickelte Zahlungen ansehen"
+    },
+    "auth": {
+      "title": "Auth & RBAC",
+      "description": "Anmeldung, Passwort-Wiederherstellung, eine 403-Grenze und ein Rollenschutz, der genau zeigt, was jede Rolle darf.",
+      "signInTitle": "Anmeldebildschirm",
+      "forgotTitle": "Passwort vergessen",
+      "forbiddenTitle": "403 – Zugriff verweigert",
+      "roleGuardTitle": "Rollenschutz"
+    },
+    "notifications": {
+      "title": "Benachrichtigungen",
+      "description": "Vorübergehende Toasts für einmalige Ereignisse und ein dauerhaftes Panel für alles, was ein Nutzer verpasst haben könnte.",
+      "toastTitle": "Toast-Auslöser",
+      "panelTitle": "Benachrichtigungspanel"
+    },
+    "wizard": {
+      "title": "Assistent",
+      "description": "Ein mehrstufiges Formular mit einem Prüfschritt vor der Übermittlung, validiert nach demselben Muster wie jedes RBI-Formular.",
+      "exampleTitle": "Onboarding-Assistent"
+    },
+    "upload": {
+      "title": "Datei-Upload",
+      "description": "Eine Ablagezone mit Fortschrittsanzeige je Datei und Inline-Fehlern — keine Anfrage verlässt jemals den Browser.",
+      "exampleTitle": "Dokumenten-Upload"
+    },
+    "datagrid": {
+      "title": "Datenraster",
+      "description": "Serverseitiges Blättern, Sortieren und Suchen über dieselbe typisierte Konten-API, die auch die API-Demo verwendet.",
+      "exampleTitle": "Konten-Raster"
+    }
+  },
+  "auditPattern": {
+    "searchAriaLabel": "Prüfprotokoll durchsuchen",
+    "searchPlaceholder": "Akteur, Aktion oder Ziel suchen",
+    "export": "Exportieren",
+    "when": "Zeitpunkt",
+    "actor": "Akteur",
+    "action": "Aktion",
+    "target": "Ziel",
+    "outcome": "Ergebnis",
+    "sourceIp": "Quell-IP",
+    "appendOnlyNote": "Einträge sind unveränderlich — ein Prüfprotokoll bietet niemals eine Bearbeitungs- oder Löschfunktion.",
+    "filters": {
+      "all": "Gesamte Aktivität",
+      "signIns": "Anmeldungen",
+      "permissionChanges": "Berechtigungsänderungen",
+      "dataExports": "Datenexporte"
+    },
+    "outcomes": {
+      "success": "Abgeschlossen",
+      "warning": "Prüfung erforderlich",
+      "danger": "Blockiert"
+    },
+    "entries": {
+      "e1": {
+        "action": "Kontolimit geändert",
+        "target": "AT-4471-0092"
+      },
+      "e2": {
+        "action": "Sammelexport angefordert",
+        "target": "1.204 Konten"
+      },
+      "e3": {
+        "action": "Anmeldeversuch",
+        "target": "Admin-Konsole"
+      },
+      "e4": {
+        "action": "Rolle zugewiesen",
+        "target": "Prüferin/Prüfer · Region CEE"
+      },
+      "e5": {
+        "action": "Konto geschlossen",
+        "target": "HR-1180-6641"
+      }
+    }
+  },
+  "profilePattern": {
+    "verifiedAccount": "Verifiziertes Konzernkonto",
+    "changePhoto": "Foto ändern",
+    "details": "Details",
+    "saveChanges": "Änderungen speichern",
+    "securityAndNotifications": "Sicherheit und Benachrichtigungen",
+    "readOnly": "Schreibgeschützt",
+    "identity": {
+      "role": "Leiterin Design-Systeme",
+      "unit": "Group Digital · Wien"
+    },
+    "fields": {
+      "displayName": "Anzeigename",
+      "workEmail": "Geschäftliche E-Mail",
+      "employeeId": "Mitarbeiter-ID",
+      "interfaceLanguage": "Oberflächensprache",
+      "interfaceLanguageValue": "Deutsch (DE)",
+      "timeZone": "Zeitzone",
+      "lastSignIn": "Letzte Anmeldung"
+    },
+    "toggles": {
+      "twoFactor": {
+        "label": "Zwei-Faktor-Authentifizierung",
+        "description": "Für jedes Konto mit administrativen Rechten erforderlich."
+      },
+      "approvalEmails": {
+        "label": "Freigabe-E-Mails",
+        "description": "Eine Nachricht, sobald eine Anweisung auf Ihre Autorisierung wartet."
+      },
+      "weeklyDigest": {
+        "label": "Wöchentliche Zusammenfassung",
+        "description": "Eine Übersicht der Aktivitäten in den Märkten, die Sie verfolgen."
+      }
+    }
+  },
+  "releaseNotesPattern": {
+    "current": "Aktuell",
+    "kinds": {
+      "added": "Neu",
+      "changed": "Geändert",
+      "fixed": "Behoben"
+    },
+    "releases": {
+      "v240": {
+        "headline": "Muster für Anwendungsseiten",
+        "changes": {
+          "c1": "Muster für Prüfprotokoll, Profil und Versionshinweise.",
+          "c2": "Farbmuster innerhalb jeder Option des Kontrast-Checkers.",
+          "c3": "Die Kopfzeilennavigation wechselt früher in die Schublade, sodass nichts mehr überlappt."
+        }
+      },
+      "v230": {
+        "headline": "Lokalisierungs-Codebücher",
+        "changes": {
+          "c1": "Locale-Codebuch sowie geprüfte Wert-Codebücher für EN, DE und HR.",
+          "c2": "Jeder Shell-Text löst sich nun über einen Nachrichtenschlüssel auf.",
+          "c3": "Deterministische Zahlen- und Datumsformatierung, wodurch ein Hydration-Mismatch entfällt."
+        }
+      },
+      "v220": {
+        "headline": "Bento-Baukasten und Kontrast-Werkzeug",
+        "changes": {
+          "c1": "Bento-Layout-Baukasten mit kopierbarem JSX.",
+          "c2": "WCAG-2.2-Kontrast-Checker über die Markenpalette.",
+          "c3": "Steuerelementhöhen bei 40 px über Filter und Schaltflächen hinweg vereinheitlicht."
+        }
+      }
+    }
+  },
+  "authPattern": {
+    "signIn": {
+      "brandEyebrow": "RBI-Konzernportal",
+      "brandHeadline": "Eine Anmeldung für jeden Markt",
+      "brandBody": "Derselbe Anmeldedatensatz erreicht Firmenkundengeschäft, Treasury und Reporting-Tools in allen siebzehn Märkten.",
+      "title": "Anmelden",
+      "subtitle": "Verwenden Sie Ihre geschäftliche E-Mail-Adresse und Ihr Passwort.",
+      "emailLabel": "Geschäftliche E-Mail",
+      "passwordLabel": "Passwort",
+      "forgotLink": "Passwort vergessen?",
+      "submit": "Anmelden"
+    },
+    "forgotPassword": {
+      "title": "Passwort zurücksetzen",
+      "subtitle": "Geben Sie Ihre geschäftliche E-Mail-Adresse ein, und wir senden Ihnen einen Link zum Zurücksetzen.",
+      "emailLabel": "Geschäftliche E-Mail",
+      "submit": "Link zum Zurücksetzen senden",
+      "note": "Falls ein Konto für diese Adresse besteht, geht Ihnen innerhalb weniger Minuten ein Link zu."
+    },
+    "forbidden": {
+      "code": "Fehler 403",
+      "title": "Sie haben keinen Zugriff auf diese Seite",
+      "body": "Ihre aktuelle Rolle umfasst diese Berechtigung nicht. Bitten Sie eine Administratorin oder einen Administrator, sie zu erteilen, oder kehren Sie zur vorherigen Seite zurück.",
+      "requestAccess": "Zugriff anfordern",
+      "goBack": "Zurück"
+    },
+    "roleGuard": {
+      "switcherLabel": "Rolle in Vorschau",
+      "previewTitle": "Was diese Rolle sieht",
+      "roles": {
+        "viewer": "Betrachter",
+        "editor": "Bearbeiter",
+        "admin": "Administrator"
+      },
+      "previews": {
+        "viewer": "Nur-Lese-Zugriff: kann Konten und Berichte einsehen, mehr nicht.",
+        "editor": "Kann Datensätze bearbeiten und Berichte exportieren, aber keine anderen Nutzer verwalten.",
+        "admin": "Voller Zugriff: verwaltet Nutzer, Rollen und sämtliche Bearbeiterrechte."
+      },
+      "capability": "Berechtigung",
+      "capabilities": {
+        "viewAccounts": "Konten einsehen",
+        "exportReports": "Berichte exportieren",
+        "editRecords": "Datensätze bearbeiten",
+        "manageUsers": "Nutzer verwalten",
+        "changeRoles": "Rollen ändern"
+      },
+      "granted": "Erteilt",
+      "notGranted": "Nicht erteilt",
+      "currentRoleBadge": "Vorschau als {{role}}"
+    }
+  },
+  "notificationsPattern": {
+    "toasts": {
+      "info": {
+        "trigger": "Info-Toast anzeigen",
+        "title": "Neue Marktdaten verfügbar",
+        "body": "Die Quartalszahlen für CEE wurden soeben veröffentlicht."
+      },
+      "success": {
+        "trigger": "Erfolgs-Toast anzeigen",
+        "title": "Zahlung genehmigt",
+        "body": "Die Anweisung PMT-88214 wurde autorisiert."
+      },
+      "warning": {
+        "trigger": "Warn-Toast anzeigen",
+        "title": "Sitzung läuft bald ab",
+        "body": "Sie werden in 5 Minuten abgemeldet."
+      },
+      "danger": {
+        "trigger": "Fehler-Toast anzeigen",
+        "title": "Upload fehlgeschlagen",
+        "body": "Die Datei hat das 10-MB-Limit überschritten."
+      }
+    },
+    "panel": {
+      "title": "Benachrichtigungen",
+      "markAllRead": "Alle als gelesen markieren",
+      "markRead": "Als gelesen markieren"
+    },
+    "severities": {
+      "info": "Info",
+      "success": "Erfolg",
+      "warning": "Warnung",
+      "danger": "Kritisch"
+    },
+    "entries": {
+      "n1": {
+        "title": "Genehmigung ausstehend",
+        "body": "Eine Zahlungsanweisung wartet seit mehr als 24 Stunden auf Ihre Freigabe."
+      },
+      "n2": {
+        "title": "Export bereit",
+        "body": "Ihr angeforderter Kontenexport ist abgeschlossen und zum Download bereit."
+      },
+      "n3": {
+        "title": "Neues Teammitglied",
+        "body": "M. Novak wurde dem Arbeitsbereich Corporate Banking hinzugefügt."
+      },
+      "n4": {
+        "title": "Anmeldung blockiert",
+        "body": "Ein Anmeldeversuch von einem unbekannten Gerät wurde blockiert."
+      }
+    }
+  },
+  "wizardPattern": {
+    "steps": {
+      "company": {
+        "label": "Unternehmen"
+      },
+      "contact": {
+        "label": "Kontakt"
+      },
+      "billing": {
+        "label": "Abrechnung"
+      },
+      "review": {
+        "label": "Prüfung"
+      }
+    },
+    "fields": {
+      "companyName": "Firmenname",
+      "segment": "Segment",
+      "segmentPlaceholder": "Segment auswählen",
+      "contactName": "Name der Kontaktperson",
+      "contactEmail": "E-Mail der Kontaktperson",
+      "iban": "IBAN",
+      "currency": "Währung"
+    },
+    "errors": {
+      "required": "Dieses Feld ist erforderlich.",
+      "email": "Geben Sie eine gültige E-Mail-Adresse ein."
+    },
+    "back": "Zurück",
+    "next": "Weiter",
+    "submit": "Absenden"
+  },
+  "uploadPattern": {
+    "dropzoneTitle": "Dateien hierher ziehen oder klicken, um sie auszuwählen",
+    "dropzoneHint": "Akzeptiert {{types}} bis zu {{size}} pro Datei.",
+    "uploaded": "Hochgeladen",
+    "errors": {
+      "tooLarge": "Die Datei überschreitet das 10-MB-Limit.",
+      "unsupportedType": "Dieser Dateityp wird nicht akzeptiert."
+    }
+  },
+  "dataGridPattern": {
+    "searchPlaceholder": "Konten suchen",
+    "table": {
+      "name": "Name",
+      "segment": "Segment",
+      "status": "Status",
+      "balance": "Saldo"
+    },
+    "pageOf": "Seite {{page}} von {{totalPages}}"
+  }
+}

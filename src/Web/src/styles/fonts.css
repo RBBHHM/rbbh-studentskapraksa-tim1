@@ -1,0 +1,71 @@
+/*
+ * Amalia — the single official Raiffeisen Bank International typeface.
+ *
+ * Files are the customer-supplied Amalia TTFs, converted to WOFF2 (lossless
+ * glyph data, ~65% smaller) and served from the project asset CDN with
+ * immutable long-lived caching.
+ *
+ * Generated from the official font files. Weight mapping follows the RBI
+ * naming: Thin 100, Light 300, Regular 400, Medium 500, Bold 700, Black 900,
+ * Italic 400 italic.
+ *
+ * font-display: swap keeps text readable during font load. Only Regular and
+ * Bold are preloaded (see src/routes/__root.tsx); the remaining weights load
+ * normally on demand.
+ */
+
+@font-face {
+  font-family: "Amalia";
+  src: url("/assets/fonts/Amalia-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Amalia";
+  src: url("/assets/fonts/Amalia-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Amalia";
+  src: url("/assets/fonts/Amalia-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Amalia";
+  src: url("/assets/fonts/Amalia-Light.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Amalia";
+  src: url("/assets/fonts/Amalia-Black.woff2") format("woff2");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Amalia";
+  src: url("/assets/fonts/Amalia-Thin.woff2") format("woff2");
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Amalia";
+  src: url("/assets/fonts/Amalia-Italic.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}

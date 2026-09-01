@@ -1,0 +1,12 @@
+{
+  "GENERIC": "Došlo je do greške. Pokušajte ponovo.",
+  "COUNTRY_PROVIDER_UNAVAILABLE": "Lista država trenutno nije dostupna.",
+  "ACCOUNT_PROVIDER_UNAVAILABLE": "Podaci o računima trenutno nisu dostupni.",
+  "ACCOUNT_NOT_FOUND": "Ovaj račun više ne postoji.",
+  "VALIDATION_FAILED": "Provjerite označena polja i pokušajte ponovo.",
+  "UNAUTHORIZED": "Prijavite se da nastavite.",
+  "FORBIDDEN": "Nemate pristup ovom sadržaju.",
+  "RATE_LIMITED": "Previše zahtjeva. Sačekajte trenutak.",
+  "REQUEST_TIMEOUT": "Zahtjev je trajao predugo. Pokušajte ponovo.",
+  "INTERNAL_ERROR": "Servis trenutno nije dostupan."
+}

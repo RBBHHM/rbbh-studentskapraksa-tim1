@@ -1,0 +1,26 @@
+{
+  "localization": {
+    "title": "Lokalizacija",
+    "lead": "Tekst je sadržaj u izvođenju, a ne rezultat builda. Izdanje se objavi u pohranu i aplikacija ga preuzme bez novog deploya.",
+    "manifestHeading": "Manifest",
+    "manifestBody": "Aplikacija čita jedan manifest po okruženju. On imenuje aktivno izdanje, jezike i lanac rezervnih jezika.",
+    "releaseHeading": "Nepromjenjiva izdanja",
+    "releaseBody": "Putanje paketa sadrže ID izdanja, pa se paket kešira trajno, a vraćanje na prethodno stanje je izmjena manifesta.",
+    "editHeading": "Uređivanje teksta",
+    "editBody": "Tekst se uređuje i odobrava u sistemu za upravljanje prijevodima, izvozi pipelineom i servira preko CDN-a.",
+    "formattingHeading": "Formatiranje",
+    "formattingBody": "Brojevi, datumi i valute koriste Intl s aktivnim jezikom. Množina i rod idu kroz ICU MessageFormat."
+  },
+  "demo": {
+    "heading": "Lokalizacija u praksi",
+    "localeLabel": "Aktivni jezik",
+    "releaseLabel": "Aktivno izdanje",
+    "pluralLabel": "Množina (ICU)",
+    "selectLabel": "Odabir (ICU)",
+    "numberLabel": "Broj",
+    "currencyLabel": "Valuta",
+    "dateLabel": "Datum",
+    "relativeLabel": "Relativno vrijeme",
+    "listLabel": "Lista"
+  }
+}

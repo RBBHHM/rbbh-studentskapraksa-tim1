@@ -1,0 +1,26 @@
+{
+  "localization": {
+    "title": "Localization",
+    "lead": "Wording is runtime content, not build output. A release is published to storage and picked up by the running app.",
+    "manifestHeading": "Manifest",
+    "manifestBody": "The app reads one manifest per environment. It names the active release, the locales and the fallback chain.",
+    "releaseHeading": "Immutable releases",
+    "releaseBody": "Bundle paths contain the release id, so a bundle is cached forever and a rollback is a manifest edit.",
+    "editHeading": "Editing wording",
+    "editBody": "Text is edited and approved in the translation management system, exported by pipeline, and served from the CDN.",
+    "formattingHeading": "Formatting",
+    "formattingBody": "Numbers, dates and currency use Intl with the active locale. Plurals and gender use ICU MessageFormat."
+  },
+  "demo": {
+    "heading": "Localization in action",
+    "localeLabel": "Active locale",
+    "releaseLabel": "Active release",
+    "pluralLabel": "Plural (ICU)",
+    "selectLabel": "Select (ICU)",
+    "numberLabel": "Number",
+    "currencyLabel": "Currency",
+    "dateLabel": "Date",
+    "relativeLabel": "Relative time",
+    "listLabel": "List"
+  }
+}

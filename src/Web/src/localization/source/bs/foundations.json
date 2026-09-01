@@ -1,0 +1,125 @@
+{
+  "nav": {
+    "label": "Sekcije temelja",
+    "items": {
+      "principles": "Principi",
+      "colour": "Boja",
+      "typography": "Tipografija",
+      "spacing": "Razmak i veličina",
+      "shape": "Oblik i elevacija",
+      "layout": "Raspored",
+      "motion": "Pokret",
+      "accessibility": "Pristupačnost"
+    }
+  },
+  "header": {
+    "eyebrow": "Temelji",
+    "title": "Sloj tokena",
+    "description": "Svaka vizuelna odluka u ovom sistemu svodi se na token. Primitivi sadrže zvanične vrijednosti brenda; semantički tokeni opisuju namjeru. Komponente uvijek koriste samo semantički sloj, što omogućava promjenu konteksta površine — svijetla, invertovana, brend, korporativna — bez ijedne varijante komponente."
+  },
+  "principles": {
+    "title": "Dva sloja, jedan smjer zavisnosti",
+    "description": "Primitivi se preuzimaju iz zvanične RGB palete RBI-a i nikada ih komponenta ne referencira direktno. Semantički tokeni ih aliasiraju pod nazivima zasnovanim na namjeni. Zavisnost uvijek teče primitiv → semantika → komponenta.",
+    "cards": {
+      "yellow": {
+        "title": "Žuta je potpis",
+        "body": "Primarna žuta je rezervisana za logotip, jedinu primarnu akciju i namjerne brend momente. Nikada ne postaje boja tijela teksta i nikada ne ispunjava cijelu stranicu iza gustog sadržaja."
+      },
+      "green": {
+        "title": "Zelena nosi korporativni glas",
+        "body": "Smjernice ističu korporativnu zelenu za međunarodni/korporativni segment. To je sekundarni akcenat za ESG i sadržaj o održivosti — nikada zamjena za žutu."
+      },
+      "structure": {
+        "title": "Struktura umjesto dekoracije",
+        "body": "Okviri, linije i velikodušan prostor nose hijerarhiju. Sjenke su rezervisane za stvarno lebdeće površine, a radijusi ostaju mali kako bi identitet djelovao precizno, a ne mekano."
+      }
+    }
+  },
+  "colour": {
+    "title": "Boja",
+    "description": "Vrijednosti su preuzete iz Colour_Palette.zip (RBI - RGB - Full Palette.ase). Uzorci ispod se generišu iz žive CSS prilagođene osobine, tako da ova stranica ne može odstupiti od implementacije.",
+    "callout": {
+      "title": "Kontrast je osobina para tokena, a ne same boje",
+      "body": "Primarna žuta je svijetla boja: koristi gotovo crn tekst, nikada bijeli. Svaki ovdje dokumentovani tekstualni token zadovoljava WCAG 2.2 AA u odnosu na površinu s kojom je uparen, a pristupačna zamjena za žuti tekst na bijeloj je --text-brand-accent (Žuta 700, 4,6:1)."
+    },
+    "paletteOverview": {
+      "title": "Pregled palete",
+      "description": "Cijela primitivna paleta na jednom mjestu."
+    },
+    "contrastChecker": {
+      "title": "Provjera kontrasta",
+      "description": "Odaberite bilo koje dvije boje iz zvanične palete i provjerite par prema WCAG 2.2 prije nego što stigne do komponente. Mogu se birati samo boje iz palete, jer par koji prolazi s bojom koja nam ne pripada nije rezultat."
+    }
+  },
+  "typography": {
+    "title": "Tipografija",
+    "description": "Amalia je korporativni font RBI-a, samostalno hostovan kao WOFF2 u šest debljina i kurzivima. Debljina obavlja posao: Black za display izjave, Bold za naslove, Medium za oznake korisničkog interfejsa, Regular za prozu.",
+    "weights": { "title": "Debljine", "sample": "Make it happen" },
+    "sizeScale": {
+      "title": "Skala veličina",
+      "description": "Modularna skala prilagođena gustim korporativnim ekranima na manjem kraju i uredničkoj sigurnosti na većem. Tekst tijela nikada ne pada ispod 16px."
+    },
+    "lineHeight": { "title": "Visina reda" },
+    "letterSpacing": {
+      "title": "Razmak slova",
+      "description": "Display tip je zbijen; male oznake velikim slovima su proširene kako bi ostale čitljive."
+    }
+  },
+  "spacing": {
+    "title": "Razmak i veličina",
+    "description": "Skala zasnovana na 4px s namjernim skokovima na velikom kraju radi ritma sekcije. Visine kontrola su postavljene tako da podrazumijevana vrijednost ispunjava WCAG 2.2 minimum od 24px sa rezervom.",
+    "spacingScale": { "title": "Skala razmaka" },
+    "controlAndIconSizes": { "title": "Veličine kontrola i ikona" }
+  },
+  "shape": {
+    "title": "Oblik i elevacija",
+    "description": "Mali radijusi čuvaju preciznost identiteta. Elevacija je tonirana gotovo crnom umjesto čisto crnom bojom, tako da sjenke ostaju tople i nikad ne djeluju sivo-plavo.",
+    "borderWidth": { "title": "Širina okvira" },
+    "radius": { "title": "Radijus" },
+    "elevation": { "title": "Elevacija" }
+  },
+  "layout": {
+    "title": "Raspored",
+    "description": "Mreža od 12 kolona sa razmakom od 24px i četiri širine sadržaja, tako da obrazac, stranica dokumentacije i gusta tabela dobijaju odgovarajuću mjeru.",
+    "breakpoints": { "title": "Prijelomne tačke" },
+    "contentWidths": { "title": "Širine sadržaja" },
+    "grid": { "title": "Mreža" },
+    "stackingOrder": {
+      "title": "Redoslijed slaganja",
+      "description": "Fiksna ljestvica z-indeksa. Ništa u sistemu ne koristi proizvoljnu vrijednost z-indeksa.",
+      "usageLabel": "Sloj"
+    }
+  },
+  "motion": {
+    "title": "Pokret",
+    "description": "Pokret je brz i svrsishodan: potvrđuje promjenu stanja umjesto da se ističe. Sve ispod je u potpunosti onemogućeno pod prefers-reduced-motion.",
+    "duration": { "title": "Trajanje" },
+    "easing": { "title": "Krivulja usporavanja" }
+  },
+  "accessibility": {
+    "title": "Temelji pristupačnosti",
+    "description": "Indikator fokusa je odluka na nivou sistema, a ne po komponenti. Definisan je jednom u baznom sloju, nikada se ne uklanja i prelazi u žutu na invertovanim površinama kako bi ostao vidljiv.",
+    "usageLabel": "Odnosi se na",
+    "callout": {
+      "title": "Šta tokeni garantuju — a šta ne",
+      "body": "Tokeni čine ispravan kontrast podrazumijevanim, ali ne mogu garantovati pristupačan proizvod. Semantika, redoslijed fokusa, imena i uloge i dalje moraju biti ispravni u svakoj komponenti — zato svaka komponenta na stranici Komponente dokumentuje svoje ponašanje tastature i čitača ekrana."
+    }
+  },
+  "contrastChecker": {
+    "foregroundLabel": "Tekst ili ikona",
+    "backgroundLabel": "Pozadina",
+    "swap": "Zamijeni",
+    "sampleHeading": "Make it happen",
+    "sampleBody": "Tekst tijela na 14px na ovom paru, kako bi se ocjena ispod mogla ocijeniti prema nečemu stvarnom.",
+    "onLabel": "{foreground} na {background}",
+    "usableEverywhere": "Upotrebljivo svuda",
+    "restrictedUse": "Ograničena upotreba",
+    "passSummary": "Ovaj par prolazi svaki AA prag, uključujući mali tekst tijela.",
+    "failSummary": "Ovaj par ne ispunjava barem jedan AA prag. Provjerite redove ispod za slučajeve gdje se ipak može koristiti.",
+    "verdicts": { "aaa": "AAA", "aa": "AA", "fail": "Nije prošao" },
+    "liveRegion": "{foreground} na {background} je {result}, {status} AA za tekst tijela.",
+    "passing": "prolazi",
+    "failing": "ne prolazi",
+    "unknownColor": "—"
+  }
+}

@@ -1,0 +1,410 @@
+{
+  "nav": {
+    "sectionsLabel": "Sekcije obrazaca",
+    "items": {
+      "hero": "Brendirani hero",
+      "statistics": "Statistička traka",
+      "bento": "Bento graditelj",
+      "features": "Mreža funkcija",
+      "corporate": "Korporativna traka",
+      "audit": "Revizijski dnevnik",
+      "profile": "Moj profil",
+      "releases": "Napomene o izdanjima",
+      "empty": "Prazno stanje",
+      "auth": "Autentifikacija i RBAC",
+      "notifications": "Obavještenja",
+      "wizard": "Čarobnjak",
+      "upload": "Otpremanje datoteka",
+      "datagrid": "Tabela podataka"
+    }
+  },
+  "page": {
+    "eyebrow": "Obrasci",
+    "title": "Kompozicija, ne dekoracija",
+    "description": "Obrasci su odobreni načini kombinovanja komponenti u potpune sekcije stranice. Postoje kako bi dva tima koja grade dva proizvoda došla do istog ritma, iste upotrebe žute boje i istog redoslijeda čitanja."
+  },
+  "groupFigures": {
+    "markets": "Tržišta u centralnoj i istočnoj Evropi",
+    "employees": "Zaposlenici u okviru grupacije",
+    "customers": "Klijenti kojima se pruža usluga",
+    "since": "Raiffeisen u Austriji od"
+  },
+  "quarterlyFigures": {
+    "operatingIncome": "Operativni prihod",
+    "costIncomeRatio": "Odnos troškova i prihoda",
+    "cet1Ratio": "CET1 stopa",
+    "newMandates": "Novi korporativni mandati",
+    "vsQ3": "u odnosu na Q3"
+  },
+  "sections": {
+    "hero": {
+      "title": "Brendirani hero",
+      "description": "Jedino mjesto gdje primarna žuta boja ispunjava veliku površinu. Display tipografija je Amalia Black sa uskim proredom slova; primarna akcija unutar žutog panela postaje crna kontura, jer žuto na žutom nema kontrast.",
+      "exampleTitle": "Žuti hero",
+      "eyebrow": "Korporativno i investiciono bankarstvo",
+      "display": "Ostvarite to",
+      "body": "Jedan dizajnerski jezik u sedamnaest tržišta — kako bi korporativni klijent prepoznao Raiffeisen prije nego pročita ijednu riječ.",
+      "explore": "Istražite sistem",
+      "readGuidelines": "Pročitajte smjernice",
+      "calloutTitle": "Ne obrćite ovaj obrazac",
+      "calloutBody": "Žuti panel je izjava, a ne spremnik za gust sadržaj. Tabele, obrasci i dugi tekstovi pripadaju na standardnu ili suptilnu površinu, gdje su kontrast teksta i udobnost čitanja najveći."
+    },
+    "statistics": {
+      "title": "Statistička traka",
+      "description": "Brojke ispisane fontom Amalia Black sa tabelarnim ciframa, na inverznoj površini, tako da djeluju kao namjerna pauza između svjetlijih sekcija.",
+      "inverseTitle": "Inverzna statistička traka",
+      "groupFiguresLabel": "Grupni pokazatelji",
+      "cardTitle": "Statistika u karticama na svijetloj površini",
+      "quarterlyLabel": "Kvartalni rezultati"
+    },
+    "bento": {
+      "title": "Bento graditelj",
+      "description": "Sastavite bento raspored ručno, a zatim kopirajte JSX. Graditelj piše iste BentoGrid i BentoCard komponente koje sadrži biblioteka, tako da je ono što zalijepite proizvodni kod, a ne snimak ekrana za ponovnu izgradnju."
+    },
+    "features": {
+      "title": "Mreža funkcija",
+      "description": "Tri ili četiri kartice, svaka sa vodećom žutom linijom umjesto ilustracije. Naslovi kartica su h3 ispod h2 sekcije, čime se čuva struktura dokumenta.",
+      "exampleTitle": "Kartice funkcija",
+      "tokenDrivenTitle": "Vođeno tokenima",
+      "tokenDrivenBody": "Boja, tipografija, razmak i animacija sve se razrješavaju u tokene prepisane iz zvanične palete. Rebrendiranje površine je promjena tokena, a ne prepravka komponente.",
+      "accessibleTitle": "Pristupačno po podrazumijevanim postavkama",
+      "accessibleBody": "Kontrastni parovi, prsten fokusa koji se nikad ne uklanja, ciljevi od 44 px i dokumentovano ponašanje tastature ugrađeni su u osnovne elemente, a ne naknadno dodani.",
+      "fullStackTitle": "Puni stack",
+      "fullStackBody": "Isti ugovor prolazi kroz tipizirani API, tako da polje obrasca i njegovo pravilo validacije na serveru ne mogu odstupiti jedno od drugog."
+    },
+    "corporate": {
+      "title": "Korporativna traka",
+      "description": "Korporativna zelena je odobreni akcent za ESG, održivost i sadržaj o korporativnoj odgovornosti. Stoji uz žutu — nikada umjesto nje.",
+      "exampleTitle": "Zelena ESG traka",
+      "badge": "Održivost",
+      "heading": "Finansiranje tranzicije, tržište po tržište",
+      "body": "Zelena boja se pojavljuje tamo gdje se sadržaj zaista odnosi na održivost. Njena dekorativna upotreba razvodnjava poruku i vremenom klijentu otežava da povjeruje u tu tvrdnju.",
+      "transitionTitle": "Finansiranje tranzicije",
+      "transitionBody": "Zelene obveznice i krediti povezani sa održivošću.",
+      "reportingTitle": "Provjereno izvještavanje",
+      "reportingBody": "Eksterno verifikovano objavljivanje u skladu sa CSRD."
+    },
+    "audit": {
+      "title": "Revizijski dnevnik",
+      "description": "Svaka aplikacija sa ovlaštenjima treba ga imati: nepromjenjiv zapis o tome ko je šta promijenio, sa mogućnošću filtriranja i izvoza, gdje se ishod prenosi putem označene oznake, a ne samo boje.",
+      "exampleTitle": "Ekran revizijskog dnevnika"
+    },
+    "profile": {
+      "title": "Moj profil",
+      "description": "Identitet lijevo, činjenice u sredini, prekidači koje korisnik zaista posjeduje pri dnu. Polja koja kontroliše organizacija označena su kao samo za čitanje umjesto da budu tiho onemogućena.",
+      "exampleTitle": "Ekran profila"
+    },
+    "releases": {
+      "title": "Napomene o izdanjima",
+      "description": "Datiran spisak promjena u kojem svaki red navodi vrstu promjene. Najnovija verzija nalazi se na suptilnoj površini, tako da je trenutno izdanje odmah uočljivo.",
+      "exampleTitle": "Spisak promjena"
+    },
+    "empty": {
+      "title": "Prazno stanje",
+      "description": "Prazno stanje imenuje šta nedostaje, objašnjava zašto i nudi tačno jedan put naprijed. Nije izvinjenje niti slijepa ulica.",
+      "exampleTitle": "Nema rezultata",
+      "heading": "Nema odobrenja na čekanju",
+      "body": "Sve što vam je dodijeljeno je odobreno. Nove instrukcije će se pojaviti ovdje čim ih kolegica ili kolega podnese.",
+      "action": "Pogledaj izmirena plaćanja"
+    },
+    "auth": {
+      "title": "Autentifikacija i RBAC",
+      "description": "Prijava, oporavak lozinke, granica 403 i zaštita uloga koja tačno prikazuje šta svaka uloga može da radi.",
+      "signInTitle": "Ekran za prijavu",
+      "forgotTitle": "Zaboravljena lozinka",
+      "forbiddenTitle": "403 – zabranjen pristup",
+      "roleGuardTitle": "Zaštita uloga"
+    },
+    "notifications": {
+      "title": "Obavještenja",
+      "description": "Privremene obavijesti (toasts) za jednokratne događaje i trajni panel za sve što je korisnik možda propustio.",
+      "toastTitle": "Okidači obavijesti",
+      "panelTitle": "Panel obavještenja"
+    },
+    "wizard": {
+      "title": "Čarobnjak",
+      "description": "Višekoračni obrazac sa korakom provjere prije slanja, validiran na isti način kao svaki RBI obrazac.",
+      "exampleTitle": "Čarobnjak za onboarding"
+    },
+    "upload": {
+      "title": "Otpremanje datoteka",
+      "description": "Zona za otpremanje sa napretkom po svakoj datoteci i greškama u samom obrascu — nijedan zahtjev nikada ne napušta pretraživač.",
+      "exampleTitle": "Otpremanje dokumenata"
+    },
+    "datagrid": {
+      "title": "Tabela podataka",
+      "description": "Serversko straničenje, sortiranje i pretraga nad istim tipiziranim API-jem za račune koji koristi i API demo.",
+      "exampleTitle": "Tabela računa"
+    }
+  },
+  "auditPattern": {
+    "searchAriaLabel": "Pretraži revizijski dnevnik",
+    "searchPlaceholder": "Pretraži aktera, akciju ili cilj",
+    "export": "Izvezi",
+    "when": "Vrijeme",
+    "actor": "Akter",
+    "action": "Akcija",
+    "target": "Cilj",
+    "outcome": "Ishod",
+    "sourceIp": "Izvorna IP adresa",
+    "appendOnlyNote": "Zapisi se samo dodaju — ekran revizijskog dnevnika nikada ne nudi uređivanje ili brisanje.",
+    "filters": {
+      "all": "Sva aktivnost",
+      "signIns": "Prijave",
+      "permissionChanges": "Promjene ovlaštenja",
+      "dataExports": "Izvozi podataka"
+    },
+    "outcomes": {
+      "success": "Završeno",
+      "warning": "Potrebna provjera",
+      "danger": "Blokirano"
+    },
+    "entries": {
+      "e1": {
+        "action": "Promijenjen limit računa",
+        "target": "AT-4471-0092"
+      },
+      "e2": {
+        "action": "Zatražen skupni izvoz",
+        "target": "1.204 računa"
+      },
+      "e3": {
+        "action": "Pokušaj prijave",
+        "target": "Administratorska konzola"
+      },
+      "e4": {
+        "action": "Dodijeljena uloga",
+        "target": "revizor/ica · regija CIE"
+      },
+      "e5": {
+        "action": "Zatvoren račun",
+        "target": "HR-1180-6641"
+      }
+    }
+  },
+  "profilePattern": {
+    "verifiedAccount": "Verifikovan grupni nalog",
+    "changePhoto": "Promijeni fotografiju",
+    "details": "Detalji",
+    "saveChanges": "Sačuvaj izmjene",
+    "securityAndNotifications": "Sigurnost i obavještenja",
+    "readOnly": "Samo za čitanje",
+    "identity": {
+      "role": "Vodeća menadžerica za dizajn sisteme",
+      "unit": "Group Digital · Beč"
+    },
+    "fields": {
+      "displayName": "Prikazano ime",
+      "workEmail": "Poslovna e-pošta",
+      "employeeId": "ID zaposlenika",
+      "interfaceLanguage": "Jezik korisničkog interfejsa",
+      "interfaceLanguageValue": "Bosanski (BS)",
+      "timeZone": "Vremenska zona",
+      "lastSignIn": "Posljednja prijava"
+    },
+    "toggles": {
+      "twoFactor": {
+        "label": "Dvofaktorska autentifikacija",
+        "description": "Obavezna za svaki nalog sa administrativnim ovlaštenjima."
+      },
+      "approvalEmails": {
+        "label": "E-poruke o odobrenju",
+        "description": "Poruka svaki put kada instrukcija čeka vaše ovlaštenje."
+      },
+      "weeklyDigest": {
+        "label": "Sedmični pregled",
+        "description": "Jedan sažetak aktivnosti na tržištima koja pratite."
+      }
+    }
+  },
+  "releaseNotesPattern": {
+    "current": "Trenutno",
+    "kinds": {
+      "added": "Dodano",
+      "changed": "Izmijenjeno",
+      "fixed": "Ispravljeno"
+    },
+    "releases": {
+      "v240": {
+        "headline": "Obrasci stranica aplikacije",
+        "changes": {
+          "c1": "Obrasci revizijskog dnevnika, profila i napomena o izdanjima.",
+          "c2": "Uzorci boja unutar svake opcije provjere kontrasta.",
+          "c3": "Navigacija u zaglavlju ranije prelazi u fioku, tako da se ništa ne preklapa."
+        }
+      },
+      "v230": {
+        "headline": "Lokalizacijski kodeksi",
+        "changes": {
+          "c1": "Kodeks lokala uz pregledane kodekse vrijednosti za EN, DE i HR.",
+          "c2": "Svaki tekst u okviru aplikacije sada se razrješava putem ključa poruke.",
+          "c3": "Deterministično formatiranje brojeva i datuma, čime se uklanja neusklađenost pri hidraciji."
+        }
+      },
+      "v220": {
+        "headline": "Bento graditelj i alat za kontrast",
+        "changes": {
+          "c1": "Graditelj bento rasporeda sa JSX-om koji se može kopirati.",
+          "c2": "Provjera kontrasta prema WCAG 2.2 na brendiranoj paleti.",
+          "c3": "Visine kontrola usklađene na 40 px za filtere i dugmad."
+        }
+      }
+    }
+  },
+  "authPattern": {
+    "signIn": {
+      "brandEyebrow": "RBI grupni portal",
+      "brandHeadline": "Jedna prijava za svako tržište",
+      "brandBody": "Isti set vjerodajnica omogućava pristup korporativnom bankarstvu, trezoru i alatima za izvještavanje u svih sedamnaest tržišta.",
+      "title": "Prijava",
+      "subtitle": "Koristite svoju poslovnu e-poštu i lozinku.",
+      "emailLabel": "Poslovna e-pošta",
+      "passwordLabel": "Lozinka",
+      "forgotLink": "Zaboravili ste lozinku?",
+      "submit": "Prijavi se"
+    },
+    "forgotPassword": {
+      "title": "Resetujte lozinku",
+      "subtitle": "Unesite svoju poslovnu e-poštu i poslaćemo vam link za resetovanje.",
+      "emailLabel": "Poslovna e-pošta",
+      "submit": "Pošalji link za resetovanje",
+      "note": "Ako nalog postoji za tu adresu, link će stići u roku od nekoliko minuta."
+    },
+    "forbidden": {
+      "code": "Greška 403",
+      "title": "Nemate pristup ovoj stranici",
+      "body": "Vaša trenutna uloga ne obuhvata ovo ovlaštenje. Zatražite od administratora da vam ga dodijeli ili se vratite na prethodnu stranicu.",
+      "requestAccess": "Zatraži pristup",
+      "goBack": "Nazad"
+    },
+    "roleGuard": {
+      "switcherLabel": "Pregled uloge",
+      "previewTitle": "Šta ova uloga vidi",
+      "roles": {
+        "viewer": "Posmatrač",
+        "editor": "Urednik",
+        "admin": "Administrator"
+      },
+      "previews": {
+        "viewer": "Pristup samo za čitanje: može pregledati račune i izvještaje, ništa više.",
+        "editor": "Može uređivati zapise i izvoziti izvještaje, ali ne može upravljati drugim korisnicima.",
+        "admin": "Pun pristup: upravlja korisnicima, ulogama i svim ovlaštenjima urednika."
+      },
+      "capability": "Ovlaštenje",
+      "capabilities": {
+        "viewAccounts": "Pregled računa",
+        "exportReports": "Izvoz izvještaja",
+        "editRecords": "Uređivanje zapisa",
+        "manageUsers": "Upravljanje korisnicima",
+        "changeRoles": "Promjena uloga"
+      },
+      "granted": "Odobreno",
+      "notGranted": "Nije odobreno",
+      "currentRoleBadge": "Pregled kao {{role}}"
+    }
+  },
+  "notificationsPattern": {
+    "toasts": {
+      "info": {
+        "trigger": "Prikaži info obavijest",
+        "title": "Dostupni novi tržišni podaci",
+        "body": "Kvartalni pokazatelji za CIE upravo su objavljeni."
+      },
+      "success": {
+        "trigger": "Prikaži obavijest o uspjehu",
+        "title": "Plaćanje odobreno",
+        "body": "Instrukcija PMT-88214 je autorizovana."
+      },
+      "warning": {
+        "trigger": "Prikaži upozoravajuću obavijest",
+        "title": "Sesija uskoro ističe",
+        "body": "Bićete odjavljeni za 5 minuta."
+      },
+      "danger": {
+        "trigger": "Prikaži obavijest o grešci",
+        "title": "Otpremanje nije uspjelo",
+        "body": "Datoteka je premašila ograničenje od 10 MB."
+      }
+    },
+    "panel": {
+      "title": "Obavještenja",
+      "markAllRead": "Označi sve kao pročitano",
+      "markRead": "Označi kao pročitano"
+    },
+    "severities": {
+      "info": "Info",
+      "success": "Uspjeh",
+      "warning": "Upozorenje",
+      "danger": "Kritično"
+    },
+    "entries": {
+      "n1": {
+        "title": "Odobrenje na čekanju",
+        "body": "Instrukcija za plaćanje čeka na vaše odobrenje već više od 24 sata."
+      },
+      "n2": {
+        "title": "Izvoz spreman",
+        "body": "Vaš zatraženi izvoz računa je završen i spreman za preuzimanje."
+      },
+      "n3": {
+        "title": "Novi član tima",
+        "body": "M. Novak je dodan/a u radni prostor Korporativno bankarstvo."
+      },
+      "n4": {
+        "title": "Prijava blokirana",
+        "body": "Pokušaj prijave sa neprepoznatog uređaja je blokiran."
+      }
+    }
+  },
+  "wizardPattern": {
+    "steps": {
+      "company": {
+        "label": "Firma"
+      },
+      "contact": {
+        "label": "Kontakt"
+      },
+      "billing": {
+        "label": "Naplata"
+      },
+      "review": {
+        "label": "Pregled"
+      }
+    },
+    "fields": {
+      "companyName": "Naziv firme",
+      "segment": "Segment",
+      "segmentPlaceholder": "Odaberite segment",
+      "contactName": "Ime kontakt osobe",
+      "contactEmail": "E-pošta kontakt osobe",
+      "iban": "IBAN",
+      "currency": "Valuta"
+    },
+    "errors": {
+      "required": "Ovo polje je obavezno.",
+      "email": "Unesite ispravnu e-adresu."
+    },
+    "back": "Nazad",
+    "next": "Dalje",
+    "submit": "Pošalji"
+  },
+  "uploadPattern": {
+    "dropzoneTitle": "Prevucite datoteke ovdje ili kliknite za odabir",
+    "dropzoneHint": "Prihvata {{types}} do {{size}} po datoteci.",
+    "uploaded": "Otpremljeno",
+    "errors": {
+      "tooLarge": "Datoteka premašuje ograničenje od 10 MB.",
+      "unsupportedType": "Ovaj tip datoteke nije podržan."
+    }
+  },
+  "dataGridPattern": {
+    "searchPlaceholder": "Pretraži račune",
+    "table": {
+      "name": "Naziv",
+      "segment": "Segment",
+      "status": "Status",
+      "balance": "Stanje"
+    },
+    "pageOf": "Stranica {{page}} od {{totalPages}}"
+  }
+}

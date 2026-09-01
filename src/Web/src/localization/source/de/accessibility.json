@@ -1,0 +1,17 @@
+{
+  "landmarks": {
+    "mainContent": "Hauptinhalt",
+    "primaryNavigation": "Hauptnavigation",
+    "breadcrumb": "Brotkrümelnavigation"
+  },
+  "announcements": {
+    "loading": "Inhalt wird geladen",
+    "loaded": "Inhalt geladen",
+    "sortedBy": "Sortiert nach {column}, {direction, select, asc {aufsteigend} desc {absteigend} other {unsortiert}}"
+  },
+  "controls": {
+    "sortColumn": "Nach {column} sortieren",
+    "openDialog": "{name} öffnen",
+    "closeDialog": "{name} schließen"
+  }
+}

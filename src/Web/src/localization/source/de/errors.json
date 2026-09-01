@@ -1,0 +1,12 @@
+{
+  "GENERIC": "Etwas ist schiefgelaufen. Bitte erneut versuchen.",
+  "COUNTRY_PROVIDER_UNAVAILABLE": "Die Länderliste ist vorübergehend nicht verfügbar.",
+  "ACCOUNT_PROVIDER_UNAVAILABLE": "Kontodaten sind vorübergehend nicht verfügbar.",
+  "ACCOUNT_NOT_FOUND": "Dieses Konto existiert nicht mehr.",
+  "VALIDATION_FAILED": "Bitte die markierten Felder prüfen und erneut versuchen.",
+  "UNAUTHORIZED": "Bitte anmelden, um fortzufahren.",
+  "FORBIDDEN": "Sie haben keinen Zugriff auf diesen Inhalt.",
+  "RATE_LIMITED": "Zu viele Anfragen. Bitte kurz warten.",
+  "REQUEST_TIMEOUT": "Die Anfrage hat zu lange gedauert. Bitte erneut versuchen.",
+  "INTERNAL_ERROR": "Der Dienst ist derzeit nicht verfügbar."
+}

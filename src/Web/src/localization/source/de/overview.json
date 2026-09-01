@@ -1,0 +1,34 @@
+{
+  "hero": {
+    "eyebrow": "Raiffeisen Bank International",
+    "lead": "Ein Enterprise Design System auf der offiziellen RBI-Marke — echte Palette, Amalia, freigegebenes Logo, typisierte API.",
+    "exploreFoundations": "Grundlagen entdecken",
+    "browseComponents": "Komponenten durchsuchen"
+  },
+  "entryPoints": {
+    "heading": "Hier beginnen",
+    "open": "Öffnen",
+    "items": {
+      "foundations": {
+        "label": "Grundlagen",
+        "body": "Farb-, Typo-, Abstands-, Elevations- und Motion-Tokens, live gerendert."
+      },
+      "components": {
+        "label": "Komponenten",
+        "body": "Buttons, Formulare, Tabellen, Overlays — mit Quelle und Tastatur-Kontrakt."
+      },
+      "patterns": {
+        "label": "Muster",
+        "body": "Fertige Seitenabschnitte und die üblichen App-Seiten."
+      },
+      "applications": {
+        "label": "Anwendungen",
+        "body": "Admin-Panel mit CRUD und dieselben Daten über einen typisierten HTTP-Vertrag."
+      },
+      "architecture": {
+        "label": "Architektur",
+        "body": "Ebenen, Ordnerkarte, Request-Flow und die ASP.NET-Core-Nahtstelle."
+      }
+    }
+  }
+}

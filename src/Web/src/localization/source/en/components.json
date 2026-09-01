@@ -1,0 +1,405 @@
+{
+  "nav": {
+    "sectionsLabel": "Component sections",
+    "onThisPage": "On this page",
+    "items": {
+      "typography": "Typography",
+      "buttons": "Buttons",
+      "forms": "Form controls",
+      "feedback": "Feedback",
+      "data": "Data display",
+      "statistics": "Statistics",
+      "navigation": "Navigation",
+      "status": "Status & progress",
+      "disclosure": "Disclosure",
+      "overlays": "Overlays",
+      "surfaces": "Surface contexts"
+    }
+  },
+  "page": {
+    "eyebrow": "Components",
+    "title": "The component library",
+    "description": "Every example below is the live component, rendered from the same code that ships. Each entry documents its keyboard and screen reader contract, because a component that looks right but cannot be operated without a mouse is not finished."
+  },
+  "example": {
+    "showCode": "Show code",
+    "hideCode": "Hide code",
+    "copyAriaLabel": "Copy code to clipboard",
+    "codeCopied": "Code copied to clipboard"
+  },
+  "a11yNotes": {
+    "heading": "Keyboard and screen reader behaviour"
+  },
+  "sections": {
+    "typography": {
+      "title": "Typography",
+      "description": "Heading level and visual size are separate props. Choose the level for document structure, then the size for appearance — so an outline is never broken to satisfy a layout.",
+      "example": {
+        "title": "Display and headings"
+      },
+      "content": {
+        "eyebrow": "Corporate banking",
+        "display": "Make it happen",
+        "heading": "A level-2 heading rendered at visual size 3",
+        "lead": "Lead paragraphs use Amalia Light at 22px. The lighter weight at a larger size keeps an introduction distinct from body copy without resorting to colour.",
+        "body": "Body copy is Amalia Regular at 16px with a 1.6 line height. It never drops below 16px, and the measure is capped at 68 characters so long-form reading stays comfortable."
+      }
+    },
+    "buttons": {
+      "title": "Buttons",
+      "description": "There is exactly one primary action per view, and it is always yellow with off-black text. Secondary — the off-black outline — is the workhorse for everything else.",
+      "variants": {
+        "title": "Variants",
+        "primary": "Open account",
+        "secondary": "Save draft",
+        "tertiary": "Cancel",
+        "corporate": "Sustainability report",
+        "ghost": "Dismiss",
+        "destructive": "Delete",
+        "link": "Read the guidelines"
+      },
+      "sizes": {
+        "title": "Sizes, icons and state",
+        "description": "Icons are always decorative and paired with a text label, or the button carries an aria-label. The default 44px height meets the WCAG 2.2 target-size minimum.",
+        "continue": "Continue",
+        "export": "Export",
+        "filter": "Filter",
+        "searchAriaLabel": "Search",
+        "submitting": "Submitting",
+        "loadingLabel": "Submitting your application",
+        "unavailable": "Unavailable"
+      },
+      "a11y": {
+        "tab": "Moves focus to the button; a 2px off-black ring appears with a 2px offset.",
+        "space": "Activates the button. Native button semantics are preserved.",
+        "ariaBusy": "Set while loading. The control stays in the tab order and a visually hidden status describes the operation, so focus is never lost mid-submit."
+      }
+    },
+    "forms": {
+      "title": "Form controls",
+      "description": "Every control has a visible, programmatically associated label. Help text and error text are wired through aria-describedby, and errors are announced rather than only coloured.",
+      "a11y": {
+        "tab": "Moves between controls in DOM order, which matches visual order.",
+        "space": "Toggles a checkbox or switch; selects the focused radio option.",
+        "arrowKeys": "Moves between radio options and within an open select listbox.",
+        "ariaInvalid": "Set on a field that fails validation, with the message referenced by aria-describedby and rendered in a live region."
+      }
+    },
+    "feedback": {
+      "title": "Feedback",
+      "description": "Status is never carried by colour alone: each tone has a distinct icon and a text label, so meaning survives greyscale and colour-vision deficiency.",
+      "callouts": {
+        "title": "Callouts",
+        "maintenanceTitle": "Scheduled maintenance",
+        "maintenanceBody": "Online banking will be unavailable on Sunday between 02:00 and 04:00 CET.",
+        "paymentTitle": "Payment submitted",
+        "paymentBody": "Your transfer of EUR 12,500.00 has been accepted for processing.",
+        "verificationTitle": "Verification pending",
+        "verificationBody": "Two documents are still required before this account can be activated.",
+        "transferTitle": "Transfer failed",
+        "transferBody": "The beneficiary IBAN could not be validated. No funds have left your account."
+      },
+      "badges": {
+        "title": "Status badges",
+        "draft": "Draft",
+        "inReview": "In review",
+        "settled": "Settled",
+        "pending": "Pending",
+        "rejected": "Rejected",
+        "priority": "Priority",
+        "esg": "ESG"
+      }
+    },
+    "data": {
+      "title": "Data display",
+      "description": "Enterprise screens live or die on tables. Headers use scope, numeric columns are right-aligned and tabular, and the caption describes the table for screen reader users.",
+      "cards": {
+        "title": "Cards",
+        "currentAccountTitle": "Corporate current account",
+        "currentAccountIban": "AT61 1904 3002 3457 3201",
+        "availableBalance": "Available balance",
+        "pendingApprovalsTitle": "Pending approvals",
+        "pendingApprovalsDescription": "Awaiting your authorisation",
+        "dueToday": "Two are due today",
+        "viewStatements": "View statements",
+        "reviewQueue": "Review queue"
+      },
+      "table": {
+        "title": "Table",
+        "caption": "Recent transactions with counterparty, date, status and amount",
+        "counterparty": "Counterparty",
+        "valueDate": "Value date",
+        "status": "Status",
+        "amount": "Amount",
+        "statusSettled": "Settled",
+        "statusPending": "Pending",
+        "statusRejected": "Rejected"
+      }
+    },
+    "disclosure": {
+      "title": "Disclosure and navigation",
+      "description": "Tabs and accordions are the two approved ways to divide dense content. Both are keyboard-complete and expose their expanded state to assistive technology.",
+      "tabs": {
+        "title": "Tabs",
+        "overview": "Overview",
+        "limits": "Limits",
+        "documents": "Documents",
+        "overviewBody": "A summary of the mandate, its signatories and the products in scope.",
+        "limitsBody": "Daily and per-transaction limits by product and by authorised user.",
+        "documentsBody": "Signed mandates, KYC evidence and the current fee schedule."
+      },
+      "accordion": {
+        "title": "Accordion",
+        "q1": "When is primary yellow appropriate?",
+        "a1": "For the logo, the single primary action in a view, and deliberate brand moments such as a hero panel or a statistic. It is not a background for dense content and never a text colour.",
+        "q2": "How do inverse sections work?",
+        "a2": "Set data-surface=\"inverse\" on a wrapper. That reassigns the semantic colour tokens for the whole subtree, so components inside become brand-correct without any dark variant.",
+        "q3": "Can I add a colour that is not in the palette?",
+        "a3": "No. Add a semantic token that aliases an existing primitive instead. If a genuinely new value is needed, it goes through brand governance and lands in the primitive layer first."
+      },
+      "a11y": {
+        "arrowKeys": "Moves between tabs in the tab list; the panel follows automatically.",
+        "tab": "Moves from the active tab into its panel, skipping inactive tabs.",
+        "enterSpace": "Toggles an accordion item; aria-expanded reflects the new state."
+      }
+    },
+    "overlays": {
+      "title": "Overlays",
+      "description": "Dialogs trap focus, restore it to the trigger on close, and are dismissible with Escape. Every dialog has a title that names it for assistive technology.",
+      "dialog": {
+        "title": "Dialog",
+        "revokeMandate": "Revoke mandate",
+        "confirmTitle": "Revoke this mandate?",
+        "confirmDescription": "Revoking removes all authorisations for the four signatories on this account. Pending instructions will be cancelled. This cannot be undone.",
+        "keepMandate": "Keep mandate"
+      },
+      "a11y": {
+        "escape": "Closes the dialog and returns focus to the element that opened it.",
+        "tabShiftTab": "Cycles within the dialog only; the page behind is inert.",
+        "roleDialog": "Labelled by its title and described by its description, both wired automatically."
+      }
+    },
+    "surfaces": {
+      "title": "Surface contexts",
+      "description": "The same markup, four times, with only the data-surface attribute changed. No component below knows which context it is in.",
+      "exampleTitle": "data-surface=\"{surface}\"",
+      "heading": "Make it happen",
+      "body": "Body copy, a secondary tone, and controls — all resolved from the semantic tokens that this surface context reassigns.",
+      "primaryAction": "Primary action",
+      "secondary": "Secondary",
+      "settled": "Settled"
+    }
+  },
+  "formExample": {
+    "title": "Payment form",
+    "description": "A realistic control set: text input with help text, a live validation error, a select, a textarea, checkbox, radio group and a switch.",
+    "ibanLabel": "Beneficiary IBAN",
+    "ibanHelp": "Enter the full IBAN without spaces. Required fields are marked with an asterisk.",
+    "ibanError": "Beneficiary IBAN is required.",
+    "ibanPlaceholder": "AT611904300234573201",
+    "currencyLabel": "Currency",
+    "currencyPlaceholder": "Select a currency",
+    "currencyEur": "EUR — Euro",
+    "currencyUsd": "USD — US Dollar",
+    "currencyCzk": "CZK — Czech Koruna",
+    "currencyRon": "RON — Romanian Leu",
+    "referenceLabel": "Payment reference",
+    "referencePlaceholder": "Invoice 2026-0417",
+    "executionLegend": "Execution",
+    "executionStandard": "Standard — next business day",
+    "executionExpress": "Express — same day, additional fee applies",
+    "confirmLabel": "I confirm the beneficiary details are correct",
+    "notifyLabel": "Email me when this payment settles",
+    "submit": "Submit payment",
+    "reset": "Reset"
+  },
+  "navigationSection": {
+    "title": "Navigation",
+    "description": "The three navigation surfaces an enterprise screen needs: a sidebar for the application, a breadcrumb trail for depth, and pagination for long result sets.",
+    "sideNav": {
+      "title": "Side navigation",
+      "description": "Sectioned, collapsible sidebar navigation that lives in normal document flow, so it can be a page rail or the left column of a dashboard shell. Collapsing leaves a labelled icon rail rather than hiding the navigation.",
+      "ariaLabel": "Back-office navigation",
+      "headerTitle": "Back office",
+      "headerSubtitle": "Group operations",
+      "footerName": "Hana Mahmutović",
+      "footerRole": "Administrator",
+      "selectedItem": "Selected item",
+      "expandRail": "Expand the rail",
+      "collapseToIcons": "Collapse to icons",
+      "sections": {
+        "operate": "Operate",
+        "govern": "Govern",
+        "dashboard": "Dashboard",
+        "accounts": "Accounts",
+        "payments": "Payments",
+        "lending": "Lending",
+        "lendingPipeline": "Pipeline",
+        "lendingLimits": "Limits",
+        "lendingCollateral": "Collateral",
+        "users": "Users and roles",
+        "compliance": "Compliance",
+        "reports": "Reports",
+        "settings": "Settings"
+      }
+    },
+    "drawer": {
+      "title": "Drawer navigation",
+      "description": "The same navigation model on a small screen: a sheet from the left edge, focus-trapped and dismissible with Escape.",
+      "open": "Open navigation",
+      "sheetTitle": "Back office",
+      "sheetDescription": "Group operations"
+    },
+    "breadcrumb": {
+      "title": "Breadcrumb",
+      "overview": "Overview",
+      "corporateBanking": "Corporate banking",
+      "account": "Account RBI-0042"
+    },
+    "pagination": {
+      "title": "Pagination"
+    },
+    "a11y": {
+      "ariaCurrent": "Set on the active sidebar item, the current breadcrumb page and the current page in pagination, so position is never carried by colour alone.",
+      "enterSpace": "Activates a sidebar item; on a group it toggles the disclosure and updates aria-expanded.",
+      "escape": "Closes the drawer variant and returns focus to the trigger."
+    },
+    "dock": {
+      "title": "Centred dock",
+      "description": "A pill-shaped switcher that hugs its content instead of spanning the container — used where a few sibling views share one screen.",
+      "ariaLabel": "Dock example",
+      "items": {
+        "admin": "Admin panel",
+        "api": "API demo",
+        "audit": "Audit log"
+      }
+    }
+  },
+  "statisticsSection": {
+    "title": "Statistics",
+    "description": "One statistic component, four treatments. Each one inherits the surrounding surface context, so the inverse band, the light dashboard tile and the corporate panel are the same component — not four copies.",
+    "variantsTitle": "Variants on a light surface",
+    "portfolioLabel": "Portfolio statistics",
+    "markets": "Markets",
+    "marketsHint": "Central and Eastern Europe",
+    "exposure": "Exposure",
+    "customers": "Customers",
+    "since": "Raiffeisen since",
+    "sinceHint": "Founded in Austria",
+    "subsectionTitle": "The same component across surfaces",
+    "subsectionDescription": "Only the surface context changes below. No statistic knows which section it is in.",
+    "surfaceLabel": "Statistics on the {surface} surface",
+    "employees": "Employees",
+    "employeesHint": "Across the group",
+    "marketsHintShort": "CEE footprint",
+    "a11y": {
+      "grouping": "A StatGroup is a labelled region, so a screen reader announces the band before reading the figures.",
+      "trend": "Direction is carried by an arrow icon and a signed number, not by red and green alone.",
+      "numerals": "Figures use tabular numerals so a column of numbers stays aligned when values change."
+    }
+  },
+  "statusSection": {
+    "title": "Status and progress",
+    "description": "The small parts every screen ends up needing: determinate progress, loading placeholders, identity and a hint on hover or focus.",
+    "progress": {
+      "title": "Progress",
+      "label": "Onboarding completion",
+      "ariaLabel": "Onboarding completion: 68 percent"
+    },
+    "skeleton": {
+      "title": "Skeleton"
+    },
+    "avatar": {
+      "title": "Avatar, separator and tooltip",
+      "name": "Hana Mahmutović",
+      "role": "Administrator · Group operations",
+      "active": "Active",
+      "details": "Details",
+      "tooltip": "Appears on hover and on keyboard focus, and stays while pointed at."
+    },
+    "a11y": {
+      "roleProgressbar": "Progress exposes its value; the visible percentage is duplicated in the accessible name.",
+      "skeletons": "Marked aria-hidden and paired with a polite live region elsewhere, so loading is announced once rather than as a wall of empty boxes.",
+      "focus": "Tooltips open on keyboard focus, not only on hover, and never contain interactive content."
+    }
+  },
+  "bentoBuilder": {
+    "blueprintLegend": "Blueprint",
+    "gapLabel": "Gap",
+    "gapTight": "tight",
+    "gapDefault": "default",
+    "gapLoose": "loose",
+    "rowHeightLabel": "Row height",
+    "densityUniform": "uniform",
+    "densityTall": "tall",
+    "addTile": "Add tile",
+    "reset": "Reset",
+    "showCode": "Show code",
+    "hideCode": "Hide code",
+    "copied": "Copied",
+    "copyCode": "Copy code",
+    "width": "Width {span}/12",
+    "rows": "Rows {rowSpan}",
+    "accentOn": "Accent on",
+    "accentOff": "Accent off",
+    "removeTile": "Remove {title}",
+    "codeCopiedStatus": "Bento layout code copied to clipboard",
+    "emptyState": "Every tile was removed. Add one, or reset the blueprint.",
+    "presets": {
+      "heroSplit": {
+        "label": "Hero split",
+        "description": "1 big + 1 tall + 3 small. Landing pages."
+      },
+      "featureMosaic": {
+        "label": "Feature mosaic",
+        "description": "5 mixed-width cards. Feature lists."
+      },
+      "dashboard": {
+        "label": "Dashboard",
+        "description": "4 metrics + chart + activity rail. Back office."
+      },
+      "editorial": {
+        "label": "Editorial",
+        "description": "Full-width banner + 2 columns. Long copy."
+      }
+    },
+    "newTile": {
+      "eyebrow": "New",
+      "title": "Tile {index}",
+      "body": "Replace this copy, then set the width and tone with the controls above the tile."
+    }
+  },
+  "contrastChecker": {
+    "textOrIcon": "Text or icon",
+    "background": "Background",
+    "swap": "Swap",
+    "sampleHeadline": "Make it happen",
+    "sampleBody": "Body copy at 14px on this pair, so the verdict below can be judged against something real.",
+    "usableEverywhere": "Usable everywhere",
+    "restrictedUse": "Restricted use",
+    "passesAllAa": "This pair clears every AA threshold, including small body text.",
+    "failsAa": "This pair fails at least one AA threshold. Check the rows below for where it may still be used.",
+    "liveRegion": "{pair} is {ratio}, {result} AA for body text.",
+    "passing": "passing",
+    "failing": "failing",
+    "verdicts": {
+      "aaa": "AAA",
+      "aa": "AA",
+      "fail": "Fail"
+    },
+    "requirements": {
+      "bodyText": {
+        "label": "Body text",
+        "description": "Text below 24px, or below 19px when bold — SC 1.4.3 / 1.4.6."
+      },
+      "largeText": {
+        "label": "Large text",
+        "description": "Text from 24px, or 19px bold and above — SC 1.4.3 / 1.4.6."
+      },
+      "uiComponent": {
+        "label": "UI and graphics",
+        "description": "Borders, icons, focus rings and control boundaries — SC 1.4.11."
+      }
+    }
+  }
+}

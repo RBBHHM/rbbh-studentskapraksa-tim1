@@ -1,0 +1,102 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+import { colorTokenGroups, spacingScale, radiusScale, sizeScale } from "@/design-system/tokens";
+
+<Meta title="Foundations/Tokens" />
+
+# Design tokens
+
+Every value below is read live from `@/design-system/tokens`, which mirrors
+the CSS custom properties defined in `src/styles.css`. This page cannot drift
+from the implementation — if a token changes there, it changes here too.
+
+## Spacing scale
+
+<table>
+  <thead>
+    <tr>
+      <th>Token</th>
+      <th>Value</th>
+      <th>Usage</th>
+    </tr>
+  </thead>
+  <tbody>
+    {spacingScale.map((entry) => (
+      <tr key={entry.token}>
+        <td><code>{entry.token}</code></td>
+        <td>{entry.value}</td>
+        <td>{entry.usage}</td>
+      </tr>
+    ))}
+  </tbody>
+</table>
+
+## Radius scale
+
+<table>
+  <thead>
+    <tr>
+      <th>Token</th>
+      <th>Value</th>
+      <th>Usage</th>
+    </tr>
+  </thead>
+  <tbody>
+    {radiusScale.map((entry) => (
+      <tr key={entry.token}>
+        <td><code>{entry.token}</code></td>
+        <td>{entry.value}</td>
+        <td>{entry.usage}</td>
+      </tr>
+    ))}
+  </tbody>
+</table>
+
+## Control & icon sizes
+
+<table>
+  <thead>
+    <tr>
+      <th>Token</th>
+      <th>Value</th>
+      <th>Usage</th>
+    </tr>
+  </thead>
+  <tbody>
+    {sizeScale.map((entry) => (
+      <tr key={entry.token}>
+        <td><code>{entry.token}</code></td>
+        <td>{entry.value}</td>
+        <td>{entry.usage}</td>
+      </tr>
+    ))}
+  </tbody>
+</table>
+
+## Colour scales
+
+Semantic tokens are grouped by primitive palette; each group renders as a row
+of swatches driven directly by its CSS custom property.
+
+{colorTokenGroups.map((group) => (
+  <div key={group.id} style={{ marginBottom: "2rem" }}>
+    <h3>{group.title}</h3>
+    <p>{group.description}</p>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
+      {group.tokens.map((token) => (
+        <div key={token.token} style={{ width: "9rem" }}>
+          <div
+            style={{
+              height: "3rem",
+              borderRadius: "var(--radii-sm)",
+              border: "1px solid var(--border-subtle)",
+              background: `var(${token.token})`,
+            }}
+          />
+          <p style={{ margin: "0.375rem 0 0", fontSize: "0.75rem", fontWeight: 600 }}>{token.label}</p>
+          <code style={{ fontSize: "0.7rem" }}>{token.token}</code>
+        </div>
+      ))}
+    </div>
+  </div>
+))}

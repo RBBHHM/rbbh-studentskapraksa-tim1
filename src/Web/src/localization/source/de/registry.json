@@ -1,0 +1,61 @@
+{
+  "shell": {
+    "product": "Register verbundener Personen",
+    "homeLabel": "Startseite des Registers",
+    "menu": "Navigation öffnen",
+    "logout": "Abmelden",
+    "profile": "Mein Profil"
+  },
+  "areas": { "work": "Arbeitsbereich", "administration": "Administration" },
+  "dashboard": {
+    "eyebrow": "Zentrales Register",
+    "title": "Register verbundener Personen",
+    "description": "Verwalten Sie verbundene Personen, Limite, Berichte und administrative Einstellungen an einem Ort."
+  },
+  "actions": { "open": "Öffnen", "refresh": "Aktualisieren", "tryAgain": "Erneut versuchen" },
+  "states": {
+    "loading": "Daten werden geladen",
+    "errorTitle": "Daten sind derzeit nicht verfügbar",
+    "errorBody": "Prüfen Sie Ihre Netzwerkverbindung und versuchen Sie es erneut. Wenden Sie sich an den Support, wenn das Problem weiterhin besteht.",
+    "emptyTitle": "Keine Einträge",
+    "emptyBody": "Der Dienst hat erfolgreich geantwortet, enthält derzeit aber keine anzuzeigenden Einträge."
+  },
+  "resources": {
+    "dashboard": {
+      "title": "Übersicht",
+      "description": "Einstieg in Arbeits- und Administrationsbereiche."
+    },
+    "legalPersons": {
+      "title": "Juristische Personen",
+      "description": "Verbundene juristische Personen anzeigen und verwalten."
+    },
+    "physicalPersons": {
+      "title": "Natürliche Personen",
+      "description": "Verbundene natürliche Personen und Familienbeziehungen anzeigen."
+    },
+    "limits": { "title": "Limite", "description": "Regulatorische Limite und verfügbare Beträge." },
+    "capital": { "title": "Kapital", "description": "Regulatorisches und Kernkapital für Limite verwalten." },
+    "reports": {
+      "title": "Regulatorisches Berichtswesen",
+      "description": "Monatsberichte und Exportvorbereitung."
+    },
+    "notifications": {
+      "title": "Benachrichtigungen",
+      "description": "Das Benachrichtigungsprotokoll zeigt Empfänger, Geschäftszweck und Erfassungszeitpunkt."
+    },
+    "users": { "title": "Benutzer", "description": "Administrative Übersicht der Benutzer." },
+    "period": {
+      "title": "Periodenverwaltung",
+      "description": "Periodenstatus und Entsperranfragen."
+    },
+    "codeLists": { "title": "Codelisten", "description": "Zentrale Ansicht der Codelistenwerte." },
+    "audit": {
+      "title": "Auditprotokoll",
+      "description": "Geschäftliche und administrative Änderungen prüfen."
+    },
+    "guide": {
+      "title": "Benutzerhandbuch",
+      "description": "Geschäftsregeln und Hinweise für zugängliche Module."
+    }
+  }
+}

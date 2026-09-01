@@ -1,0 +1,405 @@
+{
+  "nav": {
+    "sectionsLabel": "Sekcije komponenti",
+    "onThisPage": "Na ovoj stranici",
+    "items": {
+      "typography": "Tipografija",
+      "buttons": "Dugmad",
+      "forms": "Kontrole obrasca",
+      "feedback": "Povratna informacija",
+      "data": "Prikaz podataka",
+      "statistics": "Statistike",
+      "navigation": "Navigacija",
+      "status": "Status i napredak",
+      "disclosure": "Otkrivanje sadržaja",
+      "overlays": "Overlay-i",
+      "surfaces": "Konteksti površine"
+    }
+  },
+  "page": {
+    "eyebrow": "Komponente",
+    "title": "Biblioteka komponenti",
+    "description": "Svaki primjer ispod je uživo komponenta, renderovana iz istog koda koji se isporučuje. Svaki unos dokumentuje svoje ponašanje na tastaturi i sa čitačem ekrana, jer komponenta koja izgleda ispravno ali se ne može koristiti bez miša nije završena."
+  },
+  "example": {
+    "showCode": "Prikaži kod",
+    "hideCode": "Sakrij kod",
+    "copyAriaLabel": "Kopiraj kod u međuspremnik",
+    "codeCopied": "Kod kopiran u međuspremnik"
+  },
+  "a11yNotes": {
+    "heading": "Ponašanje tastature i čitača ekrana"
+  },
+  "sections": {
+    "typography": {
+      "title": "Tipografija",
+      "description": "Nivo naslova i vizuelna veličina su odvojena svojstva. Odaberite nivo za strukturu dokumenta, zatim veličinu za izgled — tako da se struktura nikad ne narušava radi izgleda.",
+      "example": {
+        "title": "Display i naslovi"
+      },
+      "content": {
+        "eyebrow": "Korporativno bankarstvo",
+        "display": "Ostvarite to",
+        "heading": "Naslov nivoa 2 renderovan u vizuelnoj veličini 3",
+        "lead": "Uvodni paragrafi koriste Amalia Light u 22px. Lakša težina u većoj veličini razdvaja uvod od tijela teksta bez korištenja boje.",
+        "body": "Tijelo teksta je Amalia Regular u 16px sa visinom reda 1.6. Nikad ne pada ispod 16px, a širina teksta je ograničena na 68 znakova radi udobnog čitanja duljeg teksta."
+      }
+    },
+    "buttons": {
+      "title": "Dugmad",
+      "description": "Postoji tačno jedna primarna akcija po prikazu, i uvijek je žuta sa gotovo crnim tekstom. Sekundarna — gotovo crni obrub — je radni konj za sve ostalo.",
+      "variants": {
+        "title": "Varijante",
+        "primary": "Otvori račun",
+        "secondary": "Sačuvaj nacrt",
+        "tertiary": "Otkaži",
+        "corporate": "Izvještaj o održivosti",
+        "ghost": "Odbaci",
+        "destructive": "Izbriši",
+        "link": "Pročitaj smjernice"
+      },
+      "sizes": {
+        "title": "Veličine, ikone i stanje",
+        "description": "Ikone su uvijek dekorativne i uparene sa tekstualnom oznakom, ili dugme nosi aria-label. Podrazumijevana visina od 44px zadovoljava WCAG 2.2 minimum za veličinu cilja.",
+        "continue": "Nastavi",
+        "export": "Izvezi",
+        "filter": "Filtriraj",
+        "searchAriaLabel": "Pretraga",
+        "submitting": "Šalje se",
+        "loadingLabel": "Vaša prijava se šalje",
+        "unavailable": "Nedostupno"
+      },
+      "a11y": {
+        "tab": "Pomjera fokus na dugme; pojavljuje se prsten od 2px u gotovo crnoj boji sa pomakom od 2px.",
+        "space": "Aktivira dugme. Nativna semantika dugmeta je očuvana.",
+        "ariaBusy": "Postavljeno tokom učitavanja. Kontrola ostaje u redoslijedu tabulacije, a vizuelno skriven status opisuje operaciju, tako da fokus nikad nije izgubljen tokom slanja."
+      }
+    },
+    "forms": {
+      "title": "Kontrole obrasca",
+      "description": "Svaka kontrola ima vidljivu, programski povezanu oznaku. Tekst pomoći i tekst greške su povezani putem aria-describedby, a greške se najavljuju, a ne samo boje.",
+      "a11y": {
+        "tab": "Kreće se između kontrola u DOM redoslijedu, koji odgovara vizuelnom redoslijedu.",
+        "space": "Prebacuje kontrolno polje ili prekidač; bira fokusiranu opciju radio dugmeta.",
+        "arrowKeys": "Kreće se između radio opcija i unutar otvorene liste izbora.",
+        "ariaInvalid": "Postavlja se na polju koje ne prolazi validaciju, sa porukom referenciranom putem aria-describedby i prikazanom u live regiji."
+      }
+    },
+    "feedback": {
+      "title": "Povratna informacija",
+      "description": "Status se nikad ne prenosi samo bojom: svaki ton ima zaseban simbol i tekstualnu oznaku, tako da značenje ostaje i u sivim tonovima i kod poremećaja vida boja.",
+      "callouts": {
+        "title": "Obavještenja",
+        "maintenanceTitle": "Planirano održavanje",
+        "maintenanceBody": "Online bankarstvo neće biti dostupno u nedjelju između 02:00 i 04:00 po CET-u.",
+        "paymentTitle": "Plaćanje poslano",
+        "paymentBody": "Vaš transfer od EUR 12.500,00 je prihvaćen na obradu.",
+        "verificationTitle": "Verifikacija na čekanju",
+        "verificationBody": "Potrebna su još dva dokumenta prije nego što se ovaj račun može aktivirati.",
+        "transferTitle": "Transfer neuspješan",
+        "transferBody": "IBAN primaoca nije mogao biti validiran. Sredstva nisu napustila vaš račun."
+      },
+      "badges": {
+        "title": "Statusne oznake",
+        "draft": "Nacrt",
+        "inReview": "U pregledu",
+        "settled": "Izmireno",
+        "pending": "Na čekanju",
+        "rejected": "Odbijeno",
+        "priority": "Prioritet",
+        "esg": "ESG"
+      }
+    },
+    "data": {
+      "title": "Prikaz podataka",
+      "description": "Poslovni ekrani opstaju ili propadaju zbog tabela. Zaglavlja koriste scope, numeričke kolone su desno poravnate i tabelarne, a naslov opisuje tabelu za korisnike čitača ekrana.",
+      "cards": {
+        "title": "Kartice",
+        "currentAccountTitle": "Poslovni tekući račun",
+        "currentAccountIban": "AT61 1904 3002 3457 3201",
+        "availableBalance": "Raspoloživo stanje",
+        "pendingApprovalsTitle": "Odobrenja na čekanju",
+        "pendingApprovalsDescription": "Čeka vašu autorizaciju",
+        "dueToday": "Dva dospijevaju danas",
+        "viewStatements": "Pregled izvoda",
+        "reviewQueue": "Red za pregled"
+      },
+      "table": {
+        "title": "Tabela",
+        "caption": "Nedavne transakcije sa suprotnom stranom, datumom, statusom i iznosom",
+        "counterparty": "Suprotna strana",
+        "valueDate": "Datum valute",
+        "status": "Status",
+        "amount": "Iznos",
+        "statusSettled": "Izmireno",
+        "statusPending": "Na čekanju",
+        "statusRejected": "Odbijeno"
+      }
+    },
+    "disclosure": {
+      "title": "Otkrivanje sadržaja i navigacija",
+      "description": "Tabovi i akordeoni su dva odobrena načina za podjelu gustog sadržaja. Oba su potpuno upotrebljiva sa tastature i izlažu svoje prošireno stanje asistivnoj tehnologiji.",
+      "tabs": {
+        "title": "Tabovi",
+        "overview": "Pregled",
+        "limits": "Limiti",
+        "documents": "Dokumenti",
+        "overviewBody": "Sažetak mandata, njegovih potpisnika i proizvoda u obuhvatu.",
+        "limitsBody": "Dnevni i po-transakcijski limiti po proizvodu i po ovlaštenom korisniku.",
+        "documentsBody": "Potpisani mandati, KYC dokazi i trenutni cjenovnik naknada."
+      },
+      "accordion": {
+        "title": "Akordeon",
+        "q1": "Kada je primarna žuta boja primjerena?",
+        "a1": "Za logo, jedinu primarnu akciju u prikazu, i namjerne trenutke brenda poput hero panela ili statistike. Nije pozadina za gust sadržaj i nikad boja teksta.",
+        "q2": "Kako funkcionišu inverzne sekcije?",
+        "a2": "Postavite data-surface=\"inverse\" na omotač. To ponovo dodjeljuje semantičke tokene boja za cijelo podstablo, tako da komponente unutra postaju ispravne za brend bez ikakve tamne varijante.",
+        "q3": "Mogu li dodati boju koja nije u paleti?",
+        "a3": "Ne. Umjesto toga dodajte semantički token koji alijasira postojeći primitiv. Ako je stvarno potrebna nova vrijednost, ona prolazi kroz upravljanje brendom i prvo završava u primitivnom sloju."
+      },
+      "a11y": {
+        "arrowKeys": "Kreće se između tabova u listi tabova; panel automatski prati.",
+        "tab": "Kreće se sa aktivnog taba u njegov panel, preskačući neaktivne tabove.",
+        "enterSpace": "Prebacuje stavku akordeona; aria-expanded odražava novo stanje."
+      }
+    },
+    "overlays": {
+      "title": "Overlay-i",
+      "description": "Dijalozi zarobljavaju fokus, vraćaju ga na okidač pri zatvaranju i mogu se zatvoriti sa Escape. Svaki dijalog ima naslov koji ga imenuje za asistivnu tehnologiju.",
+      "dialog": {
+        "title": "Dijalog",
+        "revokeMandate": "Opozovi mandat",
+        "confirmTitle": "Opozvati ovaj mandat?",
+        "confirmDescription": "Opoziv uklanja sve autorizacije za četiri potpisnika ovog računa. Instrukcije na čekanju bit će otkazane. Ovo se ne može poništiti.",
+        "keepMandate": "Zadrži mandat"
+      },
+      "a11y": {
+        "escape": "Zatvara dijalog i vraća fokus na element koji ga je otvorio.",
+        "tabShiftTab": "Kruži samo unutar dijaloga; stranica iza je inertna.",
+        "roleDialog": "Označen svojim naslovom i opisan svojim opisom, oboje automatski povezano."
+      }
+    },
+    "surfaces": {
+      "title": "Konteksti površine",
+      "description": "Isti markup, četiri puta, sa promjenjenim samo atributom data-surface. Nijedna komponenta ispod ne zna u kojem je kontekstu.",
+      "exampleTitle": "data-surface=\"{surface}\"",
+      "heading": "Ostvarite to",
+      "body": "Tijelo teksta, sekundarni ton i kontrole — svi izvedeni iz semantičkih tokena koje ovaj kontekst površine ponovo dodjeljuje.",
+      "primaryAction": "Primarna akcija",
+      "secondary": "Sekundarno",
+      "settled": "Izmireno"
+    }
+  },
+  "formExample": {
+    "title": "Obrazac za plaćanje",
+    "description": "Realističan skup kontrola: tekstualni unos sa tekstom pomoći, greška validacije uživo, izbornik, tekstualno polje, kontrolno polje, radio grupa i prekidač.",
+    "ibanLabel": "IBAN primaoca",
+    "ibanHelp": "Unesite potpuni IBAN bez razmaka. Obavezna polja su označena zvjezdicom.",
+    "ibanError": "IBAN primaoca je obavezan.",
+    "ibanPlaceholder": "AT611904300234573201",
+    "currencyLabel": "Valuta",
+    "currencyPlaceholder": "Odaberite valutu",
+    "currencyEur": "EUR — Euro",
+    "currencyUsd": "USD — Američki dolar",
+    "currencyCzk": "CZK — Češka kruna",
+    "currencyRon": "RON — Rumunski lej",
+    "referenceLabel": "Referenca plaćanja",
+    "referencePlaceholder": "Faktura 2026-0417",
+    "executionLegend": "Izvršenje",
+    "executionStandard": "Standardno — sljedeći radni dan",
+    "executionExpress": "Ekspresno — isti dan, primjenjuje se dodatna naknada",
+    "confirmLabel": "Potvrđujem da su podaci o primaocu tačni",
+    "notifyLabel": "Obavijesti me e-mailom kada se ovo plaćanje izmiri",
+    "submit": "Pošalji plaćanje",
+    "reset": "Poništi"
+  },
+  "navigationSection": {
+    "title": "Navigacija",
+    "description": "Tri navigacijske površine koje su potrebne poslovnom ekranu: bočna traka za aplikaciju, breadcrumb za dubinu i paginacija za duge liste rezultata.",
+    "sideNav": {
+      "title": "Bočna navigacija",
+      "description": "Sekcionisana, sklopiva bočna navigacija koja živi u normalnom toku dokumenta, tako da može biti traka stranice ili lijeva kolona ljuske dashboard-a. Sklapanje ostavlja označenu traku ikona umjesto sakrivanja navigacije.",
+      "ariaLabel": "Navigacija back-office-a",
+      "headerTitle": "Back office",
+      "headerSubtitle": "Poslovanje grupe",
+      "footerName": "Hana Mahmutović",
+      "footerRole": "Administratorka",
+      "selectedItem": "Odabrana stavka",
+      "expandRail": "Proširi traku",
+      "collapseToIcons": "Sklopi na ikone",
+      "sections": {
+        "operate": "Poslovanje",
+        "govern": "Upravljanje",
+        "dashboard": "Nadzorna ploča",
+        "accounts": "Računi",
+        "payments": "Plaćanja",
+        "lending": "Kreditiranje",
+        "lendingPipeline": "Cjevovod",
+        "lendingLimits": "Limiti",
+        "lendingCollateral": "Kolateral",
+        "users": "Korisnici i uloge",
+        "compliance": "Usklađenost",
+        "reports": "Izvještaji",
+        "settings": "Postavke"
+      }
+    },
+    "drawer": {
+      "title": "Drawer navigacija",
+      "description": "Isti model navigacije na malom ekranu: list koji izlazi sa lijeve ivice, zarobljenog fokusa i zatvorljiv sa Escape.",
+      "open": "Otvori navigaciju",
+      "sheetTitle": "Back office",
+      "sheetDescription": "Poslovanje grupe"
+    },
+    "breadcrumb": {
+      "title": "Breadcrumb",
+      "overview": "Pregled",
+      "corporateBanking": "Korporativno bankarstvo",
+      "account": "Račun RBI-0042"
+    },
+    "pagination": {
+      "title": "Paginacija"
+    },
+    "a11y": {
+      "ariaCurrent": "Postavlja se na aktivnu stavku bočne navigacije, trenutnu breadcrumb stranicu i trenutnu stranicu paginacije, tako da se pozicija nikad ne prenosi samo bojom.",
+      "enterSpace": "Aktivira stavku bočne navigacije; kod grupe prebacuje otkrivanje i ažurira aria-expanded.",
+      "escape": "Zatvara drawer varijantu i vraća fokus na okidač."
+    },
+    "dock": {
+      "title": "Centrirani dock",
+      "description": "Prekidač u obliku pilule koji obuhvata svoj sadržaj umjesto cijelog kontejnera — za nekoliko srodnih prikaza na istom ekranu.",
+      "ariaLabel": "Primjer docka",
+      "items": {
+        "admin": "Admin panel",
+        "api": "API demo",
+        "audit": "Audit log"
+      }
+    }
+  },
+  "statisticsSection": {
+    "title": "Statistike",
+    "description": "Jedna statistička komponenta, četiri obrade. Svaka nasljeđuje okolni kontekst površine, tako da inverzna traka, svijetla dashboard pločica i korporativni panel jesu ista komponenta — ne četiri kopije.",
+    "variantsTitle": "Varijante na svijetloj površini",
+    "portfolioLabel": "Statistike portfolija",
+    "markets": "Tržišta",
+    "marketsHint": "Centralna i Istočna Evropa",
+    "exposure": "Izloženost",
+    "customers": "Klijenti",
+    "since": "Raiffeisen od",
+    "sinceHint": "Osnovan u Austriji",
+    "subsectionTitle": "Ista komponenta na različitim površinama",
+    "subsectionDescription": "Ispod se mijenja samo kontekst površine. Nijedna statistika ne zna u kojoj je sekciji.",
+    "surfaceLabel": "Statistike na površini {surface}",
+    "employees": "Zaposleni",
+    "employeesHint": "Širom grupe",
+    "marketsHintShort": "CEE prisustvo",
+    "a11y": {
+      "grouping": "StatGroup je označena regija, tako da čitač ekrana najavi traku prije čitanja brojki.",
+      "trend": "Smjer se prenosi ikonom strelice i brojem sa predznakom, a ne samo crvenom i zelenom bojom.",
+      "numerals": "Brojke koriste tabelarne cifre tako da kolona brojeva ostaje poravnata kada se vrijednosti mijenjaju."
+    }
+  },
+  "statusSection": {
+    "title": "Status i napredak",
+    "description": "Mali dijelovi koji su na kraju potrebni svakom ekranu: određeni napredak, čuvari mjesta tokom učitavanja, identitet i savjet pri prelasku mišem ili fokusu.",
+    "progress": {
+      "title": "Napredak",
+      "label": "Završetak onboardinga",
+      "ariaLabel": "Završetak onboardinga: 68 posto"
+    },
+    "skeleton": {
+      "title": "Skeleton"
+    },
+    "avatar": {
+      "title": "Avatar, separator i tooltip",
+      "name": "Hana Mahmutović",
+      "role": "Administratorka · Poslovanje grupe",
+      "active": "Aktivno",
+      "details": "Detalji",
+      "tooltip": "Pojavljuje se pri prelasku mišem i pri fokusu tastature, i ostaje dok je pokazano."
+    },
+    "a11y": {
+      "roleProgressbar": "Napredak izlaže svoju vrijednost; vidljivi procenat je dupliciran u pristupačnom nazivu.",
+      "skeletons": "Označeni aria-hidden i upareni sa učtivom live regijom drugdje, tako da se učitavanje najavi jednom umjesto kao zid praznih kutija.",
+      "focus": "Tooltip-ovi se otvaraju pri fokusu tastature, ne samo pri prelasku mišem, i nikad ne sadrže interaktivni sadržaj."
+    }
+  },
+  "bentoBuilder": {
+    "blueprintLegend": "Nacrt",
+    "gapLabel": "Razmak",
+    "gapTight": "uski",
+    "gapDefault": "podrazumijevani",
+    "gapLoose": "široki",
+    "rowHeightLabel": "Visina reda",
+    "densityUniform": "jednoličan",
+    "densityTall": "visok",
+    "addTile": "Dodaj pločicu",
+    "reset": "Poništi",
+    "showCode": "Prikaži kod",
+    "hideCode": "Sakrij kod",
+    "copied": "Kopirano",
+    "copyCode": "Kopiraj kod",
+    "width": "Širina {span}/12",
+    "rows": "Redovi {rowSpan}",
+    "accentOn": "Akcenat uključen",
+    "accentOff": "Akcenat isključen",
+    "removeTile": "Ukloni {title}",
+    "codeCopiedStatus": "Kod bento rasporeda kopiran u međuspremnik",
+    "emptyState": "Svaka pločica je uklonjena. Dodajte jednu ili poništite nacrt.",
+    "presets": {
+      "heroSplit": {
+        "label": "Hero split",
+        "description": "1 velika + 1 visoka + 3 male. Landing stranice."
+      },
+      "featureMosaic": {
+        "label": "Feature mozaik",
+        "description": "5 kartica različitih širina. Liste funkcija."
+      },
+      "dashboard": {
+        "label": "Dashboard",
+        "description": "4 metrike + grafikon + traka aktivnosti. Back office."
+      },
+      "editorial": {
+        "label": "Editorial",
+        "description": "Baner pune širine + 2 kolone. Duži tekst."
+      }
+    },
+    "newTile": {
+      "eyebrow": "Novo",
+      "title": "Pločica {index}",
+      "body": "Zamijenite ovaj tekst, zatim postavite širinu i ton kontrolama iznad pločice."
+    }
+  },
+  "contrastChecker": {
+    "textOrIcon": "Tekst ili ikona",
+    "background": "Pozadina",
+    "swap": "Zamijeni",
+    "sampleHeadline": "Ostvarite to",
+    "sampleBody": "Tijelo teksta u 14px na ovom paru, tako da se presuda ispod može procijeniti na nečemu stvarnom.",
+    "usableEverywhere": "Upotrebljivo svugdje",
+    "restrictedUse": "Ograničena upotreba",
+    "passesAllAa": "Ovaj par prolazi svaki AA prag, uključujući mali tekst tijela.",
+    "failsAa": "Ovaj par ne prolazi barem jedan AA prag. Provjerite redove ispod gdje se ipak može koristiti.",
+    "liveRegion": "{pair} iznosi {ratio}, {result} AA za tekst tijela.",
+    "passing": "prolazi",
+    "failing": "ne prolazi",
+    "verdicts": {
+      "aaa": "AAA",
+      "aa": "AA",
+      "fail": "Nije prošlo"
+    },
+    "requirements": {
+      "bodyText": {
+        "label": "Tekst tijela",
+        "description": "Tekst ispod 24px, ili ispod 19px kada je podebljan — SC 1.4.3 / 1.4.6."
+      },
+      "largeText": {
+        "label": "Veliki tekst",
+        "description": "Tekst od 24px, ili 19px podebljan i veći — SC 1.4.3 / 1.4.6."
+      },
+      "uiComponent": {
+        "label": "UI i grafika",
+        "description": "Obrubi, ikone, fokus prstenovi i granice kontrola — SC 1.4.11."
+      }
+    }
+  }
+}

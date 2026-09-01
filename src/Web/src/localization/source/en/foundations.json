@@ -1,0 +1,125 @@
+{
+  "nav": {
+    "label": "Foundations sections",
+    "items": {
+      "principles": "Principles",
+      "colour": "Colour",
+      "typography": "Typography",
+      "spacing": "Spacing & sizing",
+      "shape": "Shape & elevation",
+      "layout": "Layout",
+      "motion": "Motion",
+      "accessibility": "Accessibility"
+    }
+  },
+  "header": {
+    "eyebrow": "Foundations",
+    "title": "The token layer",
+    "description": "Every visual decision in this system resolves to a token. Primitives hold the official brand values; semantic tokens describe intent. Components only ever consume the semantic layer, which is what makes a surface context switch — light, inverse, brand, corporate — work without a single component variant."
+  },
+  "principles": {
+    "title": "Two layers, one direction of dependency",
+    "description": "Primitives are transcribed from the official RBI RGB palette and never referenced directly by a component. Semantic tokens alias them under intent-based names. The dependency only ever flows primitive → semantic → component.",
+    "cards": {
+      "yellow": {
+        "title": "Yellow is the signature",
+        "body": "Primary yellow is reserved for the logo, the single primary action, and deliberate brand moments. It never becomes a body text colour and never fills a whole page behind dense content."
+      },
+      "green": {
+        "title": "Green carries the corporate voice",
+        "body": "The guidelines elevate corporate green for the international/corporate vertical. It is a secondary accent for ESG and sustainability content — never a substitute for yellow."
+      },
+      "structure": {
+        "title": "Structure over decoration",
+        "body": "Borders, rules and generous space carry hierarchy. Shadows are reserved for genuinely floating surfaces, and radii stay small so the identity reads as precise rather than soft."
+      }
+    }
+  },
+  "colour": {
+    "title": "Colour",
+    "description": "Values are transcribed from Colour_Palette.zip (RBI - RGB - Full Palette.ase). Swatches below render from the live CSS custom property, so this page cannot drift from the implementation.",
+    "callout": {
+      "title": "Contrast is a property of the token pair, not the colour",
+      "body": "Primary yellow is a light colour: it takes off-black text, never white. Every text token documented here meets WCAG 2.2 AA against the surface it is paired with, and the accessible substitute for yellow text on white is --text-brand-accent (Yellow 700, 4.6:1)."
+    },
+    "paletteOverview": {
+      "title": "Palette overview",
+      "description": "The full primitive palette at a glance."
+    },
+    "contrastChecker": {
+      "title": "Contrast checker",
+      "description": "Pick any two colours from the official palette and verify the pair against WCAG 2.2 before it reaches a component. Only palette colours are selectable, because a pair that passes with a colour we do not own is not a result."
+    }
+  },
+  "typography": {
+    "title": "Typography",
+    "description": "Amalia is the RBI corporate typeface, self-hosted as WOFF2 in six weights plus italics. Weight does the work: Black for display statements, Bold for headings, Medium for UI labels, Regular for prose.",
+    "weights": { "title": "Weights", "sample": "Make it happen" },
+    "sizeScale": {
+      "title": "Size scale",
+      "description": "A modular scale tuned for dense enterprise screens at the small end and editorial confidence at the large end. Body copy never drops below 16px."
+    },
+    "lineHeight": { "title": "Line height" },
+    "letterSpacing": {
+      "title": "Letter spacing",
+      "description": "Display type is tightened; small all-caps labels are opened up so they stay legible."
+    }
+  },
+  "spacing": {
+    "title": "Spacing and sizing",
+    "description": "A 4px-based scale with deliberate jumps at the large end for section rhythm. Control heights are set so the default meets the WCAG 2.2 24px target-size minimum with room to spare.",
+    "spacingScale": { "title": "Spacing scale" },
+    "controlAndIconSizes": { "title": "Control and icon sizes" }
+  },
+  "shape": {
+    "title": "Shape and elevation",
+    "description": "Small radii keep the identity precise. Elevation is tinted with off-black rather than pure black so shadows stay warm and never look grey-blue.",
+    "borderWidth": { "title": "Border width" },
+    "radius": { "title": "Radius" },
+    "elevation": { "title": "Elevation" }
+  },
+  "layout": {
+    "title": "Layout",
+    "description": "A 12-column grid with a 24px gutter, and four content widths so a form, a documentation page and a dense table each get an appropriate measure.",
+    "breakpoints": { "title": "Breakpoints" },
+    "contentWidths": { "title": "Content widths" },
+    "grid": { "title": "Grid" },
+    "stackingOrder": {
+      "title": "Stacking order",
+      "description": "A fixed z-index ladder. Nothing in the system uses an arbitrary z-index value.",
+      "usageLabel": "Layer"
+    }
+  },
+  "motion": {
+    "title": "Motion",
+    "description": "Motion is quick and purposeful: it confirms a state change rather than performing. Everything below is disabled outright under prefers-reduced-motion.",
+    "duration": { "title": "Duration" },
+    "easing": { "title": "Easing" }
+  },
+  "accessibility": {
+    "title": "Accessibility primitives",
+    "description": "The focus indicator is a system-level decision, not a per-component one. It is defined once in the base layer, never removed, and flips to yellow on inverse surfaces so it stays visible.",
+    "usageLabel": "Applies to",
+    "callout": {
+      "title": "What the tokens guarantee — and what they do not",
+      "body": "Tokens make correct contrast the default, but they cannot guarantee an accessible product. Semantics, focus order, names and roles still have to be right in each component — which is why every component on the Components page documents its keyboard and screen reader behaviour."
+    }
+  },
+  "contrastChecker": {
+    "foregroundLabel": "Text or icon",
+    "backgroundLabel": "Background",
+    "swap": "Swap",
+    "sampleHeading": "Make it happen",
+    "sampleBody": "Body copy at 14px on this pair, so the verdict below can be judged against something real.",
+    "onLabel": "{foreground} on {background}",
+    "usableEverywhere": "Usable everywhere",
+    "restrictedUse": "Restricted use",
+    "passSummary": "This pair clears every AA threshold, including small body text.",
+    "failSummary": "This pair fails at least one AA threshold. Check the rows below for where it may still be used.",
+    "verdicts": { "aaa": "AAA", "aa": "AA", "fail": "Fail" },
+    "liveRegion": "{foreground} on {background} is {result}, {status} AA for body text.",
+    "passing": "passing",
+    "failing": "failing",
+    "unknownColor": "—"
+  }
+}

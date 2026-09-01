@@ -1,0 +1,17 @@
+{
+  "primary": {
+    "overview": "Overview",
+    "foundations": "Foundations",
+    "components": "Components",
+    "patterns": "Patterns",
+    "applications": "Applications",
+    "architecture": "Architecture"
+  },
+  "shell": {
+    "skipToContent": "Skip to main content",
+    "home": "Raiffeisen Bank design system — overview",
+    "primary": "Primary",
+    "openMenu": "Open navigation menu",
+    "closeMenu": "Close navigation menu"
+  }
+}

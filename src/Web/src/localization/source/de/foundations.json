@@ -1,0 +1,125 @@
+{
+  "nav": {
+    "label": "Abschnitte der Grundlagen",
+    "items": {
+      "principles": "Prinzipien",
+      "colour": "Farbe",
+      "typography": "Typografie",
+      "spacing": "Abstand & Größe",
+      "shape": "Form & Elevation",
+      "layout": "Layout",
+      "motion": "Bewegung",
+      "accessibility": "Barrierefreiheit"
+    }
+  },
+  "header": {
+    "eyebrow": "Grundlagen",
+    "title": "Die Token-Ebene",
+    "description": "Jede visuelle Entscheidung in diesem System löst sich in einem Token auf. Primitive halten die offiziellen Markenwerte; semantische Tokens beschreiben die Absicht. Komponenten greifen ausschließlich auf die semantische Ebene zu — dadurch funktioniert ein Oberflächenwechsel (hell, invertiert, Marke, Corporate) ohne eine einzige Komponentenvariante."
+  },
+  "principles": {
+    "title": "Zwei Ebenen, eine Abhängigkeitsrichtung",
+    "description": "Primitive werden aus der offiziellen RGB-Palette der RBI übernommen und nie direkt von einer Komponente referenziert. Semantische Tokens legen intentionsbasierte Aliasnamen darüber. Die Abhängigkeit fließt ausschließlich von Primitiv → Semantik → Komponente.",
+    "cards": {
+      "yellow": {
+        "title": "Gelb ist die Signatur",
+        "body": "Primärgelb ist dem Logo, der einzigen primären Aktion und bewussten Markenmomenten vorbehalten. Es wird nie zur Fließtextfarbe und füllt nie eine ganze Seite hinter dichtem Inhalt."
+      },
+      "green": {
+        "title": "Grün trägt die Corporate-Stimme",
+        "body": "Die Richtlinien heben Corporate-Grün für den internationalen/Corporate-Bereich hervor. Es ist ein sekundärer Akzent für ESG- und Nachhaltigkeitsinhalte — niemals ein Ersatz für Gelb."
+      },
+      "structure": {
+        "title": "Struktur statt Dekoration",
+        "body": "Rahmen, Linien und großzügiger Raum tragen die Hierarchie. Schatten sind echten schwebenden Oberflächen vorbehalten, und Radien bleiben klein, damit die Identität präzise statt weich wirkt."
+      }
+    }
+  },
+  "colour": {
+    "title": "Farbe",
+    "description": "Werte werden aus Colour_Palette.zip (RBI - RGB - Full Palette.ase) übernommen. Die Farbmuster unten werden aus der Live-CSS-Custom-Property gerendert, sodass diese Seite nie von der Implementierung abweichen kann.",
+    "callout": {
+      "title": "Kontrast ist eine Eigenschaft des Token-Paars, nicht der Farbe",
+      "body": "Primärgelb ist eine helle Farbe: Sie erhält off-schwarzen Text, niemals weißen. Jedes hier dokumentierte Text-Token erfüllt WCAG 2.2 AA gegenüber der gepaarten Oberfläche, und der barrierefreie Ersatz für gelben Text auf Weiß ist --text-brand-accent (Gelb 700, 4,6:1)."
+    },
+    "paletteOverview": {
+      "title": "Paletten-Übersicht",
+      "description": "Die vollständige Primitiv-Palette auf einen Blick."
+    },
+    "contrastChecker": {
+      "title": "Kontrastprüfer",
+      "description": "Wählen Sie zwei beliebige Farben aus der offiziellen Palette und prüfen Sie das Paar gegen WCAG 2.2, bevor es eine Komponente erreicht. Nur Palettenfarben sind wählbar, denn ein Paar, das mit einer Farbe besteht, die nicht zur Marke gehört, ist kein Ergebnis."
+    }
+  },
+  "typography": {
+    "title": "Typografie",
+    "description": "Amalia ist die Corporate-Schrift der RBI, selbst gehostet als WOFF2 in sechs Schnitten plus Kursiv. Die Schriftstärke übernimmt die Arbeit: Black für Display-Aussagen, Bold für Überschriften, Medium für UI-Beschriftungen, Regular für Fließtext.",
+    "weights": { "title": "Schriftstärken", "sample": "Make it happen" },
+    "sizeScale": {
+      "title": "Größenskala",
+      "description": "Eine modulare Skala, abgestimmt auf dichte Enterprise-Bildschirme am unteren und editorielle Klarheit am oberen Ende. Fließtext fällt nie unter 16px."
+    },
+    "lineHeight": { "title": "Zeilenhöhe" },
+    "letterSpacing": {
+      "title": "Laufweite",
+      "description": "Display-Schrift wird enger gesetzt; kleine Versal-Beschriftungen werden geweitet, damit sie lesbar bleiben."
+    }
+  },
+  "spacing": {
+    "title": "Abstand und Größe",
+    "description": "Eine 4px-basierte Skala mit bewussten Sprüngen am oberen Ende für den Abschnittsrhythmus. Steuerhöhen sind so festgelegt, dass der Standard das WCAG-2.2-Mindestmaß von 24px mit Puffer erfüllt.",
+    "spacingScale": { "title": "Abstandsskala" },
+    "controlAndIconSizes": { "title": "Steuerelement- und Icon-Größen" }
+  },
+  "shape": {
+    "title": "Form und Elevation",
+    "description": "Kleine Radien halten die Identität präzise. Elevation ist off-schwarz statt reinschwarz getönt, damit Schatten warm bleiben und nie grau-blau wirken.",
+    "borderWidth": { "title": "Rahmenbreite" },
+    "radius": { "title": "Radius" },
+    "elevation": { "title": "Elevation" }
+  },
+  "layout": {
+    "title": "Layout",
+    "description": "Ein 12-Spalten-Raster mit 24px Abstand und vier Inhaltsbreiten, sodass Formular, Dokumentationsseite und dichte Tabelle jeweils ein passendes Maß erhalten.",
+    "breakpoints": { "title": "Haltepunkte" },
+    "contentWidths": { "title": "Inhaltsbreiten" },
+    "grid": { "title": "Raster" },
+    "stackingOrder": {
+      "title": "Stapelreihenfolge",
+      "description": "Eine feste Z-Index-Leiter. Nichts im System verwendet einen willkürlichen Z-Index-Wert.",
+      "usageLabel": "Ebene"
+    }
+  },
+  "motion": {
+    "title": "Bewegung",
+    "description": "Bewegung ist schnell und zielgerichtet: Sie bestätigt einen Statuswechsel, statt sich in Szene zu setzen. Alles unten ist unter prefers-reduced-motion vollständig deaktiviert.",
+    "duration": { "title": "Dauer" },
+    "easing": { "title": "Easing" }
+  },
+  "accessibility": {
+    "title": "Barrierefreiheits-Grundlagen",
+    "description": "Der Fokusindikator ist eine Systementscheidung, keine Entscheidung pro Komponente. Er wird einmal in der Basisebene definiert, nie entfernt, und wechselt auf invertierten Oberflächen zu Gelb, damit er sichtbar bleibt.",
+    "usageLabel": "Gilt für",
+    "callout": {
+      "title": "Was die Tokens garantieren — und was nicht",
+      "body": "Tokens machen korrekten Kontrast zum Standard, garantieren aber kein barrierefreies Produkt. Semantik, Fokusreihenfolge, Namen und Rollen müssen in jeder Komponente weiterhin stimmen — deshalb dokumentiert jede Komponente auf der Komponentenseite ihr Tastatur- und Screenreader-Verhalten."
+    }
+  },
+  "contrastChecker": {
+    "foregroundLabel": "Text oder Symbol",
+    "backgroundLabel": "Hintergrund",
+    "swap": "Tauschen",
+    "sampleHeading": "Make it happen",
+    "sampleBody": "Fließtext in 14px auf diesem Paar, damit das Urteil unten an etwas Realem gemessen werden kann.",
+    "onLabel": "{foreground} auf {background}",
+    "usableEverywhere": "Überall einsetzbar",
+    "restrictedUse": "Eingeschränkt einsetzbar",
+    "passSummary": "Dieses Paar besteht jede AA-Schwelle, einschließlich kleinen Fließtexts.",
+    "failSummary": "Dieses Paar erfüllt mindestens eine AA-Schwelle nicht. Prüfen Sie die Zeilen unten, wo es dennoch verwendet werden darf.",
+    "verdicts": { "aaa": "AAA", "aa": "AA", "fail": "Nicht bestanden" },
+    "liveRegion": "{foreground} auf {background} ist {result}, {status} AA für Fließtext.",
+    "passing": "bestehend",
+    "failing": "nicht bestehend",
+    "unknownColor": "—"
+  }
+}

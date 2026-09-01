@@ -1,0 +1,25 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/library/index.ts",
+    "src/components/ui/**/*.tsx",
+    "src/components/layout/primitives.tsx",
+    "src/components/patterns/app-page-patterns.tsx",
+    "src/components/brand/rbi-logo.tsx",
+    "src/components/brand/slogan.tsx",
+    "src/design-system/**/*.ts",
+    "src/lib/utils.ts",
+    "src/lib/color/contrast.ts",
+    "src/hooks/use-mobile.tsx"
+  ],
+  "compilerOptions": {
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "declarationMap": true,
+    "allowImportingTsExtensions": false,
+    "rootDir": "src",
+    "outDir": "packages/rbi-design-system/dist",
+    "types": []
+  }
+}

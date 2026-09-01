@@ -1,0 +1,8 @@
+{
+  "required": "{field} ist erforderlich.",
+  "maxLength": "{field} darf höchstens {max, plural, one {# Zeichen} other {# Zeichen}} enthalten.",
+  "minLength": "{field} muss mindestens {min, plural, one {# Zeichen} other {# Zeichen}} enthalten.",
+  "iban": "Bitte eine gültige IBAN eingeben.",
+  "email": "Bitte eine gültige E-Mail-Adresse eingeben.",
+  "numberRange": "{field} muss zwischen {min, number} und {max, number} liegen."
+}

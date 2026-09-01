@@ -1,0 +1,20 @@
+{
+  "labels": {
+    "accountName": "Naziv računa",
+    "iban": "IBAN",
+    "currency": "Valuta",
+    "segment": "Segment",
+    "status": "Status",
+    "search": "Pretraga",
+    "email": "Email adresa",
+    "fullName": "Ime i prezime"
+  },
+  "placeholders": {
+    "search": "Pretraži račune",
+    "selectSegment": "Svi segmenti"
+  },
+  "hints": {
+    "iban": "Unesite IBAN bez praznina.",
+    "search": "Traži po nazivu računa i IBAN-u."
+  }
+}

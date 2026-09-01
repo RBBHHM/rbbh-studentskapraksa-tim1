@@ -1,0 +1,17 @@
+{
+  "primary": {
+    "overview": "Pregled",
+    "foundations": "Temelji",
+    "components": "Komponente",
+    "patterns": "Uzorci",
+    "applications": "Aplikacije",
+    "architecture": "Arhitektura"
+  },
+  "shell": {
+    "skipToContent": "Preskoči na glavni sadržaj",
+    "home": "Raiffeisen Bank dizajn sistem — pregled",
+    "primary": "Glavna navigacija",
+    "openMenu": "Otvori navigaciju",
+    "closeMenu": "Zatvori navigaciju"
+  }
+}

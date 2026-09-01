@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "releaseId": "2026.08.31-001",
+  "defaultLocale": "en",
+  "fallbackLocale": "en",
+  "supportedLocales": [
+    {
+      "code": "bs",
+      "displayNameKey": "locales.bs",
+      "direction": "ltr",
+      "enabled": true
+    },
+    {
+      "code": "de",
+      "displayNameKey": "locales.de",
+      "direction": "ltr",
+      "enabled": false
+    },
+    {
+      "code": "en",
+      "displayNameKey": "locales.en",
+      "direction": "ltr",
+      "enabled": true
+    }
+  ],
+  "namespaces": [
+    "accessibility",
+    "admin",
+    "api-demo",
+    "architecture",
+    "common",
+    "components",
+    "date-time",
+    "errors",
+    "forms",
+    "foundations",
+    "navigation",
+    "overview",
+    "patterns",
+    "registry",
+    "ui-library",
+    "validation"
+  ],
+  "publishedAt": "2026-08-31T11:16:17.923Z"
+}

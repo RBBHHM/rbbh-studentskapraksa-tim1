@@ -1,0 +1,52 @@
+{
+  "shell": {
+    "product": "RBBH Related Parties Register",
+    "homeLabel": "Register home",
+    "menu": "Open navigation",
+    "logout": "Sign out",
+    "profile": "My profile"
+  },
+  "areas": { "work": "Workspace", "administration": "Administration" },
+  "dashboard": {
+    "eyebrow": "Central register",
+    "title": "RBBH Related Parties Register",
+    "description": "Manage related parties, limits, reports and administrative settings in one place."
+  },
+  "actions": { "open": "Open", "refresh": "Refresh", "tryAgain": "Try again" },
+  "states": {
+    "loading": "Loading data",
+    "errorTitle": "Data is currently unavailable",
+    "errorBody": "Check your network connection and try again. Contact support if the problem continues.",
+    "emptyTitle": "No records",
+    "emptyBody": "The service responded successfully but currently has no records to show."
+  },
+  "resources": {
+    "dashboard": {
+      "title": "Overview",
+      "description": "Entry point for work and administration areas."
+    },
+    "legalPersons": {
+      "title": "Legal entities",
+      "description": "View and manage related legal entities."
+    },
+    "physicalPersons": {
+      "title": "Individuals",
+      "description": "View and manage related individuals and family relationships."
+    },
+    "limits": { "title": "Limits", "description": "Regulatory limits and available amounts." },
+    "capital": { "title": "Capital", "description": "Manage regulatory and core capital for limits." },
+    "reports": {
+      "title": "Regulatory reporting",
+      "description": "Monthly reports and export preparation."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "description": "The business-notification record shows who a message was intended for, why it was sent and when it was recorded."
+    },
+    "users": { "title": "Users", "description": "Administrative user record overview." },
+    "period": { "title": "Period management", "description": "Period status and unlock requests." },
+    "codeLists": { "title": "Code lists", "description": "Central view of code-list values." },
+    "audit": { "title": "Audit log", "description": "Review business and administrative changes." },
+    "guide": { "title": "User guide", "description": "Business rules and guidance for the modules you can access." }
+  }
+}

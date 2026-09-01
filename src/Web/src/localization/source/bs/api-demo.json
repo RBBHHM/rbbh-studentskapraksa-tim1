@@ -1,0 +1,28 @@
+{
+  "heading": "API demo",
+  "provenance": {
+    "title": "Odakle dolaze ovi podaci",
+    "body": "Čitano kroz centralizovani API klijent sa ASP.NET Core endpointa za račune."
+  },
+  "table": {
+    "name": "Račun",
+    "iban": "IBAN",
+    "balance": "Saldo",
+    "segment": "Segment",
+    "status": "Status",
+    "updated": "Ažurirano"
+  },
+  "results": "{total, plural, =0 {Nema računa} one {# račun} few {# računa} other {# računa}} u {elapsedMs, number} ms",
+  "pagination": {
+    "page": "Stranica {page} od {totalPages}",
+    "previous": "Prethodna stranica",
+    "next": "Sljedeća stranica"
+  },
+  "scenario": {
+    "label": "Scenarij",
+    "ok": "Uspjeh",
+    "slow": "Spor odgovor",
+    "empty": "Prazan rezultat",
+    "error": "Greška servera"
+  }
+}

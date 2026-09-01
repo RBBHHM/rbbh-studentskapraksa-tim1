@@ -1,0 +1,64 @@
+{
+  "shell": {
+    "product": "RBBH Registar povezanih lica",
+    "homeLabel": "Početna stranica registra",
+    "menu": "Otvori navigaciju",
+    "logout": "Odjava",
+    "profile": "Moj profil"
+  },
+  "areas": { "work": "Radni prostor", "administration": "Administracija" },
+  "dashboard": {
+    "eyebrow": "Centralni registar",
+    "title": "RBBH Registar povezanih lica",
+    "description": "Upravljajte povezanim licima, limitima, izvještajima i administrativnim postavkama na jednom mjestu."
+  },
+  "actions": { "open": "Otvori", "refresh": "Osvježi", "tryAgain": "Pokušaj ponovo" },
+  "states": {
+    "loading": "Učitavanje podataka",
+    "errorTitle": "Podaci trenutno nisu dostupni",
+    "errorBody": "Provjerite mrežnu vezu i pokušajte ponovo. Ako se problem ponovi, kontaktirajte podršku.",
+    "emptyTitle": "Nema zapisa",
+    "emptyBody": "Servis je odgovorio uspješno, ali trenutno nema podataka za prikaz."
+  },
+  "resources": {
+    "dashboard": {
+      "title": "Pregled",
+      "description": "Ulaz u glavne radne i administrativne cjeline."
+    },
+    "legalPersons": {
+      "title": "Pravna lica",
+      "description": "Pregled i upravljanje povezanim pravnim licima."
+    },
+    "physicalPersons": {
+      "title": "Fizička lica",
+      "description": "Pregled povezanih fizičkih lica i porodičnih veza."
+    },
+    "limits": { "title": "Limiti", "description": "Regulatorni limiti i raspoložive vrijednosti." },
+    "capital": { "title": "Kapital", "description": "Upravljanje regulatornim i osnovnim kapitalom za limite." },
+    "reports": {
+      "title": "Regulatorno izvještavanje",
+      "description": "Mjesečni izvještaji i priprema izvoza."
+    },
+    "notifications": {
+      "title": "Notifikacije",
+      "description": "Evidencija poslovnih obavijesti pokazuje kome je poruka namijenjena, zašto je poslana i kada je evidentirana."
+    },
+    "users": { "title": "Korisnici", "description": "Administrativni pregled korisničkih zapisa." },
+    "period": {
+      "title": "Upravljanje periodom",
+      "description": "Status perioda i zahtjevi za otključavanje."
+    },
+    "codeLists": {
+      "title": "Šifrarnici",
+      "description": "Centralni pregled vrijednosti šifarnika."
+    },
+    "audit": {
+      "title": "Audit evidencija",
+      "description": "Pregled poslovnih i administrativnih promjena."
+    },
+    "guide": {
+      "title": "Korisnički vodič",
+      "description": "Objašnjenja poslovnih pravila i rada u dostupnim modulima."
+    }
+  }
+}

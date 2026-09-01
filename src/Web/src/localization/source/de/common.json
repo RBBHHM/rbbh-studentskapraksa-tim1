@@ -1,0 +1,67 @@
+{
+  "brand": {
+    "name": "Raiffeisen Bank International",
+    "slogan": {
+      "lead": "Make",
+      "accent": "design",
+      "tail": "happen"
+    }
+  },
+  "locales": {
+    "en": "English",
+    "de": "Deutsch",
+    "bs": "Bosanski",
+    "en-XA": "Pseudo (Entwicklung)",
+    "ar-XB": "RTL-Pseudo (Entwicklung)"
+  },
+  "language": {
+    "label": "Sprache",
+    "switcherAria": "Sprache wechseln",
+    "current": "Aktuelle Sprache: {language}",
+    "changed": "Sprache auf {language} geändert"
+  },
+  "theme": {
+    "label": "Design",
+    "switcherAria": "Design ändern",
+    "light": "Hell",
+    "dark": "Dunkel",
+    "system": "System"
+  },
+  "footer": {
+    "groups": {
+      "designSystem": "Design System",
+      "engineering": "Entwicklung"
+    },
+    "blurb": "Ein Register verbundener Personen für die sichere Verwaltung von Geschäftsdaten und regulatorischen Pflichten.",
+    "signatureAlt": "Handschriftliche Unterschrift von Hana Mahmutović",
+    "signatureCredit": "Entworfen, entwickelt und dokumentiert von Hana Mahmutović",
+    "signatureNote": "Jedes Token, jede Komponente und jede Zeile Dokumentation wurde hier von Hand erstellt. Wenn es mühelos wirkt, ist genau das der Sinn.",
+    "legal": "Markenelemente, Farbpalette und die Schrift Amalia sind Eigentum der Raiffeisen Bank International AG und werden gemäß den offiziellen Markenrichtlinien verwendet. Interne Geschäftsanwendung."
+  },
+  "actions": {
+    "save": "Speichern",
+    "saveChanges": "Änderungen speichern",
+    "cancel": "Abbrechen",
+    "retry": "Erneut versuchen",
+    "clear": "Zurücksetzen",
+    "copy": "Kopieren",
+    "refresh": "Aktualisieren",
+    "close": "Schließen",
+    "confirmAccountDeletion": "Endgültiges Löschen dieses Kontos bestätigen"
+  },
+  "states": {
+    "loading": "Wird geladen",
+    "empty": "Keine Einträge",
+    "error": "Etwas ist schiefgelaufen"
+  },
+  "localization": {
+    "activeRelease": "Aktives Lokalisierungs-Release {releaseId}",
+    "publishedAt": "Veröffentlicht {publishedAt}",
+    "fallbackNotice": "Einige Texte werden in der Ersatzsprache angezeigt.",
+    "selectedItems": "{count, plural, =0 {Keine Einträge ausgewählt} one {# Eintrag ausgewählt} other {# Einträge ausgewählt}}",
+    "unreadNotifications": "{count, plural, =0 {Keine neuen Benachrichtigungen} one {Eine neue Benachrichtigung} other {# neue Benachrichtigungen}}",
+    "accountStatus": "{status, select, active {Aktiv} review {In Prüfung} blocked {Gesperrt} other {Unbekannt}}",
+    "welcomeUser": "Willkommen zurück, {userName}",
+    "lastUpdated": "Zuletzt aktualisiert {timestamp}"
+  }
+}

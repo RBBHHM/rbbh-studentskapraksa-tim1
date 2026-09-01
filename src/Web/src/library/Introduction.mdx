@@ -1,0 +1,57 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Introduction" />
+
+# RBI Design System
+
+This catalog documents the components published from `src/library/index.ts`
+as `@rbi/design-system`.
+
+## Install
+
+```bash
+bun add @rbi/design-system
+```
+
+## Import
+
+Every component is reachable two ways:
+
+```tsx
+// Barrel — convenient, pulls in the whole surface for bundlers that don't
+// tree-shake well.
+import { Button } from "@rbi/design-system";
+
+// Deep import — the build emits one ES module per source file
+// (`preserveModules`), so this pulls in exactly Button + `cn`, nothing else.
+import { Button } from "@rbi/design-system/ui/button";
+
+// Tokens only, no components.
+import { spacingScale } from "@rbi/design-system/tokens";
+```
+
+## Token CSS
+
+Components read semantic CSS custom properties (`--surface-*`, `--text-*`,
+`--action-*`, …), not hardcoded colours. Import the stylesheet once, near the
+root of the consuming app:
+
+```ts
+import "@rbi/design-system/styles.css";
+```
+
+Without it, components render unstyled — the class names resolve to tokens
+that are never defined.
+
+## Adding a new component and story
+
+1. Add the component under `src/components/...` following the existing
+   folder (`ui`, `layout`, `brand`, `patterns`).
+2. Export it from `src/library/index.ts` with one `export *` line.
+3. Add `ComponentName.stories.tsx` next to the component source — stories live
+   beside the code they document, not in a separate `stories/` tree.
+4. Read the component's `cva` variants before writing `argTypes`; only expose
+   controls for variants that actually exist.
+
+See `docs/library.md` for the full publishing rules (deep-import layout,
+peer dependencies, `bun run build:lib`).

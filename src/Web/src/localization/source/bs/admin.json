@@ -1,0 +1,309 @@
+{
+  "nav": {
+    "label": "Primjeri aplikacija"
+  },
+  "views": {
+    "admin": {
+      "label": "Administratorski panel",
+      "summary": "Back-office ekran: metrike, filtriranje, sortiranje i potpuni tok kreiranja, uređivanja i brisanja.",
+      "dataSource": "Stanje na klijentu u memoriji, inicijalizovano iz src/lib/api/account-data.ts",
+      "capability": "Čitanje i pisanje — svaka promjena prolazi kroz reducer u pregledniku"
+    },
+    "api": {
+      "label": "API demo",
+      "summary": "Ista domena računa dohvaćena putem stvarnog HTTP zahtjeva, sa svakim dostupnim stanjem odgovora.",
+      "dataSource": "HTTP GET /api/public/accounts, koji poslužuje ASP.NET Core endpoint",
+      "capability": "Samo čitanje — straničenje, pretraga i filtriranje se izračunavaju na serveru"
+    }
+  },
+  "status": {
+    "active": {
+      "label": "Aktivan",
+      "description": "Posluje uobičajeno."
+    },
+    "review": {
+      "label": "Na provjeri",
+      "description": "Pod compliance provjerom."
+    },
+    "blocked": {
+      "label": "Blokiran",
+      "description": "Odlazna plaćanja obustavljena."
+    }
+  },
+  "sourceFiles": {
+    "page": {
+      "description": "Sam ekran: traka s metrikama, traka za filtriranje, sortabilna tabela i dijalozi koje otvara."
+    },
+    "directory": {
+      "description": "Sloj podataka — reducer sa izvedenim filtriranjem, sortiranjem i metrikama. Zamjenjiv serverskim funkcijama."
+    },
+    "presentation": {
+      "description": "Oznake, tonovi, liste opcija i formatiranje, tako da nijedan status ni valuta nisu ispisani unutar komponente."
+    },
+    "form": {
+      "description": "Formular za kreiranje i uređivanje, koji dijeli jednu funkciju validacije sa slojem podataka."
+    }
+  },
+  "page": {
+    "header": {
+      "eyebrow": "Administratorski panel",
+      "title": "Back office, sastavljen",
+      "description": "Realističan administratorski ekran sastavljen isključivo od komponenti biblioteke: traka s metrikama, filtrirana i sortabilna tabela podataka, dijalog za kreiranje i uređivanje, akcije na nivou reda i osiguran destruktivni tok — bez posebnog stilizovanja."
+    },
+    "metrics": {
+      "heading": "Portfolio na prvi pogled",
+      "accounts": {
+        "label": "Računi",
+        "hint": "{count} aktivnih"
+      },
+      "exposure": {
+        "label": "Ukupna izloženost",
+        "hint": "Iskazano u EUR"
+      },
+      "average": {
+        "label": "Prosječan saldo",
+        "hint": "Kroz sve segmente"
+      },
+      "attention": {
+        "label": "Zahtijeva pažnju",
+        "hint": "{inReview} na provjeri · {blocked} blokirano"
+      }
+    },
+    "directory": {
+      "heading": "Imenik računa",
+      "resetData": "Resetuj podatke",
+      "newAccount": "Novi račun",
+      "search": {
+        "label": "Pretraga",
+        "placeholder": "Naziv, referenca ili IBAN"
+      },
+      "segment": {
+        "label": "Segment",
+        "all": "Svi segmenti"
+      },
+      "status": {
+        "label": "Status",
+        "all": "Svi statusi"
+      },
+      "clear": "Poništi",
+      "liveRegion": "Prikazano {visible} od {total} računa",
+      "showing": "Prikazano {visible} od {total} računa",
+      "sortedBy": "Sortirano po {column}",
+      "empty": {
+        "title": "Ništa ne odgovara ovim filterima",
+        "description": "Prilagodite pojam za pretragu, segment ili status kako biste proširili prikaz.",
+        "clear": "Poništi filtere"
+      },
+      "columns": {
+        "name": "Račun",
+        "segment": "Segment",
+        "status": "Status",
+        "balanceMinor": "Saldo",
+        "updatedAt": "Posljednje ažuriranje",
+        "actions": "Akcije"
+      },
+      "row": {
+        "actionsFor": "Akcije za {name}",
+        "edit": "Uredi račun",
+        "setStatus": "Postavi status",
+        "delete": "Obriši"
+      }
+    },
+    "source": {
+      "heading": "Ponesite ovaj ekran sa sobom",
+      "description": "Cijeli panel čine četiri datoteke: ekran, njegov sloj podataka, metapodaci prikaza i dijalog formulara. Čitaju se iz repozitorija u vrijeme izgradnje, tako da kopiranje jedne daje tačno ono što radi ovdje — nijedan isječak ne zastarijeva.",
+      "footnote": "Zapisi se nalaze u reduceru u pregledniku, zbog čega su kreiranje, uređivanje i brisanje ovdje trenutni. Zamijenite taj hook serverskim funkcijama i nijedna komponenta na ovoj stranici se neće promijeniti."
+    }
+  },
+  "toast": {
+    "accountUpdated": {
+      "title": "Račun ažuriran",
+      "description": "{name} je sačuvan."
+    },
+    "accountCreated": {
+      "title": "Račun kreiran",
+      "description": "{name} je dodan kao {id}."
+    },
+    "accountDeleted": {
+      "title": "Račun obrisan",
+      "description": "{name} je uklonjen."
+    },
+    "statusChanged": {
+      "title": "Status promijenjen",
+      "description": "{name} je sada {status}."
+    }
+  },
+  "deleteDialog": {
+    "title": "Obrisati {name}?",
+    "description": "Račun i njegov saldo od {balance} bit će uklonjeni iz imenika. Ovo se ne može poništiti.",
+    "cancel": "Zadrži račun",
+    "confirm": "Obriši račun"
+  },
+  "form": {
+    "title": {
+      "edit": "Uredi {name}",
+      "create": "Novi račun"
+    },
+    "description": {
+      "edit": "Promjene se evidentiraju uz ovaj račun i vremenski se označavaju.",
+      "create": "Referenca se izdaje automatski nakon kreiranja računa."
+    },
+    "fields": {
+      "name": {
+        "label": "Naziv računa",
+        "error": "Unesite pravni naziv računa (min. 3 znaka).",
+        "placeholder": "Nordwind Logistik d.o.o."
+      },
+      "iban": {
+        "label": "IBAN",
+        "error": "Unesite važeći IBAN.",
+        "placeholder": "BA39 1610 0000 1234 5678"
+      },
+      "segment": {
+        "label": "Segment"
+      },
+      "status": {
+        "label": "Status"
+      },
+      "currency": {
+        "label": "Valuta"
+      },
+      "balance": {
+        "label": "Saldo",
+        "error": "Saldo mora biti nula ili veći."
+      }
+    },
+    "cancel": "Otkaži",
+    "submit": {
+      "edit": "Sačuvaj promjene",
+      "create": "Kreiraj račun"
+    }
+  },
+  "validation": {
+    "name": "Unesite pravni naziv računa (min. 3 znaka).",
+    "iban": "Unesite važeći IBAN.",
+    "balanceMinor": "Saldo mora biti nula ili veći."
+  },
+  "apiPage": {
+    "header": {
+      "eyebrow": "API demo",
+      "title": "Tipizirano od početka do kraja",
+      "description": "Jedan endpoint, jedan zajednički ugovor, četiri stanja. Svaki red ispod stiže putem stvarnog HTTP zahtjeva prema servisu računa, a ista tabela prikazuje da li je odgovor popunjen, spor, prazan ili dokument problema."
+    },
+    "summary": {
+      "endpoint": {
+        "label": "Endpoint",
+        "value": "GET /api/public/accounts"
+      },
+      "contract": {
+        "label": "Ugovor",
+        "value": "PagedResult<Account>"
+      },
+      "latency": {
+        "label": "Latencija servera",
+        "measuring": "mjerenje u toku…",
+        "unavailable": "—"
+      }
+    },
+    "states": {
+      "heading": "Stanja odgovora",
+      "description": "Odaberite odgovor koji neutralni .NET primjer treba vratiti: popunjen, spor, prazan ili greška u jedinstvenom API formatu.",
+      "tabsLabel": "Stanje odgovora",
+      "scenario": {
+        "ok": "Popunjeno",
+        "slow": "Učitavanje",
+        "empty": "Prazno",
+        "error": "Greška"
+      }
+    },
+    "filters": {
+      "search": {
+        "label": "Pretraži račune",
+        "placeholder": "Naziv, referenca ili IBAN"
+      },
+      "segment": {
+        "label": "Segment",
+        "all": "Svi segmenti"
+      },
+      "refetch": "Ponovo učitaj"
+    },
+    "liveRegion": {
+      "loading": "Računi se učitavaju",
+      "error": "Zahtjev nije uspio",
+      "loaded": "Učitano {total} računa"
+    },
+    "results": {
+      "matching_one": "{count} podudarni račun",
+      "matching_other": "{count} podudarnih računa"
+    },
+    "tryAgain": "Pokušaj ponovo",
+    "empty": {
+      "title": "Nijedan račun ne odgovara ovom prikazu",
+      "emptyScenario": "Servis je uspješno odgovorio sa nula redova. Prazan rezultat je validan odgovor, a ne greška.",
+      "noMatch": "Nijedan račun ne odgovara trenutnoj pretrazi i segmentu. Poništite filtere kako biste vidjeli cijeli portfolio.",
+      "reset": "Poništi filtere"
+    },
+    "table": {
+      "name": "Račun",
+      "segment": "Segment",
+      "status": "Status",
+      "balance": "Saldo"
+    },
+    "pagination": {
+      "label": "Straničenje računa",
+      "page": "Stranica {page} od {totalPages}",
+      "previous": "Prethodna",
+      "next": "Sljedeća"
+    },
+    "provenance": {
+      "heading": "Odakle dolaze ovi redovi",
+      "description": "Ništa na ovoj stranici nije simulirano u stablu komponenti. Svaki red prolazi cijeli navedeni put pri svakom zahtjevu, zbog čega je vrijednost latencije pri vrhu stranice stvarno mjerenje.",
+      "steps": {
+        "referenceData": {
+          "title": "Referentni podaci",
+          "body": "Dvanaest inicijalnih računa, čuvanih na serveru. U .NET projektu ovo odgovara EF Core seed skupu."
+        },
+        "serverHandler": {
+          "title": ".NET endpoint",
+          "body": "Primjenjuje filter segmenta, pretragu teksta i straničenje, a zatim na odgovor bilježi vlastito proteklo vrijeme."
+        },
+        "typedClient": {
+          "title": "Tipizirani klijent",
+          "body": "Gradi upitni niz, poziva zajednički API klijent i vraća tipizirane podatke bez mapiranja transportnog odgovora."
+        },
+        "thisScreen": {
+          "title": "Ovaj ekran",
+          "body": "TanStack Query keširanje po ključu upita; tabela prikazuje učitavanje, prazno, grešku i popunjeno iz istih tokena."
+        }
+      },
+      "comparisonHeading": "Razlika u odnosu na administratorski panel",
+      "comparisonTable": {
+        "screen": "Ekran",
+        "dataSource": "Izvor podataka",
+        "capability": "Šta smije raditi"
+      }
+    },
+    "contract": {
+      "heading": "OpenAPI contract",
+      "description": "OpenAPI opis iz .NET-a generiše TypeScript tipove. Tako obje strane ostaju usklađene bez ručnog dupliciranja ili mapiranja DTO modela.",
+      "swapCallout": {
+        "title": "Gdje se mijenja pravi servis",
+        "body": "Podesite .NET opcije i typed HttpClient. React nastavlja pozivati isti relativni /api endpoint kroz zajednički klijent."
+      }
+    },
+    "sourceFiles": {
+      "contract": {
+        "description": "OpenAPI iz .NET ugovora generiše TypeScript oblik API-ja; ovaj fajl se nikada ne uređuje ručno."
+      },
+      "client": {
+        "description": "Gradi upitni niz, poziva zajednički API klijent i vraća tipizirane podatke bez mapiranja transportnog odgovora."
+      },
+      "handler": {
+        "description": "Neutralni primjeri .NET endpointa i njihovi request/response modeli."
+      },
+      "seed": {
+        "description": "Zamjenjivi tipizirani HTTP klijent za opcionalni vanjski servis."
+      }
+    }
+  }
+}

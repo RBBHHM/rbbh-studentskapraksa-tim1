@@ -1,0 +1,410 @@
+{
+  "nav": {
+    "sectionsLabel": "Pattern sections",
+    "items": {
+      "hero": "Brand hero",
+      "statistics": "Statistic band",
+      "bento": "Bento builder",
+      "features": "Feature grid",
+      "corporate": "Corporate band",
+      "audit": "Audit log",
+      "profile": "My profile",
+      "releases": "Release notes",
+      "empty": "Empty state",
+      "auth": "Auth & RBAC",
+      "notifications": "Notifications",
+      "wizard": "Wizard",
+      "upload": "File upload",
+      "datagrid": "Data grid"
+    }
+  },
+  "page": {
+    "eyebrow": "Patterns",
+    "title": "Composition, not decoration",
+    "description": "Patterns are the approved ways to combine components into full page sections. They exist so that two teams building two products arrive at the same rhythm, the same use of yellow, and the same reading order."
+  },
+  "groupFigures": {
+    "markets": "Markets in Central and Eastern Europe",
+    "employees": "Employees across the group",
+    "customers": "Customers served",
+    "since": "Raiffeisen in Austria since"
+  },
+  "quarterlyFigures": {
+    "operatingIncome": "Operating income",
+    "costIncomeRatio": "Cost / income ratio",
+    "cet1Ratio": "CET1 ratio",
+    "newMandates": "New corporate mandates",
+    "vsQ3": "vs. Q3"
+  },
+  "sections": {
+    "hero": {
+      "title": "Brand hero",
+      "description": "The one place primary yellow fills a large area. Display type is Amalia Black with tight tracking; the primary action inside a yellow panel becomes the off-black outline, because yellow-on-yellow has no contrast.",
+      "exampleTitle": "Yellow hero",
+      "eyebrow": "Corporate & Investment Banking",
+      "display": "Make it happen",
+      "body": "One design language across seventeen markets — so a corporate client recognises Raiffeisen before they read a single word.",
+      "explore": "Explore the system",
+      "readGuidelines": "Read the guidelines",
+      "calloutTitle": "Do not invert this pattern",
+      "calloutBody": "A yellow panel is a statement, not a container for dense content. Tables, forms and long prose belong on the default or subtle surface, where text contrast and reading comfort are highest."
+    },
+    "statistics": {
+      "title": "Statistic band",
+      "description": "Figures set in Amalia Black with tabular numerals, on the inverse surface so they read as a deliberate pause between lighter sections.",
+      "inverseTitle": "Inverse statistic band",
+      "groupFiguresLabel": "Group figures",
+      "cardTitle": "Card statistics on a light surface",
+      "quarterlyLabel": "Quarterly performance"
+    },
+    "bento": {
+      "title": "Bento builder",
+      "description": "Compose a bento layout by hand, then copy the JSX. The builder writes the same BentoGrid and BentoCard components the library ships, so what you paste is production code rather than a screenshot to rebuild."
+    },
+    "features": {
+      "title": "Feature grid",
+      "description": "Three or four cards, each with a leading yellow rule rather than an illustration. Card titles are h3 under the section h2, keeping the outline intact.",
+      "exampleTitle": "Feature cards",
+      "tokenDrivenTitle": "Token-driven",
+      "tokenDrivenBody": "Colour, type, spacing and motion all resolve to tokens transcribed from the official palette. Rebranding a surface is a token change, not a component rewrite.",
+      "accessibleTitle": "Accessible by default",
+      "accessibleBody": "Contrast pairs, a never-removed focus ring, 44px targets and documented keyboard behaviour are built into the primitives rather than retrofitted.",
+      "fullStackTitle": "Full stack",
+      "fullStackBody": "The same contract runs through a typed API, so a form field and its server-side validation rule cannot drift apart."
+    },
+    "corporate": {
+      "title": "Corporate band",
+      "description": "Corporate green is the approved accent for ESG, sustainability and corporate-responsibility content. It sits alongside yellow — never in place of it.",
+      "exampleTitle": "Green ESG band",
+      "badge": "Sustainability",
+      "heading": "Financing the transition, market by market",
+      "body": "Green appears where the content is genuinely about sustainability. Using it decoratively dilutes the signal and, over time, makes the claim harder for a client to believe.",
+      "transitionTitle": "Transition finance",
+      "transitionBody": "Green bonds and sustainability-linked lending.",
+      "reportingTitle": "Assured reporting",
+      "reportingBody": "Externally verified disclosure under CSRD."
+    },
+    "audit": {
+      "title": "Audit log",
+      "description": "Every application with permissions needs one: an append-only record of who changed what, filterable and exportable, with the outcome carried by a labelled badge rather than colour alone.",
+      "exampleTitle": "Audit log screen"
+    },
+    "profile": {
+      "title": "My profile",
+      "description": "Identity on the left, facts in the middle, switches the user actually owns at the bottom. Fields the organisation controls are marked read only instead of being silently disabled.",
+      "exampleTitle": "Profile screen"
+    },
+    "releases": {
+      "title": "Release notes",
+      "description": "A dated changelog where each line says what kind of change it was. The newest version sits on the subtle surface so the current release is obvious at a glance.",
+      "exampleTitle": "Changelog"
+    },
+    "empty": {
+      "title": "Empty state",
+      "description": "An empty state names what is missing, explains why, and offers exactly one way forward. It is not an apology and not a dead end.",
+      "exampleTitle": "No results",
+      "heading": "No pending approvals",
+      "body": "Everything assigned to you has been authorised. New instructions will appear here as soon as a colleague submits them.",
+      "action": "View settled payments"
+    },
+    "auth": {
+      "title": "Auth & RBAC",
+      "description": "Sign-in, password recovery, a 403 boundary, and a role guard that shows exactly what each role can do.",
+      "signInTitle": "Sign-in screen",
+      "forgotTitle": "Forgot password",
+      "forbiddenTitle": "403 forbidden",
+      "roleGuardTitle": "Role guard"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "description": "Transient toasts for one-off events, and a persistent panel for everything a user might have missed.",
+      "toastTitle": "Toast triggers",
+      "panelTitle": "Notification panel"
+    },
+    "wizard": {
+      "title": "Wizard",
+      "description": "A multi-step form with a review step before submission, validated the same way every RBI form is.",
+      "exampleTitle": "Onboarding wizard"
+    },
+    "upload": {
+      "title": "File upload",
+      "description": "A drop zone with per-file progress and inline errors — no request ever leaves the browser.",
+      "exampleTitle": "Document upload"
+    },
+    "datagrid": {
+      "title": "Data grid",
+      "description": "Server-side paging, sorting and search against the same typed accounts API the API demo uses.",
+      "exampleTitle": "Accounts grid"
+    }
+  },
+  "auditPattern": {
+    "searchAriaLabel": "Search the audit log",
+    "searchPlaceholder": "Search actor, action or target",
+    "export": "Export",
+    "when": "When",
+    "actor": "Actor",
+    "action": "Action",
+    "target": "Target",
+    "outcome": "Outcome",
+    "sourceIp": "Source IP",
+    "appendOnlyNote": "Entries are append-only — an audit screen never offers edit or delete.",
+    "filters": {
+      "all": "All activity",
+      "signIns": "Sign-ins",
+      "permissionChanges": "Permission changes",
+      "dataExports": "Data exports"
+    },
+    "outcomes": {
+      "success": "Completed",
+      "warning": "Needs review",
+      "danger": "Blocked"
+    },
+    "entries": {
+      "e1": {
+        "action": "Account limit changed",
+        "target": "AT-4471-0092"
+      },
+      "e2": {
+        "action": "Bulk export requested",
+        "target": "1,204 accounts"
+      },
+      "e3": {
+        "action": "Sign-in attempt",
+        "target": "Admin console"
+      },
+      "e4": {
+        "action": "Role granted",
+        "target": "reviewer · CEE region"
+      },
+      "e5": {
+        "action": "Account closed",
+        "target": "HR-1180-6641"
+      }
+    }
+  },
+  "profilePattern": {
+    "verifiedAccount": "Verified group account",
+    "changePhoto": "Change photo",
+    "details": "Details",
+    "saveChanges": "Save changes",
+    "securityAndNotifications": "Security and notifications",
+    "readOnly": "Read only",
+    "identity": {
+      "role": "Design systems lead",
+      "unit": "Group Digital · Vienna"
+    },
+    "fields": {
+      "displayName": "Display name",
+      "workEmail": "Work e-mail",
+      "employeeId": "Employee ID",
+      "interfaceLanguage": "Interface language",
+      "interfaceLanguageValue": "English (EN)",
+      "timeZone": "Time zone",
+      "lastSignIn": "Last sign-in"
+    },
+    "toggles": {
+      "twoFactor": {
+        "label": "Two-factor authentication",
+        "description": "Required for every account with administrative rights."
+      },
+      "approvalEmails": {
+        "label": "Approval e-mails",
+        "description": "A message whenever an instruction is waiting on your authorisation."
+      },
+      "weeklyDigest": {
+        "label": "Weekly digest",
+        "description": "One summary of activity across the markets you follow."
+      }
+    }
+  },
+  "releaseNotesPattern": {
+    "current": "Current",
+    "kinds": {
+      "added": "Added",
+      "changed": "Changed",
+      "fixed": "Fixed"
+    },
+    "releases": {
+      "v240": {
+        "headline": "Application page patterns",
+        "changes": {
+          "c1": "Audit log, profile and release notes patterns.",
+          "c2": "Colour swatches inside every contrast-checker option.",
+          "c3": "Header navigation switches to the drawer earlier, so nothing overlaps."
+        }
+      },
+      "v230": {
+        "headline": "Localisation codebooks",
+        "changes": {
+          "c1": "Locale codebook plus reviewed value codebooks for EN, DE and HR.",
+          "c2": "Every shell string now resolves through a message key.",
+          "c3": "Deterministic number and date formatting, removing a hydration mismatch."
+        }
+      },
+      "v220": {
+        "headline": "Bento builder and contrast tooling",
+        "changes": {
+          "c1": "Bento layout builder with copyable JSX.",
+          "c2": "WCAG 2.2 contrast checker over the brand palette.",
+          "c3": "Control heights aligned at 40px across filters and buttons."
+        }
+      }
+    }
+  },
+  "authPattern": {
+    "signIn": {
+      "brandEyebrow": "RBI Group Portal",
+      "brandHeadline": "One sign-in for every market",
+      "brandBody": "The same credential set reaches corporate banking, treasury and reporting tools across all seventeen markets.",
+      "title": "Sign in",
+      "subtitle": "Use your work e-mail and password.",
+      "emailLabel": "Work e-mail",
+      "passwordLabel": "Password",
+      "forgotLink": "Forgot password?",
+      "submit": "Sign in"
+    },
+    "forgotPassword": {
+      "title": "Reset your password",
+      "subtitle": "Enter your work e-mail and we'll send a reset link.",
+      "emailLabel": "Work e-mail",
+      "submit": "Send reset link",
+      "note": "If an account exists for that address, a link will arrive within a few minutes."
+    },
+    "forbidden": {
+      "code": "Error 403",
+      "title": "You don't have access to this page",
+      "body": "Your current role doesn't include this permission. Ask an administrator to grant it, or go back to where you came from.",
+      "requestAccess": "Request access",
+      "goBack": "Go back"
+    },
+    "roleGuard": {
+      "switcherLabel": "Preview role",
+      "previewTitle": "What this role sees",
+      "roles": {
+        "viewer": "Viewer",
+        "editor": "Editor",
+        "admin": "Admin"
+      },
+      "previews": {
+        "viewer": "Read-only access: can browse accounts and reports, nothing more.",
+        "editor": "Can edit records and export reports, but cannot manage other users.",
+        "admin": "Full access: manages users, roles and every editor permission."
+      },
+      "capability": "Capability",
+      "capabilities": {
+        "viewAccounts": "View accounts",
+        "exportReports": "Export reports",
+        "editRecords": "Edit records",
+        "manageUsers": "Manage users",
+        "changeRoles": "Change roles"
+      },
+      "granted": "Granted",
+      "notGranted": "Not granted",
+      "currentRoleBadge": "Previewing as {{role}}"
+    }
+  },
+  "notificationsPattern": {
+    "toasts": {
+      "info": {
+        "trigger": "Show info toast",
+        "title": "New market data available",
+        "body": "CEE quarterly figures were just published."
+      },
+      "success": {
+        "trigger": "Show success toast",
+        "title": "Payment approved",
+        "body": "Instruction PMT-88214 has been authorised."
+      },
+      "warning": {
+        "trigger": "Show warning toast",
+        "title": "Session expiring soon",
+        "body": "You'll be signed out in 5 minutes."
+      },
+      "danger": {
+        "trigger": "Show error toast",
+        "title": "Upload failed",
+        "body": "The file exceeded the 10 MB limit."
+      }
+    },
+    "panel": {
+      "title": "Notifications",
+      "markAllRead": "Mark all read",
+      "markRead": "Mark read"
+    },
+    "severities": {
+      "info": "Info",
+      "success": "Success",
+      "warning": "Warning",
+      "danger": "Critical"
+    },
+    "entries": {
+      "n1": {
+        "title": "Approval pending",
+        "body": "A payment instruction has waited over 24 hours for your sign-off."
+      },
+      "n2": {
+        "title": "Export ready",
+        "body": "Your requested account export has finished and is ready to download."
+      },
+      "n3": {
+        "title": "New teammate",
+        "body": "M. Novak was added to the Corporate Banking workspace."
+      },
+      "n4": {
+        "title": "Sign-in blocked",
+        "body": "A sign-in attempt from an unrecognised device was blocked."
+      }
+    }
+  },
+  "wizardPattern": {
+    "steps": {
+      "company": {
+        "label": "Company"
+      },
+      "contact": {
+        "label": "Contact"
+      },
+      "billing": {
+        "label": "Billing"
+      },
+      "review": {
+        "label": "Review"
+      }
+    },
+    "fields": {
+      "companyName": "Company name",
+      "segment": "Segment",
+      "segmentPlaceholder": "Choose a segment",
+      "contactName": "Contact name",
+      "contactEmail": "Contact e-mail",
+      "iban": "IBAN",
+      "currency": "Currency"
+    },
+    "errors": {
+      "required": "This field is required.",
+      "email": "Enter a valid e-mail address."
+    },
+    "back": "Back",
+    "next": "Next",
+    "submit": "Submit"
+  },
+  "uploadPattern": {
+    "dropzoneTitle": "Drag files here, or click to browse",
+    "dropzoneHint": "Accepts {{types}} up to {{size}} per file.",
+    "uploaded": "Uploaded",
+    "errors": {
+      "tooLarge": "File exceeds the 10 MB limit.",
+      "unsupportedType": "File type is not accepted."
+    }
+  },
+  "dataGridPattern": {
+    "searchPlaceholder": "Search accounts",
+    "table": {
+      "name": "Name",
+      "segment": "Segment",
+      "status": "Status",
+      "balance": "Balance"
+    },
+    "pageOf": "Page {{page}} of {{totalPages}}"
+  }
+}

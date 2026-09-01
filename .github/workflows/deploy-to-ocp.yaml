@@ -1,0 +1,139 @@
+# Historija
+# v1.0.1 - dodan komentar na liniju 78 oc tag jer smo imali problem sa kofliktom sa linijom ispod oc import-image pa smo ostavili samo verziju sa linijom oc import-image
+# v1.1.0 - zamijenjen naziv varijabli u liniji 50 za registry i repository
+# v1.2.0 - zamijenjeno u slucaju da postoji deployment, da se doda novi imagestream, referncira latest na taj imagestream, i deployment se postavi na taj imagestream
+# v1.2.1 - zamijenjeno da brise trigger i trigger postavlja na image_tag, i da provjerava da li je deploy zaustavljne za rolloute, ta da opet nastavi sa rolloutom.
+# v1.3.0 - uklonjen dockerImageRepository sa ImageStream-a da sprijeci auto-import svih tagova sa artifactoryja; dodana provjera da image postoji u registryju prije deploya; uklonjen redundantan if/else za oc tag
+# v1.3.1 - provjera image-a prema Artifactory registryju sada koristi autentikaciju, da privatni registry ne vraca lazni "not found"
+
+name: Deploy to OCP
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Choose environment'
+        required: true
+        default: 'UAT'
+        type: choice
+        options:
+          - PROD
+          - UAT
+      image_tag:
+        description: 'Image tag (leave empty for latest)'
+        required: false
+        default: 'latest'
+        type: string
+jobs:             
+  deploy-to-openshift:
+    runs-on: rbbh-ghr-0
+    environment: ${{ inputs.environment }}
+
+    steps:
+    - name: Log in to OpenShift
+      run: |
+        oc login --token=${{ secrets.OCP_TOKEN }} \
+        --server=${{ vars.OCP_SERVER }} \
+        --insecure-skip-tls-verify 
+        oc project ${{ vars.OCP_PROJECT_NAME }}
+
+    - name: Deploy to OpenShift
+      env:
+        ARTIFACTORY_USERNAME: ${{ secrets.ARTIFACTORY_USERNAME }}
+        ARTIFACTORY_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
+      run: |
+        IMAGE_TAG="${{ inputs.image_tag }}"
+        FULL_IMAGE_PATH="${{ vars.ARTIFACTORY_REGISTRY }}/${{ vars.ARTIFACTORY_REPOSITORY }}/${{ vars.IMAGE_NAME }}:${IMAGE_TAG}"
+        MANIFEST_URL="https://${{ vars.ARTIFACTORY_REGISTRY }}/v2/${{ vars.ARTIFACTORY_REPOSITORY }}/${{ vars.IMAGE_NAME }}/manifests/${IMAGE_TAG}"
+        echo "Deploying image with tag: ${IMAGE_TAG}"
+        echo "Full image path: ${FULL_IMAGE_PATH}"
+
+        # Provjeri da image postoji u registryju prije nego pocnes deploy
+        if ! curl --silent --show-error --fail --output /dev/null \
+          --user "${ARTIFACTORY_USERNAME}:${ARTIFACTORY_TOKEN}" \
+          --header 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json, application/vnd.docker.distribution.manifest.v1+json, */*' \
+          "${MANIFEST_URL}"; then
+          echo "ERROR: Unable to access image ${FULL_IMAGE_PATH} in Artifactory registry!"
+          echo "Check that the tag exists and that the workflow Artifactory credentials can read the OCI/Docker manifest."
+          exit 1
+        fi
+
+        # Ukloni dockerImageRepository ako postoji - spriječava auto-import SVIH tagova sa artifactoryja
+        if oc get imagestream/${{ vars.IMAGE_NAME }} -o jsonpath='{.spec.dockerImageRepository}' 2>/dev/null | grep -q .; then
+          echo "Removing dockerImageRepository to prevent auto-import of all tags"
+          oc patch imagestream/${{ vars.IMAGE_NAME }} --type=json -p '[{"op":"remove","path":"/spec/dockerImageRepository"}]'
+        fi
+        
+        if ! oc get deployment/${{ vars.IMAGE_NAME }} >/dev/null 2>&1; then
+          echo "Creating new deployment."
+          oc new-app --image=${{ vars.ARTIFACTORY_REGISTRY }}/${{ vars.ARTIFACTORY_REPOSITORY }}/${{ vars.IMAGE_NAME }}:${IMAGE_TAG} -l 'k8s-app=prometheus,HealthChecks=true' \
+            -e TZ=Europe/Sarajevo \
+            -e ASPNETCORE_URLS=http://+:8080 \
+            -e ASPNETCORE_ENVIRONMENT=${{ inputs.environment == 'PROD' && 'Production' || 'Development' }} \
+            -e SSL_CERT_DIR=/etc/ssl/certs/aditional-certs/ \
+            || true # new-app kreira deployment, imagestream, service - koji vec postoji jer je migracija sa DC
+          
+          # Za svaki slucaj patchira deployment da koristi novi image
+          oc patch deployment/${{ vars.IMAGE_NAME }} -p "{\"spec\":{\"template\":{\"spec\":{\"containers\":[{\"name\":\"${{ vars.IMAGE_NAME }}\",\"image\":\"${{ vars.IMAGE_NAME }}:latest\",\"imagePullPolicy\":\"Always\"}]}}}}"
+
+          sleep 30  # Čekanje da se resursi kreiraju
+          if oc get svc/${{ vars.IMAGE_NAME }} -o jsonpath='{.spec.selector.deploymentconfig}' 2>/dev/null | grep -q .; then
+            echo "Service selector points to DeploymentConfig, patching to Deployment"
+            oc patch svc/${{ vars.IMAGE_NAME }} --type=json -p "[
+              {\"op\":\"remove\",\"path\":\"/spec/selector/deploymentconfig\"},
+              {\"op\":\"add\",\"path\":\"/spec/selector/deployment\",\"value\":\"${{ vars.IMAGE_NAME }}\"}
+            ]"
+          fi
+          oc get route/${{ vars.IMAGE_NAME }} >/dev/null 2>&1 || oc expose svc/${{ vars.IMAGE_NAME }}
+          oc set volume deployment/${{ vars.IMAGE_NAME }} --add --configmap-name='ca-certificates' --name=ca-certificates --mount-path=/etc/ssl/certs/aditional-certs/
+
+          # Ukloni sve postojeće image triggere za container
+          oc set triggers deployment/${{ vars.IMAGE_NAME }} --remove-all
+
+          # Ensure OpenShift image trigger follows the latest ImageStreamTag
+          oc set triggers deployment/${{ vars.IMAGE_NAME }} \
+            --from-image=${{ vars.IMAGE_NAME }}:latest \
+            -c ${{ vars.IMAGE_NAME }} \
+            --auto
+
+        else
+          echo "Deployment already exists"
+          echo "Importing image and updating ImageStream tags."
+
+          if [[ "${IMAGE_TAG}" == "latest" ]]; then
+            echo "Handling latest tag - deleting existing latest tag to avoid conflicts"
+            oc tag --delete ${{ vars.IMAGE_NAME }}:latest || true
+          fi
+
+          # Import image into ImageStream
+          oc import-image ${{ vars.IMAGE_NAME }}:${IMAGE_TAG} --from=${FULL_IMAGE_PATH} --confirm
+
+          # Set 'latest' tag to point to the deployed image tag if tag nije latest ili uvijek ako jest
+          oc tag ${{ vars.IMAGE_NAME }}:${IMAGE_TAG} ${{ vars.IMAGE_NAME }}:latest --reference=true
+
+          # Update deployment to use ImageStream tag (not full registry path)
+          oc set image deployment/${{ vars.IMAGE_NAME }} ${{ vars.IMAGE_NAME }}=${{ vars.IMAGE_NAME }}:latest
+
+          # Ukloni sve postojeće image triggere za container
+          oc set triggers deployment/${{ vars.IMAGE_NAME }} --remove-all
+
+          # Ensure OpenShift image trigger follows the latest ImageStreamTag
+          oc set triggers deployment/${{ vars.IMAGE_NAME }} \
+            --from-image=${{ vars.IMAGE_NAME }}:${IMAGE_TAG} \
+            -c ${{ vars.IMAGE_NAME }} \
+            --auto
+
+          oc patch deployment/${{ vars.IMAGE_NAME }} -p "{\"spec\":{\"template\":{\"spec\":{\"containers\":[{\"name\":\"${{ vars.IMAGE_NAME }}\",\"imagePullPolicy\":\"Always\"}]}}}}"
+
+          oc set volume deployment/${{ vars.IMAGE_NAME }} --add --overwrite --configmap-name='ca-certificates' --name=ca-certificates --mount-path=/etc/ssl/certs/aditional-certs/
+
+          oc set env deployment/${{ vars.IMAGE_NAME }} TZ=Europe/Sarajevo ASPNETCORE_ENVIRONMENT=${{ inputs.environment == 'PROD' && 'Production' || 'Development' }} ASPNETCORE_URLS=http://+:8080 SSL_CERT_DIR=/etc/ssl/certs/aditional-certs/
+
+          sleep 20
+
+          if oc get deployment/${{ vars.IMAGE_NAME }} -o jsonpath='{.spec.paused}' 2>/dev/null | grep -q "true"; then
+            echo "Deployment is paused, resuming before restart"
+            oc rollout resume deployment/${{ vars.IMAGE_NAME }}
+          fi
+
+          oc rollout restart deployment/${{ vars.IMAGE_NAME }}
+        fi

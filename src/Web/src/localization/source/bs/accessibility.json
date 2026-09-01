@@ -1,0 +1,17 @@
+{
+  "landmarks": {
+    "mainContent": "Glavni sadržaj",
+    "primaryNavigation": "Glavna navigacija",
+    "breadcrumb": "Navigacijski put"
+  },
+  "announcements": {
+    "loading": "Učitavanje sadržaja",
+    "loaded": "Sadržaj učitan",
+    "sortedBy": "Sortirano po {column}, {direction, select, asc {rastuće} desc {opadajuće} other {nesortirano}}"
+  },
+  "controls": {
+    "sortColumn": "Sortiraj po {column}",
+    "openDialog": "Otvori {name}",
+    "closeDialog": "Zatvori {name}"
+  }
+}

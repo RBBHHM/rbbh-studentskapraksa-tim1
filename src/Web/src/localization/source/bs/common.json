@@ -1,0 +1,67 @@
+{
+  "brand": {
+    "name": "Raiffeisen Bank International",
+    "slogan": {
+      "lead": "Make",
+      "accent": "design",
+      "tail": "happen"
+    }
+  },
+  "locales": {
+    "en": "English",
+    "de": "Deutsch",
+    "bs": "Bosanski",
+    "en-XA": "Pseudo (razvoj)",
+    "ar-XB": "RTL pseudo (razvoj)"
+  },
+  "language": {
+    "label": "Jezik",
+    "switcherAria": "Promijeni jezik",
+    "current": "Trenutni jezik: {language}",
+    "changed": "Jezik promijenjen na {language}"
+  },
+  "theme": {
+    "label": "Tema",
+    "switcherAria": "Promijeni temu",
+    "light": "Svijetla",
+    "dark": "Tamna",
+    "system": "Sistem"
+  },
+  "footer": {
+    "groups": {
+      "designSystem": "Dizajn sistem",
+      "engineering": "Inženjering"
+    },
+    "blurb": "Registar povezanih lica za sigurno upravljanje poslovnim podacima i regulatornim obavezama.",
+    "signatureAlt": "Rukopisni potpis Hane Mahmutović",
+    "signatureCredit": "Dizajnirala, izradila i dokumentovala Hana Mahmutović",
+    "signatureNote": "Pažljivo oblikovano za jasno, pristupačno i pouzdano svakodnevno korištenje.",
+    "legal": "Elementi marke, paleta boja i pismo Amalia vlasništvo su Raiffeisen Bank International AG i koriste se prema službenim smjernicama marke. Interna poslovna aplikacija."
+  },
+  "actions": {
+    "save": "Sačuvaj",
+    "saveChanges": "Sačuvaj izmjene",
+    "cancel": "Odustani",
+    "retry": "Pokušaj ponovo",
+    "clear": "Očisti",
+    "copy": "Kopiraj",
+    "refresh": "Osvježi",
+    "close": "Zatvori",
+    "confirmAccountDeletion": "Potvrdi trajno brisanje ovog računa"
+  },
+  "states": {
+    "loading": "Učitavanje",
+    "empty": "Nema podataka",
+    "error": "Došlo je do greške"
+  },
+  "localization": {
+    "activeRelease": "Aktivno izdanje lokalizacije {releaseId}",
+    "publishedAt": "Objavljeno {publishedAt}",
+    "fallbackNotice": "Dio teksta prikazan je na rezervnom jeziku.",
+    "selectedItems": "{count, plural, =0 {Nema odabranih zapisa} one {# odabran zapis} few {# odabrana zapisa} other {# odabranih zapisa}}",
+    "unreadNotifications": "{count, plural, =0 {Nema novih obavještenja} one {Jedno novo obavještenje} few {# nova obavještenja} other {# novih obavještenja}}",
+    "accountStatus": "{status, select, active {Aktivan} review {Na provjeri} blocked {Blokiran} other {Nepoznato}}",
+    "welcomeUser": "Dobro došli, {userName}",
+    "lastUpdated": "Zadnja izmjena {timestamp}"
+  }
+}

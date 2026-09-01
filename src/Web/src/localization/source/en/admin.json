@@ -1,0 +1,309 @@
+{
+  "nav": {
+    "label": "Application examples"
+  },
+  "views": {
+    "admin": {
+      "label": "Admin panel",
+      "summary": "A back-office screen: metrics, filtering, sorting and a full create, edit and delete flow.",
+      "dataSource": "In-memory client state seeded from src/lib/api/account-data.ts",
+      "capability": "Read and write — every mutation runs through a reducer in the browser"
+    },
+    "api": {
+      "label": "API demo",
+      "summary": "The same account domain fetched over a real HTTP request, with every response state reachable.",
+      "dataSource": "HTTP GET /api/public/accounts, served by the ASP.NET Core endpoint",
+      "capability": "Read only — paging, search and filtering are computed on the server"
+    }
+  },
+  "status": {
+    "active": {
+      "label": "Active",
+      "description": "Trading normally."
+    },
+    "review": {
+      "label": "In review",
+      "description": "Under compliance review."
+    },
+    "blocked": {
+      "label": "Blocked",
+      "description": "Outgoing payments suspended."
+    }
+  },
+  "sourceFiles": {
+    "page": {
+      "description": "The screen itself: metric band, filter bar, sortable table and the dialogs it opens."
+    },
+    "directory": {
+      "description": "The data layer — a reducer plus derived filtering, sorting and metrics. Replaceable by server functions."
+    },
+    "presentation": {
+      "description": "Labels, tones, option lists and formatters, so no status or currency is spelled out in a component."
+    },
+    "form": {
+      "description": "The create and edit form, sharing one validation function with the data layer."
+    }
+  },
+  "page": {
+    "header": {
+      "eyebrow": "Admin panel",
+      "title": "Back office, assembled",
+      "description": "A realistic administration screen built only from library components: a metric band, a filterable and sortable data table, a create and edit dialog, row-level actions and a guarded destructive flow — no bespoke styling anywhere."
+    },
+    "metrics": {
+      "heading": "Portfolio at a glance",
+      "accounts": {
+        "label": "Accounts",
+        "hint": "{count} active"
+      },
+      "exposure": {
+        "label": "Total exposure",
+        "hint": "Reported in EUR"
+      },
+      "average": {
+        "label": "Average balance",
+        "hint": "Across all segments"
+      },
+      "attention": {
+        "label": "Needs attention",
+        "hint": "{inReview} in review · {blocked} blocked"
+      }
+    },
+    "directory": {
+      "heading": "Account directory",
+      "resetData": "Reset data",
+      "newAccount": "New account",
+      "search": {
+        "label": "Search",
+        "placeholder": "Name, reference or IBAN"
+      },
+      "segment": {
+        "label": "Segment",
+        "all": "All segments"
+      },
+      "status": {
+        "label": "Status",
+        "all": "All statuses"
+      },
+      "clear": "Clear",
+      "liveRegion": "{visible} of {total} accounts shown",
+      "showing": "Showing {visible} of {total} accounts",
+      "sortedBy": "Sorted by {column}",
+      "empty": {
+        "title": "Nothing matches these filters",
+        "description": "Adjust the search term, segment or status to widen the view.",
+        "clear": "Clear filters"
+      },
+      "columns": {
+        "name": "Account",
+        "segment": "Segment",
+        "status": "Status",
+        "balanceMinor": "Balance",
+        "updatedAt": "Last updated",
+        "actions": "Actions"
+      },
+      "row": {
+        "actionsFor": "Actions for {name}",
+        "edit": "Edit account",
+        "setStatus": "Set status",
+        "delete": "Delete"
+      }
+    },
+    "source": {
+      "heading": "Take this screen with you",
+      "description": "The whole panel is four files: the screen, its data layer, its presentation metadata and the form dialog. They are read from the repository at build time, so copying one gives you exactly what runs here — no snippet drifts out of date.",
+      "footnote": "Records live in a reducer in the browser, which is what makes create, edit and delete instant here. Swap that hook for server functions and no component on this page changes."
+    }
+  },
+  "toast": {
+    "accountUpdated": {
+      "title": "Account updated",
+      "description": "{name} was saved."
+    },
+    "accountCreated": {
+      "title": "Account created",
+      "description": "{name} was added as {id}."
+    },
+    "accountDeleted": {
+      "title": "Account deleted",
+      "description": "{name} was removed."
+    },
+    "statusChanged": {
+      "title": "Status changed",
+      "description": "{name} is now {status}."
+    }
+  },
+  "deleteDialog": {
+    "title": "Delete {name}?",
+    "description": "The account and its balance of {balance} will be removed from the directory. This cannot be undone.",
+    "cancel": "Keep account",
+    "confirm": "Delete account"
+  },
+  "form": {
+    "title": {
+      "edit": "Edit {name}",
+      "create": "New account"
+    },
+    "description": {
+      "edit": "Changes are recorded against this account and stamped with the current time.",
+      "create": "The reference is issued automatically once the account is created."
+    },
+    "fields": {
+      "name": {
+        "label": "Account name",
+        "error": "Enter the legal account name (min. 3 characters).",
+        "placeholder": "Nordwind Logistik GmbH"
+      },
+      "iban": {
+        "label": "IBAN",
+        "error": "Enter a valid IBAN.",
+        "placeholder": "AT61 1904 3002 3457 3201"
+      },
+      "segment": {
+        "label": "Segment"
+      },
+      "status": {
+        "label": "Status"
+      },
+      "currency": {
+        "label": "Currency"
+      },
+      "balance": {
+        "label": "Balance",
+        "error": "Balance must be zero or greater."
+      }
+    },
+    "cancel": "Cancel",
+    "submit": {
+      "edit": "Save changes",
+      "create": "Create account"
+    }
+  },
+  "validation": {
+    "name": "Enter the legal account name (min. 3 characters).",
+    "iban": "Enter a valid IBAN.",
+    "balanceMinor": "Balance must be zero or greater."
+  },
+  "apiPage": {
+    "header": {
+      "eyebrow": "API demo",
+      "title": "Typed end to end",
+      "description": "One endpoint, one shared contract, four states. Every row below arrives over a real HTTP request against the accounts service, and the same table renders whether the response is populated, slow, empty or a problem document."
+    },
+    "summary": {
+      "endpoint": {
+        "label": "Endpoint",
+        "value": "GET /api/public/accounts"
+      },
+      "contract": {
+        "label": "Contract",
+        "value": "PagedResult<Account>"
+      },
+      "latency": {
+        "label": "Server latency",
+        "measuring": "measuring…",
+        "unavailable": "—"
+      }
+    },
+    "states": {
+      "heading": "Response states",
+      "description": "Choose the response returned by the neutral .NET example: populated, slow, empty, or an error in the unified API format.",
+      "tabsLabel": "Response state",
+      "scenario": {
+        "ok": "Populated",
+        "slow": "Loading",
+        "empty": "Empty",
+        "error": "Error"
+      }
+    },
+    "filters": {
+      "search": {
+        "label": "Search accounts",
+        "placeholder": "Name, reference or IBAN"
+      },
+      "segment": {
+        "label": "Segment",
+        "all": "All segments"
+      },
+      "refetch": "Refetch"
+    },
+    "liveRegion": {
+      "loading": "Loading accounts",
+      "error": "The request failed",
+      "loaded": "{total} accounts loaded"
+    },
+    "results": {
+      "matching_one": "{count} matching account",
+      "matching_other": "{count} matching accounts"
+    },
+    "tryAgain": "Try again",
+    "empty": {
+      "title": "No accounts match this view",
+      "emptyScenario": "The service answered successfully with zero rows. An empty result is a valid answer, not an error.",
+      "noMatch": "No account matches the current search and segment. Clear the filters to see the full portfolio.",
+      "reset": "Reset filters"
+    },
+    "table": {
+      "name": "Account",
+      "segment": "Segment",
+      "status": "Status",
+      "balance": "Balance"
+    },
+    "pagination": {
+      "label": "Accounts pagination",
+      "page": "Page {page} of {totalPages}",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "provenance": {
+      "heading": "Where these rows come from",
+      "description": "Nothing on this page is mocked in the component tree. Each row travels the full path below on every request, which is why the latency figure at the top of the page is a real measurement.",
+      "steps": {
+        "referenceData": {
+          "title": "Reference data",
+          "body": "Twelve seeded accounts, held on the server. In the .NET project this is the EF Core seed set."
+        },
+        "serverHandler": {
+          "title": ".NET endpoint",
+          "body": "Applies the segment filter, free-text search and paging, then stamps its own elapsed time on the response."
+        },
+        "typedClient": {
+          "title": "Typed client",
+          "body": "Builds the query string, calls the shared API client, and returns typed data without transport mapping."
+        },
+        "thisScreen": {
+          "title": "This screen",
+          "body": "TanStack Query caches per query key; the table renders loading, empty, error and populated from the same tokens."
+        }
+      },
+      "comparisonHeading": "How this differs from the admin panel",
+      "comparisonTable": {
+        "screen": "Screen",
+        "dataSource": "Data source",
+        "capability": "What it may do"
+      }
+    },
+    "contract": {
+      "heading": "OpenAPI contract",
+      "description": "The .NET OpenAPI document generates TypeScript types, keeping both sides aligned without handwritten DTO duplication or mapping.",
+      "swapCallout": {
+        "title": "Where the real service changes",
+        "body": "Configure the .NET options and typed HttpClient. React continues to call the same relative /api endpoint through the shared client."
+      }
+    },
+    "sourceFiles": {
+      "contract": {
+        "description": "OpenAPI generates the TypeScript API shape from the .NET contract; this file is never edited by hand."
+      },
+      "client": {
+        "description": "Builds the query string, calls the shared API client, and returns typed data without transport mapping."
+      },
+      "handler": {
+        "description": "Neutral .NET endpoint examples and their request/response records."
+      },
+      "seed": {
+        "description": "A replaceable typed HTTP client for an optional external service."
+      }
+    }
+  }
+}

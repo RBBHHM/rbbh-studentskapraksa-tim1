@@ -1,0 +1,28 @@
+{
+  "heading": "API demo",
+  "provenance": {
+    "title": "Where this data comes from",
+    "body": "Read through the centralized API client from the ASP.NET Core accounts endpoint."
+  },
+  "table": {
+    "name": "Account",
+    "iban": "IBAN",
+    "balance": "Balance",
+    "segment": "Segment",
+    "status": "Status",
+    "updated": "Updated"
+  },
+  "results": "{total, plural, =0 {No accounts} one {# account} other {# accounts}} in {elapsedMs, number} ms",
+  "pagination": {
+    "page": "Page {page} of {totalPages}",
+    "previous": "Previous page",
+    "next": "Next page"
+  },
+  "scenario": {
+    "label": "Scenario",
+    "ok": "Success",
+    "slow": "Slow response",
+    "empty": "Empty result",
+    "error": "Server error"
+  }
+}

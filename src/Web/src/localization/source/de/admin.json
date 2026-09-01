@@ -1,0 +1,309 @@
+{
+  "nav": {
+    "label": "Anwendungsbeispiele"
+  },
+  "views": {
+    "admin": {
+      "label": "Admin-Panel",
+      "summary": "Ein Back-Office-Bildschirm: Kennzahlen, Filterung, Sortierung und ein vollständiger Erstellungs-, Bearbeitungs- und Löschvorgang.",
+      "dataSource": "Clientseitiger Zustand im Speicher, initialisiert aus src/lib/api/account-data.ts",
+      "capability": "Lesen und Schreiben — jede Änderung läuft über einen Reducer im Browser"
+    },
+    "api": {
+      "label": "API-Demo",
+      "summary": "Dieselbe Kontodomäne, abgerufen über eine echte HTTP-Anfrage, wobei jeder Antwortzustand erreichbar ist.",
+      "dataSource": "HTTP GET /api/public/accounts, bereitgestellt vom ASP.NET-Core-Endpunkt",
+      "capability": "Nur Lesen — Paginierung, Suche und Filterung werden auf dem Server berechnet"
+    }
+  },
+  "status": {
+    "active": {
+      "label": "Aktiv",
+      "description": "Handelt normal."
+    },
+    "review": {
+      "label": "In Prüfung",
+      "description": "Unter Compliance-Prüfung."
+    },
+    "blocked": {
+      "label": "Gesperrt",
+      "description": "Ausgehende Zahlungen ausgesetzt."
+    }
+  },
+  "sourceFiles": {
+    "page": {
+      "description": "Der Bildschirm selbst: Kennzahlenband, Filterleiste, sortierbare Tabelle und die von ihr geöffneten Dialoge."
+    },
+    "directory": {
+      "description": "Die Datenschicht — ein Reducer sowie abgeleitete Filterung, Sortierung und Kennzahlen. Ersetzbar durch Serverfunktionen."
+    },
+    "presentation": {
+      "description": "Beschriftungen, Farbtöne, Optionslisten und Formatierer, damit kein Status oder keine Währung in einer Komponente ausgeschrieben wird."
+    },
+    "form": {
+      "description": "Das Erstellungs- und Bearbeitungsformular, das sich eine Validierungsfunktion mit der Datenschicht teilt."
+    }
+  },
+  "page": {
+    "header": {
+      "eyebrow": "Admin-Panel",
+      "title": "Back-Office, zusammengesetzt",
+      "description": "Ein realistischer Verwaltungsbildschirm, der ausschließlich aus Bibliothekskomponenten aufgebaut ist: ein Kennzahlenband, eine filter- und sortierbare Datentabelle, ein Erstellungs- und Bearbeitungsdialog, zeilenbezogene Aktionen und ein abgesicherter destruktiver Ablauf — ohne individuelle Gestaltung."
+    },
+    "metrics": {
+      "heading": "Portfolio auf einen Blick",
+      "accounts": {
+        "label": "Konten",
+        "hint": "{count} aktiv"
+      },
+      "exposure": {
+        "label": "Gesamtexposition",
+        "hint": "Ausgewiesen in EUR"
+      },
+      "average": {
+        "label": "Durchschnittssaldo",
+        "hint": "Über alle Segmente"
+      },
+      "attention": {
+        "label": "Benötigt Aufmerksamkeit",
+        "hint": "{inReview} in Prüfung · {blocked} gesperrt"
+      }
+    },
+    "directory": {
+      "heading": "Kontoverzeichnis",
+      "resetData": "Daten zurücksetzen",
+      "newAccount": "Neues Konto",
+      "search": {
+        "label": "Suche",
+        "placeholder": "Name, Referenz oder IBAN"
+      },
+      "segment": {
+        "label": "Segment",
+        "all": "Alle Segmente"
+      },
+      "status": {
+        "label": "Status",
+        "all": "Alle Status"
+      },
+      "clear": "Zurücksetzen",
+      "liveRegion": "{visible} von {total} Konten angezeigt",
+      "showing": "{visible} von {total} Konten werden angezeigt",
+      "sortedBy": "Sortiert nach {column}",
+      "empty": {
+        "title": "Keine Übereinstimmung mit diesen Filtern",
+        "description": "Passen Sie den Suchbegriff, das Segment oder den Status an, um die Ansicht zu erweitern.",
+        "clear": "Filter zurücksetzen"
+      },
+      "columns": {
+        "name": "Konto",
+        "segment": "Segment",
+        "status": "Status",
+        "balanceMinor": "Saldo",
+        "updatedAt": "Zuletzt aktualisiert",
+        "actions": "Aktionen"
+      },
+      "row": {
+        "actionsFor": "Aktionen für {name}",
+        "edit": "Konto bearbeiten",
+        "setStatus": "Status festlegen",
+        "delete": "Löschen"
+      }
+    },
+    "source": {
+      "heading": "Diesen Bildschirm mitnehmen",
+      "description": "Das gesamte Panel besteht aus vier Dateien: dem Bildschirm, seiner Datenschicht, seinen Präsentationsmetadaten und dem Formulardialog. Sie werden zur Build-Zeit aus dem Repository gelesen, sodass eine Kopie genau das liefert, was hier läuft — kein Snippet gerät in Rückstand.",
+      "footnote": "Datensätze leben in einem Reducer im Browser, wodurch Erstellen, Bearbeiten und Löschen hier sofort erfolgen. Ersetzen Sie diesen Hook durch Serverfunktionen, und keine Komponente auf dieser Seite ändert sich."
+    }
+  },
+  "toast": {
+    "accountUpdated": {
+      "title": "Konto aktualisiert",
+      "description": "{name} wurde gespeichert."
+    },
+    "accountCreated": {
+      "title": "Konto erstellt",
+      "description": "{name} wurde als {id} hinzugefügt."
+    },
+    "accountDeleted": {
+      "title": "Konto gelöscht",
+      "description": "{name} wurde entfernt."
+    },
+    "statusChanged": {
+      "title": "Status geändert",
+      "description": "{name} ist jetzt {status}."
+    }
+  },
+  "deleteDialog": {
+    "title": "{name} löschen?",
+    "description": "Das Konto und sein Saldo von {balance} werden aus dem Verzeichnis entfernt. Dies kann nicht rückgängig gemacht werden.",
+    "cancel": "Konto behalten",
+    "confirm": "Konto löschen"
+  },
+  "form": {
+    "title": {
+      "edit": "{name} bearbeiten",
+      "create": "Neues Konto"
+    },
+    "description": {
+      "edit": "Änderungen werden für dieses Konto erfasst und mit der aktuellen Zeit versehen.",
+      "create": "Die Referenz wird automatisch vergeben, sobald das Konto erstellt wird."
+    },
+    "fields": {
+      "name": {
+        "label": "Kontoname",
+        "error": "Geben Sie den rechtlichen Kontonamen ein (mind. 3 Zeichen).",
+        "placeholder": "Nordwind Logistik GmbH"
+      },
+      "iban": {
+        "label": "IBAN",
+        "error": "Geben Sie eine gültige IBAN ein.",
+        "placeholder": "AT61 1904 3002 3457 3201"
+      },
+      "segment": {
+        "label": "Segment"
+      },
+      "status": {
+        "label": "Status"
+      },
+      "currency": {
+        "label": "Währung"
+      },
+      "balance": {
+        "label": "Saldo",
+        "error": "Der Saldo muss null oder größer sein."
+      }
+    },
+    "cancel": "Abbrechen",
+    "submit": {
+      "edit": "Änderungen speichern",
+      "create": "Konto erstellen"
+    }
+  },
+  "validation": {
+    "name": "Geben Sie den rechtlichen Kontonamen ein (mind. 3 Zeichen).",
+    "iban": "Geben Sie eine gültige IBAN ein.",
+    "balanceMinor": "Der Saldo muss null oder größer sein."
+  },
+  "apiPage": {
+    "header": {
+      "eyebrow": "API-Demo",
+      "title": "Typisiert von Anfang bis Ende",
+      "description": "Ein Endpunkt, ein gemeinsamer Vertrag, vier Zustände. Jede Zeile unten wird über eine echte HTTP-Anfrage an den Kontendienst abgerufen, und dieselbe Tabelle stellt dar, ob die Antwort gefüllt, langsam, leer oder ein Problemdokument ist."
+    },
+    "summary": {
+      "endpoint": {
+        "label": "Endpunkt",
+        "value": "GET /api/public/accounts"
+      },
+      "contract": {
+        "label": "Vertrag",
+        "value": "PagedResult<Account>"
+      },
+      "latency": {
+        "label": "Serverlatenz",
+        "measuring": "wird gemessen…",
+        "unavailable": "—"
+      }
+    },
+    "states": {
+      "heading": "Antwortzustände",
+      "description": "Wählen Sie die Antwort des neutralen .NET-Beispiels: gefüllt, langsam, leer oder ein Fehler im einheitlichen API-Format.",
+      "tabsLabel": "Antwortzustand",
+      "scenario": {
+        "ok": "Gefüllt",
+        "slow": "Wird geladen",
+        "empty": "Leer",
+        "error": "Fehler"
+      }
+    },
+    "filters": {
+      "search": {
+        "label": "Konten durchsuchen",
+        "placeholder": "Name, Referenz oder IBAN"
+      },
+      "segment": {
+        "label": "Segment",
+        "all": "Alle Segmente"
+      },
+      "refetch": "Erneut abrufen"
+    },
+    "liveRegion": {
+      "loading": "Konten werden geladen",
+      "error": "Die Anfrage ist fehlgeschlagen",
+      "loaded": "{total} Konten geladen"
+    },
+    "results": {
+      "matching_one": "{count} übereinstimmendes Konto",
+      "matching_other": "{count} übereinstimmende Konten"
+    },
+    "tryAgain": "Erneut versuchen",
+    "empty": {
+      "title": "Keine Konten entsprechen dieser Ansicht",
+      "emptyScenario": "Der Dienst hat erfolgreich mit null Zeilen geantwortet. Ein leeres Ergebnis ist eine gültige Antwort, kein Fehler.",
+      "noMatch": "Kein Konto entspricht der aktuellen Suche und dem Segment. Setzen Sie die Filter zurück, um das gesamte Portfolio zu sehen.",
+      "reset": "Filter zurücksetzen"
+    },
+    "table": {
+      "name": "Konto",
+      "segment": "Segment",
+      "status": "Status",
+      "balance": "Saldo"
+    },
+    "pagination": {
+      "label": "Kontenpaginierung",
+      "page": "Seite {page} von {totalPages}",
+      "previous": "Zurück",
+      "next": "Weiter"
+    },
+    "provenance": {
+      "heading": "Woher diese Zeilen stammen",
+      "description": "Nichts auf dieser Seite wird im Komponentenbaum simuliert. Jede Zeile durchläuft bei jeder Anfrage den vollständigen unten gezeigten Pfad, weshalb die Latenzangabe oben auf der Seite eine echte Messung ist.",
+      "steps": {
+        "referenceData": {
+          "title": "Referenzdaten",
+          "body": "Zwölf initialisierte Konten, gehalten auf dem Server. Im .NET-Projekt entspricht dies dem EF-Core-Seed-Datensatz."
+        },
+        "serverHandler": {
+          "title": ".NET-Endpunkt",
+          "body": "Wendet den Segmentfilter, die Volltextsuche und die Paginierung an und versieht die Antwort mit der eigenen verstrichenen Zeit."
+        },
+        "typedClient": {
+          "title": "Typisierter Client",
+          "body": "Erstellt die Abfrage, ruft den gemeinsamen API-Client auf und liefert typisierte Daten ohne Transport-Mapping."
+        },
+        "thisScreen": {
+          "title": "Dieser Bildschirm",
+          "body": "TanStack Query cacht pro Abfrageschlüssel; die Tabelle rendert Laden, Leer, Fehler und Befüllt aus denselben Tokens."
+        }
+      },
+      "comparisonHeading": "Unterschied zum Admin-Panel",
+      "comparisonTable": {
+        "screen": "Bildschirm",
+        "dataSource": "Datenquelle",
+        "capability": "Was er darf"
+      }
+    },
+    "contract": {
+      "heading": "OpenAPI contract",
+      "description": "Die OpenAPI-Beschreibung aus .NET erzeugt TypeScript-Typen. Beide Seiten bleiben ohne manuelle DTO-Duplikate oder Mapping synchron.",
+      "swapCallout": {
+        "title": "Wo der echte Dienst geändert wird",
+        "body": "Konfigurieren Sie die .NET-Optionen und den typisierten HttpClient. React ruft weiterhin denselben relativen /api-Endpunkt auf."
+      }
+    },
+    "sourceFiles": {
+      "contract": {
+        "description": "OpenAPI erzeugt die TypeScript-API-Struktur aus dem .NET-Vertrag; diese Datei wird nie manuell bearbeitet."
+      },
+      "client": {
+        "description": "Erstellt die Abfrage, ruft den gemeinsamen API-Client auf und liefert typisierte Daten ohne Transport-Mapping."
+      },
+      "handler": {
+        "description": "Neutrale .NET-Endpunktbeispiele und ihre Request-/Response-Modelle."
+      },
+      "seed": {
+        "description": "Ein austauschbarer typisierter HTTP-Client für einen optionalen externen Dienst."
+      }
+    }
+  }
+}

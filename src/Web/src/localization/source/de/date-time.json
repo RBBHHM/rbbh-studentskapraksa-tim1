@@ -1,0 +1,13 @@
+{
+  "formats": {
+    "shortDate": "{value, date, short}",
+    "longDate": "{value, date, long}",
+    "dateTime": "{value, date, short} {value, time, short}"
+  },
+  "relative": {
+    "justNow": "Gerade eben",
+    "minutesAgo": "{count, plural, one {vor # Minute} other {vor # Minuten}}",
+    "hoursAgo": "{count, plural, one {vor # Stunde} other {vor # Stunden}}",
+    "daysAgo": "{count, plural, one {vor # Tag} other {vor # Tagen}}"
+  }
+}

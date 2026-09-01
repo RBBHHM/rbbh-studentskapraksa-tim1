@@ -1,0 +1,543 @@
+{
+  "page": {
+    "eyebrow": "Architecture",
+    "title": "How the complete application fits together",
+    "description": "A visual, plain-language guide to what runs in the browser, what runs on the server, and how one package is deployed."
+  },
+  "recipes": {
+    "heading": "I want to add X — where do I put it?",
+    "tasks": {
+      "addPage": {
+        "goal": "Add a new page",
+        "steps": {
+          "0": "Create one file; its name is the URL.",
+          "1": "Export Route with createFileRoute and a head() title.",
+          "2": "Add the link to header and footer.",
+          "3": "Add its label to every language file."
+        }
+      },
+      "addComponent": {
+        "goal": "Add a reusable component",
+        "steps": {
+          "0": "Create it using semantic classes only, never a hex.",
+          "1": "Keep logic or label maps beside it, not inside.",
+          "2": "Show it in the library."
+        }
+      },
+      "addText": {
+        "goal": "Add text a user reads",
+        "steps": {
+          "0": "Add the key and English wording.",
+          "1": "Add the same key to every language.",
+          "2": "Read it with t(\"your.key\")."
+        }
+      },
+      "addColor": {
+        "goal": "Add a colour, size or shadow",
+        "steps": {
+          "0": "Add the brand value once as a primitive.",
+          "1": "Name it in the semantic layer, then use that name.",
+          "2": "Check the pairing passes AA."
+        }
+      },
+      "addBackendData": {
+        "goal": "Add data from the backend",
+        "steps": {
+          "0": "Add the endpoint and its request/response models in .NET.",
+          "1": "Generate TypeScript types from the running OpenAPI document.",
+          "2": "Expose a small readable operation through the shared API client."
+        }
+      }
+    }
+  },
+  "layers": {
+    "heading": "Five layers, one direction of dependency",
+    "description": "Each layer may read the one below it, never above.",
+    "items": {
+      "brandPrimitives": {
+        "title": "1 · Brand primitives",
+        "body": "Official RBI values, defined once."
+      },
+      "semanticTokens": {
+        "title": "2 · Semantic tokens",
+        "body": "Intent-named aliases; reassigning them changes a whole surface at once."
+      },
+      "tailwindBridge": {
+        "title": "3 · Tailwind theme bridge",
+        "body": "@theme inline turns tokens into utility classes."
+      },
+      "components": {
+        "title": "4 · Components",
+        "body": "shadcn primitives plus RBI variants, consuming semantic tokens only."
+      },
+      "patternsAndScreens": {
+        "title": "5 · Patterns and screens",
+        "body": "Compositions like hero, feature grid, admin panel. No new colour decisions."
+      }
+    }
+  },
+  "structure": {
+    "heading": "Where a file goes",
+    "description": "The folder name is the answer.",
+    "never": "Never here",
+    "folders": {
+      "stylesCss": "Primitives, semantic tokens, @theme bridge, base layer",
+      "designSystem": "Token layer typed for TypeScript",
+      "tokensFoundations": "Colour, scale, palette and logo metadata",
+      "components": "Everything renderable",
+      "ui": "Primitives and RBI variants",
+      "layout": "AppShell, Container, Section, Grid, Stack",
+      "brand": "Logo, slogan and signature lock-ups",
+      "catalog": "Docs machinery: Example, CodePanel, builders",
+      "adminComposites": "Screen-specific admin panel composites",
+      "lib": "Logic with no JSX",
+      "libApi": "Shared contract, typed client, reference data",
+      "libAdmin": "Directory hook and presentation metadata",
+      "routesDir": "File-based routes; folder is the URL map",
+      "applicationsShell": "Shared shell for the two example apps",
+      "applicationsScreens": "The two screens",
+      "program": "Entry point and composition of the complete .NET application",
+      "server": "Server infrastructure and neutral examples",
+      "serverContracts": "Unified API response and configurable options",
+      "serverInfrastructure": "HTTP clients, sign-in, cookies, errors and tracing",
+      "serverExamples": "Minimal integration examples without domain rules",
+      "localization": "Source translations and runtime delivery",
+      "docs": "Guides for people and AI collaborators"
+    },
+    "callout": {
+      "title": "Consistency is the contract",
+      "before": "Follow the tree above. Full rules:",
+      "strong": "Where a file goes",
+      "after": "."
+    }
+  },
+  "placementRules": {
+    "styles": {
+      "owns": "Brand primitives, semantic tokens, the @theme bridge.",
+      "never": [
+        "Component-specific selectors",
+        "A literal hex in a component",
+        "Utility classes for one screen"
+      ]
+    },
+    "designSystem": {
+      "owns": "Typed token layer: palette metadata, scales, logo descriptors.",
+      "never": ["JSX", "React hooks", "Anything that imports a component"]
+    },
+    "uiComponents": {
+      "owns": "Reusable, domain-free primitives and variants.",
+      "never": ["Domain words such as account or invoice", "Data fetching", "Hardcoded colours"]
+    },
+    "domainComponents": {
+      "owns": "Composites for one domain; may know accounts, not fetch them.",
+      "never": [
+        "Business rules",
+        "Direct fetch calls",
+        "Duplicated labels — read from lib/<domain>"
+      ]
+    },
+    "layoutComponents": {
+      "owns": "Structural shells: AppShell, Container, Section, Grid, Stack.",
+      "never": ["Page copy", "Domain state"]
+    },
+    "libDomain": {
+      "owns": "Logic with no JSX: hooks, reducers, validators, codebooks.",
+      "never": ["JSX", "Copy a screen should translate", "DOM access outside a hook"]
+    },
+    "libApi": {
+      "owns": "Generated OpenAPI types and the single browser HTTP client.",
+      "never": [
+        "React imports",
+        "A handwritten copy of a generated DTO",
+        "An inline URL in a screen"
+      ]
+    },
+    "localization": {
+      "owns": "Language and value codebooks, plus the translate runtime.",
+      "never": [
+        "A translation call to an external API",
+        "A user-visible string outside a message file"
+      ]
+    },
+    "routes": {
+      "owns": "URL structure; composes components and reads data only.",
+      "never": ["Business rules", "Reusable components defined inline", "Editing routeTree.gen.ts"]
+    },
+    "serverEndpoints": {
+      "owns": "Neutral .NET endpoint examples and their request/response records.",
+      "never": [
+        "Product-specific permissions",
+        "A second API envelope",
+        "Secrets or business rules in browser code"
+      ]
+    }
+  },
+  "conventions": {
+    "heading": "How the code is written",
+    "description": "Presentation in components, orchestration in routes, rules in src/lib."
+  },
+  "codeConventions": {
+    "semanticTokensOnly": {
+      "rule": "Components consume semantic tokens only",
+      "why": "A primitive or hex value breaks theming across all surfaces."
+    },
+    "noHardcodedCopy": {
+      "rule": "No user-visible string inside a component",
+      "why": "Every string is a key, so a new market is a file, not a refactor."
+    },
+    "noBusinessLogicInUi": {
+      "rule": "No business logic in routes or components",
+      "why": "Rules live in src/lib, which keeps them testable and reusable."
+    },
+    "singleSourceOfTruth": {
+      "rule": "One source of truth per fact",
+      "why": "Generated OpenAPI types in api/generated, presentation labels beside features, languages in localization source files."
+    },
+    "dataFirstMarkupSecond": {
+      "rule": "Data first, markup second",
+      "why": "Screens render declared lists, so a new row never edits JSX."
+    },
+    "deterministicFormatting": {
+      "rule": "Deterministic formatting",
+      "why": "Explicit options and UTC keep server and browser output identical."
+    },
+    "mechanicalNaming": {
+      "rule": "Naming is mechanical",
+      "why": "kebab-case files, PascalCase components — the name tells the folder."
+    },
+    "accessibilityPartOfDone": {
+      "rule": "Accessibility is part of done",
+      "why": "AA pairings, visible focus rings, 44px targets, no colour-only status."
+    }
+  },
+  "flowSection": {
+    "heading": "How a screen gets its data",
+    "description": "Two flows: API demo crosses the network, admin panel stays local. Select a step to see its file.",
+    "callout": {
+      "title": "Connecting the ASP.NET Core service",
+      "before": "The front end knows one URL, in",
+      "after": ". Point it at the .NET controller; both sides already share the same contract."
+    }
+  },
+  "rendering": {
+    "heading": "How the application starts",
+    "steps": {
+      "build": {
+        "title": "Build",
+        "body": "Webpack compiles React into static browser files."
+      },
+      "shell": {
+        "title": "Serve",
+        "body": ".NET serves those files and exposes the API from one process."
+      },
+      "browser": {
+        "title": "Open",
+        "body": "The browser loads React; the router changes pages without full reloads."
+      },
+      "api": {
+        "title": "Read data",
+        "body": "React calls /api; in development the Webpack server forwards that call to the .NET API on port 5000."
+      }
+    }
+  },
+  "stack": {
+    "heading": "What is in the stack, and why",
+    "rows": {
+      "uiRuntime": {
+        "area": "UI runtime",
+        "choice": "React 19",
+        "because": "Concurrent rendering and stable Suspense."
+      },
+      "framework": {
+        "area": "Framework",
+        "choice": "React 19 + TanStack Router",
+        "because": "Typed file-based routing in SPA mode."
+      },
+      "build": {
+        "area": "Build",
+        "choice": "Webpack 5",
+        "because": "Fast HMR; ?raw imports quote real source."
+      },
+      "styling": {
+        "area": "Styling",
+        "choice": "Tailwind CSS v4",
+        "because": "CSS-first config; the token layer is the config."
+      },
+      "data": {
+        "area": "Data",
+        "choice": "TanStack Query",
+        "because": "Cache keys, retries and paging for free."
+      },
+      "serverData": {
+        "area": "Server",
+        "choice": "ASP.NET Core (.NET 10)",
+        "because": "One host for the API, security, logs and React files."
+      },
+      "types": {
+        "area": "API types",
+        "choice": "OpenAPI → TypeScript",
+        "because": "Generated types keep React and .NET aligned without manual mapping."
+      },
+      "typography": {
+        "area": "Typography",
+        "choice": "Self-hosted Amalia",
+        "because": "Brand fidelity, no third-party font request."
+      }
+    },
+    "accessibilityNote": "Accessibility lives in the base layer — focus rings, AA pairings, 44px targets — so screens inherit it."
+  },
+  "flows": {
+    "zones": {
+      "browser": "Browser",
+      "server": "Server",
+      "service": "Data service"
+    },
+    "labels": {
+      "responsibleFor": "Responsible for",
+      "handsOff": "Hands off",
+      "inCode": "In code",
+      "stepsAriaLabel": "Steps for {title}"
+    },
+    "read": {
+      "title": "Read path — API demo",
+      "summary": "The screen owns no data; every filter and page is a request parameter.",
+      "steps": {
+        "read-route": {
+          "label": "Route component",
+          "detail": "useQuery keyed on page, search, segment and scenario",
+          "responsibilities": [
+            "Holds query parameters as state",
+            "Renders loading, empty, error and success states",
+            "No filtering logic — the server decides"
+          ],
+          "handsOff": "AccountQuery — page, pageSize, search, segment, status, scenario"
+        },
+        "read-client": {
+          "label": "Typed client",
+          "detail": "accounts-client.ts builds the URL and narrows JSON",
+          "responsibilities": [
+            "The only place that knows the base URL",
+            "Serialises the query, throws a typed problem on failure",
+            "Imports the shared contract instead of redeclaring types"
+          ],
+          "handsOff": "Paged<Account> or a thrown ProblemDetails"
+        },
+        "read-handler": {
+          "label": ".NET endpoint",
+          "detail": "GET /api/public/accounts filters, pages and times itself",
+          "responsibilities": [
+            "Validates the query before touching data",
+            "Applies filters, then pages the result",
+            "Returns the same envelope and problem shape as .NET"
+          ],
+          "handsOff": "JSON: { items, page, pageSize, total, tookMs }",
+          "responsibility": "Neutral .NET endpoint examples and their request/response records.",
+          "handoff": ".NET endpoint"
+        },
+        "read-source": {
+          "label": "Data source",
+          "detail": "Seed set today; EF Core behind ASP.NET Core in production",
+          "responsibilities": [
+            "Supplies rows in the contract's shape only",
+            "Swapped for the real service transparently",
+            "Business rules live here, never in a component"
+          ],
+          "handsOff": "Account[] in contract shape"
+        }
+      }
+    },
+    "write": {
+      "title": "Write path — admin panel",
+      "summary": "The screen owns its records; each change is one named reducer action.",
+      "steps": {
+        "write-form": {
+          "label": "Form dialog",
+          "detail": "Collects a draft and runs the shared validator",
+          "responsibilities": [
+            "Presentation and field feedback only",
+            "Validates with the shared validator",
+            "Emits a draft; never mutates the store itself"
+          ],
+          "handsOff": "AccountDraft, already validated"
+        },
+        "write-reducer": {
+          "label": "Directory reducer",
+          "detail": "One explicit action per mutation: create, update, setStatus, delete",
+          "responsibilities": [
+            "The only writer of account state",
+            "Actions named by intent, so audit or API calls drop in",
+            "Returns derived views; components never recompute"
+          ],
+          "handsOff": "Next records array plus derived rows and metrics"
+        },
+        "write-derived": {
+          "label": "Derived state",
+          "detail": "Filtering, sorting and metrics recompute from records",
+          "responsibilities": [
+            "Memoised selectors keep re-renders cheap",
+            "Metrics are computed, never stored",
+            "Labels and tones come from account-presentation.ts"
+          ],
+          "handsOff": "rows, metrics, activeFilterCount"
+        },
+        "write-swap": {
+          "label": "Swap point",
+          "detail": "Replace the hook body with server functions — no screen changes",
+          "responsibilities": [
+            "Each action becomes one server function or endpoint",
+            "The hook's return type stays identical",
+            "Authorisation and audit belong here, never in the component"
+          ],
+          "handsOff": "Persisted rows via the ASP.NET Core service"
+        }
+      }
+    }
+  },
+  "setup": {
+    "title": "Setting up a fresh clone",
+    "description": "Seven steps, in order. Everything else can wait.",
+    "steps": {
+      "install": {
+        "label": "Install dependencies and start the dev server."
+      },
+      "brandColours": {
+        "label": "Replace brand primitives; leave the semantic layer alone."
+      },
+      "brandAssets": {
+        "label": "Swap the typeface and logo lock-ups."
+      },
+      "wording": {
+        "label": "Rewrite the English wording — it is the source of truth."
+      },
+      "backend": {
+        "label": "Point the HTTP client at your real API."
+      },
+      "removeDemos": {
+        "label": "Delete demo and catalogue screens you do not need."
+      },
+      "verify": {
+        "label": "Run lint, tests and the key check before your first commit."
+      }
+    }
+  },
+  "mobile": {
+    "title": "Mobile",
+    "description": "Every screen already works on a phone. Pick a track only for an app.",
+    "tracks": {
+      "responsive": {
+        "title": "Responsive website",
+        "effort": "Included",
+        "items": [
+          "Mobile-first breakpoints on every screen",
+          "Tables scroll instead of squashing",
+          "Controls are at least 40px tall",
+          "Check new UI at 375px width"
+        ]
+      },
+      "pwa": {
+        "title": "Installable app (PWA)",
+        "effort": "Days",
+        "items": [
+          "Web manifest with icons and theme colour",
+          "Service worker for offline shell",
+          "Safe-area padding and a bottom tab bar",
+          "Reuses this codebase almost entirely"
+        ]
+      },
+      "native": {
+        "title": "Native app",
+        "effort": "Weeks",
+        "items": [
+          "Reuse tokens, logic and translation bundles",
+          "Rebuild components on native primitives",
+          "Expo Router replaces the web router",
+          "The API stays exactly as it is"
+        ]
+      }
+    }
+  },
+  "localization": {
+    "title": "Localization",
+    "description": "Wording is runtime content, published to storage without a rebuild.",
+    "sourceBundlesLabel": "Source bundles (reviewed)",
+    "activeReleaseBefore": "Active release",
+    "activeReleaseAfter": ", loaded from the environment manifest.",
+    "runtimeDeliveryLabel": "Runtime delivery",
+    "calloutTitle": "Adding or changing wording",
+    "calloutSteps": {
+      "0": "Edit and approve text in the translation management system.",
+      "1": "Run node scripts/localization/build-release.mjs to validate and release.",
+      "2": "Point the environment manifest at the new release id."
+    }
+  },
+  "pipeline": {
+    "heading": "Request pipeline",
+    "description": "One read, end to end. Four hops, four files.",
+    "nodes": {
+      "screen": {
+        "title": "Screen",
+        "body": "Calls a hook. Knows no URL."
+      },
+      "client": {
+        "title": "Typed client",
+        "body": "The only place a URL exists."
+      },
+      "route": {
+        "title": ".NET endpoint",
+        "body": "Validates the request and returns the unified response."
+      },
+      "service": {
+        "title": "External service",
+        "body": "Optional; called through one configured HTTP client."
+      }
+    }
+  },
+  "systemMap": {
+    "heading": "The whole system in three parts",
+    "description": "Follow the request from the screen to .NET. Each part has one clear responsibility.",
+    "parts": {
+      "browser": {
+        "title": "1. React interface",
+        "body": "Pages, buttons and forms run in the user's browser. React displays data; it does not own server rules or secrets."
+      },
+      "host": {
+        "title": "2. .NET application host",
+        "body": "ASP.NET Core receives API calls, manages cookies and sessions, logs requests, and serves the built React application."
+      },
+      "external": {
+        "title": "3. External services (optional)",
+        "body": "A configured HTTP client is the single place where .NET calls a bank service or another backend."
+      }
+    },
+    "artifact": {
+      "title": "What is an artifact?",
+      "body": "It is the ready-to-deploy output of dotnet publish: the .NET application and the compiled React files together in one folder."
+    }
+  },
+  "glossary": {
+    "react": {
+      "term": "React",
+      "meaning": "The part a user sees and interacts with in the browser."
+    },
+    "dotnet": {
+      "term": ".NET / ASP.NET Core",
+      "meaning": "The server part that owns security, integration and API behaviour."
+    },
+    "api": {
+      "term": "API",
+      "meaning": "A documented doorway through which the browser asks the server for data."
+    },
+    "openapi": {
+      "term": "OpenAPI",
+      "meaning": "A machine-readable API description used to generate matching TypeScript types."
+    },
+    "artifact": {
+      "term": "Artifact",
+      "meaning": "A tested build output ready for a server or deployment pipeline."
+    },
+    "session": {
+      "term": "Cookie and session",
+      "meaning": "A secure way for the server to remember an authenticated browser between requests."
+    }
+  }
+}

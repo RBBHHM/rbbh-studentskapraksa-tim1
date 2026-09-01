@@ -1,0 +1,17 @@
+{
+  "landmarks": {
+    "mainContent": "Main content",
+    "primaryNavigation": "Primary navigation",
+    "breadcrumb": "Breadcrumb"
+  },
+  "announcements": {
+    "loading": "Loading content",
+    "loaded": "Content loaded",
+    "sortedBy": "Sorted by {column}, {direction, select, asc {ascending} desc {descending} other {unsorted}}"
+  },
+  "controls": {
+    "sortColumn": "Sort by {column}",
+    "openDialog": "Open {name}",
+    "closeDialog": "Close {name}"
+  }
+}

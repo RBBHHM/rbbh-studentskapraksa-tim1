@@ -1,0 +1,899 @@
+@import "./styles/fonts.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * ============================================================================
+ * Raiffeisen Bank International — Design System
+ * ============================================================================
+ *
+ * Two-layer token architecture:
+ *
+ *   1. PRIMITIVES (--rbi-*)   Raw, brand-owned values. These are transcribed
+ *                             byte-exactly from the official RBI RGB palette
+ *                             (brand.rbinternational.com -> Colour Palette
+ *                             download -> "RBI - RGB - Full Palette.ase").
+ *                             Hex is used deliberately so every value can be
+ *                             diffed against the official swatch file without
+ *                             a color-space conversion step.
+ *                             Never reference a primitive from a component.
+ *
+ *   2. SEMANTIC (--surface-*, --text-*, --border-*, --action-*, --feedback-*)
+ *                             Intent-named tokens that components consume.
+ *                             Rethemeing happens here, not in components.
+ *
+ * The @theme inline block exposes semantic tokens to Tailwind utilities.
+ *
+ * See BRAND_IMPLEMENTATION.md for the provenance of every value below.
+ * ============================================================================
+ */
+
+/* ---------------------------------------------------------------------------
+ * Layer 1 — Brand primitives (official values, do not edit without Brand
+ * Guardian sign-off)
+ * ------------------------------------------------------------------------ */
+:root {
+  /* Primary yellow — the defining RBI asset */
+  --rbi-yellow-100: #fdf8d5;
+  --rbi-yellow-200: #fff0a6;
+  --rbi-yellow-300: #ffd403;
+  --rbi-yellow-400: #fee600; /* RBI Primary Yellow */
+  --rbi-yellow-500: #f9bb30;
+  --rbi-yellow-600: #ed9504;
+  --rbi-yellow-700: #c9740e;
+
+  /* Mono / warm neutrals */
+  --rbi-white: #ffffff;
+  --rbi-warm-grey-50: #f8f6f2; /* Warm Grey 50% */
+  --rbi-warm-grey-100: #f1ede6; /* Warm Grey */
+  --rbi-off-black: #2b2d33; /* RBI Off Black */
+  --rbi-mono-black: #1d1d1b; /* Mono Black */
+
+  /* Cool grey ramp (from the official off-black tonal ramp) */
+  --rbi-grey-50: #f9f9f9;
+  --rbi-grey-100: #f2f2f3;
+  --rbi-grey-200: #eaeaeb;
+  --rbi-grey-300: #d5d5d6;
+  --rbi-grey-400: #bfc0c2;
+  --rbi-grey-500: #aaabae;
+  --rbi-grey-600: #808185;
+  --rbi-grey-700: #55575d;
+  --rbi-grey-800: #404248;
+  --rbi-grey-900: #2b2d33;
+
+  /* Corporate green — elevated for the RBI International corporate vertical */
+  --rbi-green-100: #d0f0e5;
+  --rbi-green-200: #a3e2cc;
+  --rbi-green-300: #67d0ab;
+  --rbi-green-400: #489b79;
+  --rbi-green-500: #225b45;
+
+  /* Coral */
+  --rbi-coral-100: #ffe2da;
+  --rbi-coral-200: #ffb9a5;
+  --rbi-coral-300: #ff8b6b;
+  --rbi-coral-400: #e67153;
+  --rbi-coral-500: #c65c4a;
+
+  /* Purple */
+  --rbi-purple-100: #e1d6ff;
+  --rbi-purple-200: #9d88d9;
+  --rbi-purple-300: #6a4cad;
+  --rbi-purple-400: #563e83;
+  --rbi-purple-500: #412f59;
+
+  /* Red */
+  --rbi-red-100: #f9d7da;
+  --rbi-red-200: #f7a8a8;
+  --rbi-red-300: #f26161;
+  --rbi-red-400: #e61e33;
+  --rbi-red-500: #c10614;
+
+  /* Amber */
+  --rbi-amber-100: #ffe9be;
+  --rbi-amber-200: #ffcc66;
+  --rbi-amber-300: #ffaa00;
+  --rbi-amber-400: #ed9504;
+  --rbi-amber-500: #c9740e;
+
+  /* Blue / teal (information + data visualisation only) */
+  --rbi-blue-100: #ddf4fb;
+  --rbi-blue-200: #bceaf8;
+  --rbi-blue-300: #7cd5f1;
+  --rbi-blue-400: #20a3e5;
+  --rbi-blue-500: #31388a;
+  --rbi-teal-300: #64c5c9;
+  --rbi-teal-400: #0b969e;
+  --rbi-teal-500: #1f6566;
+  --rbi-lime-300: #9ce377;
+  --rbi-lime-400: #66b84d;
+  --rbi-lime-500: #409119;
+  --rbi-magenta-300: #f46bac;
+  --rbi-magenta-400: #d94591;
+  --rbi-magenta-500: #a8286f;
+  --rbi-brown-400: #905c40;
+  --rbi-brown-500: #5a3a2b;
+}
+
+/* ---------------------------------------------------------------------------
+ * Layer 2 — Semantic tokens
+ * ------------------------------------------------------------------------ */
+:root {
+  /* Surfaces */
+  --surface-default: var(--rbi-white);
+  --surface-subtle: var(--rbi-warm-grey-50);
+  --surface-muted: var(--rbi-warm-grey-100);
+  --surface-raised: var(--rbi-white);
+  --surface-sunken: var(--rbi-grey-100);
+  --surface-inverse: var(--rbi-off-black);
+  --surface-inverse-subtle: var(--rbi-grey-800);
+  --surface-brand: var(--rbi-yellow-400);
+  --surface-brand-subtle: var(--rbi-yellow-200);
+  --surface-brand-faint: var(--rbi-yellow-100);
+  --surface-corporate: var(--rbi-green-500);
+  --surface-corporate-subtle: var(--rbi-green-100);
+  --surface-overlay: color-mix(in srgb, var(--rbi-off-black) 60%, transparent);
+  --surface-disabled: var(--rbi-grey-100);
+
+  /* Text */
+  --text-primary: var(--rbi-off-black);
+  --text-secondary: var(--rbi-grey-700);
+  --text-tertiary: var(--rbi-grey-600);
+  --text-inverse: var(--rbi-white);
+  --text-inverse-secondary: var(--rbi-grey-300);
+  --text-on-brand: var(--rbi-off-black);
+  --text-on-corporate: var(--rbi-white);
+  --text-brand-accent: var(--rbi-yellow-700);
+  --text-corporate: var(--rbi-green-500);
+  --text-disabled: var(--rbi-grey-500);
+  --text-link: var(--rbi-off-black);
+  --text-link-hover: var(--rbi-yellow-700);
+
+  /* Borders */
+  --border-default: var(--rbi-grey-300);
+  --border-subtle: var(--rbi-grey-200);
+  --border-strong: var(--rbi-off-black);
+  --border-inverse: color-mix(in srgb, var(--rbi-white) 24%, transparent);
+  --border-brand: var(--rbi-yellow-400);
+  --border-corporate: var(--rbi-green-500);
+  --border-input: var(--rbi-grey-600);
+  --border-input-hover: var(--rbi-off-black);
+  --border-error: var(--rbi-red-500);
+  --border-success: var(--rbi-green-500);
+
+  /* Actions */
+  --action-primary-background: var(--rbi-yellow-400);
+  --action-primary-background-hover: var(--rbi-yellow-300);
+  --action-primary-background-active: var(--rbi-yellow-500);
+  --action-primary-foreground: var(--rbi-off-black);
+  --action-secondary-background: transparent;
+  --action-secondary-background-hover: var(--rbi-warm-grey-100);
+  --action-secondary-foreground: var(--rbi-off-black);
+  --action-secondary-border: var(--rbi-off-black);
+  --action-tertiary-background: var(--rbi-warm-grey-100);
+  --action-tertiary-background-hover: var(--rbi-grey-200);
+  --action-tertiary-foreground: var(--rbi-off-black);
+  --action-ghost-background-hover: var(--rbi-warm-grey-100);
+  --action-ghost-foreground: var(--rbi-off-black);
+  --action-inverse-background: var(--rbi-white);
+  --action-inverse-background-hover: var(--rbi-warm-grey-100);
+  --action-inverse-foreground: var(--rbi-off-black);
+  --action-destructive-background: var(--rbi-red-500);
+  --action-destructive-background-hover: var(--rbi-red-400);
+  --action-destructive-foreground: var(--rbi-white);
+
+  /* Feedback */
+  --feedback-info-background: var(--rbi-blue-100);
+  --feedback-info-border: var(--rbi-blue-400);
+  --feedback-info-foreground: var(--rbi-blue-500);
+  --feedback-success-background: var(--rbi-green-100);
+  --feedback-success-border: var(--rbi-green-400);
+  --feedback-success-foreground: var(--rbi-green-500);
+  --feedback-warning-background: var(--rbi-amber-100);
+  --feedback-warning-border: var(--rbi-amber-300);
+  --feedback-warning-foreground: var(--rbi-amber-500);
+  --feedback-danger-background: var(--rbi-red-100);
+  --feedback-danger-border: var(--rbi-red-400);
+  --feedback-danger-foreground: var(--rbi-red-500);
+  --feedback-neutral-background: var(--rbi-grey-100);
+  --feedback-neutral-border: var(--rbi-grey-400);
+  --feedback-neutral-foreground: var(--rbi-grey-800);
+
+  /* Data visualisation — ordered for maximum adjacent-hue separation */
+  --data-1: var(--rbi-yellow-400);
+  --data-2: var(--rbi-green-500);
+  --data-3: var(--rbi-blue-400);
+  --data-4: var(--rbi-coral-400);
+  --data-5: var(--rbi-purple-300);
+  --data-6: var(--rbi-teal-400);
+  --data-7: var(--rbi-magenta-400);
+  --data-8: var(--rbi-lime-400);
+
+  /* Typography */
+  --font-family-brand: "Amalia", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-family-mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", "Liberation Mono", monospace;
+
+  --font-weight-thin: 100;
+  --font-weight-light: 300;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+  --font-weight-black: 900;
+
+  --font-size-2xs: 0.6875rem; /* 11px */
+  --font-size-xs: 0.75rem; /* 12px */
+  --font-size-sm: 0.875rem; /* 14px */
+  --font-size-md: 1rem; /* 16px */
+  --font-size-lg: 1.125rem; /* 18px */
+  --font-size-xl: 1.375rem; /* 22px */
+  --font-size-2xl: 1.75rem; /* 28px */
+  --font-size-3xl: 2.25rem; /* 36px */
+  --font-size-4xl: 3rem; /* 48px */
+  --font-size-5xl: 4rem; /* 64px */
+  --font-size-6xl: 5.25rem; /* 84px */
+
+  --line-height-tight: 1.05;
+  --line-height-snug: 1.2;
+  --line-height-normal: 1.4;
+  --line-height-relaxed: 1.6;
+
+  --letter-spacing-tighter: -0.03em;
+  --letter-spacing-tight: -0.015em;
+  --letter-spacing-normal: 0em;
+  --letter-spacing-wide: 0.04em;
+  --letter-spacing-wider: 0.12em;
+
+  /* Spacing — 4px base */
+  --space-0: 0rem;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 2.5rem;
+  --space-8: 3rem;
+  --space-9: 4rem;
+  --space-10: 5rem;
+  --space-11: 6.5rem;
+  --space-12: 8rem;
+
+  /* Control sizes */
+  --size-control-sm: 2rem;
+  --size-control-md: 2.75rem; /* 44px — WCAG 2.2 target size */
+  --size-control-lg: 3.25rem;
+  --size-icon-xs: 0.875rem;
+  --size-icon-sm: 1rem;
+  --size-icon-md: 1.25rem;
+  --size-icon-lg: 1.5rem;
+  --size-icon-xl: 2rem;
+  --size-touch-target-min: 2.75rem;
+
+  /* Borders */
+  --border-width-hairline: 1px;
+  --border-width-thin: 1px;
+  --border-width-medium: 2px;
+  --border-width-thick: 3px;
+  --border-width-accent: 6px;
+
+  /* Radii — RBI is a squared, editorial identity: restrained radii only */
+  --radii-none: 0px;
+  --radii-xs: 2px;
+  --radii-sm: 4px;
+  --radii-md: 6px;
+  --radii-lg: 10px;
+  --radii-pill: 999px;
+
+  /* Elevation — warm, low-contrast shadows; never neon or coloured glows */
+  --elevation-none: none;
+  --elevation-xs: 0 1px 2px 0 color-mix(in srgb, var(--rbi-off-black) 8%, transparent);
+  --elevation-sm:
+    0 1px 3px 0 color-mix(in srgb, var(--rbi-off-black) 10%, transparent),
+    0 1px 2px -1px color-mix(in srgb, var(--rbi-off-black) 8%, transparent);
+  --elevation-md:
+    0 4px 12px -2px color-mix(in srgb, var(--rbi-off-black) 12%, transparent),
+    0 2px 4px -2px color-mix(in srgb, var(--rbi-off-black) 8%, transparent);
+  --elevation-lg: 0 12px 28px -6px color-mix(in srgb, var(--rbi-off-black) 16%, transparent);
+  --elevation-overlay: 0 24px 56px -12px color-mix(in srgb, var(--rbi-off-black) 28%, transparent);
+
+  /* Z-index layers */
+  --z-base: 0;
+  --z-raised: 10;
+  --z-sticky: 20;
+  --z-header: 30;
+  --z-drawer: 40;
+  --z-overlay: 50;
+  --z-modal: 60;
+  --z-popover: 70;
+  --z-toast: 80;
+  --z-skip-link: 90;
+
+  /* Content widths */
+  --content-width-prose: 68ch;
+  --content-width-narrow: 44rem;
+  --content-width-default: 76rem;
+  --content-width-wide: 90rem;
+  --content-gutter: var(--space-4);
+  --content-gutter-lg: var(--space-6);
+
+  /* Grid */
+  --grid-columns: 12;
+  --grid-gap: var(--space-5);
+  --grid-gap-tight: var(--space-4);
+
+  /* Motion */
+  --duration-instant: 80ms;
+  --duration-fast: 140ms;
+  --duration-normal: 220ms;
+  --duration-slow: 360ms;
+  --easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --easing-decelerate: cubic-bezier(0, 0, 0.2, 1);
+  --easing-accelerate: cubic-bezier(0.4, 0, 1, 1);
+  --easing-emphasised: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* Focus ring — never removed, only replaced */
+  --focus-ring-color: var(--rbi-off-black);
+  --focus-ring-color-inverse: var(--rbi-yellow-400);
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+
+  /* States */
+  --opacity-disabled: 0.45;
+  --opacity-loading: 0.6;
+
+  /* Brand geometry — the Gable Cross diagonal is 45deg */
+  --brand-diagonal-angle: 45deg;
+  --brand-diagonal-height: 5rem;
+}
+
+/* ---------------------------------------------------------------------------
+ * Layer 2b — Themes (surface context)
+ * ------------------------------------------------------------------------
+ *
+ * A theme is a global colour-scheme choice (light / dark),
+ * orthogonal to the `[data-surface="*"]` contexts below. It is applied once,
+ * as `data-theme` on <html>, by re-pointing the Layer 2 semantic tokens —
+ * every component keeps consuming `--surface-*`, `--text-*`, `--border-*`,
+ * `--action-*` and `--feedback-*` unchanged. RBI yellow stays the brand
+ * accent in every theme; only its supporting neutrals and text pairings move
+ * to keep contrast at WCAG AA.
+ * ------------------------------------------------------------------------ */
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --surface-default: var(--rbi-mono-black);
+  --surface-subtle: var(--rbi-off-black);
+  --surface-muted: var(--rbi-grey-800);
+  --surface-raised: var(--rbi-off-black);
+  --surface-sunken: color-mix(in srgb, var(--rbi-mono-black) 70%, black);
+  --surface-inverse: var(--rbi-white);
+  --surface-inverse-subtle: var(--rbi-grey-100);
+  --surface-brand: var(--rbi-yellow-400);
+  --surface-brand-subtle: color-mix(in srgb, var(--rbi-yellow-400) 22%, var(--rbi-mono-black));
+  --surface-brand-faint: color-mix(in srgb, var(--rbi-yellow-400) 10%, var(--rbi-mono-black));
+  --surface-corporate: var(--rbi-green-500);
+  --surface-corporate-subtle: color-mix(in srgb, var(--rbi-green-500) 30%, var(--rbi-mono-black));
+  --surface-overlay: color-mix(in srgb, black 70%, transparent);
+  --surface-disabled: var(--rbi-grey-800);
+
+  --text-primary: var(--rbi-white);
+  --text-secondary: var(--rbi-grey-300);
+  --text-tertiary: var(--rbi-grey-500);
+  --text-inverse: var(--rbi-off-black);
+  --text-inverse-secondary: var(--rbi-grey-700);
+  --text-on-brand: var(--rbi-off-black);
+  --text-on-corporate: var(--rbi-white);
+  --text-brand-accent: var(--rbi-yellow-300);
+  --text-corporate: var(--rbi-green-300);
+  --text-disabled: var(--rbi-grey-600);
+  --text-link: var(--rbi-white);
+  --text-link-hover: var(--rbi-yellow-300);
+
+  --border-default: var(--rbi-grey-700);
+  --border-subtle: var(--rbi-grey-800);
+  --border-strong: var(--rbi-white);
+  --border-inverse: color-mix(in srgb, var(--rbi-off-black) 24%, transparent);
+  --border-brand: var(--rbi-yellow-400);
+  --border-corporate: var(--rbi-green-400);
+  --border-input: var(--rbi-grey-500);
+  --border-input-hover: var(--rbi-white);
+  --border-error: var(--rbi-red-300);
+  --border-success: var(--rbi-green-300);
+
+  --action-primary-background: var(--rbi-yellow-400);
+  --action-primary-background-hover: var(--rbi-yellow-300);
+  --action-primary-background-active: var(--rbi-yellow-500);
+  --action-primary-foreground: var(--rbi-off-black);
+  --action-secondary-background: transparent;
+  --action-secondary-background-hover: var(--rbi-grey-800);
+  --action-secondary-foreground: var(--rbi-white);
+  --action-secondary-border: var(--rbi-white);
+  --action-tertiary-background: var(--rbi-grey-800);
+  --action-tertiary-background-hover: var(--rbi-grey-700);
+  --action-tertiary-foreground: var(--rbi-white);
+  --action-ghost-background-hover: var(--rbi-grey-800);
+  --action-ghost-foreground: var(--rbi-white);
+  --action-inverse-background: var(--rbi-off-black);
+  --action-inverse-background-hover: var(--rbi-grey-800);
+  --action-inverse-foreground: var(--rbi-white);
+  --action-destructive-background: var(--rbi-red-400);
+  --action-destructive-background-hover: var(--rbi-red-300);
+  --action-destructive-foreground: var(--rbi-white);
+
+  --feedback-info-background: color-mix(in srgb, var(--rbi-blue-500) 35%, var(--rbi-mono-black));
+  --feedback-info-border: var(--rbi-blue-400);
+  --feedback-info-foreground: var(--rbi-blue-300);
+  --feedback-success-background: color-mix(
+    in srgb,
+    var(--rbi-green-500) 35%,
+    var(--rbi-mono-black)
+  );
+  --feedback-success-border: var(--rbi-green-400);
+  --feedback-success-foreground: var(--rbi-green-300);
+  --feedback-warning-background: color-mix(
+    in srgb,
+    var(--rbi-amber-500) 35%,
+    var(--rbi-mono-black)
+  );
+  --feedback-warning-border: var(--rbi-amber-400);
+  --feedback-warning-foreground: var(--rbi-amber-200);
+  --feedback-danger-background: color-mix(in srgb, var(--rbi-red-500) 35%, var(--rbi-mono-black));
+  --feedback-danger-border: var(--rbi-red-400);
+  --feedback-danger-foreground: var(--rbi-red-200);
+  --feedback-neutral-background: var(--rbi-grey-800);
+  --feedback-neutral-border: var(--rbi-grey-600);
+  --feedback-neutral-foreground: var(--rbi-grey-200);
+
+  --focus-ring-color: var(--rbi-yellow-400);
+  --focus-ring-color-inverse: var(--rbi-yellow-400);
+}
+
+/* ---------------------------------------------------------------------------
+ * shadcn/ui compatibility layer.
+ * shadcn primitives consume these names; they are aliases onto RBI semantics
+ * so a shadcn component is brand-correct by default.
+ * ------------------------------------------------------------------------ */
+:root {
+  --radius: var(--radii-sm);
+  --background: var(--surface-default);
+  --foreground: var(--text-primary);
+  --card: var(--surface-raised);
+  --card-foreground: var(--text-primary);
+  --popover: var(--surface-raised);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--action-primary-background);
+  --primary-foreground: var(--action-primary-foreground);
+  --secondary: var(--action-tertiary-background);
+  --secondary-foreground: var(--action-tertiary-foreground);
+  --muted: var(--surface-muted);
+  --muted-foreground: var(--text-secondary);
+  --accent: var(--surface-brand-faint);
+  --accent-foreground: var(--text-primary);
+  --destructive: var(--action-destructive-background);
+  --destructive-foreground: var(--action-destructive-foreground);
+  --border: var(--border-default);
+  --input: var(--border-input);
+  --ring: var(--focus-ring-color);
+  --sidebar: var(--surface-subtle);
+  --sidebar-foreground: var(--text-primary);
+  --sidebar-primary: var(--surface-brand);
+  --sidebar-primary-foreground: var(--text-on-brand);
+  --sidebar-accent: var(--surface-muted);
+  --sidebar-accent-foreground: var(--text-primary);
+  --sidebar-border: var(--border-subtle);
+  --sidebar-ring: var(--focus-ring-color);
+  --chart-1: var(--data-1);
+  --chart-2: var(--data-2);
+  --chart-3: var(--data-3);
+  --chart-4: var(--data-4);
+  --chart-5: var(--data-5);
+}
+
+/* ---------------------------------------------------------------------------
+ * Tailwind theme wiring
+ * ------------------------------------------------------------------------ */
+@theme inline {
+  /* Colour utilities — semantic only */
+  --color-surface: var(--surface-default);
+  --color-surface-subtle: var(--surface-subtle);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-inverse: var(--surface-inverse);
+  --color-surface-inverse-subtle: var(--surface-inverse-subtle);
+  --color-surface-brand: var(--surface-brand);
+  --color-surface-brand-subtle: var(--surface-brand-subtle);
+  --color-surface-brand-faint: var(--surface-brand-faint);
+  --color-surface-corporate: var(--surface-corporate);
+  --color-surface-corporate-subtle: var(--surface-corporate-subtle);
+  --color-surface-disabled: var(--surface-disabled);
+  --color-surface-overlay: var(--surface-overlay);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-inverse: var(--text-inverse);
+  --color-text-inverse-secondary: var(--text-inverse-secondary);
+  --color-text-on-brand: var(--text-on-brand);
+  --color-text-on-corporate: var(--text-on-corporate);
+  --color-text-brand-accent: var(--text-brand-accent);
+  --color-text-corporate: var(--text-corporate);
+  --color-text-disabled: var(--text-disabled);
+  --color-text-link: var(--text-link);
+  --color-text-link-hover: var(--text-link-hover);
+
+  --color-border-default: var(--border-default);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-border-inverse: var(--border-inverse);
+  --color-border-brand: var(--border-brand);
+  --color-border-corporate: var(--border-corporate);
+  --color-border-input: var(--border-input);
+  --color-border-error: var(--border-error);
+  --color-border-success: var(--border-success);
+
+  --color-feedback-info: var(--feedback-info-foreground);
+  --color-feedback-info-bg: var(--feedback-info-background);
+  --color-feedback-info-border: var(--feedback-info-border);
+  --color-feedback-success: var(--feedback-success-foreground);
+  --color-feedback-success-bg: var(--feedback-success-background);
+  --color-feedback-success-border: var(--feedback-success-border);
+  --color-feedback-warning: var(--feedback-warning-foreground);
+  --color-feedback-warning-bg: var(--feedback-warning-background);
+  --color-feedback-warning-border: var(--feedback-warning-border);
+  --color-feedback-danger: var(--feedback-danger-foreground);
+  --color-feedback-danger-bg: var(--feedback-danger-background);
+  --color-feedback-danger-border: var(--feedback-danger-border);
+  --color-feedback-neutral: var(--feedback-neutral-foreground);
+  --color-feedback-neutral-bg: var(--feedback-neutral-background);
+  --color-feedback-neutral-border: var(--feedback-neutral-border);
+
+  --color-data-1: var(--data-1);
+  --color-data-2: var(--data-2);
+  --color-data-3: var(--data-3);
+  --color-data-4: var(--data-4);
+  --color-data-5: var(--data-5);
+  --color-data-6: var(--data-6);
+  --color-data-7: var(--data-7);
+  --color-data-8: var(--data-8);
+
+  /* shadcn aliases */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Typography */
+  --font-sans: var(--font-family-brand);
+  --font-brand: var(--font-family-brand);
+  --font-mono: var(--font-family-mono);
+
+  --text-2xs: var(--font-size-2xs);
+  --text-xs: var(--font-size-xs);
+  --text-sm: var(--font-size-sm);
+  --text-base: var(--font-size-md);
+  --text-lg: var(--font-size-lg);
+  --text-xl: var(--font-size-xl);
+  --text-2xl: var(--font-size-2xl);
+  --text-3xl: var(--font-size-3xl);
+  --text-4xl: var(--font-size-4xl);
+  --text-5xl: var(--font-size-5xl);
+  --text-6xl: var(--font-size-6xl);
+
+  --leading-tight: var(--line-height-tight);
+  --leading-snug: var(--line-height-snug);
+  --leading-normal: var(--line-height-normal);
+  --leading-relaxed: var(--line-height-relaxed);
+
+  --tracking-tighter: var(--letter-spacing-tighter);
+  --tracking-tight: var(--letter-spacing-tight);
+  --tracking-normal: var(--letter-spacing-normal);
+  --tracking-wide: var(--letter-spacing-wide);
+  --tracking-wider: var(--letter-spacing-wider);
+
+  /*
+   * Spacing stays on Tailwind's linear 4px multiplier so numeric utilities keep
+   * their expected values (`h-11` = 44px). The named `--space-*` primitives above
+   * remain the documented rhythm tokens and are surfaced in the token tables.
+   */
+
+  --radius-none: var(--radii-none);
+  --radius-xs: var(--radii-xs);
+  --radius-sm: var(--radii-sm);
+  --radius-md: var(--radii-md);
+  --radius-lg: var(--radii-lg);
+  --radius-pill: var(--radii-pill);
+
+  --shadow-xs: var(--elevation-xs);
+  --shadow-sm: var(--elevation-sm);
+  --shadow-md: var(--elevation-md);
+  --shadow-lg: var(--elevation-lg);
+  --shadow-overlay: var(--elevation-overlay);
+
+  --breakpoint-sm: 40rem;
+  --breakpoint-md: 48rem;
+  --breakpoint-lg: 64rem;
+  --breakpoint-xl: 80rem;
+  --breakpoint-2xl: 96rem;
+
+  --container-prose: var(--content-width-prose);
+  --container-narrow: var(--content-width-narrow);
+  --container-default: var(--content-width-default);
+  --container-wide: var(--content-width-wide);
+
+  --ease-standard: var(--easing-standard);
+  --ease-decelerate: var(--easing-decelerate);
+  --ease-accelerate: var(--easing-accelerate);
+  --ease-emphasised: var(--easing-emphasised);
+}
+
+/* ---------------------------------------------------------------------------
+ * Base layer
+ * ------------------------------------------------------------------------ */
+@layer base {
+  * {
+    border-color: var(--border-default);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--surface-default);
+    color: var(--text-primary);
+    font-family: var(--font-family-brand);
+    font-weight: var(--font-weight-regular);
+    font-size: var(--font-size-md);
+    line-height: var(--line-height-relaxed);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Native select popups are rendered by the operating system. Explicit
+     semantic colours keep their options readable in both application themes. */
+  select {
+    color-scheme: light;
+  }
+
+  [data-theme="dark"] select {
+    color-scheme: dark;
+  }
+
+  select option,
+  select optgroup {
+    background-color: var(--surface-raised);
+    color: var(--text-primary);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-weight: var(--font-weight-bold);
+    line-height: var(--line-height-snug);
+    letter-spacing: var(--letter-spacing-tight);
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Single, consistent, never-removed focus indicator */
+  :focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+    border-radius: var(--radii-xs);
+  }
+
+  [data-surface="inverse"] :focus-visible,
+  [data-surface="brand"] :focus-visible {
+    outline-color: var(--focus-ring-color);
+  }
+
+  [data-surface="inverse"] :focus-visible {
+    outline-color: var(--focus-ring-color-inverse);
+  }
+
+  ::selection {
+    background-color: var(--rbi-yellow-400);
+    color: var(--rbi-off-black);
+  }
+
+  :disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Surface contexts — set once on a wrapper; descendants inherit brand-correct
+ * colours without any component needing a "dark" variant.
+ * ------------------------------------------------------------------------ */
+@layer components {
+  [data-surface="inverse"] {
+    background-color: var(--rbi-off-black);
+    color: var(--rbi-white);
+    --border-default: var(--border-inverse);
+    --border-subtle: color-mix(in srgb, var(--rbi-white) 14%, transparent);
+    --text-primary: var(--rbi-white);
+    --text-secondary: var(--rbi-grey-300);
+    --text-tertiary: var(--rbi-grey-400);
+    --surface-default: var(--rbi-off-black);
+    --surface-subtle: var(--rbi-grey-800);
+    --surface-muted: var(--rbi-grey-800);
+    --surface-raised: var(--rbi-grey-800);
+  }
+
+  [data-surface="brand"] {
+    background-color: var(--surface-brand);
+    color: var(--text-on-brand);
+    --text-primary: var(--rbi-off-black);
+    --text-secondary: color-mix(in srgb, var(--rbi-off-black) 78%, transparent);
+    --border-default: color-mix(in srgb, var(--rbi-off-black) 22%, transparent);
+    --surface-default: var(--rbi-yellow-400);
+    --surface-raised: var(--rbi-white);
+    --action-secondary-foreground: var(--rbi-off-black);
+    --action-secondary-border: var(--rbi-off-black);
+    --action-secondary-background-hover: color-mix(in srgb, var(--rbi-off-black) 10%, transparent);
+  }
+
+  [data-surface="corporate"] {
+    background-color: var(--surface-corporate);
+    color: var(--text-on-corporate);
+    --text-primary: var(--rbi-white);
+    --text-secondary: var(--rbi-green-200);
+    --border-default: color-mix(in srgb, var(--rbi-white) 24%, transparent);
+    --surface-default: var(--rbi-green-500);
+    --surface-raised: color-mix(in srgb, var(--rbi-white) 8%, var(--rbi-green-500));
+  }
+
+  [data-surface="subtle"] {
+    background-color: var(--surface-subtle);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Brand utilities
+ * ------------------------------------------------------------------------ */
+
+/* Editorial display type: large, confident, Amalia Black, tight tracking. */
+.text-display {
+  font-weight: var(--font-weight-black);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tighter);
+  text-transform: none;
+}
+
+/* Small all-caps eyebrow label used above section headings. */
+.text-eyebrow {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wider);
+  text-transform: uppercase;
+  line-height: var(--line-height-normal);
+}
+
+/* Gable-Cross-derived 45deg leading rule used on section headers. */
+.brand-rule {
+  position: relative;
+  padding-left: var(--space-5);
+}
+
+.brand-rule::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block: 0.15em 0.15em;
+  width: var(--border-width-thick);
+  background-color: var(--rbi-yellow-400);
+  transform: skewX(-12deg);
+}
+
+/* Diagonal repeating hatch derived from the Gable Cross diagonals. */
+.brand-hatch {
+  background-image: repeating-linear-gradient(
+    var(--brand-diagonal-angle),
+    currentColor 0 1px,
+    transparent 1px 10px
+  );
+}
+
+.focus-ring:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* ---------------------------------------------------------------------------
+ * Translucency ("glass") — a blurred, semi-transparent layer of whatever the
+ * current surface context is. Because the colour is derived from
+ * --surface-default, the same utility reads correctly on light, subtle, brand,
+ * corporate and inverse surfaces without a per-context variant.
+ *
+ * Only the standard `backdrop-filter` property is written; vendor prefixing is
+ * the build's job. Blur is dropped for reduced-motion/low-transparency users
+ * further down in this file.
+ * ------------------------------------------------------------------------ */
+
+/* Light veil — decorative panels sitting over brand colour or imagery. */
+.glass {
+  background-color: color-mix(in srgb, var(--surface-default) 62%, transparent);
+  backdrop-filter: blur(14px) saturate(140%);
+  border-color: color-mix(in srgb, var(--rbi-white) 45%, var(--border-subtle));
+}
+
+/* Legible veil — sticky chrome that content scrolls underneath. */
+.glass-strong {
+  background-color: var(--surface-default);
+  backdrop-filter: none;
+}
+
+/* Brand-tinted veil, for accents that must stay unmistakably Raiffeisen. */
+.glass-brand {
+  background-color: color-mix(in srgb, var(--surface-brand) 70%, transparent);
+  backdrop-filter: blur(14px) saturate(150%);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass,
+  .glass-strong,
+  .glass-brand {
+    backdrop-filter: none;
+    background-color: var(--surface-default);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Reduced motion — honoured globally.
+ * ------------------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "required": "{field} je obavezno.",
+  "maxLength": "{field} smije imati najviše {max, plural, one {# znak} few {# znaka} other {# znakova}}.",
+  "minLength": "{field} mora imati najmanje {min, plural, one {# znak} few {# znaka} other {# znakova}}.",
+  "iban": "Unesite ispravan IBAN.",
+  "email": "Unesite ispravnu email adresu.",
+  "numberRange": "{field} mora biti između {min, number} i {max, number}."
+}

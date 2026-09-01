@@ -1,0 +1,30 @@
+# Exclude non-.NET directories from Docker build context
+.git
+.github
+.research
+src/
+docs/
+scripts/
+
+node_modules
+artifacts
+dist
+Makefile
+README.md
+CLAUDE.md
+.env
+.env.example
+*.md
+
+# Exclude build output and NuGet assets (Windows paths break Linux Docker build)
+**/obj/
+**/bin/
+
+# Exclude backend test projects from production images
+RelatedPartiesRegister/UnitTests/
+RelatedPartiesRegister/IntegrationTests/
+
+# Exclude local SQLite databases
+*.db
+*.db-shm
+*.db-wal

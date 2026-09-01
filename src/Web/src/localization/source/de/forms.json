@@ -1,0 +1,20 @@
+{
+  "labels": {
+    "accountName": "Kontoname",
+    "iban": "IBAN",
+    "currency": "Währung",
+    "segment": "Segment",
+    "status": "Status",
+    "search": "Suche",
+    "email": "E-Mail-Adresse",
+    "fullName": "Vollständiger Name"
+  },
+  "placeholders": {
+    "search": "Konten suchen",
+    "selectSegment": "Alle Segmente"
+  },
+  "hints": {
+    "iban": "IBAN ohne Leerzeichen eingeben.",
+    "search": "Sucht in Kontoname und IBAN."
+  }
+}

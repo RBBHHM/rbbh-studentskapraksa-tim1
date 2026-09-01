@@ -1,0 +1,26 @@
+{
+  "localization": {
+    "title": "Lokalisierung",
+    "lead": "Texte sind Laufzeitinhalte, kein Build-Ergebnis. Ein Release wird in den Speicher veröffentlicht und von der laufenden Anwendung übernommen.",
+    "manifestHeading": "Manifest",
+    "manifestBody": "Die Anwendung liest ein Manifest pro Umgebung. Es benennt das aktive Release, die Sprachen und die Ersatzkette.",
+    "releaseHeading": "Unveränderliche Releases",
+    "releaseBody": "Bundle-Pfade enthalten die Release-ID, daher ist ein Bundle dauerhaft cachebar und ein Rollback nur eine Manifest-Änderung.",
+    "editHeading": "Texte bearbeiten",
+    "editBody": "Texte werden im Translation-Management-System bearbeitet und freigegeben, per Pipeline exportiert und über das CDN ausgeliefert.",
+    "formattingHeading": "Formatierung",
+    "formattingBody": "Zahlen, Datum und Währung nutzen Intl mit der aktiven Sprache. Plural und Genus über ICU MessageFormat."
+  },
+  "demo": {
+    "heading": "Lokalisierung in der Praxis",
+    "localeLabel": "Aktive Sprache",
+    "releaseLabel": "Aktives Release",
+    "pluralLabel": "Plural (ICU)",
+    "selectLabel": "Auswahl (ICU)",
+    "numberLabel": "Zahl",
+    "currencyLabel": "Währung",
+    "dateLabel": "Datum",
+    "relativeLabel": "Relative Zeit",
+    "listLabel": "Liste"
+  }
+}

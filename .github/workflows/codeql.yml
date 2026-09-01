@@ -1,0 +1,309 @@
+name: CodeQL Security Scan
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [ "development" ]
+    types: [opened, synchronize, reopened]
+  
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+      issues: write
+      pull-requests: write
+      statuses: write  
+    strategy:
+      fail-fast: false
+    container:
+      image: docker.artifacts.rbi.tech/dotnet/sdk:${{ vars.DOTNET_VERSION }}
+      env: 
+        HTTP_PROXY: http://proxy.r-services.at:57165
+        HTTPS_PROXY: http://proxy.r-services.at:57165
+        NO_PROXY: code.rbi.tech:443,artifacts.rbi.tech,objects.githubusercontent.com:443,github.com:443,code.rbi.tech,localhost:80,localhost:443,127.0.0.1:80,127.0.0.1:443,rbinternational.corp:443,rbi.tech:443,.amazonaws.com:443,github.com:443,dotnetcli.blob.core.windows.net:443,download.visualstudio.microsoft.com:443,api.nuget.org:443,dotnetcli.azureedge.net:443
+        NODE_TLS_REJECT_UNAUTHORIZED: 0
+        NODE_DEBUG: http
+        DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER: 1
+        ACTIONS_ALLOW_UNSECURE_COMMAND: 1
+        LANGUAGE: csharp
+        NUGET_CONFIG_PATH: ${{ vars.NUGET_CONFIG_PATH }}
+        PROJECT_PATH: ${{ vars.PROJECT_PATH }}
+        SOLUTION_PATH: ${{ vars.SOLUTION_PATH }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: csharp
+
+    - name: Disabling NuGet Source and Building .NET Project
+      run: |
+        dotnet nuget disable source "nuget.org"
+        dotnet restore --configfile "${{ vars.PROJECT_PATH }}/${{ vars.NUGET_CONFIG_PATH }}" "${{ vars.PROJECT_PATH }}/${{ vars.SOLUTION_PATH }}"
+        dotnet build "${{ vars.PROJECT_PATH }}/${{ vars.SOLUTION_PATH }}" -c Release --no-restore /clp:ErrorsOnly
+
+    - name: Perform CodeQL Analysis
+      id: codeql-analyze
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:csharp"
+        output: sarif-results
+        upload: true
+
+    - name: Parse CodeQL Results
+      if: always()
+      id: parse-results
+      uses: actions/github-script@v7
+      with:
+        script: |
+          let summary = { critical: 0, high: 0, medium: 0, low: 0, total: 0, findings: [] };
+          
+          // Wait a bit for GitHub to process the upload
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          
+          try {
+            console.log('Fetching alerts from GitHub API...');
+            
+            // Get code scanning alerts from GitHub API (same source as Security Dashboard)
+            const { data: alerts } = await github.rest.codeScanning.listAlertsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              ref: context.ref || `refs/pull/${context.issue.number}/merge`
+            });
+            
+            console.log(`Found ${alerts.length} alerts from GitHub API`);
+            summary.total = alerts.length;
+            
+            alerts.forEach((alert) => {
+              // Use GitHub's severity classification (matches Security Dashboard)
+              const severity = alert.rule?.security_severity_level?.toLowerCase() || alert.rule?.severity?.toLowerCase() || 'low';
+              
+              console.log(`Alert: ${alert.rule?.id} - Severity: ${severity}`);
+              
+              if (severity === 'critical') summary.critical++;
+              else if (severity === 'high') summary.high++;
+              else if (severity === 'medium') summary.medium++;
+              else summary.low++;
+              
+              // Collect details for critical and high severity issues
+              if (severity === 'critical' || severity === 'high') {
+                summary.findings.push({
+                  severity: severity.toUpperCase(),
+                  rule: alert.rule?.id || 'unknown',
+                  message: (alert.rule?.description || alert.most_recent_instance?.message?.text || 'No message').substring(0, 100),
+                  location: alert.most_recent_instance?.location?.path || 'N/A',
+                  line: alert.most_recent_instance?.location?.start_line || 'N/A',
+                  url: alert.html_url
+                });
+              }
+            });
+          } catch (error) {
+            console.log('Error fetching alerts from GitHub API:', error.message);
+            console.log('Note: Alerts may not be available yet. This can happen on the first run or for workflow_dispatch events.');
+            console.log('The alerts will appear in the Security Dashboard once processing is complete.');
+          }
+          
+          console.log('Summary:', JSON.stringify(summary, null, 2));
+          core.setOutput('critical', summary.critical);
+          core.setOutput('high', summary.high);
+          core.setOutput('medium', summary.medium);
+          core.setOutput('low', summary.low);
+          core.setOutput('total', summary.total);
+          core.setOutput('findings', JSON.stringify(summary.findings));
+
+    - name: Create Job Summary
+      if: always()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const critical = parseInt('${{ steps.parse-results.outputs.critical }}') || 0;
+          const high = parseInt('${{ steps.parse-results.outputs.high }}') || 0;
+          const medium = parseInt('${{ steps.parse-results.outputs.medium }}') || 0;
+          const low = parseInt('${{ steps.parse-results.outputs.low }}') || 0;
+          const total = parseInt('${{ steps.parse-results.outputs.total }}') || 0;
+          
+          const securityUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/security/code-scanning`;
+          const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+          
+          if (total === 0) {
+            await core.summary
+              .addHeading('✅ CodeQL Security Scan - All Clear', 2)
+              .addRaw('\n\nNo security vulnerabilities detected in the codebase.\n\n')
+              .addTable([
+                [{data: 'Status', header: true}, {data: 'Result', header: true}],
+                ['Security Issues', '✅ None Found'],
+                ['Scan Status', '✅ Passed'],
+                ['Code Quality', '✅ Excellent']
+              ])
+              .addRaw('\n\n')
+              .addLink('View Security Dashboard', securityUrl)
+              .write();
+          } else {
+            let findings = [];
+            try { findings = JSON.parse('${{ steps.parse-results.outputs.findings }}'); } catch (e) {}
+            
+            const statusEmoji = critical > 0 ? '🔴' : high > 0 ? '🟠' : medium > 0 ? '🟡' : '🔵';
+            const statusText = critical > 0 ? 'CRITICAL' : high > 0 ? 'HIGH' : medium > 0 ? 'MEDIUM' : 'LOW';
+            
+            await core.summary
+              .addHeading(`${statusEmoji} CodeQL Security Scan - ${statusText} Issues Found`, 2)
+              .addRaw('\n')
+              .addTable([
+                [{data: 'Severity', header: true}, {data: 'Count', header: true}],
+                ['🔴 Critical', String(critical)],
+                ['🟠 High', String(high)],
+                ['🟡 Medium', String(medium)],
+                ['🔵 Low', String(low)],
+                ['Total', String(total)]
+              ])
+              .addRaw('\n\n');
+            
+            if (findings.length > 0) {
+              await core.summary
+                .addHeading('Critical & High Severity Issues', 3)
+                .addTable([
+                  [{data: 'Severity', header: true}, {data: 'Rule', header: true}, {data: 'Location', header: true}],
+                  ...findings.slice(0, 10).map(f => [f.severity, f.rule, f.location])
+                ]);
+            }
+            
+            await core.summary
+              .addRaw('\n\n### 🔗 Resources\n')
+              .addList([
+                `[View All Issues in Security Dashboard](${securityUrl})`,
+                `[View Full Scan Results](${runUrl})`
+              ])
+              .addRaw('\n\n')
+              .addRaw('> **Note:** Low/medium severity issues and code quality findings may not appear in the Security Dashboard. Check the SARIF results or workflow logs for details.\n')
+              .write();
+          }
+
+    - name: Post PR Comment
+      if: github.event_name == 'pull_request' && always()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const critical = parseInt('${{ steps.parse-results.outputs.critical }}') || 0;
+          const high = parseInt('${{ steps.parse-results.outputs.high }}') || 0;
+          const medium = parseInt('${{ steps.parse-results.outputs.medium }}') || 0;
+          const low = parseInt('${{ steps.parse-results.outputs.low }}') || 0;
+          const total = parseInt('${{ steps.parse-results.outputs.total }}') || 0;
+          
+          const securityUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/security/code-scanning`;
+          
+          let comment = '';
+          
+          if (total === 0) {
+            comment = '## ✅ CodeQL Security Scan - Passed\n\n';
+            comment += '**No security vulnerabilities detected!**\n\n';
+            comment += 'Your code has been analyzed and no security issues were found.\n\n';
+            comment += '📊 **Scan Results:** 0 issues found\n';
+            comment += `🔒 [View Security Dashboard](${securityUrl})\n\n`;
+            comment += '---\n';
+            comment += '<sub>🤖 Automated by CodeQL Security Scanner</sub>';
+          } else {
+            const statusEmoji = critical > 0 ? '🔴' : high > 0 ? '🟠' : medium > 0 ? '🟡' : '🔵';
+            const statusText = critical > 0 ? 'CRITICAL' : high > 0 ? 'HIGH' : medium > 0 ? 'MEDIUM' : 'LOW';
+            const blockMerge = critical > 0 || high > 0;
+            
+            comment = `## ${statusEmoji} CodeQL Security Scan - ${statusText} Issues Found\n\n`;
+            comment += blockMerge ? '⚠️ **Security vulnerabilities detected**\n\n' : 'ℹ️ **Code quality issues detected**\n\n';
+            comment += '| Severity | Count |\n';
+            comment += '|----------|-------|\n';
+            comment += `| 🔴 Critical | **${critical}** |\n`;
+            comment += `| 🟠 High | **${high}** |\n`;
+            comment += `| 🟡 Medium | **${medium}** |\n`;
+            comment += `| 🔵 Low | **${low}** |\n`;
+            comment += `| **Total** | **${total}** |\n\n`;
+            
+            // Show details of critical/high issues
+            if (blockMerge) {
+              let findings = [];
+              try { 
+                findings = JSON.parse('${{ steps.parse-results.outputs.findings }}');
+              } catch (e) {
+                console.error('Failed to parse findings:', e);
+              }
+              
+              if (findings.length > 0) {
+                comment += '### 🔍 Critical & High Severity Issues\n\n';
+                findings.slice(0, 5).forEach((finding, index) => {
+                  comment += `**${index + 1}. ${finding.rule}** (${finding.severity})\n`;
+                  comment += `- **Location:** \`${finding.location}:${finding.line}\`\n`;
+                  comment += `- **Description:** ${finding.message}\n`;
+                  if (finding.url) {
+                    comment += `- **[View Alert →](${finding.url})**\n`;
+                  }
+                  comment += '\n';
+                });
+                if (findings.length > 5) {
+                  comment += `_...and ${findings.length - 5} more issue(s)_\n\n`;
+                }
+              }
+              
+              comment += '### 📋 Next Steps\n';
+              comment += `1. Review issues in [Security Dashboard](${securityUrl})\n`;
+              comment += '2. Fix critical and high severity issues\n';
+              comment += '3. Re-run scan after pushing fixes\n\n';
+              comment += '> 🚫 **MERGE BLOCKED** - Fix critical/high issues before merging\n\n';
+            } else {
+              comment += '### 📋 Recommendations\n';
+              comment += `1. Review findings in the [workflow logs](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})\n`;
+              comment += '2. Consider addressing medium/low severity issues when possible\n\n';
+              comment += '> ✅ **No blocking issues** - Safe to merge, but consider reviewing findings\n\n';
+              comment += '**Note:** Low/medium severity issues may not appear in Security Dashboard.\n\n';
+            }
+            
+            comment += '---\n';
+            comment += '<sub>🤖 Automated by CodeQL Security Scanner</sub>';
+          }
+          
+          try {
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(c => c.user.type === 'Bot' && c.body.includes('CodeQL Security Scan'));
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: comment
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+            }
+          } catch (error) {
+            console.error('Error posting comment:', error.message);
+          }
+
+    - name: Verify security scan results
+      if: steps.parse-results.outputs.critical > 0 || steps.parse-results.outputs.high > 0
+      run: |
+        echo "::error::Found ${{ steps.parse-results.outputs.critical }} critical and ${{ steps.parse-results.outputs.high }} high severity issues"
+        echo "::error::Review issues at: ${{ github.server_url }}/${{ github.repository }}/security/code-scanning"
+        exit 1
+    
+    - name: Security scan passed
+      if: steps.parse-results.outputs.critical == 0 && steps.parse-results.outputs.high == 0
+      run: |
+        echo "::notice::✅ CodeQL scan passed - No critical or high severity issues"
+        echo "::notice::Total findings: ${{ steps.parse-results.outputs.total }} (Critical: ${{ steps.parse-results.outputs.critical }}, High: ${{ steps.parse-results.outputs.high }}, Medium: ${{ steps.parse-results.outputs.medium }}, Low: ${{ steps.parse-results.outputs.low }})"
