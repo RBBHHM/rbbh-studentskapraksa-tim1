@@ -2,7 +2,11 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const outputDirectory = resolve(process.argv[2] ?? ".runtime");
-const candidates = [resolve(".env"), resolve("..", "..", ".env")];
+const candidates = [
+  resolve(".env"),
+  resolve("..", "..", "RelatedPartiesRegister", ".env"),
+  resolve("..", "..", ".env"),
+];
 const source = candidates.find(existsSync);
 const values = {};
 
@@ -35,7 +39,14 @@ const mapping = {
 };
 
 const config = Object.fromEntries(
-  Object.entries(mapping).map(([target, sourceKey]) => [target, values[sourceKey] ?? process.env[sourceKey] ?? ""]),
+  Object.entries(mapping).map(([target, sourceKey]) => [target, process.env[sourceKey] ?? values[sourceKey] ?? ""]),
 );
+if (process.argv.includes("--same-origin")) config.API_BASE_URL = "";
+const option = (name) => {
+  const index = process.argv.indexOf(name);
+  return index >= 0 ? process.argv[index + 1] : undefined;
+};
+config.ENVIRONMENT = option("--environment") ?? config.ENVIRONMENT;
+config.LOCALIZATION_MANIFEST_URL = option("--localization-manifest") ?? config.LOCALIZATION_MANIFEST_URL;
 mkdirSync(outputDirectory, { recursive: true });
 writeFileSync(resolve(outputDirectory, "app-config.js"), `window.__APP_CONFIG__ = ${JSON.stringify(config, null, 2)};\n`, "utf8");

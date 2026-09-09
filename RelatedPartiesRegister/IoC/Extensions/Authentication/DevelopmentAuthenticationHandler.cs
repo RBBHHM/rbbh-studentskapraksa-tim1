@@ -37,12 +37,9 @@ public sealed class DevelopmentAuthenticationHandler : AuthenticationHandler<Dev
             new("sub", "local-development-user"),
             new(ClaimTypes.Name, "Lokalni razvojni korisnik"),
             new("name", "Lokalni razvojni korisnik"),
-            new("preferred_username", "local.admin"),
-            new(ClaimTypes.Email, "local.admin@localhost"),
+            new("preferred_username", "admin1"),
+            new(ClaimTypes.Email, "admin@localhost"),
         };
-
-        foreach (var role in new[] { "physical-persons", "legal-persons", "limits", "regulatory-reporting" })
-            claims.Add(new Claim(ClaimTypes.Role, role));
 
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, SchemeName));
         return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, SchemeName)));

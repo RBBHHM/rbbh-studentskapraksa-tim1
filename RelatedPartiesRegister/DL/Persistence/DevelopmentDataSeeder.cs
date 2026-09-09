@@ -28,8 +28,10 @@ public static class DevelopmentDataSeeder
         var physicalRole = new AppRole { Name = ApplicationAccessRoles.PhysicalPersons, CreatedBy = "seed" };
         var legalRole = new AppRole { Name = ApplicationAccessRoles.LegalPersons, CreatedBy = "seed" };
         var limitsRole = new AppRole { Name = ApplicationAccessRoles.Limits, CreatedBy = "seed" };
-        var reportingRole = new AppRole { Name = ApplicationAccessRoles.RegulatoryReporting, CreatedBy = "seed" };
-        db.Roles.AddRange(physicalRole, legalRole, limitsRole, reportingRole);
+        var capitalRole = new AppRole { Name = ApplicationAccessRoles.Capital, CreatedBy = "seed" };
+        var adminRole = new AppRole { Name = ApplicationAccessRoles.Administrator, CreatedBy = "seed" };
+        var guestRole = new AppRole { Name = ApplicationAccessRoles.Guest, CreatedBy = "seed" };
+        db.Roles.AddRange(physicalRole, legalRole, limitsRole, capitalRole, adminRole, guestRole);
 
         db.CodeLists.AddRange(
             Code("TipLica", "FL", "Fizičko lice", 1, now),
@@ -87,7 +89,8 @@ public static class DevelopmentDataSeeder
             new UserRole { UserId = admin.Id, RoleId = physicalRole.Id, CreatedBy = "seed" },
             new UserRole { UserId = admin.Id, RoleId = legalRole.Id, CreatedBy = "seed" },
             new UserRole { UserId = admin.Id, RoleId = limitsRole.Id, CreatedBy = "seed" },
-            new UserRole { UserId = admin.Id, RoleId = reportingRole.Id, CreatedBy = "seed" },
+            new UserRole { UserId = admin.Id, RoleId = capitalRole.Id, CreatedBy = "seed" },
+            new UserRole { UserId = admin.Id, RoleId = adminRole.Id, CreatedBy = "seed" },
             new UserRole { UserId = verifier.Id, RoleId = legalRole.Id, CreatedBy = "seed" },
             new UserRole { UserId = verifier.Id, RoleId = limitsRole.Id, CreatedBy = "seed" });
 
@@ -111,6 +114,7 @@ public static class DevelopmentDataSeeder
             new AuditLog { TableName = "PeriodLock", RecordId = $"{now.Year}-{now.Month}", Action = "PERIOD_UNLOCK", NewValues = "{\"isLocked\":false}", UserId = admin.Username, Username = admin.Username, IpAddress = "127.0.0.1", Timestamp = now.AddDays(-2) });
 
         await db.SaveChangesAsync(ct);
+        await EnsureApplicationRolesAsync(db, ct);
     }
 
     private static CodeList Code(string category, string code, string name, int order, DateTime now, string? description = null) =>
@@ -142,9 +146,19 @@ public static class DevelopmentDataSeeder
         await db.SaveChangesAsync(ct);
     }
 
-    private static async Task EnsureApplicationRolesAsync(ConnectedPartiesDbContext db, CancellationToken ct)
+    public static async Task EnsureApplicationRolesAsync(ConnectedPartiesDbContext db, CancellationToken ct = default)
     {
         var roles = await db.Roles.AsTracking().ToListAsync(ct);
+        var legacyNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["physical-persons"] = ApplicationAccessRoles.PhysicalPersons,
+            ["legal-persons"] = ApplicationAccessRoles.LegalPersons,
+            ["limits"] = ApplicationAccessRoles.Limits,
+            ["regulatory-reporting"] = ApplicationAccessRoles.Capital
+        };
+        foreach (var role in roles.Where(role => legacyNames.ContainsKey(role.Name)))
+            role.Name = legacyNames[role.Name];
+
         foreach (var role in roles.Where(role => !ApplicationAccessRoles.All.Contains(role.Name)))
             role.IsActive = false;
         foreach (var name in ApplicationAccessRoles.All.Where(name => roles.All(role => !role.Name.Equals(name, StringComparison.OrdinalIgnoreCase))))
@@ -159,7 +173,7 @@ public static class DevelopmentDataSeeder
             var assignments = await db.UserRoles.AsTracking()
                 .Where(item => item.UserId == localAdmin.Id)
                 .ToListAsync(ct);
-            foreach (var role in roles.Where(role => ApplicationAccessRoles.All.Contains(role.Name)))
+            foreach (var role in roles.Where(role => role.Name == ApplicationAccessRoles.Administrator))
             {
                 var existing = assignments.FirstOrDefault(item => item.RoleId == role.Id);
                 if (existing is null)
@@ -168,6 +182,70 @@ public static class DevelopmentDataSeeder
                     existing.IsActive = true;
             }
         }
+
+        var moduleRoleIds = roles
+            .Where(role => ApplicationAccessRoles.BusinessModules.Contains(role.Name))
+            .Select(role => role.Id)
+            .ToArray();
+        var adminRole = roles.First(role => role.Name == ApplicationAccessRoles.Administrator);
+        var legacyAdministrators = await db.UserRoles
+            .Where(userRole => userRole.IsActive && moduleRoleIds.Contains(userRole.RoleId))
+            .GroupBy(userRole => userRole.UserId)
+            .Where(group => group.Select(userRole => userRole.RoleId).Distinct().Count() == moduleRoleIds.Length)
+            .Select(group => group.Key)
+            .ToListAsync(ct);
+        var assignedAdminIds = await db.UserRoles
+            .Where(userRole => userRole.RoleId == adminRole.Id)
+            .Select(userRole => userRole.UserId)
+            .ToListAsync(ct);
+        foreach (var userId in legacyAdministrators.Where(userId => !assignedAdminIds.Contains(userId)))
+            db.UserRoles.Add(new UserRole { UserId = userId, RoleId = adminRole.Id, CreatedBy = "role-migration" });
+
+        await db.SaveChangesAsync(ct);
+
+        var permissions = await db.Permissions.AsTracking().ToListAsync(ct);
+        foreach (var code in ApplicationPermissions.All)
+        {
+            var permission = permissions.FirstOrDefault(item =>
+                item.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            if (permission is null)
+            {
+                permission = new Permission
+                {
+                    Code = code,
+                    Module = code[..code.LastIndexOf('_')],
+                    Description = code.Replace('_', ' ')
+                };
+                db.Permissions.Add(permission);
+                permissions.Add(permission);
+            }
+            else
+                permission.IsActive = true;
+        }
+
+        foreach (var permission in permissions.Where(item => !ApplicationPermissions.All.Contains(item.Code)))
+            permission.IsActive = false;
+
+        var existingMappings = await db.RolePermissions.AsTracking().ToListAsync(ct);
+        var expectedMappings = RolePermissionMatrix.PermissionsByRole
+            .SelectMany(pair => pair.Value.Select(permissionCode => new
+            {
+                RoleId = roles.Single(role => role.Name.Equals(pair.Key, StringComparison.OrdinalIgnoreCase)).Id,
+                PermissionId = permissions.Single(permission => permission.Code.Equals(permissionCode, StringComparison.OrdinalIgnoreCase)).Id
+            }))
+            .ToArray();
+
+        foreach (var mapping in expectedMappings.Where(mapping => existingMappings.All(existing =>
+                     existing.RoleId != mapping.RoleId || existing.PermissionId != mapping.PermissionId)))
+            db.RolePermissions.Add(new RolePermission
+            {
+                RoleId = mapping.RoleId,
+                PermissionId = mapping.PermissionId
+            });
+
+        db.RolePermissions.RemoveRange(existingMappings.Where(existing => expectedMappings.All(expected =>
+            expected.RoleId != existing.RoleId || expected.PermissionId != existing.PermissionId)));
+
         await db.SaveChangesAsync(ct);
     }
 }

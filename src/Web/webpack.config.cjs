@@ -61,7 +61,7 @@ module.exports = (_env, argv) => {
       historyApiFallback: true,
       hot: true,
       proxy: [
-        { context: ["/api", "/health", "/swagger"], target: "http://127.0.0.1:5000" },
+        { context: ["/api", "/health", "/swagger", "/authentication", "/signin-oidc", "/signout-callback-oidc"], target: "http://127.0.0.1:5000" },
       ],
     },
   };

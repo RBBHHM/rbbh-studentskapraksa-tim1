@@ -5,6 +5,7 @@ using RBBH.ConnectedParties.DL.DTO.Report;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using RBBH.ConnectedParties.Helpers.Constants;
 
 namespace RBBH.ConnectedParties.API.Controllers;
 
@@ -13,7 +14,7 @@ namespace RBBH.ConnectedParties.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/reports")]
-[Authorize(Roles = "regulatory-reporting")]
+[Authorize(Policy = ApplicationPolicies.CapitalRead)]
 [Produces("application/json")]
 public class ReportController : ControllerBase
 {
@@ -33,6 +34,7 @@ public class ReportController : ControllerBase
 
     /// <summary>Kreira dnevni izvještaj za trenutni datum.</summary>
     [HttpPost("daily")]
+    [Authorize(Policy = ApplicationPolicies.CapitalCreate)]
     [ProducesResponseType(typeof(ReportDTO), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GenerateDailyReport()
@@ -63,6 +65,7 @@ public class ReportController : ControllerBase
     /// <param name="year">Godina (npr. 2026).</param>
     /// <param name="month">Mjesec (1-12).</param>
     [HttpPost("monthly/{year:int}/{month:int}")]
+    [Authorize(Policy = ApplicationPolicies.CapitalCreate)]
     [ProducesResponseType(typeof(ReportDTO), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

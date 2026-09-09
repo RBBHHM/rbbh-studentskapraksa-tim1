@@ -4,6 +4,7 @@ using RBBH.ConnectedParties.DL.DTO.Limiti;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using RBBH.ConnectedParties.Helpers.Excel;
+using RBBH.ConnectedParties.Helpers.Constants;
 
 namespace RBBH.ConnectedParties.API.Controllers;
 
@@ -12,13 +13,14 @@ namespace RBBH.ConnectedParties.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/limiti")]
-[Authorize(Roles = "limits")]
+[Authorize]
 public class LimitController(ILimitService limitService) : BaseResuItController
 {
     private readonly ILimitService _limitService = limitService;
 
     /// <summary>Vraća sve limite.</summary>
     [HttpGet]
+    [Authorize(Policy = ApplicationPolicies.LimitsRead)]
     [ProducesResponseType(typeof(List<LimitResponseDTO>), StatusCodes.Status200OK)]
     public async Task<ActionResult<List<LimitResponseDTO>>> GetAll()
     {
@@ -27,6 +29,7 @@ public class LimitController(ILimitService limitService) : BaseResuItController
     }
 
     [HttpGet("export")]
+    [Authorize(Policy = ApplicationPolicies.LimitsRead)]
     public async Task<IActionResult> Export()
     {
         var result = await _limitService.GetAll();
@@ -40,11 +43,13 @@ public class LimitController(ILimitService limitService) : BaseResuItController
     }
 
     [HttpPut("{id:int}/capital")]
+    [Authorize(Policy = ApplicationPolicies.CapitalEdit)]
     public async Task<ActionResult<LimitResponseDTO>> UpdateCapital([FromRoute] int id, [FromBody] UpdateCapitalDTO dto)
         => HandleResult(await _limitService.UpdateCapital(id, dto, GetKorisnik()));
 
     /// <summary>Vraća jedan limit po ID-u.</summary>
     [HttpGet("{id:int}")]
+    [Authorize(Policy = ApplicationPolicies.LimitsRead)]
     [ProducesResponseType(typeof(LimitResponseDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -56,6 +61,7 @@ public class LimitController(ILimitService limitService) : BaseResuItController
 
     /// <summary>Kreira novi limit.</summary>
     [HttpPost]
+    [Authorize(Policy = ApplicationPolicies.LimitsCreate)]
     [ProducesResponseType(typeof(LimitResponseDTO), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<LimitResponseDTO>> Create([FromBody] CreateLimitDTO dto)
@@ -71,6 +77,7 @@ public class LimitController(ILimitService limitService) : BaseResuItController
 
     /// <summary>Ažurira postojeći limit.</summary>
     [HttpPut("{id:int}")]
+    [Authorize(Policy = ApplicationPolicies.LimitsEdit)]
     [ProducesResponseType(typeof(LimitResponseDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -83,6 +90,7 @@ public class LimitController(ILimitService limitService) : BaseResuItController
 
     /// <summary>Briše limit.</summary>
     [HttpDelete("{id:int}")]
+    [Authorize(Policy = ApplicationPolicies.LimitsDelete)]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]

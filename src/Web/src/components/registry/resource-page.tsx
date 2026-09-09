@@ -18,6 +18,7 @@ import { Heading, Text } from "@/components/ui/typography";
 import { IconIndicator, type IndicatorKind } from "@/components/registry/icon-indicator";
 import { apiClient, apiErrorMessage } from "@/lib/api/http-client";
 import { getLegacyRecords, type LegacyRecord } from "@/lib/api/legacy-client";
+import { canWriteApplicationAccess } from "@/lib/auth/application-access";
 import type { RegistryResource, ResourceField } from "@/lib/registry/resources";
 
 type EditorState = { readonly mode: "create" | "edit"; readonly record?: LegacyRecord } | null;
@@ -30,6 +31,7 @@ export function ResourcePage({ resource, toolbar }: { readonly resource: Registr
   const [search, setSearch] = useState("");
   const [editor, setEditor] = useState<EditorState>(null);
   const [deleteId, setDeleteId] = useState<string>();
+  const canWrite = canWriteApplicationAccess(resource.accessRole);
   const queryKey = useMemo(() => ["registry", resource.key] as const, [resource.key]);
   const query = useQuery({
     queryKey,
@@ -98,7 +100,7 @@ export function ResourcePage({ resource, toolbar }: { readonly resource: Registr
         </div>
         <div className="flex flex-wrap gap-2">
           {toolbar}
-          {resource.capabilities?.create && (
+          {canWrite && resource.capabilities?.create && (
             <Button onClick={() => setEditor({ mode: "create" })}>
               <Plus className="size-4" />
               {bs ? "Novi zapis" : "New record"}
@@ -143,7 +145,7 @@ export function ResourcePage({ resource, toolbar }: { readonly resource: Registr
                       {fieldLabel(resource, column, bs)}
                     </th>
                   ))}
-                  {resource.capabilities && (
+                  {canWrite && resource.capabilities && (
                     <th className="sticky right-0 bg-surface-subtle px-4 py-3 text-center font-semibold">
                       {bs ? "Akcije" : "Actions"}
                     </th>
@@ -165,7 +167,7 @@ export function ResourcePage({ resource, toolbar }: { readonly resource: Registr
                           ) : formatValue(record[column], bs, column)}
                         </td>
                       ))}
-                      {resource.capabilities && (
+                      {canWrite && resource.capabilities && (
                         <td className="sticky right-0 bg-surface-default px-4 py-2 text-center align-middle">
                           <div className="flex items-center justify-center gap-1">
                             {resource.capabilities.verifyPath && !isVerified(record) && (
@@ -210,7 +212,7 @@ export function ResourcePage({ resource, toolbar }: { readonly resource: Registr
           </div>
         )}
       </div>
-      {editor && resource.capabilities && (
+      {canWrite && editor && resource.capabilities && (
         <Editor
           resource={resource}
           state={editor}

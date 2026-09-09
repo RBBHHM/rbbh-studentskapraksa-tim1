@@ -6,16 +6,26 @@ namespace RBBH.ConnectedParties.Helpers.Constants;
 /// </summary>
 public static class ApplicationAccessRoles
 {
-    public const string PhysicalPersons = "physical-persons";
-    public const string LegalPersons = "legal-persons";
-    public const string Limits = "limits";
-    public const string RegulatoryReporting = "regulatory-reporting";
+    public const string PhysicalPersons = "FL";
+    public const string LegalPersons = "PL";
+    public const string Capital = "kapital";
+    public const string Limits = "limiti";
+    public const string Administrator = "admin";
+    public const string Guest = "gost";
 
     public static readonly string[] All =
     [
         PhysicalPersons,
         LegalPersons,
+        Capital,
         Limits,
-        RegulatoryReporting
+        Administrator,
+        Guest
     ];
+
+    public static readonly string[] BusinessModules =
+    [PhysicalPersons, LegalPersons, Capital, Limits];
+
+    public static readonly string[] Assignable =
+    [Administrator, Capital, LegalPersons, PhysicalPersons, Limits];
 }

@@ -67,7 +67,7 @@ test("user guide is pinned to the sidebar and filters content by active access",
   const shell = read("src/components/registry/registry-shell.tsx");
   const guide = read("src/components/registry/user-guide-page.tsx");
   assert.match(shell, /to="\/app\/guide"/);
-  assert.match(guide, /activeApplicationAccesses\(\)/);
-  assert.match(guide, /hasAllApplicationAccesses\(\)/);
+  assert.match(guide, /hasApplicationAccess\(section\.role\)/);
+  assert.match(guide, /isApplicationAdmin\(\)/);
   assert.match(guide, /sections\.filter/);
 });

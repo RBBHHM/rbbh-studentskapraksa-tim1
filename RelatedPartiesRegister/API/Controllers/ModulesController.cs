@@ -14,6 +14,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using RBBH.ConnectedParties.Helpers.Constants;
 
 namespace RBBH.ConnectedParties.API.Controllers
 {
@@ -30,10 +31,10 @@ namespace RBBH.ConnectedParties.API.Controllers
         // Ključ = naziv modula, Vrijednost = skup rola koje imaju pristup.
         private static readonly Dictionary<string, HashSet<string>> _moduleRoles = new()
         {
-            ["physical-persons"] = new(StringComparer.OrdinalIgnoreCase) { "physical-persons" },
-            ["legal-persons"] = new(StringComparer.OrdinalIgnoreCase) { "legal-persons" },
-            ["limits"] = new(StringComparer.OrdinalIgnoreCase) { "limits" },
-            ["regulatory-reporting"] = new(StringComparer.OrdinalIgnoreCase) { "regulatory-reporting" },
+            ["physical-persons"] = new(StringComparer.OrdinalIgnoreCase) { ApplicationAccessRoles.PhysicalPersons, ApplicationAccessRoles.Administrator, ApplicationAccessRoles.Guest },
+            ["legal-persons"] = new(StringComparer.OrdinalIgnoreCase) { ApplicationAccessRoles.LegalPersons, ApplicationAccessRoles.Administrator, ApplicationAccessRoles.Guest },
+            ["limits"] = new(StringComparer.OrdinalIgnoreCase) { ApplicationAccessRoles.Limits, ApplicationAccessRoles.Administrator, ApplicationAccessRoles.Guest },
+            ["regulatory-reporting"] = new(StringComparer.OrdinalIgnoreCase) { ApplicationAccessRoles.Capital, ApplicationAccessRoles.Administrator, ApplicationAccessRoles.Guest },
         };
 
         // Statička lista svih modula s metapodacima

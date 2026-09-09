@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Heading, Text } from "@/components/ui/typography";
 import { apiClient, apiErrorMessage } from "@/lib/api/http-client";
 import { getLegacyRecords } from "@/lib/api/legacy-client";
+import { canWriteApplicationAccess } from "@/lib/auth/application-access";
 
 export function ReportsPage() {
   const { i18n } = useTranslation();
@@ -17,6 +18,7 @@ export function ReportsPage() {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [identifier, setIdentifier] = useState("");
+  const canWrite = canWriteApplicationAccess("kapital");
   const query = useQuery({
     queryKey: ["reports"],
     queryFn: async () => {
@@ -56,11 +58,11 @@ export function ReportsPage() {
           : "Generate daily and monthly reports and download Excel data."}
       </Text>
       <div className="mt-6 flex flex-wrap items-end gap-3 rounded-sm border border-border-subtle bg-surface-default p-4">
-        <Button disabled={generate.isPending} onClick={() => generate.mutate("daily")}>
+        {canWrite ? <Button disabled={generate.isPending} onClick={() => generate.mutate("daily")}>
           <FilePlus2 className="size-4" />
           {bs ? "Generiši dnevni" : "Generate daily"}
-        </Button>
-        <label className="grid gap-1 text-sm">
+        </Button> : null}
+        {canWrite ? <label className="grid gap-1 text-sm">
           <span>{bs ? "Godina" : "Year"}</span>
           <input
             className="h-10 w-28 rounded-sm border border-border-subtle bg-surface-default px-3"
@@ -70,8 +72,8 @@ export function ReportsPage() {
             value={year}
             onChange={(e) => setYear(Number(e.target.value))}
           />
-        </label>
-        <label className="grid gap-1 text-sm">
+        </label> : null}
+        {canWrite ? <label className="grid gap-1 text-sm">
           <span>{bs ? "Mjesec" : "Month"}</span>
           <input
             className="h-10 w-24 rounded-sm border border-border-subtle bg-surface-default px-3"
@@ -81,11 +83,11 @@ export function ReportsPage() {
             value={month}
             onChange={(e) => setMonth(Number(e.target.value))}
           />
-        </label>
-        <Button disabled={generate.isPending || !validPeriod} onClick={() => generate.mutate("monthly")}>
+        </label> : null}
+        {canWrite ? <Button disabled={generate.isPending || !validPeriod} onClick={() => generate.mutate("monthly")}>
           <FilePlus2 className="size-4" />
           {bs ? "Generiši mjesečni" : "Generate monthly"}
-        </Button>
+        </Button> : null}
         <Button
           variant="secondary"
           onClick={() => download("/api/reports/export/all-clients", "svi-klijenti.xlsx", bs)}

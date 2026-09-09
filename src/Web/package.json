@@ -17,7 +17,7 @@
     "localization:validate": "node scripts/localization/validate-keys.mjs",
     "test": "node --test tests/node/*.test.mjs",
     "test:api": "powershell -NoProfile -ExecutionPolicy Bypass -File ..\\..\\scripts\\testing\\Test-LocalApi.ps1",
-    "publish:iis": "pnpm.cmd build && node scripts/deployment/create-iis-zip.mjs"
+    "publish:iis": "pnpm.cmd localization:build -- --environment production && pnpm.cmd test && pnpm.cmd build && node scripts/config/generate-runtime-config.mjs dist --same-origin --environment production --localization-manifest /localization/manifests/production.json && node scripts/deployment/create-iis-zip.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

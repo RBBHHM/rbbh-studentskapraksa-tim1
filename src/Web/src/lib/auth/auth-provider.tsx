@@ -1,12 +1,18 @@
 import { type ReactNode, useEffect, useState } from "react";
-import { initializeAuthentication } from "./keycloak";
+import { loadCurrentUser } from "./current-user";
 
 export function AuthProvider({ children }: { readonly children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<Error>();
   useEffect(() => {
-    initializeAuthentication()
-      .then(() => setReady(true))
+    loadCurrentUser()
+      .then((user) => {
+        if (!user) {
+          location.assign(`/authentication/login?returnUrl=${encodeURIComponent(location.pathname)}`);
+          return;
+        }
+        setReady(true);
+      })
       .catch((reason: unknown) =>
         setError(reason instanceof Error ? reason : new Error("Authentication failed.")),
       );

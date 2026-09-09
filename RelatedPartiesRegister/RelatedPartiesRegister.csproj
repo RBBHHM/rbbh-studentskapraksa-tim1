@@ -9,6 +9,7 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn>
     <RootNamespace>RBBH.ConnectedParties.Api</RootNamespace>
     <AssemblyName>RelatedPartiesRegister</AssemblyName>
+    <AssemblyName Condition="'$(UseLocalDataCoreAssemblyName)' == 'true'">DATA_CORE</AssemblyName>
     <DefaultItemExcludes>$(DefaultItemExcludes);**\bin\**;**\obj\**</DefaultItemExcludes>
   </PropertyGroup>
 
@@ -23,6 +24,7 @@
 <!--#if (!IsClean)-->
     <PackageReference Include="dotenv.net" Version="4.0.2" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.3" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.3" />
 <!--#endif-->
     <PackageReference Include="ClosedXML" Version="0.104.2" />
     <PackageReference Include="Mapster" Version="7.4.0" />

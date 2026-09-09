@@ -5,6 +5,7 @@ using RBBH.ConnectedParties.DL.DTO.RelatedPersons;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RBBH.ConnectedParties.Helpers.Excel;
+using RBBH.ConnectedParties.Helpers.Constants;
 
 namespace RBBH.ConnectedParties.API.Controllers;
 
@@ -21,7 +22,7 @@ namespace RBBH.ConnectedParties.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/related-persons")]
-[Authorize(Roles = "physical-persons")]
+[Authorize(Policy = ApplicationPolicies.PhysicalPersonsRead)]
 public class RelatedPersonController(
     IRelatedPersonService relatedPersonService,
     IAuditService auditService) : BaseResuItController
@@ -93,6 +94,7 @@ public class RelatedPersonController(
     /// Kreira novo povezano fizičko lice. Novi zapis se uvijek čuva u statusu Draft.
     /// </summary>
     [HttpPost]
+    [Authorize(Policy = ApplicationPolicies.PhysicalPersonsCreate)]
     [ProducesResponseType(typeof(RelatedPersonResponseDTO), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<RelatedPersonResponseDTO>> Create([FromBody] CreateRelatedPersonDTO dto)
@@ -108,6 +110,7 @@ public class RelatedPersonController(
 
     /// <summary>Ažurira postojeće povezano fizičko lice.</summary>
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = ApplicationPolicies.PhysicalPersonsEdit)]
     [ProducesResponseType(typeof(RelatedPersonResponseDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -120,6 +123,7 @@ public class RelatedPersonController(
 
     /// <summary>Soft-delete povezanog fizičkog lica (i svih njegovih aktivnih članova porodice).</summary>
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = ApplicationPolicies.PhysicalPersonsDelete)]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<ActionResult> Delete([FromRoute] Guid id)
@@ -174,6 +178,7 @@ public class RelatedPersonController(
     /// Vraća HTTP 400 ako matično lice ima postavljenu izjavu o nepostojanju članova porodice.
     /// </summary>
     [HttpPost("{id:guid}/family-members")]
+    [Authorize(Policy = ApplicationPolicies.PhysicalPersonsCreate)]
     [ProducesResponseType(typeof(FamilyMemberResponseDTO), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -190,6 +195,7 @@ public class RelatedPersonController(
 
     /// <summary>Ažurira podatke postojećeg člana porodice.</summary>
     [HttpPut("{id:guid}/family-members/{familyMemberId:guid}")]
+    [Authorize(Policy = ApplicationPolicies.PhysicalPersonsEdit)]
     [ProducesResponseType(typeof(FamilyMemberResponseDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -205,6 +211,7 @@ public class RelatedPersonController(
 
     /// <summary>Soft-delete člana porodice.</summary>
     [HttpDelete("{id:guid}/family-members/{familyMemberId:guid}")]
+    [Authorize(Policy = ApplicationPolicies.PhysicalPersonsDelete)]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -230,6 +237,7 @@ public class RelatedPersonController(
     /// Red 1 je zaglavlje i preskače se.
     /// </summary>
     [HttpPost("import")]
+    [Authorize(Policy = ApplicationPolicies.PhysicalPersonsCreate)]
     [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(ImportResultDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]

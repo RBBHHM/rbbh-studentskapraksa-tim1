@@ -1,4 +1,3 @@
-import { getAccessToken } from "../auth/keycloak";
 import { runtimeConfig } from "../../runtime-config";
 
 /** One wire format for every successful and failed application API response. */
@@ -84,8 +83,6 @@ export function createApiClient(): ApiClient {
     if (typeof document !== "undefined") {
       headers["accept-language"] = document.documentElement.lang || "bs";
     }
-    const accessToken = await getAccessToken();
-    if (accessToken) headers["authorization"] = `Bearer ${accessToken}`;
     return headers;
   }
 

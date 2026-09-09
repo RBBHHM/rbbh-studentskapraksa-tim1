@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using RBBH.ConnectedParties.Helpers.Excel;
+using RBBH.ConnectedParties.Helpers.Constants;
 
 namespace RBBH.ConnectedParties.API.Controllers;
 
@@ -15,7 +16,7 @@ namespace RBBH.ConnectedParties.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/legal-entities")]
-[Authorize(Roles = "legal-persons")]
+[Authorize]
 [Produces("application/json")]
 public class LegalEntityController : ControllerBase
 {
@@ -40,6 +41,7 @@ public class LegalEntityController : ControllerBase
     /// <param name="pageSize">Broj rezultata po stranici (10, 25, 50).</param>
     /// <param name="search">Pretraga po nazivu, poreznom broju ili FBA ID-u (case-insensitive).</param>
     [HttpGet]
+    [Authorize(Policy = ApplicationPolicies.LegalPersonsRead)]
     [ProducesResponseType(typeof(LegalEntityListDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetAll(
@@ -52,6 +54,7 @@ public class LegalEntityController : ControllerBase
     }
 
     [HttpGet("export")]
+    [Authorize(Policy = ApplicationPolicies.LegalPersonsRead)]
     public async Task<IActionResult> Export()
     {
         var items = await _legalEntityService.GetAllForExportAsync();
@@ -68,6 +71,7 @@ public class LegalEntityController : ControllerBase
     /// </summary>
     /// <param name="id">ID pravnog lica.</param>
     [HttpGet("{id:guid}")]
+    [Authorize(Policy = ApplicationPolicies.LegalPersonsRead)]
     [ProducesResponseType(typeof(LegalEntityDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -86,6 +90,7 @@ public class LegalEntityController : ControllerBase
     /// </summary>
     /// <param name="search">Tekst pretrage — naziv ili matični broj.</param>
     [HttpGet("limits/search")]
+    [Authorize(Policy = ApplicationPolicies.LimitsRead)]
     [ProducesResponseType(typeof(List<LegalEntityLookupDTO>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> SearchForLimits([FromQuery] string? search = null)
@@ -99,6 +104,7 @@ public class LegalEntityController : ControllerBase
     /// </summary>
     /// <param name="id">ID pravnog lica.</param>
     [HttpGet("{id:guid}/limit-form-data")]
+    [Authorize(Policy = ApplicationPolicies.LimitsRead)]
     [ProducesResponseType(typeof(LegalEntityLimitFormDataDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -119,6 +125,7 @@ public class LegalEntityController : ControllerBase
     /// </summary>
     /// <param name="dto">Podaci novog pravnog lica.</param>
     [HttpPost]
+    [Authorize(Policy = ApplicationPolicies.LegalPersonsCreate)]
     [ProducesResponseType(typeof(LegalEntityDTO), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -157,6 +164,7 @@ public class LegalEntityController : ControllerBase
     /// <param name="id">ID pravnog lica.</param>
     /// <param name="dto">Novi podaci.</param>
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = ApplicationPolicies.LegalPersonsEdit)]
     [ProducesResponseType(typeof(LegalEntityDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -192,6 +200,7 @@ public class LegalEntityController : ControllerBase
     /// </summary>
     /// <param name="id">ID pravnog lica.</param>
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = ApplicationPolicies.LegalPersonsDelete)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -221,6 +230,7 @@ public class LegalEntityController : ControllerBase
     /// Red 1 je zaglavlje i preskače se.
     /// </summary>
     [HttpPost("import")]
+    [Authorize(Policy = ApplicationPolicies.LegalPersonsCreate)]
     [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(ImportResultDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

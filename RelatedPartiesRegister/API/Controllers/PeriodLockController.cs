@@ -6,12 +6,13 @@ using System.Text.Json.Serialization;
 using RBBH.ConnectedParties.BL.ServiceInterfaces;
 using RBBH.ConnectedParties.DL.Entities.PeriodLock;
 using RBBH.ConnectedParties.Helpers;
+using RBBH.ConnectedParties.Helpers.Constants;
 
 namespace RBBH.ConnectedParties.API.Controllers;
 
 [ApiController]
 [Route("api/period-lock")]
-[Authorize(Roles = "regulatory-reporting")]
+[Authorize(Policy = ApplicationPolicies.CapitalRead)]
 public class PeriodLockController(
     IPeriodLockRepository periodLockRepository,
     IUnlockRequestRepository unlockRequestRepository,
@@ -73,6 +74,7 @@ public class PeriodLockController(
     }
 
     [HttpPost("lock")]
+    [Authorize(Policy = ApplicationPolicies.CapitalWrite)]
     public async Task<IActionResult> LockPeriod([FromBody] PeriodTargetDto? dto = null)
     {
         var now = DateTime.UtcNow;
@@ -121,6 +123,7 @@ public class PeriodLockController(
     }
 
     [HttpPost("unlock")]
+    [Authorize(Policy = ApplicationPolicies.CapitalWrite)]
     public async Task<IActionResult> UnlockPeriod([FromBody] PeriodTargetDto? dto = null)
     {
         var now = DateTime.UtcNow;
@@ -190,6 +193,7 @@ public class PeriodLockController(
     }
 
     [HttpPost("request-unlock")]
+    [Authorize(Policy = ApplicationPolicies.CapitalWrite)]
     public async Task<IActionResult> RequestUnlock([FromBody] RequestUnlockDto dto)
     {
         if (dto == null || string.IsNullOrWhiteSpace(dto.Reason) || dto.Reason.Length < 10 || dto.Reason.Length > 500)
@@ -264,6 +268,7 @@ public class PeriodLockController(
     }
 
     [HttpPost("unlock-requests/{id:guid}/reject")]
+    [Authorize(Policy = ApplicationPolicies.CapitalWrite)]
     public async Task<IActionResult> RejectRequest(
         [FromRoute] Guid id,
         [FromBody] AdminActionDto dto)
@@ -290,6 +295,7 @@ public class PeriodLockController(
     }
 
     [HttpPost("unlock-requests/{id:guid}/request-info")]
+    [Authorize(Policy = ApplicationPolicies.CapitalWrite)]
     public async Task<IActionResult> RequestMoreInfo(
         [FromRoute] Guid id,
         [FromBody] AdminActionDto dto)
@@ -326,6 +332,7 @@ public class PeriodLockController(
     }
 
     [HttpPost("unlock-requests/{id:guid}/respond")]
+    [Authorize(Policy = ApplicationPolicies.CapitalWrite)]
     public async Task<IActionResult> RespondToRequest(
         [FromRoute] Guid id,
         [FromBody] RespondDto dto)

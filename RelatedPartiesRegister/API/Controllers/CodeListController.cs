@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RBBH.ConnectedParties.DL.Entities.Sifarnici;
 using RBBH.ConnectedParties.DL.Persistence;
+using RBBH.ConnectedParties.Helpers.Constants;
 
 namespace RBBH.ConnectedParties.API.Controllers;
 
@@ -17,7 +18,7 @@ namespace RBBH.ConnectedParties.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/code-lists")]
-[Authorize(Policy = "application-administration")]
+[Authorize(Policy = ApplicationPolicies.CodeListsRead)]
 public class CodeListController(ICodeListService codeListService, ConnectedPartiesDbContext db) : BaseResuItController
 {
     private readonly ICodeListService _codeListService = codeListService;
@@ -36,6 +37,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
     }
 
     [HttpPost("categories")]
+    [Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
     public async Task<ActionResult<object>> CreateCategory([FromBody] CreateCodeListDefinitionDTO dto)
     {
         var name = dto.Name.Trim();
@@ -53,6 +55,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
     /// Briše cijelu definiciju šifrarnika i sve njene vrijednosti metodom soft-delete.
     /// </summary>
     [HttpDelete("categories/{name}")]
+    [Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -111,6 +114,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
     /// Kreira novu vrijednost šifarnika (puni DTO format).
     /// </summary>
     [HttpPost]
+    [Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
     [ProducesResponseType(typeof(CodeListResponseDTO), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<CodeListResponseDTO>> Create([FromBody] CreateCodeListDTO dto)
@@ -128,6 +132,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
     /// API contract: POST /api/code-lists/{category} { "value": "Nova vrijednost" }
     /// </summary>
     [HttpPost("{kategorija}")]
+    [Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
     [ProducesResponseType(typeof(object), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<object>> CreateInCategory(
@@ -175,6 +180,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
     /// Automatski bilježi korisnika i datum izmjene.
     /// </summary>
     [HttpPut("{id:int}")]
+    [Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -202,6 +208,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
     /// Ako je vrijednost u upotrebi, vraća HTTP 400 s upozorenjem — ne briše.
     /// </summary>
     [HttpDelete("{id:int}")]
+    [Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -226,6 +233,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
     /// Excel format: prva kolona (A) sadrži vrijednosti. Zaglavlje se automatski detektuje.
     /// </summary>
     [HttpPost("{kategorija}/import")]
+    [Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
     [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(ImportPreviewDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]

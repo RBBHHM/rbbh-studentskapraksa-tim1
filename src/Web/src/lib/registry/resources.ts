@@ -12,6 +12,7 @@ import {
   UserRound,
   type LucideIcon,
 } from "lucide-react";
+import type { ApplicationAccessRole } from "@/lib/auth/application-access";
 
 export interface RegistryResource {
   readonly key: string;
@@ -21,8 +22,8 @@ export interface RegistryResource {
   readonly area: "work" | "administration";
   readonly capabilities?: ResourceCapabilities;
   readonly displayColumns?: readonly string[];
-  readonly accessRole?: "physical-persons" | "legal-persons" | "limits" | "regulatory-reporting";
-  readonly requiresAllAccesses?: boolean;
+  readonly accessRole?: ApplicationAccessRole;
+  readonly adminOnly?: boolean;
 }
 
 export interface ResourceField {
@@ -103,7 +104,7 @@ export const registryResources: readonly RegistryResource[] = [
     displayColumns: ["name", "isResident", "taxNumber", "maticniBroj", "fbaId", "basisOfConnection", "status"],
     icon: Building2,
     area: "work",
-    accessRole: "legal-persons",
+    accessRole: "pl",
     capabilities: {
       create: true,
       update: true,
@@ -156,7 +157,7 @@ export const registryResources: readonly RegistryResource[] = [
     displayColumns: ["personTypeLabel", "firstName", "lastName", "residencyLabel", "jmbg", "passportNumber", "relationBasis", "statusLabel"],
     icon: UserRound,
     area: "work",
-    accessRole: "physical-persons",
+    accessRole: "fl",
     capabilities: {
       mutationEndpoint: "/api/related-persons",
       create: true,
@@ -239,7 +240,7 @@ export const registryResources: readonly RegistryResource[] = [
     endpoint: "/api/limiti",
     icon: Scale,
     area: "work",
-    accessRole: "limits",
+    accessRole: "limiti",
     capabilities: {
       create: true,
       update: true,
@@ -274,7 +275,7 @@ export const registryResources: readonly RegistryResource[] = [
     endpoint: "/api/limiti",
     icon: Landmark,
     area: "work",
-    accessRole: "limits",
+    accessRole: "kapital",
   },
   {
     key: "reports",
@@ -282,7 +283,7 @@ export const registryResources: readonly RegistryResource[] = [
     endpoint: "/api/reports/monthly",
     icon: FileChartColumn,
     area: "work",
-    accessRole: "regulatory-reporting",
+    accessRole: "kapital",
   },
   {
     key: "notifications",
@@ -291,7 +292,7 @@ export const registryResources: readonly RegistryResource[] = [
     displayColumns: ["purpose", "to", "subject", "deliveryStatus", "sentAt"],
     icon: Bell,
     area: "work",
-    accessRole: "regulatory-reporting",
+    accessRole: "kapital",
   },
   {
     key: "users",
@@ -299,7 +300,7 @@ export const registryResources: readonly RegistryResource[] = [
     endpoint: "/api/users",
     icon: Users,
     area: "administration",
-    requiresAllAccesses: true,
+    accessRole: "admin",
   },
   {
     key: "period",
@@ -307,7 +308,7 @@ export const registryResources: readonly RegistryResource[] = [
     endpoint: "/api/period-lock/status",
     icon: CalendarClock,
     area: "administration",
-    accessRole: "regulatory-reporting",
+    accessRole: "kapital",
   },
   {
     key: "codeLists",
@@ -315,7 +316,7 @@ export const registryResources: readonly RegistryResource[] = [
     endpoint: "/api/code-lists",
     icon: BookOpen,
     area: "administration",
-    requiresAllAccesses: true,
+    accessRole: "admin",
   },
   {
     key: "audit",
@@ -324,7 +325,8 @@ export const registryResources: readonly RegistryResource[] = [
     displayColumns: ["timestamp", "actionDisplay", "areaDisplay", "changeSummary", "username", "ipAddress"],
     icon: ScrollText,
     area: "administration",
-    requiresAllAccesses: true,
+    accessRole: "admin",
+    adminOnly: true,
   },
 ];
 

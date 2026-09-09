@@ -1,30 +1,50 @@
-import { isAuthenticationConfigured, keycloak } from "./keycloak";
+import { getCurrentUser } from "./current-user";
+import { redirect } from "@tanstack/react-router";
 
 export const applicationAccessRoles = [
-  "physical-persons",
-  "legal-persons",
-  "limits",
-  "regulatory-reporting",
+  "pl",
+  "fl",
+  "kapital",
+  "limiti",
+  "admin",
+  "gost",
 ] as const;
 
 export type ApplicationAccessRole = (typeof applicationAccessRoles)[number];
 
+const modulePrefixes: Partial<Record<ApplicationAccessRole, string>> = {
+  fl: "FL",
+  pl: "PL",
+  kapital: "KAPITAL",
+  limiti: "LIMITI",
+};
+
 export function activeApplicationAccesses(): ReadonlySet<string> {
-  if (!isAuthenticationConfigured) return new Set(applicationAccessRoles);
-  const token = (keycloak.tokenParsed ?? {}) as Record<string, unknown>;
-  const realm = token["realm_access"] as { roles?: string[] } | undefined;
-  const resources = token["resource_access"] as Record<string, { roles?: string[] }> | undefined;
-  return new Set([
-    ...(realm?.roles ?? []),
-    ...Object.values(resources ?? {}).flatMap((entry) => entry.roles ?? []),
-  ].map((role) => role.toLowerCase()));
+  return new Set((getCurrentUser()?.roles ?? []).map((role) => role.toLowerCase()));
 }
 
 export function hasApplicationAccess(role?: ApplicationAccessRole): boolean {
-  return !role || activeApplicationAccesses().has(role);
+  if (!role) return true;
+  if (role === "admin") return hasPermission("ADMINISTRATION_VIEW");
+  if (role === "gost") return Boolean(getCurrentUser());
+  return hasPermission(`${modulePrefixes[role]}_VIEW`);
 }
 
-export function hasAllApplicationAccesses(): boolean {
-  const active = activeApplicationAccesses();
-  return applicationAccessRoles.every((role) => active.has(role));
+export function canWriteApplicationAccess(role?: ApplicationAccessRole): boolean {
+  const prefix = role ? modulePrefixes[role] : undefined;
+  return Boolean(prefix && ["CREATE", "EDIT", "DELETE"].some((operation) =>
+    hasPermission(`${prefix}_${operation}`)));
+}
+
+export function isApplicationAdmin(): boolean {
+  return hasPermission("ADMINISTRATION_MANAGE");
+}
+
+export function requireApplicationAdmin(): void {
+  if (!isApplicationAdmin()) throw redirect({ to: "/app" });
+}
+
+export function hasPermission(permission: string): boolean {
+  return (getCurrentUser()?.permissions ?? []).some((item) =>
+    item.localeCompare(permission, undefined, { sensitivity: "accent" }) === 0);
 }

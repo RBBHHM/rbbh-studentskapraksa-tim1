@@ -4,6 +4,7 @@ using RBBH.ConnectedParties.DL.DTO.LegalEntity;
 using RBBH.ConnectedParties.DL.DTO.RelatedPersons;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RBBH.ConnectedParties.Helpers.Constants;
 using System.Security.Claims;
 
 namespace RBBH.ConnectedParties.API.Controllers;
@@ -35,7 +36,7 @@ public class VerificationController : BaseResuItController
     /// Verifikuje povezano fizičko lice.
     /// </summary>
     [HttpPost("physical-person/{id:guid}")]
-    [Authorize(Roles = "physical-persons")]
+    [Authorize(Policy = ApplicationPolicies.PhysicalPersonsEdit)]
     [ProducesResponseType(typeof(RelatedPersonResponseDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -71,7 +72,7 @@ public class VerificationController : BaseResuItController
     /// Verifikuje povezano pravno lice.
     /// </summary>
     [HttpPost("legal-person/{id:guid}")]
-    [Authorize(Roles = "legal-persons")]
+    [Authorize(Policy = ApplicationPolicies.LegalPersonsEdit)]
     [ProducesResponseType(typeof(LegalEntityDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]

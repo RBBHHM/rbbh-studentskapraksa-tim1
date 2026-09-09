@@ -1,13 +1,14 @@
 using RBBH.ConnectedParties.DL.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RBBH.ConnectedParties.Helpers.Constants;
 using Microsoft.EntityFrameworkCore;
 
 namespace RBBH.ConnectedParties.API.Controllers;
 
 [ApiController]
 [Route("api/audit-logs")]
-[Authorize(Policy = "application-administration")]
+[Authorize(Policy = ApplicationPolicies.AdminOnly)]
 public class AuditLogController(ConnectedPartiesDbContext db) : ControllerBase
 {
     private static readonly Dictionary<string, string> ActionDisplayNames = new()

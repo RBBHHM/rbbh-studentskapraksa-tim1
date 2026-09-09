@@ -1,12 +1,13 @@
 using RBBH.ConnectedParties.BL.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RBBH.ConnectedParties.Helpers.Constants;
 
 namespace RBBH.ConnectedParties.API.Controllers;
 
 [ApiController]
 [Route("api/email-log")]
-[Authorize(Roles = "regulatory-reporting")]
+[Authorize(Policy = ApplicationPolicies.CapitalRead)]
 public class EmailLogController(
     EmailLogStore store,
     IConfiguration configuration) : ControllerBase

@@ -13,8 +13,8 @@ import { useTranslation } from "react-i18next";
 import { IconIndicator } from "@/components/registry/icon-indicator";
 import { Heading, Text } from "@/components/ui/typography";
 import {
-  activeApplicationAccesses,
-  hasAllApplicationAccesses,
+  hasApplicationAccess,
+  isApplicationAdmin,
   type ApplicationAccessRole,
 } from "@/lib/auth/application-access";
 
@@ -33,7 +33,7 @@ type GuideSection = {
 
 const sections: readonly GuideSection[] = [
   {
-    id: "individuals", role: "physical-persons", icon: UsersRound,
+    id: "individuals", role: "fl", icon: UsersRound,
     titleBs: "Fizička lica i stablo povezanosti", titleEn: "Individuals and relationship tree",
     summaryBs: "Jedinstven unos zaposlenika, povezanih lica i članova porodice.", summaryEn: "A unified record for employees, related persons and family members.",
     pointsBs: [
@@ -54,7 +54,7 @@ const sections: readonly GuideSection[] = [
     ],
   },
   {
-    id: "legal", role: "legal-persons", icon: Building2,
+    id: "legal", role: "pl", icon: Building2,
     titleBs: "Pravna lica", titleEn: "Legal entities",
     summaryBs: "Evidencija, provjera i razmjena podataka o povezanim pravnim licima.", summaryEn: "Recording, verification and data exchange for related legal entities.",
     pointsBs: [
@@ -69,7 +69,7 @@ const sections: readonly GuideSection[] = [
     ],
   },
   {
-    id: "limits", role: "limits", icon: Scale,
+    id: "limits", role: "limiti", icon: Scale,
     titleBs: "Limiti i kapital", titleEn: "Limits and capital",
     summaryBs: "Odvojeni ekrani nad povezanim finansijskim podacima.", summaryEn: "Separate screens over connected financial data.",
     pointsBs: [
@@ -86,7 +86,7 @@ const sections: readonly GuideSection[] = [
     ],
   },
   {
-    id: "reporting", role: "regulatory-reporting", icon: FileSpreadsheet,
+    id: "reporting", role: "kapital", icon: FileSpreadsheet,
     titleBs: "Regulatorno izvještavanje i period", titleEn: "Regulatory reporting and period",
     summaryBs: "Generisanje, preuzimanje i kontrola izvještajnog perioda.", summaryEn: "Report generation, download and reporting-period control.",
     pointsBs: [
@@ -105,14 +105,14 @@ const sections: readonly GuideSection[] = [
     titleBs: "Administracija", titleEn: "Administration",
     summaryBs: "Korisnici, pristupi, šifrarnici i audit trag.", summaryEn: "Users, access, code lists and audit trail.",
     pointsBs: [
-      "Korisnik može imati jedan ili više od četiri nezavisna funkcionalna pristupa: Fizička lica, Pravna lica, Limiti i Regulatorno izvještavanje.",
-      "Novi korisnik mora imati jedinstveno korisničko ime i e-mail adresu koja završava sa @raiffeisengroup.ba. Deaktivacija privremeno ukida pristup, a brisanje uklanja korisnički zapis prema potvrđenom toku.",
+      "Svaki prijavljeni korisnik automatski ima Gost pristup za pregled i izvoz. Dodatne role PL, FL, kapital, limiti i admin mogu se kombinovati, a audit vidi isključivo administrator.",
+      "Dodatne privilegije se vežu za postojeći Keycloak identitet po e-mail adresi. Uklanjanjem svih dodatnih rola korisnik nastavlja raditi kao Gost.",
       "Šifrarnici pune izbore u formama. Aktivna vrijednost se može birati; neaktivna ostaje radi historije. Vrijednost ili cijeli šifrarnik nije moguće obrisati dok ga poslovni podatak koristi.",
       "Audit evidencija pokazuje ko je, kada i nad kojim područjem izvršio promjenu, uključujući čitljiv sažetak prije i poslije izmjene.",
     ],
     pointsEn: [
-      "A user can hold one or more of four independent functional accesses: Individuals, Legal entities, Limits and Regulatory reporting.",
-      "A new user needs a unique username and an email ending in @raiffeisengroup.ba. Deactivation temporarily removes access; deletion removes the user record through a confirmed flow.",
+      "Every signed-in user automatically has Guest access for viewing and export. Additional PL, FL, capital, limits and admin roles can be combined, and only administrators can view the audit log.",
+      "Additional privileges are mapped to an existing Keycloak identity by email. Removing every additional role returns the user to Guest access.",
       "Code lists populate form choices. Active values can be selected; inactive values remain for history. A value or entire list cannot be deleted while business data uses it.",
       "The audit log shows who changed what, when and in which area, including a readable before-and-after summary.",
     ],
@@ -122,9 +122,7 @@ const sections: readonly GuideSection[] = [
 export function UserGuidePage() {
   const { i18n } = useTranslation();
   const bs = i18n.language.startsWith("bs");
-  const accesses = activeApplicationAccesses();
-  const admin = hasAllApplicationAccesses();
-  const visible = sections.filter((section) => (!section.role || accesses.has(section.role)) && (!section.admin || admin));
+  const visible = sections.filter((section) => (!section.role || hasApplicationAccess(section.role)) && (!section.admin || isApplicationAdmin()));
 
   return (
     <section className="mx-auto max-w-6xl">

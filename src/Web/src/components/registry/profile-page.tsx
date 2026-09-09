@@ -2,25 +2,18 @@ import { BadgeCheck, KeyRound, Mail, ShieldCheck, UserRound } from "lucide-react
 import { useTranslation } from "react-i18next";
 
 import { Heading, Text } from "@/components/ui/typography";
-import { isAuthenticationConfigured, keycloak } from "@/lib/auth/keycloak";
+import { getCurrentUser } from "@/lib/auth/current-user";
 import { applicationAccessRoles } from "@/lib/auth/application-access";
 
 export function ProfilePage() {
   const { i18n } = useTranslation();
   const bs = i18n.language.startsWith("bs");
-  const token = (keycloak.tokenParsed ?? {}) as Record<string, unknown>;
-  const realmAccess = token["realm_access"] as { roles?: string[] } | undefined;
-  const resourceAccess = token["resource_access"] as Record<string, { roles?: string[] }> | undefined;
-  const roles = Array.from(new Set([
-    ...(realmAccess?.roles ?? []),
-    ...Object.values(resourceAccess ?? {}).flatMap((item) => item.roles ?? []),
-  ])).filter((role) => applicationAccessRoles.includes(role.toLowerCase() as (typeof applicationAccessRoles)[number]));
-  const tokenName = [token["given_name"], token["family_name"]].filter(Boolean).join(" ");
-  const displayName = String(token["name"] ?? (tokenName || (bs ? "Lokalni razvojni korisnik" : "Local development user")));
-  const username = String(token["preferred_username"] ?? (isAuthenticationConfigured ? "—" : "local.developer"));
-  const email = String(token["email"] ?? (isAuthenticationConfigured ? "—" : "local@localhost"));
-  const effectiveRoles = roles.length ? roles : isAuthenticationConfigured ? [] : [...applicationAccessRoles];
-  const permissions = permissionsFor(effectiveRoles, bs);
+  const user = getCurrentUser();
+  const effectiveRoles = (user?.roles ?? []).filter((role) => role.toLowerCase() !== "gost" && applicationAccessRoles.includes(role.toLowerCase() as (typeof applicationAccessRoles)[number]));
+  const displayName = user?.fullName ?? user?.username ?? "—";
+  const username = user?.username ?? "—";
+  const email = user?.email ?? "—";
+  const permissions = user?.permissions ?? [];
 
   return (
     <section className="mx-auto max-w-5xl">
@@ -35,7 +28,6 @@ export function ProfilePage() {
           </div>
         </div>
       </div>
-      {!isAuthenticationConfigured && <div className="mt-4 rounded-sm border border-feedback-warning bg-feedback-warning/10 p-4 text-sm">{bs ? "Keycloak nije podešen. Prikazana su lokalna razvojna ovlaštenja." : "Keycloak is not configured. Local development permissions are shown."}</div>}
       <div className="mt-6 grid gap-5 lg:grid-cols-2">
         <div className="rounded-sm border border-border-subtle bg-surface-default p-6 shadow-sm">
           <Heading level={2} size={3}>{bs ? "Dodijeljene uloge" : "Assigned roles"}</Heading>
@@ -51,22 +43,14 @@ export function ProfilePage() {
   );
 }
 
-function permissionsFor(roles: string[], bs: boolean) {
-  const normalized = roles.map((role) => role.toLowerCase());
-  const result: string[] = [];
-  if (normalized.includes("physical-persons")) result.push(bs ? "Pregled, unos, izmjena i verifikacija fizičkih lica" : "View, create, edit and verify individuals");
-  if (normalized.includes("legal-persons")) result.push(bs ? "Pregled, unos, izmjena i verifikacija pravnih lica" : "View, create, edit and verify legal entities");
-  if (normalized.includes("limits")) result.push(bs ? "Pregled i upravljanje limitima" : "View and manage limits");
-  if (normalized.includes("regulatory-reporting")) result.push(bs ? "Pregled, generisanje i izvoz regulatornih izvještaja" : "View, generate and export regulatory reports");
-  return result.length ? result : [bs ? "Nije dodijeljen nijedan funkcionalni pristup." : "No functional access has been assigned."];
-}
-
 function accessLabel(role: string, bs: boolean) {
   const labels: Record<string, [string, string]> = {
-    "physical-persons": ["Fizička lica", "Individuals"],
-    "legal-persons": ["Pravna lica", "Legal entities"],
-    limits: ["Limiti", "Limits"],
-    "regulatory-reporting": ["Regulatorna izvještavanja", "Regulatory reporting"],
+    fl: ["Fizička lica", "Individuals"],
+    pl: ["Pravna lica", "Legal entities"],
+    limiti: ["Limiti", "Limits"],
+    kapital: ["Kapital", "Capital"],
+    admin: ["Administrator", "Administrator"],
+    gost: ["Gost", "Guest"],
   };
   return labels[role.toLowerCase()]?.[bs ? 0 : 1] ?? role;
 }

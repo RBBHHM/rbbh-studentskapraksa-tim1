@@ -9,11 +9,13 @@ import { IconIndicator } from "@/components/registry/icon-indicator";
 import { Heading, Text } from "@/components/ui/typography";
 import { apiClient, apiErrorMessage } from "@/lib/api/http-client";
 import { getLegacyRecords, type LegacyRecord } from "@/lib/api/legacy-client";
+import { isApplicationAdmin } from "@/lib/auth/application-access";
 
 export function CodeListsPage() {
   const { i18n } = useTranslation();
   const bs = i18n.language.startsWith("bs");
   const cache = useQueryClient();
+  const canWrite = isApplicationAdmin();
   const categories = useQuery({
     queryKey: ["code-list-categories"],
     queryFn: async () => {
@@ -127,7 +129,7 @@ export function CodeListsPage() {
               : "Centrally manage values used by application forms."}
           </Text>
         </div>
-        <div className="flex gap-2">
+        {canWrite ? <div className="flex gap-2">
           <Button variant="secondary" onClick={() => setDefinitionOpen(true)}><Plus className="size-4" />{bs ? "Novi šifrarnik" : "New code list"}</Button>
           <label className="inline-flex cursor-pointer items-center gap-2 rounded-sm border border-border-subtle px-4 py-2 text-sm font-semibold">
             <FileUp className="size-4" />
@@ -143,7 +145,7 @@ export function CodeListsPage() {
             <Plus className="size-4" />
             {bs ? "Nova vrijednost" : "New value"}
           </Button>
-        </div>
+        </div> : null}
       </div>
       <div className="mt-6 flex max-w-xl items-end gap-2">
         <label className="grid min-w-0 flex-1 gap-1 text-sm font-medium">
@@ -158,7 +160,7 @@ export function CodeListsPage() {
             ))}
           </select>
         </label>
-        <Button
+        {canWrite ? <Button
           variant="destructive"
           aria-label={bs ? "Obriši cijeli šifrarnik" : "Delete entire code list"}
           disabled={!category || removeCategory.isPending}
@@ -166,7 +168,7 @@ export function CodeListsPage() {
         >
           <Trash2 className="size-4" />
           {bs ? "Obriši šifrarnik" : "Delete code list"}
-        </Button>
+        </Button> : null}
       </div>
       <div className="mt-5 overflow-x-auto rounded-sm border border-border-subtle bg-surface-default">
         <table className="w-full min-w-[700px] text-left text-sm">
@@ -177,7 +179,7 @@ export function CodeListsPage() {
                 bs ? "Naziv" : "Name",
                 bs ? "Opis" : "Description",
                 bs ? "Aktivan" : "Active",
-                bs ? "Akcije" : "Actions",
+                ...(canWrite ? [bs ? "Akcije" : "Actions"] : []),
               ].map((x) => (
                 <th key={x} className="px-4 py-3">
                   {x}
@@ -201,7 +203,7 @@ export function CodeListsPage() {
                       ? <IconIndicator kind="active" label={bs ? "Aktivan" : "Active"} />
                       : <IconIndicator kind="inactive" label={bs ? "Neaktivan" : "Inactive"} />}
                   </td>
-                  <td className="px-4 py-2 text-center align-middle">
+                  {canWrite ? <td className="px-4 py-2 text-center align-middle">
                     <div className="flex items-center justify-center gap-1">
                       <Button size="icon" variant="ghost" onClick={() => setEdit(r)}>
                         <Pencil className="size-4" />
@@ -214,14 +216,14 @@ export function CodeListsPage() {
                         <Trash2 className="size-4 text-feedback-danger" />
                       </Button>
                     </div>
-                  </td>
+                  </td> : null}
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
-      {edit !== undefined && (
+      {canWrite && edit !== undefined && (
         <CodeForm
           bs={bs}
           category={category}
@@ -230,7 +232,7 @@ export function CodeListsPage() {
           saved={refresh}
         />
       )}
-      {definitionOpen && <DefinitionForm bs={bs} close={() => setDefinitionOpen(false)} saved={async (name) => { await cache.invalidateQueries({ queryKey: ["code-list-categories"] }); setCategory(name); }} />}
+      {canWrite && definitionOpen && <DefinitionForm bs={bs} close={() => setDefinitionOpen(false)} saved={async (name) => { await cache.invalidateQueries({ queryKey: ["code-list-categories"] }); setCategory(name); }} />}
       <ConfirmDialog open={Boolean(deleteId)} title={bs ? "Obrisati vrijednost?" : "Delete value?"} description={bs ? "Vrijednost će biti uklonjena ako nije u upotrebi." : "The value will be removed if it is not in use."} cancelLabel={bs ? "Odustani" : "Cancel"} confirmLabel={bs ? "Obriši" : "Delete"} destructive onCancel={() => setDeleteId(undefined)} onConfirm={() => { if (deleteId) remove.mutate(deleteId); setDeleteId(undefined); }} />
       <ConfirmDialog open={deleteCategoryOpen} title={bs ? `Obrisati cijeli šifrarnik „${category}“?` : `Delete the entire “${category}” code list?`} description={bs ? "Definicija i sve njene vrijednosti bit će uklonjene. Brisanje neće biti dozvoljeno ako je bilo koja vrijednost u upotrebi." : "The definition and all its values will be removed. Deletion will be blocked if any value is in use."} cancelLabel={bs ? "Odustani" : "Cancel"} confirmLabel={bs ? "Obriši šifrarnik" : "Delete code list"} destructive onCancel={() => setDeleteCategoryOpen(false)} onConfirm={() => { setDeleteCategoryOpen(false); removeCategory.mutate(); }} />
       <ConfirmDialog open={Boolean(pendingImport)} title={bs ? "Potvrditi Excel uvoz?" : "Confirm Excel import?"} description={`${bs ? `Provjereno je ${pendingImport?.total ?? 0} redova: ${pendingImport?.ready ?? 0} spremno za uvoz, ${pendingImport?.duplicates ?? 0} postojećih vrijednosti koje će biti preskočene.` : `${pendingImport?.total ?? 0} rows checked: ${pendingImport?.ready ?? 0} ready to import and ${pendingImport?.duplicates ?? 0} existing values that will be skipped.`}${pendingImport?.errors.length ? ` ${bs ? "Greške" : "Errors"}: ${pendingImport.errors.join(" ")}` : ""}`} cancelLabel={bs ? "Odustani" : "Cancel"} confirmLabel={bs ? "Uvezi ispravne redove" : "Import valid rows"} onCancel={() => setPendingImport(undefined)} onConfirm={async () => { const pending = pendingImport; setPendingImport(undefined); if (!pending) return; try { await apiClient.postLegacy(`/api/code-lists/${encodeURIComponent(category)}/import?dryRun=false`, { body: pending.form }); await refresh(); toast.success(bs ? "Uvoz je završen." : "Import completed."); } catch (error) { toast.error(error instanceof Error ? error.message : bs ? "Uvoz nije uspio." : "Import failed."); } }} />

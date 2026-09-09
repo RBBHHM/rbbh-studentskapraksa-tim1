@@ -7,14 +7,17 @@ import { RbiLogo } from "@/components/brand/rbi-logo";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/design-system/theme/theme-toggle";
 import { LanguageSwitcher } from "@/localization";
-import { isAuthenticationConfigured, keycloak } from "@/lib/auth/keycloak";
+import { getCurrentUser } from "@/lib/auth/current-user";
 import { registryResources } from "@/lib/registry/resources";
-import { hasAllApplicationAccesses, hasApplicationAccess } from "@/lib/auth/application-access";
+import { hasApplicationAccess, isApplicationAdmin } from "@/lib/auth/application-access";
 
 export function RegistryShell() {
   const { t } = useTranslation("registry");
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const [open, setOpen] = useState(false);
+  const currentUserName = getCurrentUser()?.fullName
+    ?? getCurrentUser()?.username
+    ?? t("shell.profile", { defaultValue: "Moj profil / My profile" });
 
   return (
     <div className="min-h-screen bg-surface text-text-primary">
@@ -34,17 +37,20 @@ export function RegistryShell() {
           <div className="ml-auto flex items-center gap-2">
             <ThemeToggle />
             <LanguageSwitcher className="hidden sm:flex" />
-            <Button asChild variant="ghost" size="icon" title={t("shell.profile", { defaultValue: "Moj profil / My profile" })}>
-              <Link to="/app/profile"><UserRound className="size-4" /></Link>
+            <Button asChild variant="ghost" title={t("shell.profile", { defaultValue: "Moj profil / My profile" })}>
+              <Link to="/app/profile" className="gap-2">
+                <UserRound className="size-4" />
+                <span className="hidden max-w-40 truncate md:inline">{currentUserName}</span>
+              </Link>
             </Button>
-            {isAuthenticationConfigured ? <Button
+            <Button
               variant="ghost"
               size="icon"
               title={t("shell.logout", { defaultValue: "Odjava / Sign out" })}
-              onClick={() => keycloak.logout({ redirectUri: location.origin })}
+              onClick={() => location.assign("/authentication/logout")}
             >
               <LogOut className="size-4" />
-            </Button> : null}
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -68,7 +74,7 @@ export function RegistryShell() {
               <p className="px-3 text-eyebrow text-text-tertiary">{t(`areas.${area}`)}</p>
               <nav className="mt-2 space-y-1" aria-label={t(`areas.${area}`)}>
                 {registryResources
-                  .filter((item) => item.area === area && hasApplicationAccess(item.accessRole) && (!item.requiresAllAccesses || hasAllApplicationAccesses()))
+                  .filter((item) => item.area === area && hasApplicationAccess(item.accessRole) && (!item.adminOnly || isApplicationAdmin()))
                   .map((item) => {
                     const active =
                       item.path === "/app"
@@ -104,7 +110,7 @@ export function RegistryShell() {
         <main id="main-content" className="min-w-0 px-4 py-8 lg:px-10 lg:py-10">
           {(() => {
             const current = registryResources.find((item) => item.path !== "/app" && pathname.startsWith(item.path));
-            return hasApplicationAccess(current?.accessRole) && (!current?.requiresAllAccesses || hasAllApplicationAccesses());
+            return hasApplicationAccess(current?.accessRole) && (!current?.adminOnly || isApplicationAdmin());
           })()
             ? <Outlet />
             : <AccessDenied />}

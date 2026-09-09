@@ -16,12 +16,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Heading, Text } from "@/components/ui/typography";
 import { apiClient, apiErrorMessage } from "@/lib/api/http-client";
 import { getLegacyRecords } from "@/lib/api/legacy-client";
+import { canWriteApplicationAccess } from "@/lib/auth/application-access";
 
 type State = Readonly<Record<string, unknown>>;
 export function PeriodPage() {
   const { i18n } = useTranslation();
   const bs = i18n.language.startsWith("bs");
   const cache = useQueryClient();
+  const canWrite = canWriteApplicationAccess("kapital");
   const query = useQuery({
     queryKey: ["period-current"],
     queryFn: () => apiClient.getLegacy<State>("/api/period-lock/current"),
@@ -135,7 +137,7 @@ export function PeriodPage() {
               {String(raw?.["month"] ?? raw?.["Month"] ?? "")}
             </p>
           </div>
-          <Button
+          {canWrite ? <Button
             disabled={query.isLoading || action.isPending}
             variant={locked ? "secondary" : "primary"}
             onClick={() => action.mutate(!locked)}
@@ -148,10 +150,10 @@ export function PeriodPage() {
               : bs
                 ? "Zaključaj period"
                 : "Lock period"}
-          </Button>
+          </Button> : null}
         </div>
       </div>
-      {locked && (
+      {canWrite && locked && (
         <form
           className="mt-5 rounded-sm border border-border-subtle bg-surface-default p-5"
           onSubmit={(event) => {
@@ -204,7 +206,7 @@ export function PeriodPage() {
                 bs ? "Razlog" : "Reason",
                 "Status",
                 bs ? "Napomena" : "Note",
-                bs ? "Akcije" : "Actions",
+                ...(canWrite ? [bs ? "Akcije" : "Actions"] : []),
               ].map((label, index) => (
                 <th key={label} className={`px-4 py-3 ${index === 5 ? "text-center" : ""}`}>
                   {label}
@@ -229,7 +231,7 @@ export function PeriodPage() {
                   <td className="max-w-72 break-words px-4 py-3">
                     {String(item["adminNote"] ?? "—")}
                   </td>
-                  <td className="px-4 py-2 text-center align-middle">
+                  {canWrite ? <td className="px-4 py-2 text-center align-middle">
                     <div className="flex flex-wrap items-center justify-center gap-1">
                       {itemStatus === "PENDING" && (
                         <>
@@ -266,14 +268,14 @@ export function PeriodPage() {
                         </Button>
                       )}
                     </div>
-                  </td>
+                  </td> : null}
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
-      <Dialog open={Boolean(noteDialog)} onOpenChange={(open) => !open && setNoteDialog(null)}>
+      <Dialog open={canWrite && Boolean(noteDialog)} onOpenChange={(open) => !open && setNoteDialog(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>

@@ -6,7 +6,7 @@ import { Heading, Text } from "@/components/ui/typography";
 import { BentoCard, BentoGrid } from "@/components/ui/bento-grid";
 import { HeroSection } from "@/components/ui/hero-section";
 import { registryResources } from "@/lib/registry/resources";
-import { hasAllApplicationAccesses, hasApplicationAccess } from "@/lib/auth/application-access";
+import { hasApplicationAccess, isApplicationAdmin } from "@/lib/auth/application-access";
 
 export const Route = createFileRoute("/app/")({ component: Dashboard });
 
@@ -16,7 +16,7 @@ function Dashboard() {
   const resources = registryResources.filter((item) =>
     item.key !== "dashboard" &&
     hasApplicationAccess(item.accessRole) &&
-    (!item.requiresAllAccesses || hasAllApplicationAccesses()));
+    (!item.adminOnly || isApplicationAdmin()));
   const work = resources.filter((item) => item.area === "work" && item.accessRole);
   const supporting = resources.filter((item) => !item.accessRole);
   return (

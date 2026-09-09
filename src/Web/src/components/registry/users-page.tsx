@@ -9,11 +9,13 @@ import { IconIndicator } from "@/components/registry/icon-indicator";
 import { Heading, Text } from "@/components/ui/typography";
 import { apiClient, apiErrorMessage } from "@/lib/api/http-client";
 import { getLegacyRecords, type LegacyRecord } from "@/lib/api/legacy-client";
+import { isApplicationAdmin } from "@/lib/auth/application-access";
 
 export function UsersPage() {
   const { i18n } = useTranslation();
   const bs = i18n.language.startsWith("bs");
   const cache = useQueryClient();
+  const canWrite = isApplicationAdmin();
   const [createOpen, setCreateOpen] = useState(false);
   const [roleUser, setRoleUser] = useState<LegacyRecord>();
   const [stateUser, setStateUser] = useState<{ id: string; active: boolean; label: string }>();
@@ -50,10 +52,10 @@ export function UsersPage() {
               : "Assign one or more independent business-area accesses."}
           </Text>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
+        {canWrite ? <Button onClick={() => setCreateOpen(true)}>
           <Plus className="size-4" />
           {bs ? "Dodaj korisnika" : "Add user"}
-        </Button>
+        </Button> : null}
       </div>
       <div className="mt-6 overflow-x-auto rounded-sm border border-border-subtle bg-surface-default">
         <table className="w-full min-w-[850px] text-left text-sm">
@@ -63,8 +65,9 @@ export function UsersPage() {
                 bs ? "Korisnik" : "User",
                 "Email",
                 bs ? "Pristupi" : "Accesses",
+                bs ? "Efektivna ovlaštenja" : "Effective permissions",
                 bs ? "Status" : "Status",
-                bs ? "Akcije" : "Actions",
+                ...(canWrite ? [bs ? "Akcije" : "Actions"] : []),
               ].map((x) => (
                 <th key={x} className="px-4 py-3">
                   {x}
@@ -88,12 +91,15 @@ export function UsersPage() {
                   <td className="px-4 py-3">
                     {Array.isArray(u["roles"]) ? u["roles"].map((role) => accessLabel(String(role), bs)).join(", ") : "—"}
                   </td>
+                  <td className="max-w-sm px-4 py-3 text-xs text-text-secondary">
+                    {Array.isArray(u["effectivePermissions"]) ? u["effectivePermissions"].map(String).join(", ") : "—"}
+                  </td>
                   <td className="px-4 py-3 text-center align-middle">
                     <div className="flex items-center justify-center">
                       <IconIndicator kind={active ? "active" : "inactive"} label={active ? (bs ? "Aktivan" : "Active") : bs ? "Neaktivan" : "Inactive"} />
                     </div>
                   </td>
-                  <td className="px-4 py-2">
+                  {canWrite ? <td className="px-4 py-2">
                     <div className="flex items-center justify-center gap-1">
                       <Button
                         size="icon"
@@ -123,14 +129,14 @@ export function UsersPage() {
                         <Trash2 className="size-4 text-feedback-danger" />
                       </Button>
                     </div>
-                  </td>
+                  </td> : null}
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
-      {createOpen && (
+      {canWrite && createOpen && (
         <UserForm
           bs={bs}
           roles={roles.data ?? []}
@@ -138,7 +144,7 @@ export function UsersPage() {
           saved={refresh}
         />
       )}
-      {roleUser && (
+      {canWrite && roleUser && (
         <RoleForm
           bs={bs}
           user={roleUser}
@@ -286,7 +292,6 @@ function RoleForm({
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (roleIds.length === 0) return;
           m.mutate();
         }}
       >
@@ -314,17 +319,19 @@ function AccessSelector({ bs, roles, selected, setSelected }: { bs: boolean; rol
           );
         })}
       </div>
-      {selected.length === 0 && <p className="mt-2 text-sm text-feedback-danger">{bs ? "Odaberite najmanje jedan pristup." : "Select at least one access."}</p>}
+      {selected.length === 0 && <p className="mt-2 text-sm text-text-secondary">{bs ? "Bez dodatnih uloga korisnik nastavlja kao Gost." : "Without additional roles the user continues as Guest."}</p>}
     </fieldset>
   );
 }
 
 function accessLabel(name: string, bs: boolean) {
   const labels: Record<string, [string, string]> = {
-    "physical-persons": ["Fizička lica", "Individuals"],
-    "legal-persons": ["Pravna lica", "Legal entities"],
-    limits: ["Limiti", "Limits"],
-    "regulatory-reporting": ["Regulatorna izvještavanja", "Regulatory reporting"],
+    fl: ["Fizička lica", "Individuals"],
+    pl: ["Pravna lica", "Legal entities"],
+    limiti: ["Limiti", "Limits"],
+    kapital: ["Kapital", "Capital"],
+    admin: ["Administrator", "Administrator"],
+    gost: ["Gost", "Guest"],
   };
   return labels[name]?.[bs ? 0 : 1] ?? name;
 }

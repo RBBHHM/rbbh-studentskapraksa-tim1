@@ -229,7 +229,7 @@ namespace IntegrationTests.Tests.PeriodLock
                 .FirstOrDefault();
 
             authorizeAttr.Should().NotBeNull("upravljanje periodom zahtijeva autentificiran funkcionalni pristup");
-            authorizeAttr!.Roles.Should().Be("regulatory-reporting");
+            authorizeAttr!.Policy.Should().Be(RBBH.ConnectedParties.Helpers.Constants.ApplicationPolicies.CapitalRead);
         }
 
         [Fact]

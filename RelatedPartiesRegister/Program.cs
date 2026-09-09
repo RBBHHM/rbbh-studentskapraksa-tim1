@@ -14,11 +14,6 @@ using dotenv.net;
 
 DotEnv.Load();
 
-Console.WriteLine($"Server: {Environment.GetEnvironmentVariable("Database__ServerName")}");
-Console.WriteLine($"Database: {Environment.GetEnvironmentVariable("Database__Name")}");
-Console.WriteLine($"User: {Environment.GetEnvironmentVariable("Database__User")}");
-Console.WriteLine($"Password: {Environment.GetEnvironmentVariable("Database__Password")}");
-
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
@@ -78,6 +73,8 @@ await using (var scope = app.Services.CreateAsyncScope())
             emailLog.Add(new EmailLogEntry { To = "hr@localhost", Subject = "Novo povezano fizičko lice", HtmlBody = "<p>U registar je dodano novo povezano fizičko lice.</p>", Audience = "hr", SentAt = DateTime.UtcNow.AddDays(-1) });
         }
     }
+    else
+        await DevelopmentDataSeeder.EnsureApplicationRolesAsync(database);
 }
 
 // Enable Swagger page
@@ -102,8 +99,6 @@ app.AddHTTPMetricsExtension();
 
 app.MapCustomHealthChecks();
 
-app.UseHttpsRedirection();
-
 //#if (IsAPI)
 // Use CORS for API projects
 app.UseCors();
@@ -113,6 +108,33 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseMiddleware<RBBH.ConnectedParties.Middlewares.PeriodLockMiddleware>();
 
+app.MapGet("/authentication/login", (string? returnUrl) =>
+    Results.Challenge(
+        new Microsoft.AspNetCore.Authentication.AuthenticationProperties
+        {
+            RedirectUri = SafeLocalReturnUrl(returnUrl)
+        },
+        ["KeycloakOidc"]));
+app.MapGet("/authentication/logout", () =>
+    Results.SignOut(
+        new Microsoft.AspNetCore.Authentication.AuthenticationProperties { RedirectUri = "/" },
+        [Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme, "KeycloakOidc"]));
+app.MapGet("/api/auth/profile", (HttpContext context) => Results.Ok(new
+{
+    userId = context.User.FindFirst("sub")?.Value
+        ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value,
+    fullName = context.User.FindFirst("name")?.Value ?? context.User.Identity?.Name,
+    username = context.User.FindFirst("preferred_username")?.Value,
+    email = context.User.FindFirst("email")?.Value,
+    roles = context.User.FindAll(System.Security.Claims.ClaimTypes.Role).Select(claim => claim.Value).Distinct(),
+    permissions = context.User.FindAll("permission").Select(claim => claim.Value).Distinct()
+})).RequireAuthorization();
+
 app.MapControllers();
 
 app.Run();
+
+static string SafeLocalReturnUrl(string? returnUrl) =>
+    !string.IsNullOrWhiteSpace(returnUrl) && returnUrl.StartsWith('/') && !returnUrl.StartsWith("//")
+        ? returnUrl
+        : "/app";

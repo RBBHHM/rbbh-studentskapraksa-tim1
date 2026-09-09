@@ -5,12 +5,12 @@ namespace UnitTests.Constants;
 public class ApplicationAccessRolesTests
 {
     [Fact]
-    public void All_ContainsExactlyFourUniqueFunctionalAccesses()
+    public void All_ContainsExactlySixUniqueFunctionalAccesses()
     {
-        Assert.Equal(4, ApplicationAccessRoles.All.Count);
-        Assert.Equal(4, ApplicationAccessRoles.All.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        Assert.Equal(6, ApplicationAccessRoles.All.Length);
+        Assert.Equal(6, ApplicationAccessRoles.All.Distinct(StringComparer.OrdinalIgnoreCase).Count());
         Assert.Equal(
-            ["physical-persons", "legal-persons", "limits", "regulatory-reporting"],
+            ["FL", "PL", "kapital", "limiti", "admin", "gost"],
             ApplicationAccessRoles.All);
     }
 }
