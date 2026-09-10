@@ -20,6 +20,9 @@ test("development commands use Windows-safe pnpm wrapper", () => {
 });
 
 test("IIS package proxies backend and serves localization and fonts", () => {
+  assert.match(webConfig, /<add value="index\.html" \/>/u);
+  assert.match(webConfig, /<action type="Rewrite" url="\/index\.html" \/>/u);
+  assert.doesNotMatch(webConfig, /_shell\.html/u);
   assert.match(webConfig, /name="OCP backend reverse proxy"/u);
   for (const route of ["api", "authentication", "health", "signin-oidc", "signout-callback-oidc"]) {
     assert.match(webConfig, new RegExp(`\\b${route}\\b`, "u"));
