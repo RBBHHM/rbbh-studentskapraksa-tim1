@@ -6,10 +6,7 @@ using RBBH.ConnectedParties.IoC.Extensions.Swagger;
 using RBBH.ConnectedParties.IoC.Middleware;
 using RBBH.ConnectedParties.IoC.Extensions.Authentication;
 using RBBH.ConnectedParties.IoC.Extensions.Databases;
-using RBBH.ConnectedParties.DL.Persistence;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.HttpOverrides;
-using RBBH.ConnectedParties.BL.Services;
 using dotenv.net;
 
 DotEnv.Load();
@@ -41,41 +38,6 @@ if (authWarning is not null)
 var databaseWarning = app.Services.GetService<DatabaseStartupWarning>();
 if (databaseWarning is not null)
     app.Logger.LogWarning("{DatabaseWarning}", databaseWarning.Message);
-
-await using (var scope = app.Services.CreateAsyncScope())
-{
-    var database = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
-    if (database.Database.IsRelational())
-    {
-        var applyMigrations = app.Environment.IsDevelopment()
-            || builder.Configuration.GetValue<bool>("Database:ApplyMigrations");
-        var pendingMigrations = (await database.Database.GetPendingMigrationsAsync()).ToArray();
-
-        if (applyMigrations && pendingMigrations.Length > 0)
-            await database.Database.MigrateAsync();
-        else if (!applyMigrations && pendingMigrations.Length > 0)
-            throw new InvalidOperationException(
-                $"Baza nije usklađena s aplikacijom. Nedostaju migracije: {string.Join(", ", pendingMigrations)}. " +
-                "Na UAT/produkciji primijenite odobreni idempotentni SQL kroz centralni DB repozitorij; " +
-                "aplikacija namjerno ne izvršava DDL automatski.");
-    }
-    else
-        await database.Database.EnsureCreatedAsync();
-
-    if (app.Environment.IsDevelopment() && !database.Database.IsRelational())
-    {
-        await DevelopmentDataSeeder.SeedAsync(database);
-        var emailLog = scope.ServiceProvider.GetRequiredService<EmailLogStore>();
-        if (emailLog.GetAll().Count == 0)
-        {
-            emailLog.Add(new EmailLogEntry { To = "admin@localhost", Subject = "Zahtjev za otključavanje perioda", HtmlBody = "<p>Korisnik je zatražio otključavanje trenutnog perioda radi korekcije podataka.</p>", Audience = "admin", SentAt = DateTime.UtcNow.AddMinutes(-45) });
-            emailLog.Add(new EmailLogEntry { To = "verifier@localhost", Subject = "Period je uspješno otključan", HtmlBody = "<p>Period je otključan i unos podataka je ponovo dozvoljen.</p>", Audience = "user", SentAt = DateTime.UtcNow.AddHours(-2) });
-            emailLog.Add(new EmailLogEntry { To = "hr@localhost", Subject = "Novo povezano fizičko lice", HtmlBody = "<p>U registar je dodano novo povezano fizičko lice.</p>", Audience = "hr", SentAt = DateTime.UtcNow.AddDays(-1) });
-        }
-    }
-    else
-        await DevelopmentDataSeeder.EnsureApplicationRolesAsync(database);
-}
 
 // Enable Swagger page
 if (!builder.Environment.IsProduction())

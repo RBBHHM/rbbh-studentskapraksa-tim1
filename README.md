@@ -53,16 +53,19 @@ pnpm dev:api
 pnpm dev
 ```
 
-Otvorite `http://127.0.0.1:8080`. API je na `http://127.0.0.1:5000`. `dev:api` postavlja Development režim; bez lokalnih tajni automatski koristi seedovanu InMemory bazu i lokalnog korisnika sa sva četiri pristupa.
+Otvorite `http://127.0.0.1:8080`. API je na `http://127.0.0.1:5000`. `dev:api`
+postavlja Development režim; bez SQL konfiguracije koristi praznu InMemory bazu
+i lokalnu autentifikaciju.
 
 `pnpm dev:api` prvo koristi SQL Server kada su njegove vrijednosti definisane u
 `.env`. Ako konfigurisana veza nije ispravna ili SQL Server nije dostupan,
 startup se prekida jasnom greškom. Ako SQL uopšte nije konfigurisan, lokalni
-Development koristi seedovanu InMemory bazu. UAT i produkcija nikada ne koriste
+Development koristi praznu InMemory bazu. UAT i produkcija nikada ne koriste
 ovaj fallback. Ako Keycloak nije konfigurisan, prikazuje se upozorenje i koristi
 se lokalna autentifikacija.
 
-Seed pokriva nacrt, verificiran i odbijen zapis, rezidenta i nerezidenta, porodične veze, prekoračen limit, zaključan period, zahtjeve za otključavanje, obavijesti, šifarnike, izvještaje i sva četiri pristupa. InMemory podaci nestaju nakon gašenja API-ja.
+Startup ne primjenjuje migracije i ne izvršava seed. Obje operacije pokreću se
+eksplicitno kao jednokratni developerski ili kontrolisani DB postupak.
 
 ## Najvažnija pravila unosa
 

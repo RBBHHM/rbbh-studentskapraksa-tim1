@@ -33,11 +33,11 @@ dotnet ef migrations add NazivPromjene `
   --startup-project RelatedPartiesRegister/RelatedPartiesRegister.csproj
 ```
 
-U Development režimu backend primjenjuje samo još neprimijenjene migracije.
-UAT i produkcija imaju `Database__ApplyMigrations=false` i ne izvršavaju DDL iz
-aplikacijskog procesa. Ako baza kasni za kodom, servis prekida startup jasnom
-porukom umjesto da radi nad nekompatibilnom shemom. Odobreni idempotentni SQL
+Backend ne primjenjuje migracije, ne kreira shemu i ne izvršava seed ni u jednom
+okruženju. Developer lokalno eksplicitno primjenjuje pregledanu migraciju naredbom
+`dotnet ef database update`, a odobreni idempotentni SQL za UAT i produkciju
 izvršava se kroz centralni DB repozitorij prema
 [DB change workflowu](DB-CHANGE-WORKFLOW.md). Historija ostaje u
-`__EFMigrationsHistory`. Demo seed se izvršava samo nad Development InMemory
-bazom; produkcijski podaci se unose kroz aplikaciju ili kontrolisani DB proces.
+`__EFMigrationsHistory`. Eventualni jednokratni seed izvršava se samo eksplicitnim
+developerskim ili kontrolisanim DB procesom; aplikacijski startup nikada ne mijenja
+podatke radi inicijalizacije.
