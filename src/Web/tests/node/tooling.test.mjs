@@ -24,6 +24,8 @@ test("IIS package proxies backend and serves localization and fonts", () => {
   assert.match(webConfig, /<action type="Rewrite" url="\/index\.html" \/>/u);
   assert.doesNotMatch(webConfig, /_shell\.html/u);
   assert.match(webConfig, /name="OCP backend reverse proxy"/u);
+  assert.match(webConfig, /serverVariable="RESPONSE_Location"/u);
+  assert.match(webConfig, /__KEYCLOAK_ORIGIN__/u);
   for (const route of ["api", "authentication", "health", "signin-oidc", "signout-callback-oidc"]) {
     assert.match(webConfig, new RegExp(`\\b${route}\\b`, "u"));
   }
@@ -33,6 +35,7 @@ test("IIS package proxies backend and serves localization and fonts", () => {
   assert.doesNotMatch(webConfig, /application\/json; charset=/u);
   assert.match(webConfig, /fileExtension="\.woff2" mimeType="font\/woff2"/u);
   assert.match(iisPackager, /--backend-origin/u);
+  assert.match(iisPackager, /--keycloak-origin/u);
 });
 
 test("deployment config overrides local environment and uses same-origin API", () => {
