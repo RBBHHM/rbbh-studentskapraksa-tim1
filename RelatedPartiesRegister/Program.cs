@@ -18,7 +18,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor |
         ForwardedHeaders.XForwardedHost |
         ForwardedHeaders.XForwardedProto;
-    options.ForwardLimit = 1;
+    options.ForwardLimit = 2;
     // OCP/IIS proxy addresses are dynamic and controlled by the hosting network.
     options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
