@@ -25,8 +25,8 @@ public enum RelatedPersonStatus
     /// <summary>Zapis je poslan na verifikaciju/odobrenje.</summary>
     Submitted = 2,
 
-     /// <summary>Zapis je verificiran.</summary>
-     Verified = 3,
+    /// <summary>Zapis je verificiran.</summary>
+    Verified = 3,
 
     /// <summary>Zapis je odbijen i vraćen na doradu.</summary>
     Rejected = 4,
@@ -36,23 +36,4 @@ public enum RelatedPersonStatus
 
     /// <summary>Zapis je odobren/aktivan.</summary>
     Approved = 6
-}
-
-/// <summary>
-/// Vrsta srodstva/odnosa člana porodice prema matičnom (povezanom) fizičkom licu.
-/// Definisano kao enum za ovaj sprint; po potrebi se kasnije može zamijeniti
-/// šifrarnikom (CodeList) bez promjene strukture FamilyMember tabele
-/// (kolona RelationshipType ostaje, samo se mapiranje vrijednosti proširi).
-/// </summary>
-public enum FamilyRelationshipType
-{
-    Spouse = 1,
-    Partner = 2,
-    Parent = 3,
-    Child = 4,
-    Sibling = 5,
-    StepParent = 6,
-    StepChild = 7,
-    Guardian = 8,
-    Other = 99
 }

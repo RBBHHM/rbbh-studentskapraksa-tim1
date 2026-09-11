@@ -50,14 +50,6 @@ public class RelatedPerson
 
     #region Podaci o povezanosti
 
-    /// <summary>GCC broj.</summary>
-    [StringLength(50)]
-    public string? GCCNumber { get; set; }
-
-    /// <summary>GCC naziv.</summary>
-    [StringLength(250)]
-    public string? GCCName { get; set; }
-
     /// <summary>Osnov povezanosti.</summary>
     [StringLength(500)]
     public string? RelationBasis { get; set; }
@@ -112,9 +104,6 @@ public class RelatedPerson
     public Guid? RelatedToPersonId { get; set; }
 
     public virtual RelatedPerson? RelatedToPerson { get; set; }
-
-    /// <summary>Vrsta porodičnog odnosa prema <see cref="RelatedToPerson"/>.</summary>
-    public FamilyRelationshipType? FamilyRelationshipType { get; set; }
 
     /// <summary>Fizička lica koja su kroz porodični odnos povezana s ovim licem.</summary>
     public virtual ICollection<RelatedPerson> RelatedFamilyMembers { get; set; } = new List<RelatedPerson>();

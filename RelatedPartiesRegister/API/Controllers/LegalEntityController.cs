@@ -60,9 +60,9 @@ public class LegalEntityController : ControllerBase
         var items = await _legalEntityService.GetAllForExportAsync();
         var bytes = RegistryExcelExporter.Create(
             "Pravna lica",
-            ["Naziv", "Rezidentnost", "Porezni broj", "Matični broj", "FBA ID", "GCC broj", "GCC naziv", "Osnov povezanosti", "Opis povezanosti", "Povezano s bankom", "Datum od", "Datum do", "Status"],
+            ["Naziv", "Rezidentnost", "Porezni broj", "Matični broj", "FBA ID", "Osnov povezanosti", "Opis povezanosti", "Povezano s bankom", "Datum od", "Datum do", "Status"],
             items.Select(item => (IReadOnlyList<object?>)
-            [item.Name, item.IsResident ? "Rezident" : "Nerezident", item.TaxNumber, item.MaticniBroj, item.FbaId, item.GccNumber, item.GccName, item.BasisOfConnection, item.ConnectionDescription, item.ConnectedWithBank, item.DateFrom, item.DateTo, item.Status]));
+            [item.Name, item.IsResident ? "Rezident" : "Nerezident", item.TaxNumber, item.MaticniBroj, item.FbaId, item.BasisOfConnection, item.ConnectionDescription, item.ConnectedWithBank, item.DateFrom, item.DateTo, item.Status]));
         return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"pravna-lica-{DateTime.UtcNow:yyyyMMdd-HHmm}.xlsx");
     }
 
@@ -225,7 +225,7 @@ public class LegalEntityController : ControllerBase
 
     /// <summary>
     /// Uvozi pravna lica iz Excel fajla (.xlsx).
-    /// Kolone: Naziv, Tip (Rezident/Nerezident), Porezni broj, FBA ID, GCC broj, GCC naziv,
+    /// Kolone: Naziv, Tip (Rezident/Nerezident), Porezni broj, FBA ID,
     /// Matbroj, Osnov povezanosti, Opis povezanosti, Pov. lice sa Bankom (DA/NE), Datum od, Datum do.
     /// Red 1 je zaglavlje i preskače se.
     /// </summary>

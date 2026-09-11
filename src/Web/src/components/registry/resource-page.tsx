@@ -261,9 +261,9 @@ function Editor({
   const isPhysical = resource.key === "physicalPersons";
   const immediateFamily = isImmediateFamily(values["specialRelationBasis"]);
   const visibleFields = (isPhysical
-    ? fields.filter((_, index) => step === 1 ? index < 8 : index >= 8)
+    ? fields.filter((_, index) => step === 1 ? index < 6 : index >= 6)
     : fields).filter((field) =>
-      !isPhysical || immediateFamily || !["relatedToPersonId", "familyRelationshipType"].includes(field.key));
+      !isPhysical || immediateFamily || field.key !== "relatedToPersonId");
   const mutation = useMutation({
     mutationFn: () => {
       const id = String(state.record?.["id"] ?? state.record?.["Id"] ?? state.record?.["ID"] ?? "");
@@ -524,7 +524,7 @@ function validateResource(resource: RegistryResource, values: Record<string, unk
   const text = (field: string) => String(values[field] ?? "").trim();
   const missing = resource.capabilities?.fields.find((field) =>
     field.required
-    && (!(["relatedToPersonId", "familyRelationshipType"].includes(field.key)) || isImmediateFamily(values["specialRelationBasis"]))
+    && (field.key !== "relatedToPersonId" || isImmediateFamily(values["specialRelationBasis"]))
     && (values[field.key] === "" || values[field.key] == null));
   if (missing)
     return bs
@@ -548,8 +548,6 @@ function validateResource(resource: RegistryResource, values: Record<string, unk
         : "A non-resident must have an FBA ID containing no more than 10 digits.";
     if (isImmediateFamily(values["specialRelationBasis"]) && !values["relatedToPersonId"])
       return bs ? "Odaberite fizičko lice s kojim je član uže porodice povezan." : "Select the individual to whom the immediate family member is related.";
-    if (isImmediateFamily(values["specialRelationBasis"]) && !values["familyRelationshipType"])
-      return bs ? "Odaberite porodični odnos." : "Select the family relationship.";
   }
   if (key === "legalPersons") {
     if (values["isResident"] === "" || values["isResident"] == null)
@@ -621,7 +619,6 @@ function updateFieldValues(resourceKey: string, field: ResourceField, value: unk
       next["declarationNoFamilyMembers"] = true;
     } else {
       next["relatedToPersonId"] = null;
-      next["familyRelationshipType"] = null;
       next["isIdentifiedStaff"] = "";
       next["connectedWithBank"] = "";
       next["specialRelationshipWithBank"] = "";
@@ -706,7 +703,6 @@ function validatePhysicalIdentity(values: Record<string, unknown>, bs: boolean) 
   const residency = Number(values["residency"]);
   if (residency === 1 && !isValidJmbg(String(values["jmbg"] ?? ""))) return bs ? "JMBG nije ispravan: provjerite datum, 13 cifara i kontrolnu cifru." : "The national ID is invalid: check its date, 13 digits and check digit.";
   if (residency === 2 && !/^[A-Za-z0-9][A-Za-z0-9-]{4,19}$/.test(String(values["passportNumber"] ?? ""))) return bs ? "Broj pasoša mora sadržavati 5–20 slova, cifara ili crtica." : "Passport number must contain 5–20 letters, digits or hyphens.";
-  if (!/^\d+$/.test(String(values["gccNumber"] ?? ""))) return bs ? "GCC broj smije sadržavati samo cifre." : "GCC number may contain digits only.";
   return "";
 }
 function isValidJmbg(value: string) {

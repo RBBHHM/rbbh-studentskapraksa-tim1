@@ -82,9 +82,9 @@ public class RelatedPersonController(
         if (!result.IsSuccessful) return HTTPExceptiontFromResult(result).Result!;
         var bytes = RegistryExcelExporter.Create(
             "Fizička lica",
-            ["Tip", "Ime", "Prezime", "Rezidentnost", "JMBG", "Pasoš", "FBA ID", "GCC broj", "GCC naziv", "Osnov povezanosti", "Osnov posebnog odnosa", "Povezano lice", "Porodični odnos", "Datum od", "Datum do", "Status"],
+            ["Tip", "Ime", "Prezime", "Rezidentnost", "JMBG", "Pasoš", "FBA ID", "Osnov povezanosti", "Osnov posebnog odnosa", "Povezano lice", "Datum od", "Datum do", "Status"],
             result.Value.Select(item => (IReadOnlyList<object?>)
-            [item.PersonTypeLabel, item.FirstName, item.LastName, item.ResidencyLabel, item.JMBG, item.PassportNumber, item.FBAId, item.GCCNumber, item.GCCName, item.RelationBasis, item.SpecialRelationBasis, item.RelatedToPersonName, item.FamilyRelationshipTypeLabel, item.DateFrom, item.DateTo, item.StatusLabel]));
+            [item.PersonTypeLabel, item.FirstName, item.LastName, item.ResidencyLabel, item.JMBG, item.PassportNumber, item.FBAId, item.RelationBasis, item.SpecialRelationBasis, item.RelatedToPersonName, item.DateFrom, item.DateTo, item.StatusLabel]));
         return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"fizicka-lica-{DateTime.UtcNow:yyyyMMdd-HHmm}.xlsx");
     }
 
@@ -230,7 +230,7 @@ public class RelatedPersonController(
 
     /// <summary>
     /// Uvozi fizička lica iz Excel fajla (.xlsx).
-    /// Kolone: Ime, Prezime, Rezidentnost, JMBG, Broj pasoša, FBA ID, GCC broj, GCC naziv,
+    /// Kolone: Ime, Prezime, Rezidentnost, JMBG, Broj pasoša, FBA ID,
     /// Osnov povezanosti, Osnov posebnog odnosa, Datum od, Datum do,
     /// Izjava bez clanova porodice (DA/NE), Pov. lice sa Bankom (DA/NE),
     /// Lice u posebnom odnosu (DA/NE), Poseban ugovor (DA/NE), Malus &amp; Clawback (DA/NE).

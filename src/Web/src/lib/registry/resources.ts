@@ -119,8 +119,6 @@ export const registryResources: readonly RegistryResource[] = [
         { key: "taxNumber", labelBs: "Porezni broj", labelEn: "Tax number", pattern: "[0-9]{13}", minLength: 13, maxLength: 13 },
         { key: "maticniBroj", labelBs: "Matični broj", labelEn: "Registration number", pattern: "[0-9]*" },
         { key: "fbaId", labelBs: "FBA ID", labelEn: "FBA ID", pattern: "[0-9]{1,10}", maxLength: 10 },
-        { key: "gccNumber", labelBs: "GCC broj", labelEn: "GCC number", required: true, pattern: "[0-9]+" },
-        { key: "gccName", labelBs: "GCC naziv", labelEn: "GCC name", required: true },
         {
           key: "basisOfConnection",
           labelBs: "Osnov povezanosti",
@@ -181,8 +179,6 @@ export const registryResources: readonly RegistryResource[] = [
         { key: "jmbg", labelBs: "JMBG", labelEn: "National ID", pattern: "[0-9]{13}", minLength: 13, maxLength: 13 },
         { key: "passportNumber", labelBs: "Broj pasoša", labelEn: "Passport number", maxLength: 50 },
         { key: "fbaId", labelBs: "FBA ID", labelEn: "FBA ID", pattern: "[0-9]{1,10}", maxLength: 10 },
-        { key: "gccNumber", labelBs: "GCC broj", labelEn: "GCC number", required: true, pattern: "[0-9]+" },
-        { key: "gccName", labelBs: "GCC naziv", labelEn: "GCC name", required: true },
         { key: "relationBasis", labelBs: "Osnov povezanosti", labelEn: "Relation basis", type: "select", required: true, codeListCategory: "OsnovPovezanosti", options: physicalConnectionOptions },
         {
           key: "relationDescription",
@@ -221,15 +217,6 @@ export const registryResources: readonly RegistryResource[] = [
           type: "select",
           required: true,
           lookupEndpoint: "/api/related-persons",
-        },
-        {
-          key: "familyRelationshipType",
-          labelBs: "Porodični odnos",
-          labelEn: "Family relationship",
-          type: "select",
-          required: true,
-          codeListCategory: "Srodstvo",
-          valueKind: "number",
         },
       ],
     },

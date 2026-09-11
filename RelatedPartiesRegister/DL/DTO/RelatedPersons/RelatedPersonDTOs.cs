@@ -35,12 +35,6 @@ public class CreateRelatedPersonDTO
 
     // ── Podaci o povezanosti ──────────────────────────────────────────────────
 
-    [StringLength(50)]
-    public string? GCCNumber { get; set; }
-
-    [StringLength(250)]
-    public string? GCCName { get; set; }
-
     [StringLength(500)]
     public string? RelationBasis { get; set; }
 
@@ -71,7 +65,6 @@ public class CreateRelatedPersonDTO
     public bool MalusClawback { get; set; } = false;
 
     public Guid? RelatedToPersonId { get; set; }
-    public FamilyRelationshipType? FamilyRelationshipType { get; set; }
 }
 
 // ─── UPDATE ───────────────────────────────────────────────────────────────────
@@ -101,12 +94,6 @@ public class UpdateRelatedPersonDTO
     [StringLength(50)]
     public string? FBAId { get; set; }
 
-    [StringLength(50)]
-    public string? GCCNumber { get; set; }
-
-    [StringLength(250)]
-    public string? GCCName { get; set; }
-
     [StringLength(500)]
     public string? RelationBasis { get; set; }
 
@@ -129,7 +116,6 @@ public class UpdateRelatedPersonDTO
     public bool MalusClawback { get; set; } = false;
 
     public Guid? RelatedToPersonId { get; set; }
-    public FamilyRelationshipType? FamilyRelationshipType { get; set; }
 }
 
 // ─── RESPONSE ─────────────────────────────────────────────────────────────────
@@ -151,8 +137,6 @@ public class RelatedPersonResponseDTO
     public string? PassportNumber { get; set; }
     public string? FBAId { get; set; }
 
-    public string? GCCNumber { get; set; }
-    public string? GCCName { get; set; }
     public string? RelationBasis { get; set; }
     public string? RelationDescription { get; set; }
     public string? SpecialRelationBasis { get; set; }
@@ -170,8 +154,6 @@ public class RelatedPersonResponseDTO
 
     public Guid? RelatedToPersonId { get; set; }
     public string? RelatedToPersonName { get; set; }
-    public FamilyRelationshipType? FamilyRelationshipType { get; set; }
-    public string? FamilyRelationshipTypeLabel => FamilyRelationshipType?.ToString();
 
     public RelatedPersonStatus Status { get; set; }
     public string StatusLabel => Status.ToString();
@@ -217,8 +199,6 @@ public sealed class RelatedPersonTreeNodeDTO
     public string LastName { get; set; } = string.Empty;
     public string PersonType { get; set; } = string.Empty;
     public string PersonTypeLabel { get; set; } = string.Empty;
-    public FamilyRelationshipType? RelationshipType { get; set; }
-    public string? RelationshipTypeLabel => RelationshipType?.ToString();
     public List<RelatedPersonTreeNodeDTO> Children { get; set; } = [];
 }
 

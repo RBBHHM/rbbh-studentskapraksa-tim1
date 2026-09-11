@@ -17,11 +17,6 @@ public class FamilyMemberConfiguration : IEntityTypeConfiguration<FamilyMember>
                .HasConversion<string>()
                .HasMaxLength(20);
 
-        builder.Property(e => e.RelationshipType)
-               .IsRequired()
-               .HasConversion<string>()
-               .HasMaxLength(30);
-
         builder.Property(e => e.JMBG).HasMaxLength(13);
         builder.Property(e => e.PassportNumber).HasMaxLength(50);
         builder.Property(e => e.FBAId).HasMaxLength(50);

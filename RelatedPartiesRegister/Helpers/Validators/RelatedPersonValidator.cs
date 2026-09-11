@@ -96,9 +96,9 @@ public static class RelatedPersonValidator
         var nonResidentError = ValidateMainNonResident(dto.Residency, dto.PassportNumber, dto.FBAId);
         if (nonResidentError is not null) return nonResidentError;
 
-        return ValidateBusinessFields(dto.GCCNumber, dto.GCCName, dto.RelationBasis,
+        return ValidateBusinessFields(dto.RelationBasis,
             dto.RelationDescription, dto.SpecialRelationBasis, dto.IsIdentifiedStaff, dto.RelatedToPersonId,
-            dto.FamilyRelationshipType, dto.DateFrom, dto.DateTo);
+            dto.DateFrom, dto.DateTo);
     }
 
     /// <summary>
@@ -114,9 +114,9 @@ public static class RelatedPersonValidator
         var nonResidentError = ValidateMainNonResident(dto.Residency, dto.PassportNumber, dto.FBAId);
         if (nonResidentError is not null) return nonResidentError;
 
-        return ValidateBusinessFields(dto.GCCNumber, dto.GCCName, dto.RelationBasis,
+        return ValidateBusinessFields(dto.RelationBasis,
             dto.RelationDescription, dto.SpecialRelationBasis, dto.IsIdentifiedStaff, dto.RelatedToPersonId,
-            dto.FamilyRelationshipType, dto.DateFrom, dto.DateTo);
+            dto.DateFrom, dto.DateTo);
     }
 
     /// <summary>
@@ -157,15 +157,10 @@ public static class RelatedPersonValidator
         return null;
     }
 
-    private static string? ValidateBusinessFields(string? gccNumber, string? gccName, string? relationBasis,
+    private static string? ValidateBusinessFields(string? relationBasis,
         string? relationDescription, string? specialRelationBasis, bool isIdentifiedStaff, Guid? relatedToPersonId,
-        FamilyRelationshipType? familyRelationshipType,
         DateTime? dateFrom, DateTime? dateTo)
     {
-        if (string.IsNullOrWhiteSpace(gccNumber) || !gccNumber.All(char.IsDigit))
-            return "GCC broj je obavezan i mora sadržavati samo cifre.";
-        if (string.IsNullOrWhiteSpace(gccName))
-            return "GCC naziv je obavezan.";
         if (string.IsNullOrWhiteSpace(relationBasis))
             return "Osnov povezanosti je obavezan.";
         if (string.IsNullOrWhiteSpace(relationDescription))
@@ -176,8 +171,6 @@ public static class RelatedPersonValidator
             return "Fizičko lice koje nije član uže porodice mora biti identifikovani zaposlenik.";
         if (IsImmediateFamily(specialRelationBasis) && !relatedToPersonId.HasValue)
             return "Za člana uže porodice odaberite fizičko lice s kojim je povezan.";
-        if (IsImmediateFamily(specialRelationBasis) && !familyRelationshipType.HasValue)
-            return "Za člana uže porodice odaberite vrstu porodičnog odnosa.";
         if (!dateFrom.HasValue)
             return "Datum početka povezanosti je obavezan.";
         if (!dateTo.HasValue)

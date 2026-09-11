@@ -1,4 +1,4 @@
-import { getCurrentUser } from "./current-user";
+import { getCurrentUser, loadCurrentUser } from "./current-user";
 import { redirect } from "@tanstack/react-router";
 
 export const applicationAccessRoles = [
@@ -40,7 +40,8 @@ export function isApplicationAdmin(): boolean {
   return hasPermission("ADMINISTRATION_MANAGE");
 }
 
-export function requireApplicationAdmin(): void {
+export async function requireApplicationAdmin(): Promise<void> {
+  if (!getCurrentUser()) await loadCurrentUser();
   if (!isApplicationAdmin()) throw redirect({ to: "/app" });
 }
 

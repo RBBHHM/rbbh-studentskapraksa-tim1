@@ -30,13 +30,6 @@ public class CreateLegalEntityDTO
     [StringLength(50)]
     public string? Matbroj { get; set; }
 
-    [StringLength(100)]
-    [RegularExpression(@"^\d+$", ErrorMessage = "GCC broj mora sadržavati samo cifre.")]
-    public string? GccNumber { get; set; }
-
-    [StringLength(100)]
-    public string? GccName { get; set; }
-
     [Required(ErrorMessage = "Osnov povezanosti je obavezan.")]
     [StringLength(100)]
     public string BasisOfConnection { get; set; } = string.Empty;
@@ -72,13 +65,6 @@ public class UpdateLegalEntityDTO
     [StringLength(50)]
     public string? Matbroj { get; set; }
 
-    [StringLength(100)]
-    [RegularExpression(@"^\d+$", ErrorMessage = "GCC broj mora sadržavati samo cifre.")]
-    public string? GccNumber { get; set; }
-
-    [StringLength(200)]
-    public string? GccName { get; set; }
-
     [Required(ErrorMessage = "Osnov povezanosti je obavezan.")]
     [StringLength(100)]
     public string BasisOfConnection { get; set; } = string.Empty;
@@ -105,8 +91,6 @@ public class LegalEntityDTO
     public string? FbaId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? Matbroj { get; set; }
-    public string? GccNumber { get; set; }
-    public string? GccName { get; set; }
     public string BasisOfConnection { get; set; } = string.Empty;
     public string? ConnectionDescription { get; set; }
     public bool? ConnectedWithBank { get; set; }
@@ -153,6 +137,4 @@ public class LegalEntityLimitFormDataDTO
     public string? TaxNumber { get; set; }
     public string? MaticniBroj { get; set; }
     public string Name { get; set; } = string.Empty;
-    public string? GccNumber { get; set; }
-    public string? GccName { get; set; }
 }

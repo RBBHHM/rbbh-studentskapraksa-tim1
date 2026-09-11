@@ -11,7 +11,7 @@ public static class ImmediateFamilyPolicy
 {
     public static void Apply(CreateRelatedPersonDTO dto) => Apply(
         dto.SpecialRelationBasis,
-        clearLink: () => { dto.RelatedToPersonId = null; dto.FamilyRelationshipType = null; },
+        clearLink: () => dto.RelatedToPersonId = null,
         applyDefaults: () =>
         {
             dto.IsIdentifiedStaff = false;
@@ -24,7 +24,7 @@ public static class ImmediateFamilyPolicy
 
     public static void Apply(UpdateRelatedPersonDTO dto) => Apply(
         dto.SpecialRelationBasis,
-        clearLink: () => { dto.RelatedToPersonId = null; dto.FamilyRelationshipType = null; },
+        clearLink: () => dto.RelatedToPersonId = null,
         applyDefaults: () =>
         {
             dto.IsIdentifiedStaff = false;

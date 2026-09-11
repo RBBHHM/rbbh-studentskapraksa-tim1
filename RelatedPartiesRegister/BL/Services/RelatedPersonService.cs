@@ -30,8 +30,6 @@ public class RelatedPersonService(
         new("JMBG / National ID", "JMBG", "National ID"),
         new("Broj pasoša / Passport number", "Broj pasoša", "Passport number"),
         new("FBA ID", "FBA ID"),
-        new("GCC broj / GCC number", "GCC broj", "GCC number"),
-        new("GCC naziv / GCC name", "GCC naziv", "GCC name"),
         new("Osnov povezanosti / Relation basis", "Osnov povezanosti", "Relation basis"),
         new("Osnov posebnog odnosa / Special relationship basis", "Osnov posebnog odnosa", "Special relationship basis"),
         new("Datum od / Date from", "Datum od", "Date from"),
@@ -120,8 +118,7 @@ public class RelatedPersonService(
                 FirstName = person.FirstName,
                 LastName = person.LastName,
                 PersonType = person.RelatedToPersonId.HasValue ? "FamilyMember" : person.IsIdentifiedStaff ? "Employee" : "RelatedPerson",
-                PersonTypeLabel = person.RelatedToPersonId.HasValue ? "Član porodice" : person.IsIdentifiedStaff ? "Zaposlenik" : "Povezano lice",
-                RelationshipType = person.FamilyRelationshipType
+                PersonTypeLabel = person.RelatedToPersonId.HasValue ? "Član porodice" : person.IsIdentifiedStaff ? "Zaposlenik" : "Povezano lice"
             };
 
             if (!path.Add(person.Id)) return node;
@@ -275,7 +272,6 @@ public class RelatedPersonService(
         foreach (var member in entity.RelatedFamilyMembers.Where(member => member.IsActive))
         {
             member.RelatedToPersonId = null;
-            member.FamilyRelationshipType = null;
             member.ModifiedAt = now;
             member.ModifiedBy = korisnik;
         }
@@ -565,17 +561,15 @@ public class RelatedPersonService(
                 var jmbg          = ws.Cell(row, 4).GetString().Trim();
                 var passport      = ws.Cell(row, 5).GetString().Trim();
                 var fbaId         = ws.Cell(row, 6).GetString().Trim();
-                var gccNumber     = ws.Cell(row, 7).GetString().Trim();
-                var gccName       = ws.Cell(row, 8).GetString().Trim();
-                var relationBasis = ws.Cell(row, 9).GetString().Trim();
-                var specialBasis  = ws.Cell(row, 10).GetString().Trim();
-                var dateFromStr   = ws.Cell(row, 11).GetString().Trim();
-                var dateToStr     = ws.Cell(row, 12).GetString().Trim();
-                var noFamilyStr   = ws.Cell(row, 13).GetString().Trim();
-                var connBankStr   = ws.Cell(row, 14).GetString().Trim();
-                var specialRelStr = ws.Cell(row, 15).GetString().Trim();
-                var specContStr   = ws.Cell(row, 16).GetString().Trim();
-                var malusStr      = ws.Cell(row, 17).GetString().Trim();
+                var relationBasis = ws.Cell(row, 7).GetString().Trim();
+                var specialBasis  = ws.Cell(row, 8).GetString().Trim();
+                var dateFromStr   = ws.Cell(row, 9).GetString().Trim();
+                var dateToStr     = ws.Cell(row, 10).GetString().Trim();
+                var noFamilyStr   = ws.Cell(row, 11).GetString().Trim();
+                var connBankStr   = ws.Cell(row, 12).GetString().Trim();
+                var specialRelStr = ws.Cell(row, 13).GetString().Trim();
+                var specContStr   = ws.Cell(row, 14).GetString().Trim();
+                var malusStr      = ws.Cell(row, 15).GetString().Trim();
 
                 if (string.IsNullOrWhiteSpace(firstName) && string.IsNullOrWhiteSpace(lastName))
                     continue; // prazan red — preskoči bez greške
@@ -605,8 +599,6 @@ public class RelatedPersonService(
                     JMBG         = string.IsNullOrWhiteSpace(jmbg) ? null : jmbg,
                     PassportNumber = string.IsNullOrWhiteSpace(passport) ? null : passport,
                     FBAId        = string.IsNullOrWhiteSpace(fbaId) ? null : fbaId,
-                    GCCNumber    = string.IsNullOrWhiteSpace(gccNumber) ? null : gccNumber,
-                    GCCName      = string.IsNullOrWhiteSpace(gccName) ? null : gccName,
                     RelationBasis      = string.IsNullOrWhiteSpace(relationBasis) ? null : relationBasis,
                     RelationDescription = string.IsNullOrWhiteSpace(relationBasis) ? null : relationBasis,
                     SpecialRelationBasis = string.IsNullOrWhiteSpace(specialBasis) ? null : specialBasis,
@@ -635,8 +627,6 @@ public class RelatedPersonService(
                     JMBG = dto.JMBG,
                     PassportNumber = dto.PassportNumber,
                     FBAId = dto.FBAId,
-                    GCCNumber = dto.GCCNumber,
-                    GCCName = dto.GCCName,
                     RelationBasis = dto.RelationBasis,
                     RelationDescription = dto.RelationDescription,
                     SpecialRelationBasis = dto.SpecialRelationBasis,
