@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "releaseId": "2026.08.31-001",
+  "releaseId": "2026.09.15-001",
   "defaultLocale": "en",
   "fallbackLocale": "en",
   "supportedLocales": [
@@ -41,5 +41,5 @@
     "ui-library",
     "validation"
   ],
-  "publishedAt": "2026-08-31T11:16:17.923Z"
+  "publishedAt": "2026-09-15T18:25:40.368Z"
 }

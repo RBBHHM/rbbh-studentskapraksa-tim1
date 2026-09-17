@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/design-system/theme/theme-toggle";
 import { LanguageSwitcher } from "@/localization";
 import { getCurrentUser } from "@/lib/auth/current-user";
+import { getDevelopmentUser, setDevelopmentUser } from "@/lib/auth/current-user";
+import { isAuthenticationConfigured } from "@/lib/auth/keycloak";
 import { registryResources } from "@/lib/registry/resources";
 import { hasApplicationAccess, isApplicationAdmin } from "@/lib/auth/application-access";
 
@@ -35,6 +37,23 @@ export function RegistryShell() {
             </span>
           </Link>
           <div className="ml-auto flex items-center gap-2">
+            {!isAuthenticationConfigured && (
+              <label className="hidden items-center gap-2 text-xs font-medium text-text-secondary md:flex">
+                <span>Testni korisnik</span>
+                <select
+                  className="h-10 rounded-sm border border-border-strong bg-surface-raised px-3 text-sm text-text-primary"
+                  value={getDevelopmentUser()}
+                  onChange={(event) => {
+                    setDevelopmentUser(event.target.value);
+                    location.reload();
+                  }}
+                  aria-label="Testni korisnik"
+                >
+                  <option value="admin1">Administrator (admin1)</option>
+                  <option value="verifier1">Verifikator (verifier1)</option>
+                </select>
+              </label>
+            )}
             <ThemeToggle />
             <LanguageSwitcher className="hidden sm:flex" />
             <Button asChild variant="ghost" title={t("shell.profile", { defaultValue: "Moj profil / My profile" })}>

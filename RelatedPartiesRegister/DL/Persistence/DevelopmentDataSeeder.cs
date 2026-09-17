@@ -20,6 +20,7 @@ public static class DevelopmentDataSeeder
         if (await db.CodeLists.AnyAsync(ct))
         {
             await EnsureApplicationRolesAsync(db, ct);
+            await EnsureDevelopmentUsersAsync(db, ct);
             await EnsureReferenceCodeListsAsync(db, ct);
             return;
         }
@@ -38,8 +39,17 @@ public static class DevelopmentDataSeeder
             Code("TipLica", "PL", "Pravno lice", 2, now),
             Code("OsnovPovezanosti", "VL", "Vlasništvo", 1, now),
             Code("OsnovPovezanosti", "UP", "Upravljačka povezanost", 2, now),
-            Code("VrstaLimita", "REG", "Regulatorni limit", 1, now),
-            Code("VrstaLimita", "INT", "Interni limit", 2, now),
+            Code("VrstaLimita", "MM", "MM", 1, now, "Izvor: SATA"),
+            Code("VrstaLimita", "FXS", "FXs", 2, now, "Izvor: SATA. Iskorištenost se po FBA ponderiše sa 1%."),
+            Code("VrstaLimita", "FXD", "FXD", 3, now, "Izvor: SATA"),
+            Code("VrstaLimita", "OVL", "OVL", 4, now, "Izvor: manuelna evidencija"),
+            Code("VrstaLimita", "OVL_CUSTODY", "OVL CUSTODY", 5, now, "Izvor: manuelna evidencija"),
+            Code("VrstaLimita", "SFL_NET", "SFL Net", 6, now, "Izvor: manuelna evidencija"),
+            Code("VrstaLimita", "LG", "LG", 7, now, "Izvor: manuelna evidencija"),
+            Code("VrstaLimita", "LT", "LT", 8, now, "Izvor: manuelna evidencija"),
+            Code("VrstaLimita", "ST", "ST", 9, now, "Izvor: manuelna evidencija"),
+            Code("VrstaLimita", "SPRL", "SPRL", 10, now, "Izvor: manuelna evidencija"),
+            Code("VrstaLimita", "LEASING", "LEASING", 11, now, "Izvor: manuelna evidencija"),
             Code("Status", "DRAFT", "Nacrt", 1, now),
             Code("Status", "VERIFIED", "Verificirano", 2, now),
             Code("Status", "REJECTED", "Odbijeno", 3, now),
@@ -66,10 +76,6 @@ public static class DevelopmentDataSeeder
             Code("OsnovPosebnogOdnosa", "B1", "B1", 5, now),
             Code("OsnovPosebnogOdnosa", "UZA_PORODICA", "Član uže porodice povezanog lica", 6, now));
 
-        db.Limiti.AddRange(
-            new Limit { Naziv = "Ukupna izloženost", TipLimita = "REG", IznosLimita = 1_000_000, Utilizacija = 425_000, RaspoloziviLimit = 575_000, RegulatorniKapital = 5_000_000, OsnovniKapital = 4_000_000, CreatedBy = "seed" },
-            new Limit { Naziv = "Interni operativni limit", TipLimita = "INT", IznosLimita = 500_000, Utilizacija = 125_000, RaspoloziviLimit = 375_000, RegulatorniKapital = 5_000_000, OsnovniKapital = 4_000_000, CreatedBy = "seed" });
-
         var resident = new RelatedPerson { FirstName = "Amina", LastName = "Hadžić", Residency = ResidencyType.Resident, JMBG = "0101990170003", RelationBasis = "ZOB-2-V-5", RelationDescription = "Član uprave banke i članovi uže porodice.", SpecialRelationBasis = "UPRAVA", IsIdentifiedStaff = true, DeclarationNoFamilyMembers = false, ConnectedWithBank = true, SpecialRelationshipWithBank = true, SpecialContract = false, MalusClawback = true, DateFrom = now.Date.AddYears(-2), DateTo = now.Date.AddYears(1), Status = RelatedPersonStatus.Verified, CreatedBy = "seed" };
         var nonResident = new RelatedPerson { FirstName = "Marko", LastName = "Kovač", Residency = ResidencyType.NonResident, PassportNumber = "P-DEMO-2026", FBAId = "1002", RelationBasis = "ZOB-2-V-8", RelationDescription = "Lice sa značajnim uticajem ili mogućim sukobom interesa.", SpecialRelationBasis = "PROKURISTA", IsIdentifiedStaff = true, DeclarationNoFamilyMembers = false, ConnectedWithBank = false, SpecialRelationshipWithBank = true, SpecialContract = true, MalusClawback = false, DateFrom = now.Date.AddYears(-1), DateTo = now.Date.AddYears(1), Status = RelatedPersonStatus.Draft, CreatedBy = "seed" };
         var rejected = new RelatedPerson { FirstName = "Lejla", LastName = "Testić", Residency = ResidencyType.NonResident, PassportNumber = "P-REJECT-01", FBAId = "1003", RelationBasis = "ZOB-2-V-7", RelationDescription = "Član organa upravljanja člana bankarske grupe.", SpecialRelationBasis = "NKF", IsIdentifiedStaff = true, DeclarationNoFamilyMembers = false, ConnectedWithBank = false, SpecialRelationshipWithBank = false, SpecialContract = false, MalusClawback = false, DateFrom = now.Date.AddMonths(-6), DateTo = now.Date.AddMonths(6), Status = RelatedPersonStatus.Rejected, CreatedBy = "seed" };
@@ -77,12 +83,17 @@ public static class DevelopmentDataSeeder
         var child = new RelatedPerson { FirstName = "Ana", LastName = "Kovač", Residency = ResidencyType.NonResident, PassportNumber = "P-FAMILY-01", FBAId = "1004", RelationBasis = "ZOB-2-V-5", RelationDescription = "Član uže porodice povezanog lica.", SpecialRelationBasis = "UZA_PORODICA", IsIdentifiedStaff = false, DeclarationNoFamilyMembers = true, ConnectedWithBank = true, SpecialRelationshipWithBank = false, SpecialContract = false, MalusClawback = false, DateFrom = now.Date.AddYears(-1), DateTo = now.Date.AddYears(1), RelatedToPersonId = nonResident.Id, Status = RelatedPersonStatus.Draft, CreatedBy = "seed" };
         db.RelatedPersons.AddRange(resident, nonResident, rejected, spouse, child);
 
-        var legalResident = new LegalEntity { IsResident = true, TaxNumber = "4200000000001", Name = "RBI Poslovni partner d.o.o.", BasisOfConnection = "Član 4. stav (1) tačka a) ZOB", ConnectionDescription = "Član 4. stav (1) tačka a) ZOB", ConnectedWithBank = true, DateFrom = now.Date.AddYears(-3), Status = "VERIFIED", CreatedBy = "seed", VerifiedBy = "demo.verifier", VerifiedAt = now.AddDays(-2) };
-        var legalForeign = new LegalEntity { IsResident = false, FbaId = "2002", Name = "International Partner GmbH", BasisOfConnection = "Član 4. stav (1) tačka b) ZOB", ConnectionDescription = "Član 4. stav (1) tačka b) ZOB", ConnectedWithBank = false, DateFrom = now.Date.AddMonths(-8), Status = "DRAFT", CreatedBy = "seed" };
+        var legalResident = new LegalEntity { IsResident = true, TaxNumber = "4200000000001", Name = "RBI Poslovni partner d.o.o.", BasisOfConnection = "Član 4. stav (1) tačka a) ZOB", ConnectionDescription = "Član 4. stav (1) tačka a) ZOB", DateFrom = now.Date.AddYears(-3), Status = "VERIFIED", CreatedBy = "seed", VerifiedBy = "demo.verifier", VerifiedAt = now.AddDays(-2) };
+        var legalForeign = new LegalEntity { IsResident = false, FbaId = "2002", Name = "International Partner GmbH", BasisOfConnection = "Član 4. stav (1) tačka b) ZOB", ConnectionDescription = "Član 4. stav (1) tačka b) ZOB", DateFrom = now.Date.AddMonths(-8), Status = "DRAFT", CreatedBy = "seed" };
         db.Set<LegalEntity>().AddRange(legalResident, legalForeign);
 
+        db.Limiti.AddRange(
+            new Limit { LegalEntityId = legalResident.Id, LegalEntity = legalResident, Naziv = legalResident.Name, TipLimita = "MM", IznosLimita = 1_000_000, MaksimalnoOcekivanaUtilizacija = 425_000, RokUtilizacije = now.Date.AddMonths(6), Komentar = "Limit iz SATA izvora.", RegulatorniKapital = 5_000_000, OsnovniKapital = 4_000_000, DopunskiKapital = 750_000, DatumKapitala = now.Date, CreatedBy = "seed" },
+            new Limit { LegalEntityId = legalForeign.Id, LegalEntity = legalForeign, Naziv = legalForeign.Name, TipLimita = "OVL", IznosLimita = 500_000, MaksimalnoOcekivanaUtilizacija = 125_000, RokUtilizacije = now.Date.AddMonths(3), Komentar = "Manuelno evidentiran limit.", RegulatorniKapital = 5_000_000, OsnovniKapital = 4_000_000, DopunskiKapital = 750_000, DatumKapitala = now.Date, CreatedBy = "seed" });
+        db.Capitals.Add(new RBBH.ConnectedParties.DL.Entities.Capital.Capital { OsnovniKapital = 4_000_000, RegulatorniKapital = 5_000_000, DopunskiKapital = 750_000, DatumKapitala = now.Date, CreatedBy = "seed" });
+
         var admin = new AppUser { KeycloakId = "local-admin", Username = "admin1", FirstName = "Lokalni", LastName = "Korisnik", Email = "admin@localhost", CreatedBy = "seed" };
-        var verifier = new AppUser { KeycloakId = "local-multi-access", Username = "user1", FirstName = "Vera", LastName = "Korisnik", Email = "user@localhost", CreatedBy = "seed" };
+        var verifier = new AppUser { KeycloakId = "local-verifier", Username = "verifier1", FirstName = "Lokalni", LastName = "Verifikator", Email = "verifier1@raiffeisengroup.ba", CreatedBy = "seed" };
         var inactive = new AppUser { KeycloakId = "local-inactive", Username = "inactive1", FirstName = "Neaktivni", LastName = "Korisnik", Email = "inactive@localhost", IsActive = false, CreatedBy = "seed" };
         db.AppUsers.AddRange(admin, verifier, inactive);
         db.UserRoles.AddRange(
@@ -115,6 +126,62 @@ public static class DevelopmentDataSeeder
 
         await db.SaveChangesAsync(ct);
         await EnsureApplicationRolesAsync(db, ct);
+        await EnsureDevelopmentUsersAsync(db, ct);
+    }
+
+    private static async Task EnsureDevelopmentUsersAsync(ConnectedPartiesDbContext db, CancellationToken ct)
+    {
+        var users = await db.AppUsers.IgnoreQueryFilters().AsTracking().ToListAsync(ct);
+        var definitions = new[]
+        {
+            new { Username = "admin1", KeycloakId = "local-admin", FirstName = "Lokalni", LastName = "Administrator", Email = "admin1@raiffeisengroup.ba" },
+            new { Username = "verifier1", KeycloakId = "local-verifier", FirstName = "Lokalni", LastName = "Verifikator", Email = "verifier1@raiffeisengroup.ba" }
+        };
+
+        foreach (var definition in definitions)
+        {
+            var user = users.FirstOrDefault(item => item.Username == definition.Username);
+            if (user is null)
+            {
+                user = new AppUser
+                {
+                    Username = definition.Username,
+                    KeycloakId = definition.KeycloakId,
+                    FirstName = definition.FirstName,
+                    LastName = definition.LastName,
+                    Email = definition.Email,
+                    CreatedBy = "seed"
+                };
+                db.AppUsers.Add(user);
+                users.Add(user);
+            }
+            else
+            {
+                user.KeycloakId = definition.KeycloakId;
+                user.FirstName = definition.FirstName;
+                user.LastName = definition.LastName;
+                user.Email = definition.Email;
+                user.IsActive = true;
+            }
+        }
+
+        await db.SaveChangesAsync(ct);
+
+        var legalRole = await db.Roles.FirstAsync(role => role.Name == ApplicationAccessRoles.LegalPersons, ct);
+        var verifier = users.First(user => user.Username == "verifier1");
+        bool hasLegalAccess = await db.UserRoles.AnyAsync(
+            item => item.UserId == verifier.Id && item.RoleId == legalRole.Id && item.IsActive,
+            ct);
+        if (!hasLegalAccess)
+        {
+            db.UserRoles.Add(new UserRole
+            {
+                UserId = verifier.Id,
+                RoleId = legalRole.Id,
+                CreatedBy = "seed"
+            });
+            await db.SaveChangesAsync(ct);
+        }
     }
 
     private static CodeList Code(string category, string code, string name, int order, DateTime now, string? description = null) =>
@@ -125,7 +192,12 @@ public static class DevelopmentDataSeeder
         var now = DateTime.UtcNow;
         var required = new[]
         {
-            Code("VrstaLimita", "REG", "Regulatorni limit", 1, now), Code("VrstaLimita", "INT", "Interni limit", 2, now),
+            Code("VrstaLimita", "MM", "MM", 1, now, "Izvor: SATA"), Code("VrstaLimita", "FXS", "FXs", 2, now, "Izvor: SATA"),
+            Code("VrstaLimita", "FXD", "FXD", 3, now, "Izvor: SATA"), Code("VrstaLimita", "OVL", "OVL", 4, now, "Izvor: manuelna evidencija"),
+            Code("VrstaLimita", "OVL_CUSTODY", "OVL CUSTODY", 5, now, "Izvor: manuelna evidencija"), Code("VrstaLimita", "SFL_NET", "SFL Net", 6, now, "Izvor: manuelna evidencija"),
+            Code("VrstaLimita", "LG", "LG", 7, now, "Izvor: manuelna evidencija"), Code("VrstaLimita", "LT", "LT", 8, now, "Izvor: manuelna evidencija"),
+            Code("VrstaLimita", "ST", "ST", 9, now, "Izvor: manuelna evidencija"), Code("VrstaLimita", "SPRL", "SPRL", 10, now, "Izvor: manuelna evidencija"),
+            Code("VrstaLimita", "LEASING", "LEASING", 11, now, "Izvor: manuelna evidencija"),
             Code("Srodstvo", "1", "Bračni partner", 1, now), Code("Srodstvo", "2", "Partner", 2, now), Code("Srodstvo", "3", "Roditelj", 3, now),
             Code("Srodstvo", "4", "Dijete", 4, now), Code("Srodstvo", "5", "Brat ili sestra", 5, now), Code("Srodstvo", "6", "Očuh ili maćeha", 6, now),
             Code("Srodstvo", "7", "Pastorak", 7, now), Code("Srodstvo", "8", "Staratelj", 8, now), Code("Srodstvo", "99", "Drugo", 9, now),
@@ -141,8 +213,20 @@ public static class DevelopmentDataSeeder
             Code("OsnovPosebnogOdnosa", "NKF", "Nosilac ključne funkcije", 3, now), Code("OsnovPosebnogOdnosa", "PROKURISTA", "Prokurista banke", 4, now),
             Code("OsnovPosebnogOdnosa", "B1", "B1", 5, now), Code("OsnovPosebnogOdnosa", "UZA_PORODICA", "Član uže porodice povezanog lica", 6, now)
         };
-        var existing = await db.CodeLists.IgnoreQueryFilters().Select(item => item.Kategorija + "|" + item.Kod).ToListAsync(ct);
-        db.CodeLists.AddRange(required.Where(item => !existing.Contains(item.Kategorija + "|" + item.Kod)));
+        var existing = await db.CodeLists.IgnoreQueryFilters().AsTracking().ToListAsync(ct);
+        foreach (var item in required)
+        {
+            var stored = existing.FirstOrDefault(x => x.Kategorija == item.Kategorija && x.Kod == item.Kod);
+            if (stored is null) db.CodeLists.Add(item);
+            else if (item.Kategorija == "VrstaLimita")
+            {
+                stored.Naziv = item.Naziv;
+                stored.Opis = item.Opis;
+                stored.RedoslijedPrikaza = item.RedoslijedPrikaza;
+                stored.Aktivan = true;
+            }
+        }
+        foreach (var obsolete in existing.Where(x => x.Kategorija == "VrstaLimita" && required.All(y => y.Kategorija != "VrstaLimita" || y.Kod != x.Kod))) obsolete.Aktivan = false;
         await db.SaveChangesAsync(ct);
     }
 

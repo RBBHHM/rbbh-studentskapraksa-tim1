@@ -45,6 +45,12 @@ public class LegalEntity
     [StringLength(50)]
     public string? Matbroj { get; set; }
 
+    [StringLength(50)]
+    public string? GCCNumber { get; set; }
+
+    [StringLength(200)]
+    public string? GCCName { get; set; }
+
     // ── Osnov i opis povezanosti ──────────────────────────────────────────────
 
     /// <summary>Osnov povezanosti — vrijednost iz šifarnika OSNOV_POVEZANOSTI.</summary>
@@ -55,14 +61,12 @@ public class LegalEntity
     [StringLength(500)]
     public string? ConnectionDescription { get; set; }
 
-    // ── Veza s bankom ─────────────────────────────────────────────────────────
-
-    /// <summary>Da li je pravno lice povezano lice sa Bankom (DA/NE).</summary>
-    public bool? ConnectedWithBank { get; set; }
+    [StringLength(100)]
+    public string? SpecialRelationBasis { get; set; }
 
     // ── Period važenja ────────────────────────────────────────────────────────
 
-    public DateTime? DateFrom { get; set; }
+    public DateTime DateFrom { get; set; }
     public DateTime? DateTo { get; set; }
 
     // ── Status ────────────────────────────────────────────────────────────────

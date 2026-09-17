@@ -23,6 +23,7 @@ public partial class ConnectedPartiesDbContext : DbContext
     public virtual DbSet<AppUser> AppUsers { get; set; }
     public virtual DbSet<AuditLog> AuditLogs { get; set; }
     public virtual DbSet<Limit> Limiti { get; set; }
+    public virtual DbSet<RBBH.ConnectedParties.DL.Entities.Capital.Capital> Capitals { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -53,6 +54,11 @@ public partial class ConnectedPartiesDbContext : DbContext
             entity.HasIndex(e => e.TableName);
             entity.HasIndex(e => e.Username);
             // Audit logs are never soft-deleted — no HasQueryFilter
+        });
+        modelBuilder.Entity<RBBH.ConnectedParties.DL.Entities.Capital.Capital>(entity =>
+        {
+            entity.ToTable("Capital");
+            entity.HasIndex(e => e.DatumKapitala).IsUnique();
         });
 
         modelBuilder.Entity<RBBH.ConnectedParties.DL.Entities.Role.Role>(entity =>

@@ -82,9 +82,9 @@ public class RelatedPersonController(
         if (!result.IsSuccessful) return HTTPExceptiontFromResult(result).Result!;
         var bytes = RegistryExcelExporter.Create(
             "Fizička lica",
-            ["Tip", "Ime", "Prezime", "Rezidentnost", "JMBG", "Pasoš", "FBA ID", "Osnov povezanosti", "Osnov posebnog odnosa", "Povezano lice", "Datum od", "Datum do", "Status"],
+            ["Redni broj", "Rezidentnost", "FBA_ID", "JMBG", "JMBG povezanog lica", "Broj pasoša", "Naziv", "Osnov povezanosti", "Osnov posebnog odnosa", "Izjava o nepostojanju člana obitelji", "Povezano lice sa Bankom", "Lice u posebnom odnosu sa bankom", "Poseban ugovor", "Malus & Clawback", "Datum od", "Datum do", "Datum izmjene", "user_verified"],
             result.Value.Select(item => (IReadOnlyList<object?>)
-            [item.PersonTypeLabel, item.FirstName, item.LastName, item.ResidencyLabel, item.JMBG, item.PassportNumber, item.FBAId, item.RelationBasis, item.SpecialRelationBasis, item.RelatedToPersonName, item.DateFrom, item.DateTo, item.StatusLabel]));
+            [result.Value.IndexOf(item) + 1, item.ResidencyLabel, item.FBAId, item.JMBG, item.RelatedToPersonJMBG, item.PassportNumber, $"{item.LastName} {item.FirstName}", item.RelationBasis, item.SpecialRelationBasis, item.DeclarationNoFamilyMembers ? "DA" : "NE", item.ConnectedWithBank ? "DA" : "NE", item.SpecialRelationshipWithBank ? "DA" : "NE", item.SpecialContract ? "DA" : "NE", item.MalusClawback ? "DA" : "NE", item.DateFrom, item.DateTo, item.ModifiedAt ?? item.CreatedAt, item.VerifiedBy]));
         return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"fizicka-lica-{DateTime.UtcNow:yyyyMMdd-HHmm}.xlsx");
     }
 

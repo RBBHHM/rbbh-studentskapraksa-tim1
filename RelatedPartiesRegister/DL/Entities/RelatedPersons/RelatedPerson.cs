@@ -46,6 +46,12 @@ public class RelatedPerson
     [StringLength(50)]
     public string? FBAId { get; set; }
 
+    [StringLength(50)]
+    public string? GCCNumber { get; set; }
+
+    [StringLength(200)]
+    public string? GCCName { get; set; }
+
     #endregion
 
     #region Podaci o povezanosti

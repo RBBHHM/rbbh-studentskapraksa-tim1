@@ -1,4 +1,5 @@
 import { runtimeConfig } from "../../runtime-config";
+import { developmentUserHeaders } from "../auth/current-user";
 
 /** One wire format for every successful and failed application API response. */
 export interface ApiEnvelope<T> {
@@ -79,7 +80,7 @@ function isEnvelope<T>(body: unknown): body is ApiEnvelope<T> {
 
 export function createApiClient(): ApiClient {
   async function authorizedHeaders(extra?: Readonly<Record<string, string>>) {
-    const headers: Record<string, string> = { ...extra };
+    const headers: Record<string, string> = { ...developmentUserHeaders(), ...extra };
     if (typeof document !== "undefined") {
       headers["accept-language"] = document.documentElement.lang || "bs";
     }
@@ -241,8 +242,10 @@ export function apiErrorMessage(error: unknown, fallback: string): string {
   const systemMessage = /JSON value could not be converted|dto field is required|System\.|BytePositionInLine|LineNumber/i.test(error.message)
     ? ""
     : error.message;
-  const parts = [systemMessage, ...details].filter((part) => Boolean(part) && !/JSON value could not be converted|System\.|BytePositionInLine|LineNumber/i.test(part));
-  if (error.traceId && error.traceId !== "unknown" && error.traceId !== "legacy-boundary")
+  const parts = [...new Set([systemMessage, ...details]
+    .filter((part) => Boolean(part) && !/JSON value could not be converted|System\.|BytePositionInLine|LineNumber/i.test(part))
+    .map((part) => part.replace(/^[^:]+:\s*/, "")))];
+  if (error.status >= 500 && error.traceId && error.traceId !== "unknown" && error.traceId !== "legacy-boundary")
     parts.push(`ID: ${error.traceId}`);
   return parts.join(" ") || fallback;
 }

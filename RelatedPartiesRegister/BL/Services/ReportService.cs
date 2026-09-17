@@ -24,20 +24,31 @@ public class ReportService : IReportService
     public async Task<ReportDTO> GenerateDailyReportAsync(string createdBy)
     {
         var today = DateTime.UtcNow.Date;
-        var limits = await _context.Limiti.AsNoTracking().ToListAsync();
+        var limits = await _context.Limiti.AsNoTracking().Include(l => l.LegalEntity).ToListAsync();
+        var capital = await CapitalAt(today);
 
         var report = new Report
         {
             ReportType = "DAILY",
             ReportDate = today,
             TotalClients = limits.Select(l => l.Naziv).Distinct().Count(),
-            ClientsWithBreachedLimit = limits.Count(l => l.RaspoloziviLimit < 0),
-            TotalExposure = limits.Sum(l => l.Utilizacija),
+            ClientsWithBreachedLimit = limits.Count(l => l.MaksimalnoOcekivanaUtilizacija > (l.KorigovaniLimit ?? l.IznosLimita)),
+            TotalExposure = limits.Sum(l => l.MaksimalnoOcekivanaUtilizacija),
             DataSnapshot = JsonSerializer.Serialize(limits.Select(l => new
             {
                 l.Id, l.Naziv, l.TipLimita,
-                l.IznosLimita, l.Utilizacija,
-                l.RaspoloziviLimit, l.RegulatorniKapital, l.OsnovniKapital
+                l.IznosLimita, l.MaksimalnoOcekivanaUtilizacija,
+                l.RokUtilizacije, l.Komentar,
+                RegulatorniKapital = capital?.RegulatorniKapital ?? 0,
+                OsnovniKapital = capital?.OsnovniKapital ?? 0,
+                DatumKapitala = capital?.DatumKapitala,
+                l.LegalEntityId,
+                LegalEntity = l.LegalEntity == null ? null : new
+                {
+                    l.LegalEntity.IsResident, l.LegalEntity.FbaId, l.LegalEntity.TaxNumber,
+                    l.LegalEntity.Matbroj, l.LegalEntity.MaticniBroj
+                },
+                l.ModifiedAt, l.CreatedAt, l.ModifiedBy
             })),
             CreatedBy = createdBy,
             CreatedAt = DateTime.UtcNow,
@@ -53,20 +64,31 @@ public class ReportService : IReportService
     public async Task<ReportDTO> GenerateMonthlyReportAsync(int year, int month, string createdBy)
     {
         var reportDate = new DateTime(year, month, 1);
-        var limits = await _context.Limiti.AsNoTracking().ToListAsync();
+        var limits = await _context.Limiti.AsNoTracking().Include(l => l.LegalEntity).ToListAsync();
+        var capital = await CapitalAt(reportDate.AddMonths(1).AddTicks(-1));
 
         var report = new Report
         {
             ReportType = "MONTHLY",
             ReportDate = reportDate,
             TotalClients = limits.Select(l => l.Naziv).Distinct().Count(),
-            ClientsWithBreachedLimit = limits.Count(l => l.RaspoloziviLimit < 0),
-            TotalExposure = limits.Sum(l => l.Utilizacija),
+            ClientsWithBreachedLimit = limits.Count(l => l.MaksimalnoOcekivanaUtilizacija > (l.KorigovaniLimit ?? l.IznosLimita)),
+            TotalExposure = limits.Sum(l => l.MaksimalnoOcekivanaUtilizacija),
             DataSnapshot = JsonSerializer.Serialize(limits.Select(l => new
             {
                 l.Id, l.Naziv, l.TipLimita,
-                l.IznosLimita, l.Utilizacija,
-                l.RaspoloziviLimit, l.RegulatorniKapital, l.OsnovniKapital
+                l.IznosLimita, l.MaksimalnoOcekivanaUtilizacija,
+                l.RokUtilizacije, l.Komentar,
+                RegulatorniKapital = capital?.RegulatorniKapital ?? 0,
+                OsnovniKapital = capital?.OsnovniKapital ?? 0,
+                DatumKapitala = capital?.DatumKapitala,
+                l.LegalEntityId,
+                LegalEntity = l.LegalEntity == null ? null : new
+                {
+                    l.LegalEntity.IsResident, l.LegalEntity.FbaId, l.LegalEntity.TaxNumber,
+                    l.LegalEntity.Matbroj, l.LegalEntity.MaticniBroj
+                },
+                l.ModifiedAt, l.CreatedAt, l.ModifiedBy
             })),
             CreatedBy = createdBy,
             CreatedAt = DateTime.UtcNow,
@@ -129,45 +151,46 @@ public class ReportService : IReportService
             throw new ValidationException("identifier",
                 $"Pravno lice s identifikatorom '{identifier.Trim()}' nije pronađeno.");
 
-        var clientLimits = await _context.ClientLimits.AsNoTracking()
-            .Where(l => l.LegalEntityId == legalEntity.Id && l.IsActive)
-            .ToListAsync();
-        var limits = clientLimits.Select(l => new Limit
-        {
-            Naziv = legalEntity.Name,
-            TipLimita = "REG",
-            IznosLimita = l.ExposureLimit,
-            Utilizacija = l.CurrentExposure,
-            RaspoloziviLimit = l.ExposureLimit - l.CurrentExposure,
-            RegulatorniKapital = l.RegulatoryCapital,
-            OsnovniKapital = l.CoreCapital,
-            CreatedBy = l.CreatedBy
-        }).ToList();
-
-        // Kompatibilnost sa postojećim podacima: prije uvođenja ClientLimits
-        // limiti su bili vezani poslovnim nazivom klijenta.
+        var limits = await _context.Limiti.AsNoTracking().Include(l => l.LegalEntity)
+            .Where(l => l.LegalEntityId == legalEntity.Id).OrderBy(l => l.TipLimita).ToListAsync();
+        // Legacy records without a foreign key are matched by client name.
         if (limits.Count == 0)
         {
             limits = await _context.Limiti.AsNoTracking()
+                .Include(limit => limit.LegalEntity)
                 .Where(limit => limit.Naziv.ToLower() == legalEntity.Name.ToLower())
                 .OrderBy(limit => limit.TipLimita)
                 .ToListAsync();
+        }
+
+        // Older reporting installations may only have ClientLimits.
+        if (limits.Count == 0)
+        {
+            var clientLimits = await _context.ClientLimits.AsNoTracking()
+                .Where(l => l.LegalEntityId == legalEntity.Id && l.IsActive).ToListAsync();
+            limits = clientLimits.Select(l => new Limit
+            {
+                Naziv = legalEntity.Name, TipLimita = "REG", IznosLimita = l.ExposureLimit,
+                MaksimalnoOcekivanaUtilizacija = l.CurrentExposure, CreatedBy = l.CreatedBy,
+                LegalEntityId = legalEntity.Id, LegalEntity = legalEntity
+            }).ToList();
         }
 
         if (limits.Count == 0)
             throw new ValidationException("identifier",
                 $"Klijent '{legalEntity.Name}' nema definisanih limita.");
 
-        return GenerateExcel(limits, $"Klijent — {legalEntity.Name}");
+        return GenerateExcel(limits, $"Klijent — {legalEntity.Name}", await CapitalAt(DateTime.UtcNow.Date));
     }
 
     public async Task<byte[]> ExportAllClientsWithLimitsAsync()
     {
         var limits = await _context.Limiti.AsNoTracking()
+            .Include(l => l.LegalEntity)
             .OrderBy(l => l.Naziv)
             .ToListAsync();
 
-        return GenerateExcel(limits, "Svi klijenti s limitima");
+        return GenerateExcel(limits, "Svi klijenti s limitima", await CapitalAt(DateTime.UtcNow.Date));
     }
 
     public async Task<byte[]> ExportGeneratedReportAsync(Guid reportId)
@@ -177,10 +200,13 @@ public class ReportService : IReportService
         var limits = string.IsNullOrWhiteSpace(report.DataSnapshot)
             ? []
             : JsonSerializer.Deserialize<List<Limit>>(report.DataSnapshot) ?? [];
-        return GenerateExcel(limits, $"{(report.ReportType == "DAILY" ? "Dnevni" : "Mjesečni")} izvještaj — {report.ReportDate:dd.MM.yyyy}");
+        return GenerateExcel(limits, $"{(report.ReportType == "DAILY" ? "Dnevni" : "Mjesečni")} izvještaj — {report.ReportDate:dd.MM.yyyy}", includeSnapshotCapital: true);
     }
 
-    private static byte[] GenerateExcel(List<Limit> limits, string sheetTitle)
+    private Task<RBBH.ConnectedParties.DL.Entities.Capital.Capital?> CapitalAt(DateTime date) => _context.Capitals.AsNoTracking()
+        .Where(x => x.DatumKapitala <= date).OrderByDescending(x => x.DatumKapitala).ThenByDescending(x => x.Id).FirstOrDefaultAsync();
+
+    private static byte[] GenerateExcel(List<Limit> limits, string sheetTitle, RBBH.ConnectedParties.DL.Entities.Capital.Capital? capital = null, bool includeSnapshotCapital = false)
     {
         using var workbook = new XLWorkbook();
         var ws = workbook.Worksheets.Add("Izvještaj");
@@ -192,19 +218,20 @@ public class ReportService : IReportService
         ws.Cell(1, 1).Style.Font.FontColor = XLColor.FromArgb(0x18, 0x18, 0x18);
         ws.Cell(1, 1).Style.Fill.BackgroundColor = XLColor.FromArgb(0xFF, 0xE6, 0x00);
         ws.Row(1).Height = 34;
-        ws.Range(1, 1, 1, 9).Merge();
+        ws.Range(1, 1, 1, 16).Merge();
 
         ws.Cell(2, 1).Value = $"Generisano: {DateTime.Now:dd.MM.yyyy HH:mm}";
         ws.Cell(2, 1).Style.Font.Italic = true;
         ws.Cell(2, 1).Style.Font.FontName = "Amalia";
         ws.Cell(2, 1).Style.Font.FontColor = XLColor.FromArgb(0x55, 0x55, 0x55);
-        ws.Range(2, 1, 2, 9).Merge();
+        ws.Range(2, 1, 2, 16).Merge();
 
         string[] headers =
         [
-            "Naziv", "Tip limita", "Iznos limita", "Utilizacija",
-            "Korigovani limit", "Raspoloživi limit",
-            "Regulatorni kapital", "Osnovni kapital", "Kreirao"
+            "Redni broj", "Rezidentnost", "FBA_ID", "Porez_broj", "Matbroj/JMBG", "Naziv",
+            "Tip limita", "Odobreni limit", "Maksimalna očekivana utilizacija",
+            "Rok očekivane utilizacije", "Komentar", "Regulatorni kapital", "Osnovni kapital",
+            "Datum kapitala", "Datum izmjene", "user_verified"
         ];
 
         for (int i = 0; i < headers.Length; i++)
@@ -225,35 +252,48 @@ public class ReportService : IReportService
             var row = 4 + i;
             var bg = i % 2 == 0 ? XLColor.White : XLColor.FromArgb(0xF5, 0xF5, 0xF5);
             var breachedBg = XLColor.FromArgb(0xFF, 0xEB, 0xEB);
-            bool breached = l.RaspoloziviLimit < 0;
+            bool breached = l.MaksimalnoOcekivanaUtilizacija > (l.KorigovaniLimit ?? l.IznosLimita);
 
-            ws.Cell(row, 1).Value = l.Naziv;
-            ws.Cell(row, 2).Value = l.TipLimita;
-            SetNum(ws.Cell(row, 3), l.IznosLimita, breached ? breachedBg : bg);
-            SetNum(ws.Cell(row, 4), l.Utilizacija, breached ? breachedBg : bg);
-            SetNum(ws.Cell(row, 5), l.KorigovaniLimit ?? 0, bg);
-            SetNum(ws.Cell(row, 6), l.RaspoloziviLimit, breached ? breachedBg : bg);
-            SetNum(ws.Cell(row, 7), l.RegulatorniKapital, bg);
-            SetNum(ws.Cell(row, 8), l.OsnovniKapital, bg);
-            ws.Cell(row, 9).Value = l.CreatedBy;
+            var client = l.LegalEntity;
+            ws.Cell(row, 1).Value = i + 1;
+            ws.Cell(row, 2).Value = client is null ? "" : client.IsResident ? "Rezident" : "Nerezident";
+            ws.Cell(row, 3).Value = client?.FbaId ?? "";
+            ws.Cell(row, 4).Value = client?.TaxNumber ?? "";
+            ws.Cell(row, 5).Value = client?.Matbroj ?? client?.MaticniBroj ?? "";
+            ws.Cell(row, 6).Value = client?.Name ?? l.Naziv;
+            ws.Cell(row, 7).Value = l.TipLimita;
+            SetNum(ws.Cell(row, 8), l.IznosLimita, breached ? breachedBg : bg);
+            SetNum(ws.Cell(row, 9), l.MaksimalnoOcekivanaUtilizacija, breached ? breachedBg : bg);
+            if (l.RokUtilizacije.HasValue) ws.Cell(row, 10).Value = l.RokUtilizacije.Value;
+            ws.Cell(row, 11).Value = l.Komentar ?? "";
+            if (capital is not null || (includeSnapshotCapital && l.DatumKapitala.HasValue))
+            {
+                SetNum(ws.Cell(row, 12), capital?.RegulatorniKapital ?? l.RegulatorniKapital, bg);
+                SetNum(ws.Cell(row, 13), capital?.OsnovniKapital ?? l.OsnovniKapital, bg);
+                ws.Cell(row, 14).Value = capital?.DatumKapitala ?? l.DatumKapitala!.Value;
+            }
+            ws.Cell(row, 15).Value = l.ModifiedAt ?? l.CreatedAt;
+            ws.Cell(row, 16).Value = l.ModifiedBy ?? "";
 
-            for (int c = 1; c <= 9; c++)
+            for (int c = 1; c <= 16; c++)
             {
                 ws.Cell(row, c).Style.Font.FontName = "Amalia";
-                ws.Cell(row, c).Style.Fill.BackgroundColor = c is >= 3 and <= 8
+                ws.Cell(row, c).Style.Fill.BackgroundColor = c is >= 8 and <= 13
                     ? ws.Cell(row, c).Style.Fill.BackgroundColor
                     : (breached ? breachedBg : bg);
             }
         }
 
-        var tableRange = ws.Range(3, 1, Math.Max(3, 3 + limits.Count), 9);
+        var tableRange = ws.Range(3, 1, Math.Max(3, 3 + limits.Count), 16);
         tableRange.Style.Border.InsideBorder = XLBorderStyleValues.Hair;
         tableRange.Style.Border.InsideBorderColor = XLColor.FromArgb(0xDD, 0xDD, 0xDD);
         tableRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
         tableRange.SetAutoFilter();
         ws.Columns().AdjustToContents();
-        ws.Columns(1, 9).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
-        ws.Column(1).Width = Math.Max(ws.Column(1).Width, 28);
+        ws.Columns(1, 16).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+        ws.Column(6).Width = Math.Max(ws.Column(6).Width, 28);
+        ws.Column(10).Style.DateFormat.Format = "dd.MM.yyyy";
+        ws.Columns(14, 15).Style.DateFormat.Format = "dd.MM.yyyy";
         ws.SheetView.FreezeRows(3);
 
         using var stream = new MemoryStream();

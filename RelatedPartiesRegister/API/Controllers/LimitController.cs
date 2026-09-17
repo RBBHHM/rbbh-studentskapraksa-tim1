@@ -30,22 +30,25 @@ public class LimitController(ILimitService limitService) : BaseResuItController
 
     [HttpGet("export")]
     [Authorize(Policy = ApplicationPolicies.LimitsRead)]
-    public async Task<IActionResult> Export()
+    public async Task<IActionResult> Export([FromQuery] string? identifier = null)
     {
         var result = await _limitService.GetAll();
         if (!result.IsSuccessful) return HTTPExceptiontFromResult(result).Result!;
+        var items = result.Value.AsEnumerable();
+        if (!string.IsNullOrWhiteSpace(identifier))
+        {
+            var term = identifier.Trim();
+            items = items.Where(item => string.Equals(item.MaticniBroj, term, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(item.TaxNumber, term, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(item.FbaId, term, StringComparison.OrdinalIgnoreCase));
+        }
         var bytes = RegistryExcelExporter.Create(
             "Limiti",
-            ["Naziv", "Tip limita", "Iznos limita", "Utilizacija", "Korigovani limit", "Raspoloživi limit", "Rok utilizacije", "Komentar", "Regulatorni kapital", "Osnovni kapital"],
-            result.Value.Select(item => (IReadOnlyList<object?>)
-            [item.Naziv, item.TipLimita, item.IznosLimita, item.Utilizacija, item.KorigovaniLimit, item.RaspoloziviLimit, item.RokUtilizacije, item.Komentar, item.RegulatorniKapital, item.OsnovniKapital]));
+            ["Redni broj", "Rezidentnost", "FBA_ID", "Porez_broj", "Matbroj/JMBG", "Naziv", "Tip limita", "Odobreni limit", "Maksimalna očekivana utilizacija", "Rok očekivane utilizacije", "Komentar", "Regulatorni kapital", "Osnovni kapital", "Datum kapitala", "Datum izmjene", "user_verified"],
+            items.Select((item, index) => (IReadOnlyList<object?>)
+            [index + 1, item.IsResident is null ? null : item.IsResident.Value ? "Rezident" : "Nerezident", item.FbaId, item.TaxNumber, item.MaticniBroj, item.Naziv, item.TipLimita, item.IznosLimita, item.MaksimalnoOcekivanaUtilizacija, item.RokUtilizacije, item.Komentar, item.RegulatorniKapital, item.OsnovniKapital, item.DatumKapitala, item.ModifiedAt ?? item.CreatedAt, item.ModifiedBy]));
         return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"limiti-{DateTime.UtcNow:yyyyMMdd-HHmm}.xlsx");
     }
-
-    [HttpPut("{id:int}/capital")]
-    [Authorize(Policy = ApplicationPolicies.CapitalEdit)]
-    public async Task<ActionResult<LimitResponseDTO>> UpdateCapital([FromRoute] int id, [FromBody] UpdateCapitalDTO dto)
-        => HandleResult(await _limitService.UpdateCapital(id, dto, GetKorisnik()));
 
     /// <summary>Vraća jedan limit po ID-u.</summary>
     [HttpGet("{id:int}")]

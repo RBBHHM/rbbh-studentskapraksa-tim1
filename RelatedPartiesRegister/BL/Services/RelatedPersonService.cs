@@ -62,12 +62,19 @@ public class RelatedPersonService(
     /// <inheritdoc/>
     public async Task<Result<List<RelatedPersonResponseDTO>>> GetAllDetailed()
     {
-        var items = await _dbContext.RelatedPersons
+        var entities = await _dbContext.RelatedPersons
             .AsNoTracking()
+            .Include(rp => rp.RelatedToPerson)
             .Where(rp => rp.IsActive)
             .OrderByDescending(rp => rp.CreatedAt)
-            .ProjectToType<RelatedPersonResponseDTO>()
             .ToListAsync();
+        var items = entities.Select(entity =>
+        {
+            var dto = entity.Adapt<RelatedPersonResponseDTO>();
+            dto.RelatedToPersonName = entity.RelatedToPerson is null ? null : $"{entity.RelatedToPerson.FirstName} {entity.RelatedToPerson.LastName}";
+            dto.RelatedToPersonJMBG = entity.RelatedToPerson?.JMBG;
+            return dto;
+        }).ToList();
 
         return Result<List<RelatedPersonResponseDTO>>.Success(items);
     }
@@ -296,6 +303,9 @@ public class RelatedPersonService(
 
         if (entity.Status == RelatedPersonStatus.Verified)
             return Result<RelatedPersonResponseDTO>.ValidationError("Povezano fizičko lice je već verificirano.");
+
+        if (string.Equals(entity.CreatedBy?.Trim(), korisnik?.Trim(), StringComparison.OrdinalIgnoreCase))
+            return Result<RelatedPersonResponseDTO>.ValidationError("Korisnik koji je unio fizičko lice ne može verificirati vlastiti unos.");
 
         entity.Status = RelatedPersonStatus.Verified;
         entity.VerifiedBy = korisnik;

@@ -22,8 +22,8 @@ namespace UnitTests.Services.ReportServiceTests
     ///   - Performanse exporta sa većim brojem zapisa
     ///
     /// Kolone u Excelu (header red = 3, podaci od reda 4):
-    ///   1 Naziv | 2 Tip limita | 3 Iznos limita | 4 Utilizacija | 5 Korigovani limit |
-    ///   6 Raspoloživi limit | 7 Regulatorni kapital | 8 Osnovni kapital | 9 Kreirao
+    ///   1 Naziv | 2 Tip limita | 3 Iznos limita | 4 Maksimalno očekivana utilizacija | 5 Korigovani limit |
+    ///   6 Regulatorni kapital | 7 Osnovni kapital | 8 Kreirao
     /// </summary>
     public class ExcelExportTests
     {
@@ -60,8 +60,7 @@ namespace UnitTests.Services.ReportServiceTests
             Naziv = naziv,
             TipLimita = tip,
             IznosLimita = iznos,
-            Utilizacija = util,
-            RaspoloziviLimit = raspolozivi,
+            MaksimalnoOcekivanaUtilizacija = util,
             RegulatorniKapital = 5000m,
             OsnovniKapital = 4000m,
             CreatedBy = "seed",
@@ -225,7 +224,7 @@ namespace UnitTests.Services.ReportServiceTests
             DataRowCount(ws).Should().Be(2, "samo ACME limiti");
             // Provjeri da nijedan red nije BETA
             for (int r = FirstDataRow; r < FirstDataRow + 2; r++)
-                ws.Cell(r, 1).GetString().Should().Be("ACME");
+                ws.Cell(r, 6).GetString().Should().Be("ACME");
         }
 
         // ── Export svih klijenata ────────────────────────────────────────────────
@@ -266,8 +265,8 @@ namespace UnitTests.Services.ReportServiceTests
             var bytes = await service.ExportAllClientsWithLimitsAsync();
 
             var ws = OpenSheet(bytes);
-            ws.Cell(FirstDataRow, 1).GetString().Should().Be("Alpha");
-            ws.Cell(FirstDataRow + 2, 1).GetString().Should().Be("Zeta");
+            ws.Cell(FirstDataRow, 6).GetString().Should().Be("Alpha");
+            ws.Cell(FirstDataRow + 2, 6).GetString().Should().Be("Zeta");
         }
 
         // ── Tačnost podataka u Excel fajlu ──────────────────────────────────────
@@ -282,13 +281,15 @@ namespace UnitTests.Services.ReportServiceTests
 
             var ws = OpenSheet(await service.ExportAllClientsWithLimitsAsync());
 
-            ws.Cell(HeaderRow, 1).GetString().Should().Be("Naziv");
-            ws.Cell(HeaderRow, 2).GetString().Should().Be("Tip limita");
-            ws.Cell(HeaderRow, 3).GetString().Should().Be("Iznos limita");
-            ws.Cell(HeaderRow, 4).GetString().Should().Be("Utilizacija");
-            ws.Cell(HeaderRow, 6).GetString().Should().Be("Raspoloživi limit");
-            ws.Cell(HeaderRow, 7).GetString().Should().Be("Regulatorni kapital");
-            ws.Cell(HeaderRow, 9).GetString().Should().Be("Kreirao");
+            ws.Cell(HeaderRow, 1).GetString().Should().Be("Redni broj");
+            ws.Cell(HeaderRow, 6).GetString().Should().Be("Naziv");
+            ws.Cell(HeaderRow, 7).GetString().Should().Be("Tip limita");
+            ws.Cell(HeaderRow, 8).GetString().Should().Be("Odobreni limit");
+            ws.Cell(HeaderRow, 9).GetString().Should().Be("Maksimalna očekivana utilizacija");
+            ws.Cell(HeaderRow, 12).GetString().Should().Be("Regulatorni kapital");
+            ws.Cell(HeaderRow, 13).GetString().Should().Be("Osnovni kapital");
+            ws.Cell(HeaderRow, 14).GetString().Should().Be("Datum kapitala");
+            ws.Row(HeaderRow).CellsUsed().Select(cell => cell.GetString()).Should().NotContain(value => value.Contains("GCC", StringComparison.OrdinalIgnoreCase));
         }
 
         // Tačnost podataka - vrijednosti u ćelijama odgovaraju podacima iz baze
@@ -297,17 +298,17 @@ namespace UnitTests.Services.ReportServiceTests
         {
             var service = NewService(out var ctx);
             ctx.Limiti.Add(NewLimit("ACME", iznos: 1500.50m, util: 750.25m, raspolozivi: 749.75m, tip: "Izloženost"));
+            ctx.Capitals.Add(new RBBH.ConnectedParties.DL.Entities.Capital.Capital { OsnovniKapital = 4000m, RegulatorniKapital = 5000m, DopunskiKapital = 500m, DatumKapitala = DateTime.UtcNow.Date, CreatedBy = "test" });
             await ctx.SaveChangesAsync();
 
             var ws = OpenSheet(await service.ExportAllClientsWithLimitsAsync());
 
-            ws.Cell(FirstDataRow, 1).GetString().Should().Be("ACME");
-            ws.Cell(FirstDataRow, 2).GetString().Should().Be("Izloženost");
-            ws.Cell(FirstDataRow, 3).GetValue<decimal>().Should().Be(1500.50m);
-            ws.Cell(FirstDataRow, 4).GetValue<decimal>().Should().Be(750.25m);
-            ws.Cell(FirstDataRow, 6).GetValue<decimal>().Should().Be(749.75m);
-            ws.Cell(FirstDataRow, 7).GetValue<decimal>().Should().Be(5000m);
-            ws.Cell(FirstDataRow, 9).GetString().Should().Be("seed");
+            ws.Cell(FirstDataRow, 6).GetString().Should().Be("ACME");
+            ws.Cell(FirstDataRow, 7).GetString().Should().Be("Izloženost");
+            ws.Cell(FirstDataRow, 8).GetValue<decimal>().Should().Be(1500.50m);
+            ws.Cell(FirstDataRow, 9).GetValue<decimal>().Should().Be(750.25m);
+            ws.Cell(FirstDataRow, 12).GetValue<decimal>().Should().Be(5000m);
+            ws.Cell(FirstDataRow, 13).GetValue<decimal>().Should().Be(4000m);
         }
 
         // Tačnost podataka - produkovani fajl je validan .xlsx (može se otvoriti)

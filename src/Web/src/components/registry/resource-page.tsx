@@ -19,12 +19,13 @@ import { IconIndicator, type IndicatorKind } from "@/components/registry/icon-in
 import { apiClient, apiErrorMessage } from "@/lib/api/http-client";
 import { getLegacyRecords, type LegacyRecord } from "@/lib/api/legacy-client";
 import { canWriteApplicationAccess } from "@/lib/auth/application-access";
+import { getCurrentUser } from "@/lib/auth/current-user";
 import type { RegistryResource, ResourceField } from "@/lib/registry/resources";
 
 type EditorState = { readonly mode: "create" | "edit"; readonly record?: LegacyRecord } | null;
 const EMPTY_RECORDS: readonly LegacyRecord[] = [];
 
-export function ResourcePage({ resource, toolbar }: { readonly resource: RegistryResource; readonly toolbar?: ReactNode }) {
+export function ResourcePage({ resource, toolbar }: { readonly resource: RegistryResource; readonly toolbar?: ReactNode | ((search: string) => ReactNode) }) {
   const { t, i18n } = useTranslation("registry");
   const bs = i18n.language.startsWith("bs");
   const cache = useQueryClient();
@@ -32,6 +33,7 @@ export function ResourcePage({ resource, toolbar }: { readonly resource: Registr
   const [editor, setEditor] = useState<EditorState>(null);
   const [deleteId, setDeleteId] = useState<string>();
   const canWrite = canWriteApplicationAccess(resource.accessRole);
+  const currentUsername = getCurrentUser()?.username?.trim().toLocaleLowerCase();
   const queryKey = useMemo(() => ["registry", resource.key] as const, [resource.key]);
   const query = useQuery({
     queryKey,
@@ -99,7 +101,7 @@ export function ResourcePage({ resource, toolbar }: { readonly resource: Registr
           </Text>
         </div>
         <div className="flex flex-wrap gap-2">
-          {toolbar}
+          {typeof toolbar === "function" ? toolbar(search) : toolbar}
           {canWrite && resource.capabilities?.create && (
             <Button onClick={() => setEditor({ mode: "create" })}>
               <Plus className="size-4" />
@@ -170,7 +172,7 @@ export function ResourcePage({ resource, toolbar }: { readonly resource: Registr
                       {canWrite && resource.capabilities && (
                         <td className="sticky right-0 bg-surface-default px-4 py-2 text-center align-middle">
                           <div className="flex items-center justify-center gap-1">
-                            {resource.capabilities.verifyPath && !isVerified(record) && (
+                            {resource.capabilities.verifyPath && !isVerified(record) && !isOwnRecord(record, currentUsername) && (
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -259,6 +261,12 @@ function Editor({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [step, setStep] = useState<1 | 2>(1);
   const isPhysical = resource.key === "physicalPersons";
+  const capital = useQuery({
+    queryKey: ["capital", "limit-form"],
+    queryFn: () => getLegacyRecords("/api/capital"),
+    enabled: resource.key === "limits",
+  });
+  const currentCapital = (capital.data ?? []).find((item) => String(item["datumKapitala"] ?? "").slice(0, 10) <= new Date().toISOString().slice(0, 10));
   const immediateFamily = isImmediateFamily(values["specialRelationBasis"]);
   const visibleFields = (isPhysical
     ? fields.filter((_, index) => step === 1 ? index < 6 : index >= 6)
@@ -343,13 +351,33 @@ function Editor({
               field={field}
               value={values[field.key]}
               bs={bs}
-              disabled={isConditionallyDisabled(resource.key, field.key, values)}
+              disabled={field.readOnly || isConditionallyDisabled(resource.key, field.key, values)}
               error={fieldErrors[field.key] ?? ""}
               onBlur={() => { if (isPhysical) void checkIdentity(field.key, values[field.key]); }}
-              set={(value) => { setFieldErrors((current) => ({ ...current, [field.key]: "" })); setValues((current) => updateFieldValues(resource.key, field, value, current, bs)); }}
+              set={(value) => {
+                setFieldErrors((current) => ({ ...current, [field.key]: "" }));
+                setValues((current) => updateFieldValues(resource.key, field, value, current, bs));
+                if (resource.key === "limits" && field.key === "legalEntityId" && value) {
+                  void apiClient.getLegacy<Record<string, unknown>>(`/api/legal-entities/${encodeURIComponent(String(value))}/limit-form-data`).then((client) => {
+                    const data = (client["data"] ?? client["value"] ?? client) as Record<string, unknown>;
+                    setValues((current) => ({ ...current,
+                      naziv: data["name"] ?? "",
+                      rezidentnost: data["isResident"] ? (bs ? "Rezident" : "Resident") : (bs ? "Nerezident" : "Non-resident"),
+                      fbaId: data["fbaId"] ?? "", taxNumber: data["taxNumber"] ?? "",
+                      maticniBroj: data["maticniBroj"] ?? "", gccNumber: data["gccNumber"] ?? "", gccName: data["gccName"] ?? "",
+                    }));
+                  }).catch((error) => setValidationError(apiErrorMessage(error, bs ? "Podaci pravnog lica nisu učitani." : "Legal entity data could not be loaded.")));
+                }
+              }}
             />
           ))}
         </div>
+        {resource.key === "limits" && <div className="mt-5 rounded-sm border border-border-subtle bg-surface-subtle p-4 text-sm">
+          <p className="font-semibold">{bs ? "Zajednički kapital banke (samo pregled)" : "Bank-wide capital (read-only)"}</p>
+          <p className="mt-1 text-text-secondary">{currentCapital
+            ? `${bs ? "Osnovni" : "Core"}: ${String(currentCapital["osnovniKapital"])} · ${bs ? "Regulatorni" : "Regulatory"}: ${String(currentCapital["regulatorniKapital"])} · ${bs ? "Datum" : "Date"}: ${String(currentCapital["datumKapitala"]).slice(0, 10)}`
+            : bs ? "Kapital još nije unesen; unesite ga u modulu Kapital." : "Capital has not been entered; add it in the Capital module."}</p>
+        </div>}
         {validationError && (
           <div role="alert" className="mt-5 flex items-start gap-2 rounded-sm border border-feedback-danger bg-feedback-danger/10 p-3 text-sm text-feedback-danger">
             <AlertCircle className="mt-0.5 size-4 shrink-0" />
@@ -397,10 +425,10 @@ function Field({
       ? String(item["id"] ?? item["Id"] ?? "")
       : String(item["kod"] ?? item["Kod"] ?? ""),
     labelBs: field.lookupEndpoint
-      ? `${String(item["firstName"] ?? "")} ${String(item["lastName"] ?? "")}`.trim()
+      ? String(item["name"] ?? `${String(item["firstName"] ?? "")} ${String(item["lastName"] ?? "")}`.trim())
       : field.options?.find((option) => String(option.value) === String(item["kod"] ?? item["Kod"] ?? ""))?.labelBs ?? String(item["naziv"] ?? item["Naziv"] ?? ""),
     labelEn: field.lookupEndpoint
-      ? `${String(item["firstName"] ?? "")} ${String(item["lastName"] ?? "")}`.trim()
+      ? String(item["name"] ?? `${String(item["firstName"] ?? "")} ${String(item["lastName"] ?? "")}`.trim())
       : field.options?.find((option) => String(option.value) === String(item["kod"] ?? item["Kod"] ?? ""))?.labelEn ?? String(item["naziv"] ?? item["Naziv"] ?? ""),
   })).filter((item) => item.value);
   const options = dynamicOptions.length > 0 ? dynamicOptions : field.options;
@@ -658,6 +686,7 @@ function fieldLabel(resource: RegistryResource, key: string, bs: boolean) {
     subject: ["Naslov", "Subject"], audience: ["Grupa primalaca", "Audience"], sentAt: ["Poslano", "Sent"],
     purpose: ["Poslovna svrha", "Business purpose"], deliveryStatus: ["Status dostave", "Delivery status"],
     personTypeLabel: ["Vrsta lica", "Person type"],
+    legalEntityName: ["Pravno lice", "Legal entity"],
   };
   return field ? (bs ? field.labelBs : field.labelEn) : known[key]?.[bs ? 0 : 1] ?? humanize(key);
 }
@@ -717,6 +746,12 @@ function isValidJmbg(value: string) {
 function isVerified(record: LegacyRecord) {
   const value = String(record["statusLabel"] ?? record["status"] ?? "").toLowerCase();
   return value === "verified" || value === "verificiran" || value === "3";
+}
+
+function isOwnRecord(record: LegacyRecord, currentUsername?: string) {
+  if (!currentUsername) return false;
+  const createdBy = record["createdBy"] ?? record["CreatedBy"];
+  return typeof createdBy === "string" && createdBy.trim().toLocaleLowerCase() === currentUsername;
 }
 function errorMessage(error: unknown, bs: boolean) {
   return apiErrorMessage(

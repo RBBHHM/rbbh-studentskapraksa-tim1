@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
+using RBBH.ConnectedParties.Helpers.Constants;
 
 namespace RBBH.ConnectedParties.IoC.Extensions.Authentication;
 
@@ -17,6 +18,14 @@ public sealed class DevelopmentAuthenticationOptions : AuthenticationSchemeOptio
 public sealed class DevelopmentAuthenticationHandler : AuthenticationHandler<DevelopmentAuthenticationOptions>
 {
     public const string SchemeName = "LocalDevelopment";
+    public const string UserHeader = "X-Development-User";
+
+    private static readonly IReadOnlyDictionary<string, (string Id, string Name, string Email)> Users =
+        new Dictionary<string, (string, string, string)>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["admin1"] = ("local-admin", "Lokalni administrator", "admin1@raiffeisengroup.ba"),
+            ["verifier1"] = ("local-verifier", "Lokalni verifikator", "verifier1@raiffeisengroup.ba")
+        };
 
     public DevelopmentAuthenticationHandler(
         IOptionsMonitor<DevelopmentAuthenticationOptions> options,
@@ -31,15 +40,26 @@ public sealed class DevelopmentAuthenticationHandler : AuthenticationHandler<Dev
         if (!Options.Enabled)
             return Task.FromResult(AuthenticateResult.NoResult());
 
+        var requestedUsername = Request.Headers[UserHeader].FirstOrDefault();
+        var username = requestedUsername is not null && Users.ContainsKey(requestedUsername)
+            ? requestedUsername
+            : "admin1";
+        var user = Users[username];
+
         var claims = new List<Claim>
         {
-            new(ClaimTypes.NameIdentifier, "local-development-user"),
-            new("sub", "local-development-user"),
-            new(ClaimTypes.Name, "Lokalni razvojni korisnik"),
-            new("name", "Lokalni razvojni korisnik"),
-            new("preferred_username", "admin1"),
-            new(ClaimTypes.Email, "admin@localhost"),
+            new(ClaimTypes.NameIdentifier, user.Id),
+            new("sub", user.Id),
+            new(ClaimTypes.Name, user.Name),
+            new("name", user.Name),
+            new("preferred_username", username),
+            new(ClaimTypes.Email, user.Email),
         };
+
+        claims.AddRange(ApplicationAccessRoles.Assignable.Select(role =>
+            new Claim(ClaimTypes.Role, role)));
+        claims.AddRange(ApplicationPermissions.All.Select(permission =>
+            new Claim("permission", permission)));
 
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, SchemeName));
         return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, SchemeName)));

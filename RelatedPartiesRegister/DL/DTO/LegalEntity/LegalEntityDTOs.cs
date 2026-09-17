@@ -36,9 +36,9 @@ public class CreateLegalEntityDTO
 
     [StringLength(500)]
     public string? ConnectionDescription { get; set; }
+    [StringLength(100)] public string? SpecialRelationBasis { get; set; }
 
-    public bool? ConnectedWithBank { get; set; }
-
+    [Required(ErrorMessage = "Datum od je obavezan.")]
     public DateTime? DateFrom { get; set; }
     public DateTime? DateTo { get; set; }
 }
@@ -71,9 +71,9 @@ public class UpdateLegalEntityDTO
 
     [StringLength(500)]
     public string? ConnectionDescription { get; set; }
+    [StringLength(100)] public string? SpecialRelationBasis { get; set; }
 
-    public bool? ConnectedWithBank { get; set; }
-
+    [Required(ErrorMessage = "Datum od je obavezan.")]
     public DateTime? DateFrom { get; set; }
     public DateTime? DateTo { get; set; }
 
@@ -91,10 +91,12 @@ public class LegalEntityDTO
     public string? FbaId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? Matbroj { get; set; }
+    public string? GCCNumber { get; set; }
+    public string? GCCName { get; set; }
     public string BasisOfConnection { get; set; } = string.Empty;
     public string? ConnectionDescription { get; set; }
-    public bool? ConnectedWithBank { get; set; }
-    public DateTime? DateFrom { get; set; }
+    public string? SpecialRelationBasis { get; set; }
+    public DateTime DateFrom { get; set; }
     public DateTime? DateTo { get; set; }
     public string Status { get; set; } = string.Empty;
     public string CreatedBy { get; set; } = string.Empty;
@@ -122,6 +124,8 @@ public class LegalEntityLookupDTO
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
+    public string? GCCNumber { get; set; }
+    public string? GCCName { get; set; }
     public string? MaticniBroj { get; set; }
     public string? TaxNumber { get; set; }
 }
@@ -137,4 +141,6 @@ public class LegalEntityLimitFormDataDTO
     public string? TaxNumber { get; set; }
     public string? MaticniBroj { get; set; }
     public string Name { get; set; } = string.Empty;
+    public string? GCCNumber { get; set; }
+    public string? GCCName { get; set; }
 }

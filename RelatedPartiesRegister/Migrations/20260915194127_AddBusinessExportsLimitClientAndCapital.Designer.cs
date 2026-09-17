@@ -3,17 +3,20 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RBBH.ConnectedParties.DL.Persistence;
 
 #nullable disable
 
-namespace RBBH.ConnectedParties.Migrations
+namespace RBBH.ConnectedParties.Api.Migrations
 {
     [DbContext(typeof(ConnectedPartiesDbContext))]
-    partial class ConnectedPartiesDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260915194127_AddBusinessExportsLimitClientAndCapital")]
+    partial class AddBusinessExportsLimitClientAndCapital
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -75,49 +78,6 @@ namespace RBBH.ConnectedParties.Migrations
                     b.HasIndex("Username");
 
                     b.ToTable("AuditLogs");
-                });
-
-            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Capital.Capital", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<DateTime>("DatumKapitala")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("DopunskiKapital")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime?>("ModifiedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ModifiedBy")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<decimal>("OsnovniKapital")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("RegulatorniKapital")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DatumKapitala")
-                        .IsUnique();
-
-                    b.ToTable("Capital", (string)null);
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntity", b =>
@@ -240,6 +200,12 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<DateTime?>("DatumKapitala")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("DopunskiKapital")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<decimal>("IznosLimita")
                         .HasColumnType("decimal(18,2)");
 
@@ -267,6 +233,12 @@ namespace RBBH.ConnectedParties.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("OsnovniKapital")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("RegulatorniKapital")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("RokUtilizacije")
                         .HasColumnType("datetime2");

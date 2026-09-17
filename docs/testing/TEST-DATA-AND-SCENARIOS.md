@@ -15,7 +15,7 @@ Dokument pokriva lokalni InMemory/SQL Server seed, UI, validacije i glavne API t
 - Fizička lica: Amina Hadžić / zaposlenik / rezident / sintetički JMBG `0101990170003` / Verified; Marko Kovač / zaposlenik / nerezident / pasoš `P-DEMO-2026` / Draft; Lejla Testić / zaposlenik / `P-REJECT-01` / Rejected.
 - Uža porodica u istoj tabeli fizičkih lica: Emir Hadžić (bračni partner Amine) i Ana Kovač (dijete Marka). Oba zapisa imaju `UZA_PORODICA`, popunjenu vezu prema postojećem licu i zaključane propisane DA/NE vrijednosti.
 - Pravna lica: `RBI Poslovni partner d.o.o.`, porezni broj `4200000000001`, Verified; `International Partner GmbH`, FBA `2002`, Draft.
-- Limiti: Ukupna izloženost 1.000.000/425.000; Interni operativni limit 500.000/125.000.
+- Limiti: `MM` za RBI Poslovni partner 1.000.000/425.000 i `OVL` za International Partner 500.000/125.000; oba imaju sva tri kapitala i datum kapitala.
 - Izvještaji: DAILY i MONTHLY te jedan probijeni EUR limit.
 - Periodi: tekući otključan; prethodni zaključan; PENDING i REJECTED zahtjev za otključavanje.
 - Šifrarnici: TipLica, OsnovPovezanosti, VrstaLimita, Status, Srodstvo i OsnovPosebnogOdnosa.
@@ -32,7 +32,7 @@ Dokument pokriva lokalni InMemory/SQL Server seed, UI, validacije i glavne API t
 
 ### Limit
 
-Naziv `Test limit`, tip `INT`, iznos 100000 i utilizacija 25000. Raspoloživi limit mora biti izveden. Zatim na zasebnoj stranici Kapital postaviti regulatorni kapital 500000 i osnovni kapital 400000; vrijednosti ostaju u istom zapisu limita u bazi.
+Odabrati pravno lice `RBI Poslovni partner d.o.o.`, tip `MM` iz šifrarnika, odobreni iznos 100000 i maksimalno očekivanu utilizaciju 25000. Identifikatori i naziv klijenta prepisuju se iz pravnog lica. Aplikacija ne računa niti prikazuje raspoloživi limit. Na zasebnoj stranici Kapital unijeti osnovni 400000, regulatorni 500000, dopunski 50000 i datum kapitala. To je jedan zajednički zapis, a ne podatak pojedinačnog limita; provjeriti isti osnovni/regulatorni kapital na svim limitima i dopunski samo u Kapital exportu.
 
 ### Korisnik
 
@@ -43,7 +43,7 @@ Username `test.korisnik`, ime `Test`, prezime `Korisnik`, e-mail `test.korisnik@
 - Rezident bez JMBG-a, pogrešna dužina/kontrolna cifra JMBG-a ili duplikat.
 - Nerezident bez pasoša; istovremeni JMBG i pasoš koji krše tip rezidentnosti.
 - Prazno ime/prezime/naziv, samo razmaci, pretjerana dužina i nedozvoljeni znakovi.
-- Datum do prije datuma od; negativni novčani iznosi; utilizacija iznad limita gdje pravilo to zabranjuje.
+- Datum do prije datuma od; negativni novčani iznosi; negativna maksimalno očekivana utilizacija.
 - Duplikat poreznog broja/FBA ID-a; e-mail bez `@raiffeisengroup.ba`; duplikat e-maila ili usernamea.
 - Brisanje šifrarnika/vrijednosti u upotrebi mora vratiti 409 i jasnu poruku.
 - Random, prazni, prevelik ili pogrešno strukturiran Excel mora navesti grešku po redu/koloni; ne smije prijaviti samo “0 uvezeno”.
@@ -53,11 +53,11 @@ Username `test.korisnik`, ime `Test`, prezime `Korisnik`, e-mail `test.korisnik@
 1. GET liste/detalja za `legal-entities`, `related-persons`, `limiti`, `code-lists`, `users`, `reports`, `period-lock`, `audit-logs`.
 2. POST validnog zapisa -> 201/200; lista se automatski osvježava bez Refresh dugmeta.
 3. PUT izmijenjenog komentara i ostalih polja -> vrijednost ostaje nakon ponovnog GET-a.
-4. VERIFY Draft zapisa -> status postaje Verified i verify akcija nestaje.
+4. VERIFY Draft zapisa drugim ovlaštenim korisnikom -> status postaje Verified i verify akcija nestaje. Autor zapisa ne smije verificirati vlastiti unos.
 5. DELETE -> potvrda kroz RBI dialog, zapis nestaje; ponovljeni DELETE daje kontrolisan 404.
 6. Član uže porodice: kreirati kroz glavnu formu fizičkih lica; provjeriti automatske DA/NE vrijednosti, obaveznu povezanu osobu, obavezno srodstvo i zabranu samoveze.
 7. Period: lock, request-unlock, request-info, respond, reject/unlock; svaka tranzicija mijenja status i audit.
-8. Izvještaji: generiši dnevni/mjesečni, zatim preuzmi generisani fajl i export jednog/svih klijenata.
+8. Izvještaji: generiši dnevni/mjesečni, zatim preuzmi generisani fajl i export jednog/svih klijenata. U Limitima pretraži po matičnom/poreznom/FBA broju i potvrdi da export sadrži samo taj rezultat.
 9. Users: dodijeli više pristupa, ukloni pristup, deaktiviraj/reaktiviraj i trajno izbriši dozvoljeni testni nalog.
 10. Import: preview/validacija prije upisa, parcijalne greške po redovima, potvrda samo validnih redova prema poslovnom pravilu.
 11. Excel export: preuzeti fizička lica, pravna lica, limite i regulatorne izvještaje; otvoriti `.xlsx` i provjeriti RBI zaglavlje, filtere, datume i broj redova.
@@ -67,6 +67,6 @@ Username `test.korisnik`, ime `Test`, prezime `Korisnik`, e-mail `test.korisnik@
 
 ## Automatizovani testovi
 
-- `dotnet test RelatedPartiesRegister/RelatedPartiesRegister.sln --configuration Release`: 191 unit + 52 integration testa.
+- `dotnet test RelatedPartiesRegister/RelatedPartiesRegister.sln --configuration Release`: 211 unit + 52 integration testa.
 - `cd src/Web; pnpm test; pnpm build`: CSS/logo/surface ugovor i production bundle.
 - Posebno su pokriveni JMBG/porezni broj, korisnički e-mail, CRUD, izvještaji, Excel export, servisni rezultati i HTTP integracija.

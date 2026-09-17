@@ -136,6 +136,8 @@ public class RelatedPersonResponseDTO
     public string? JMBG { get; set; }
     public string? PassportNumber { get; set; }
     public string? FBAId { get; set; }
+    public string? GCCNumber { get; set; }
+    public string? GCCName { get; set; }
 
     public string? RelationBasis { get; set; }
     public string? RelationDescription { get; set; }
@@ -154,6 +156,7 @@ public class RelatedPersonResponseDTO
 
     public Guid? RelatedToPersonId { get; set; }
     public string? RelatedToPersonName { get; set; }
+    public string? RelatedToPersonJMBG { get; set; }
 
     public RelatedPersonStatus Status { get; set; }
     public string StatusLabel => Status.ToString();

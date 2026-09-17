@@ -35,7 +35,6 @@ namespace UnitTests.Services.LegalEntityServiceTests
             Name = "Rezidentno DOO",
             BasisOfConnection = "Vlasništvo",
             ConnectionDescription = "Opis povezanosti",
-            ConnectedWithBank = true,
             DateFrom = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
         };
 
@@ -46,9 +45,24 @@ namespace UnitTests.Services.LegalEntityServiceTests
             Name = "Nerezidentno LLC",
             BasisOfConnection = "Vlasništvo",
             ConnectionDescription = "Opis povezanosti",
-            ConnectedWithBank = true,
             DateFrom = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
         };
+
+        [Fact]
+        public async Task NameWithBosnianLetters_IsStoredAndFoundRegardlessOfCase()
+        {
+            var service = NewService(out _);
+            var dto = ValidResidentDto();
+            dto.Name = "ŠĐČĆŽ d.o.o.";
+
+            var created = await service.CreateAsync(dto, "tester");
+            created.Name.Should().Be(dto.Name);
+
+            var list = await service.GetAllAsync(1, 20, "šđčćž");
+            list.Items.Should().ContainSingle(x => x.Id == created.Id);
+            var lookup = await service.SearchForLimitsAsync("šđčćž");
+            lookup.Should().ContainSingle(x => x.Id == created.Id);
+        }
 
         // ── PL-57 - Rezidentna pravna lica ─────────────────────────────────────────
 
@@ -221,6 +235,30 @@ namespace UnitTests.Services.LegalEntityServiceTests
             // Assert
             result.TaxNumber.Should().BeNull();
             result.FbaId.Should().Be("1234567890");
+        }
+
+        [Fact]
+        public async Task VerifyAsync_WhenVerifierCreatedRecord_ThrowsValidationException()
+        {
+            var service = NewService(out _);
+            var created = await service.CreateAsync(ValidResidentDto(), "author.user");
+
+            var act = async () => await service.VerifyAsync(created.Id, "AUTHOR.USER");
+
+            (await act.Should().ThrowAsync<ValidationException>())
+                .Which.Field.Should().Be("verifiedBy");
+        }
+
+        [Fact]
+        public async Task VerifyAsync_WhenVerifierIsDifferentUser_VerifiesRecord()
+        {
+            var service = NewService(out _);
+            var created = await service.CreateAsync(ValidResidentDto(), "author.user");
+
+            var verified = await service.VerifyAsync(created.Id, "verifier.user");
+
+            verified.Status.Should().Be("Verified");
+            verified.VerifiedBy.Should().Be("verifier.user");
         }
     }
 }

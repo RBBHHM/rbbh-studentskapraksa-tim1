@@ -3,17 +3,20 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RBBH.ConnectedParties.DL.Persistence;
 
 #nullable disable
 
-namespace RBBH.ConnectedParties.Migrations
+namespace RBBH.ConnectedParties.Api.Migrations
 {
     [DbContext(typeof(ConnectedPartiesDbContext))]
-    partial class ConnectedPartiesDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260916080508_MakeCapitalBankWide")]
+    partial class MakeCapitalBankWide
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -240,6 +243,12 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<DateTime?>("DatumKapitala")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("DopunskiKapital")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<decimal>("IznosLimita")
                         .HasColumnType("decimal(18,2)");
 
@@ -267,6 +276,12 @@ namespace RBBH.ConnectedParties.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("OsnovniKapital")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("RegulatorniKapital")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("RokUtilizacije")
                         .HasColumnType("datetime2");

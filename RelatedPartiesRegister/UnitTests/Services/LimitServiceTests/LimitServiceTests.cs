@@ -65,9 +65,7 @@ namespace UnitTests.Services.LimitServiceTests
                 Naziv = "Novi limit",
                 TipLimita = "Regulatorni",
                 IznosLimita = 500_000m,
-                Utilizacija = 50_000m,
-                RegulatorniKapital = 2_000_000m,
-                OsnovniKapital = 1_000_000m
+                MaksimalnoOcekivanaUtilizacija = 50_000m,
             };
 
             var result = await _service.Create(dto, "test.user");
@@ -75,27 +73,26 @@ namespace UnitTests.Services.LimitServiceTests
             Assert.True(result.IsSuccessful);
             Assert.NotNull(result.Value);
             Assert.Equal("Novi limit", result.Value.Naziv);
-            Assert.Equal(450_000m, result.Value.RaspoloziviLimit);
+            Assert.Equal(50_000m, result.Value.MaksimalnoOcekivanaUtilizacija);
         }
 
         [Fact]
-        public async Task Create_WithKorigovaniLimit_CalculatesRaspoloziviLimitCorrectly()
+        public async Task Create_WithKorigovaniLimit_DoesNotCalculateDerivedValues()
         {
             var dto = new CreateLimitDTO
             {
                 Naziv = "Limit s korigovanim",
                 TipLimita = "Interni",
                 IznosLimita = 1_000_000m,
-                Utilizacija = 100_000m,
+                MaksimalnoOcekivanaUtilizacija = 100_000m,
                 KorigovaniLimit = 800_000m,
-                RegulatorniKapital = 3_000_000m,
-                OsnovniKapital = 2_000_000m
             };
 
             var result = await _service.Create(dto, "test.user");
 
             Assert.True(result.IsSuccessful);
-            Assert.Equal(700_000m, result.Value!.RaspoloziviLimit);
+            Assert.Equal(100_000m, result.Value!.MaksimalnoOcekivanaUtilizacija);
+            Assert.Equal(800_000m, result.Value.KorigovaniLimit);
         }
 
         // Create - validacije
@@ -108,9 +105,7 @@ namespace UnitTests.Services.LimitServiceTests
                 Naziv = "",
                 TipLimita = "Regulatorni",
                 IznosLimita = 100_000m,
-                Utilizacija = 10_000m,
-                RegulatorniKapital = 500_000m,
-                OsnovniKapital = 300_000m
+                MaksimalnoOcekivanaUtilizacija = 10_000m,
             };
 
             var result = await _service.Create(dto, "test.user");
@@ -127,9 +122,7 @@ namespace UnitTests.Services.LimitServiceTests
                 Naziv = new string('A', 101),
                 TipLimita = "Regulatorni",
                 IznosLimita = 100_000m,
-                Utilizacija = 10_000m,
-                RegulatorniKapital = 500_000m,
-                OsnovniKapital = 300_000m
+                MaksimalnoOcekivanaUtilizacija = 10_000m,
             };
 
             var result = await _service.Create(dto, "test.user");
@@ -145,9 +138,7 @@ namespace UnitTests.Services.LimitServiceTests
                 Naziv = "Validan naziv",
                 TipLimita = "",
                 IznosLimita = 100_000m,
-                Utilizacija = 10_000m,
-                RegulatorniKapital = 500_000m,
-                OsnovniKapital = 300_000m
+                MaksimalnoOcekivanaUtilizacija = 10_000m,
             };
 
             var result = await _service.Create(dto, "test.user");
@@ -164,15 +155,13 @@ namespace UnitTests.Services.LimitServiceTests
                 Naziv = "Validan naziv",
                 TipLimita = "Regulatorni",
                 IznosLimita = 100_000m,
-                Utilizacija = 10_000m,
-                RegulatorniKapital = null,
-                OsnovniKapital = 300_000m
+                MaksimalnoOcekivanaUtilizacija = 10_000m,
             };
 
             var result = await _service.Create(dto, "test.user");
 
             Assert.True(result.IsSuccessful);
-            Assert.Equal(0, result.Value!.RegulatorniKapital);
+            Assert.Null(result.Value!.RegulatorniKapital);
         }
 
         [Fact]
@@ -183,15 +172,13 @@ namespace UnitTests.Services.LimitServiceTests
                 Naziv = "Validan naziv",
                 TipLimita = "Regulatorni",
                 IznosLimita = 100_000m,
-                Utilizacija = 10_000m,
-                RegulatorniKapital = 500_000m,
-                OsnovniKapital = null
+                MaksimalnoOcekivanaUtilizacija = 10_000m,
             };
 
             var result = await _service.Create(dto, "test.user");
 
             Assert.True(result.IsSuccessful);
-            Assert.Equal(0, result.Value!.OsnovniKapital);
+            Assert.Null(result.Value!.OsnovniKapital);
         }
 
         // Update
@@ -204,16 +191,14 @@ namespace UnitTests.Services.LimitServiceTests
                 Naziv = "Izmijenjeni naziv",
                 TipLimita = "Regulatorni",
                 IznosLimita = 900_000m,
-                Utilizacija = 100_000m,
-                RegulatorniKapital = 5_000_000m,
-                OsnovniKapital = 3_000_000m
+                MaksimalnoOcekivanaUtilizacija = 100_000m,
             };
 
             var result = await _service.Update(_fixture.ValidLimitId2, dto, "test.user");
 
             Assert.True(result.IsSuccessful);
             Assert.Equal("Izmijenjeni naziv", result.Value!.Naziv);
-            Assert.Equal(800_000m, result.Value.RaspoloziviLimit);
+            Assert.Equal(100_000m, result.Value.MaksimalnoOcekivanaUtilizacija);
         }
 
         [Fact]
@@ -224,9 +209,7 @@ namespace UnitTests.Services.LimitServiceTests
                 Naziv = "Naziv",
                 TipLimita = "Regulatorni",
                 IznosLimita = 100_000m,
-                Utilizacija = 10_000m,
-                RegulatorniKapital = 500_000m,
-                OsnovniKapital = 300_000m
+                MaksimalnoOcekivanaUtilizacija = 10_000m,
             };
 
             var result = await _service.Update(0, dto, "test.user");
@@ -243,9 +226,7 @@ namespace UnitTests.Services.LimitServiceTests
                 Naziv = "Naziv",
                 TipLimita = "Regulatorni",
                 IznosLimita = 100_000m,
-                Utilizacija = 10_000m,
-                RegulatorniKapital = 500_000m,
-                OsnovniKapital = 300_000m
+                MaksimalnoOcekivanaUtilizacija = 10_000m,
             };
 
             var result = await _service.Update(99999, dto, "test.user");
@@ -261,9 +242,7 @@ namespace UnitTests.Services.LimitServiceTests
                 Naziv = "   ",
                 TipLimita = "Regulatorni",
                 IznosLimita = 100_000m,
-                Utilizacija = 10_000m,
-                RegulatorniKapital = 500_000m,
-                OsnovniKapital = 300_000m
+                MaksimalnoOcekivanaUtilizacija = 10_000m,
             };
 
             var result = await _service.Update(_fixture.ValidLimitId, dto, "test.user");
@@ -282,9 +261,7 @@ namespace UnitTests.Services.LimitServiceTests
                 Naziv = "Limit za brisanje",
                 TipLimita = "Interni",
                 IznosLimita = 100_000m,
-                Utilizacija = 0m,
-                RegulatorniKapital = 500_000m,
-                OsnovniKapital = 300_000m
+                MaksimalnoOcekivanaUtilizacija = 0m,
             };
             var created = await _service.Create(createDto, "test.user");
             var idZaBrisanje = created.Value!.Id;

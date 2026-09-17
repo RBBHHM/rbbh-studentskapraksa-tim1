@@ -37,6 +37,7 @@ export interface ResourceField {
   readonly pattern?: string;
   readonly codeListCategory?: string;
   readonly lookupEndpoint?: string;
+  readonly readOnly?: boolean;
   readonly valueKind?: "string" | "number";
   readonly options?: readonly {
     readonly value: string | number | boolean;
@@ -135,14 +136,7 @@ export const registryResources: readonly RegistryResource[] = [
           type: "textarea",
           required: true,
         },
-        {
-          key: "connectedWithBank",
-          labelBs: "Povezan s bankom",
-          labelEn: "Connected with bank",
-          type: "segmented",
-          required: true,
-          options: yesNoOptions,
-        },
+        { key: "specialRelationBasis", labelBs: "Osnov posebnog odnosa", labelEn: "Special relationship basis", type: "select", codeListCategory: "OsnovPosebnogOdnosa", options: specialRelationshipOptions },
         { key: "dateFrom", labelBs: "Datum od", labelEn: "Date from", type: "date", required: true },
         { key: "dateTo", labelBs: "Datum do", labelEn: "Date to", type: "date" },
       ],
@@ -225,6 +219,7 @@ export const registryResources: readonly RegistryResource[] = [
     key: "limits",
     path: "/app/limits",
     endpoint: "/api/limiti",
+    displayColumns: ["legalEntityName", "tipLimita", "iznosLimita", "maksimalnoOcekivanaUtilizacija", "rokUtilizacije", "komentar"],
     icon: Scale,
     area: "work",
     accessRole: "limiti",
@@ -233,23 +228,21 @@ export const registryResources: readonly RegistryResource[] = [
       update: true,
       remove: true,
       fields: [
-        { key: "naziv", labelBs: "Naziv", labelEn: "Name", required: true },
-        { key: "tipLimita", labelBs: "Tip limita", labelEn: "Limit type", type: "select", required: true, codeListCategory: "VrstaLimita", options: [
-          { value: "REG", labelBs: "Regulatorni limit", labelEn: "Regulatory limit" },
-          { value: "INT", labelBs: "Interni limit", labelEn: "Internal limit" },
-        ] },
-        { key: "iznosLimita", labelBs: "Iznos limita", labelEn: "Limit amount", type: "number" },
-        { key: "utilizacija", labelBs: "Utilizacija", labelEn: "Utilisation", type: "number" },
-        {
-          key: "korigovaniLimit",
-          labelBs: "Korigovani limit",
-          labelEn: "Adjusted limit",
-          type: "number",
-        },
+        { key: "legalEntityId", labelBs: "Pravno lice", labelEn: "Legal entity", type: "select", required: true, lookupEndpoint: "/api/legal-entities/limits/search" },
+        { key: "naziv", labelBs: "Naziv", labelEn: "Name", required: true, readOnly: true },
+        { key: "rezidentnost", labelBs: "Rezidentnost", labelEn: "Residency", readOnly: true },
+        { key: "fbaId", labelBs: "FBA ID", labelEn: "FBA ID", readOnly: true },
+        { key: "taxNumber", labelBs: "Porezni broj", labelEn: "Tax number", readOnly: true },
+        { key: "maticniBroj", labelBs: "Matbroj/JMBG", labelEn: "Registration/National ID", readOnly: true },
+        { key: "gccNumber", labelBs: "GCC broj", labelEn: "GCC number", readOnly: true },
+        { key: "gccName", labelBs: "GCC naziv", labelEn: "GCC name", readOnly: true },
+        { key: "tipLimita", labelBs: "Tip limita", labelEn: "Limit type", type: "select", required: true, codeListCategory: "VrstaLimita" },
+        { key: "iznosLimita", labelBs: "Odobreni limit", labelEn: "Approved limit", type: "number" },
+        { key: "maksimalnoOcekivanaUtilizacija", labelBs: "Maksimalno očekivana utilizacija", labelEn: "Maximum expected utilisation", type: "number" },
         {
           key: "rokUtilizacije",
-          labelBs: "Rok utilizacije",
-          labelEn: "Utilisation deadline",
+          labelBs: "Rok maksimalno očekivane utilizacije",
+          labelEn: "Maximum expected utilisation deadline",
           type: "date",
         },
         { key: "komentar", labelBs: "Komentar", labelEn: "Comment" },
@@ -259,7 +252,7 @@ export const registryResources: readonly RegistryResource[] = [
   {
     key: "capital",
     path: "/app/capital",
-    endpoint: "/api/limiti",
+    endpoint: "/api/capital",
     icon: Landmark,
     area: "work",
     accessRole: "kapital",

@@ -60,9 +60,9 @@ public class LegalEntityController : ControllerBase
         var items = await _legalEntityService.GetAllForExportAsync();
         var bytes = RegistryExcelExporter.Create(
             "Pravna lica",
-            ["Naziv", "Rezidentnost", "Porezni broj", "Matični broj", "FBA ID", "Osnov povezanosti", "Opis povezanosti", "Povezano s bankom", "Datum od", "Datum do", "Status"],
+            ["Redni broj", "Rezidentnost", "FBA_ID", "Porez broj", "Matbroj", "Naziv", "Osnov povezanosti", "Osnov posebnog odnosa", "Datum od", "Datum do", "Datum izmjene", "user_verified"],
             items.Select(item => (IReadOnlyList<object?>)
-            [item.Name, item.IsResident ? "Rezident" : "Nerezident", item.TaxNumber, item.MaticniBroj, item.FbaId, item.BasisOfConnection, item.ConnectionDescription, item.ConnectedWithBank, item.DateFrom, item.DateTo, item.Status]));
+            [items.IndexOf(item) + 1, item.IsResident ? "Rezident" : "Nerezident", item.FbaId, item.TaxNumber, item.Matbroj ?? item.MaticniBroj, item.Name, item.BasisOfConnection, item.SpecialRelationBasis, item.DateFrom, item.DateTo, item.ModifiedAt ?? item.CreatedAt, item.VerifiedBy]));
         return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"pravna-lica-{DateTime.UtcNow:yyyyMMdd-HHmm}.xlsx");
     }
 

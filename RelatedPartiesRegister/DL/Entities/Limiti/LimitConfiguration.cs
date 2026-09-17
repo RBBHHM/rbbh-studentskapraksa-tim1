@@ -19,13 +19,8 @@ public class LimitConfiguration : IEntityTypeConfiguration<Limit>
                .HasMaxLength(100)
                .IsRequired();
 
-        builder.Property(e => e.RegulatorniKapital)
-               .HasColumnType("decimal(18,2)")
-               .IsRequired();
-
-        builder.Property(e => e.OsnovniKapital)
-               .HasColumnType("decimal(18,2)")
-               .IsRequired();
+        builder.HasOne(e => e.LegalEntity).WithMany().HasForeignKey(e => e.LegalEntityId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(e => e.LegalEntityId);
 
         builder.Property(e => e.CreatedBy)
                .HasMaxLength(100)

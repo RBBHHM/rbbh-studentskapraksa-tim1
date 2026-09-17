@@ -25,6 +25,8 @@ public class RelatedPersonConfiguration : IEntityTypeConfiguration<RelatedPerson
         builder.Property(e => e.JMBG).HasMaxLength(13);
         builder.Property(e => e.PassportNumber).HasMaxLength(50);
         builder.Property(e => e.FBAId).HasMaxLength(50);
+        builder.Property(e => e.GCCNumber).HasMaxLength(50);
+        builder.Property(e => e.GCCName).HasMaxLength(200);
 
         builder.Property(e => e.RelationBasis).HasMaxLength(500);
         builder.Property(e => e.RelationDescription).HasMaxLength(1000);

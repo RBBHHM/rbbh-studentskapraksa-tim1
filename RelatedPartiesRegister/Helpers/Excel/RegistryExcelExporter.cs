@@ -41,6 +41,65 @@ public static class RegistryExcelExporter
         return stream.ToArray();
     }
 
+    /// <summary>Report layout shared with regulatory reporting: title, timestamp, dark headings and striped rows.</summary>
+    public static byte[] CreateReport(
+        string sheetName,
+        IReadOnlyList<string> headers,
+        IEnumerable<IReadOnlyList<object?>> rows)
+    {
+        using var workbook = new XLWorkbook();
+        var sheet = workbook.Worksheets.Add(SafeSheetName(sheetName));
+        var columnCount = headers.Count;
+        sheet.Style.Font.FontName = "Amalia";
+        sheet.Style.Font.FontSize = 10;
+
+        var title = sheet.Range(1, 1, 1, columnCount);
+        title.Merge();
+        title.FirstCell().Value = sheetName;
+        title.Style.Fill.BackgroundColor = XLColor.FromHtml("#FFE600");
+        title.Style.Font.FontColor = XLColor.FromHtml("#181818");
+        title.Style.Font.FontSize = 20;
+        title.Style.Font.Bold = true;
+        sheet.Row(1).Height = 34;
+
+        var timestamp = sheet.Range(2, 1, 2, columnCount);
+        timestamp.Merge();
+        timestamp.FirstCell().Value = $"Generisano: {DateTime.Now:dd.MM.yyyy HH:mm}";
+        timestamp.Style.Font.Italic = true;
+        timestamp.Style.Font.FontColor = XLColor.FromHtml("#555555");
+
+        for (var column = 0; column < columnCount; column++)
+            sheet.Cell(3, column + 1).Value = headers[column];
+        var heading = sheet.Range(3, 1, 3, columnCount);
+        heading.Style.Fill.BackgroundColor = XLColor.FromHtml("#1A1A1A");
+        heading.Style.Font.FontColor = XLColor.White;
+        heading.Style.Font.Bold = true;
+        heading.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+        sheet.Row(3).Height = 26;
+
+        var rowNumber = 4;
+        foreach (var row in rows)
+        {
+            var dataRow = sheet.Range(rowNumber, 1, rowNumber, columnCount);
+            dataRow.Style.Fill.BackgroundColor = rowNumber % 2 == 0 ? XLColor.White : XLColor.FromHtml("#F5F5F5");
+            for (var column = 0; column < columnCount; column++)
+                SetValue(sheet.Cell(rowNumber, column + 1), column < row.Count ? row[column] : null);
+            rowNumber++;
+        }
+
+        var table = sheet.Range(3, 1, Math.Max(3, rowNumber - 1), columnCount);
+        table.Style.Border.InsideBorder = XLBorderStyleValues.Hair;
+        table.Style.Border.InsideBorderColor = XLColor.FromHtml("#DDDDDD");
+        table.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+        table.SetAutoFilter();
+        sheet.SheetView.FreezeRows(3);
+        sheet.Columns().AdjustToContents(12, 48);
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        return stream.ToArray();
+    }
+
     private static void SetValue(IXLCell cell, object? value)
     {
         switch (value)

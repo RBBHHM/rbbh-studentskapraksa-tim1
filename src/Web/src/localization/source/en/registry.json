@@ -33,7 +33,7 @@
       "title": "Individuals",
       "description": "View and manage related individuals and family relationships."
     },
-    "limits": { "title": "Limits", "description": "Regulatory limits and available amounts." },
+    "limits": { "title": "Limits", "description": "Regulatory limits and maximum expected utilisation." },
     "capital": { "title": "Capital", "description": "Manage regulatory and core capital for limits." },
     "reports": {
       "title": "Regulatory reporting",

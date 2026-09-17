@@ -9,7 +9,7 @@ Poslovna aplikacija za vođenje Registra povezanih lica: fizička i pravna lica,
 - pregled stabla povezanosti za svako fizičko lice, uključujući zaposlenike i sve njihove porodične veze;
 - Excel pregled i uvoz koji prije obrade provjerava format, broj, redoslijed i nazive kolona, a zatim svaki red;
 - RBI-stilizovan Excel izvoz fizičkih lica, pravnih lica, limita i regulatornih izvještaja;
-- evidenciju i praćenje raspoloživih limita te zasebnu Kapital stranicu za regulatorni i osnovni kapital;
+- evidenciju odobrenog limita i maksimalne očekivane utilizacije, bez pozadinskih kalkulacija, te zaseban zajednički Kapital banke (osnovni, regulatorni i dopunski kapital s datumom važenja);
 - dnevne i mjesečne regulatorne izvještaje koji se odmah mogu preuzeti kao RBI-stilizovan Excel;
 - zaključavanje perioda, zahtjev za otključavanje i obradu odgovora;
 - korisničke obavijesti, kreiranje definicija i vrijednosti šifrarnika te razumljiv revizijski trag;
@@ -67,18 +67,29 @@ se lokalna autentifikacija.
 Startup ne primjenjuje migracije i ne izvršava seed. Obje operacije pokreću se
 eksplicitno kao jednokratni developerski ili kontrolisani DB postupak.
 
+Referentne vrijednosti iz odobrenih poslovnih tabela mogu se sigurno i više puta
+primijeniti SQL Server skriptom `scripts/database/seed-business-code-lists.sql`.
+Skripta puni 11 vrsta limita (uz oznaku izvora SATA/manuelno) i zakonske osnove
+povezanosti. Padajuća lista tipova limita čita isključivo aktivne vrijednosti iz
+baze, bez ugrađene rezervne liste na frontendu. Prije skripte primijeniti EF
+migracije kroz odobreni bankarski DB change postupak.
+
 ## Najvažnija pravila unosa
 
 - Rezidentno fizičko lice mora imati validan JMBG od 13 cifara; nerezident mora imati i pasoš i numerički FBA ID do 10 cifara.
 - Ime i prezime prihvataju slova, razmak, crticu i apostrof; JMBG provjerava datum rođenja i kontrolnu cifru, a pasoš 5–20 dozvoljenih znakova.
 - JMBG, broj pasoša i FBA ID provjeravaju se već u prvom koraku forme i ponovo na servisu i jedinstvenom SQL indeksu, pa aktivni duplikat nije moguće sačuvati.
 - Odabir člana uže porodice automatski postavlja poslovna DA/NE pravila; promjena na drugi osnov čisti te vrijednosti i zahtijeva novi svjestan odabir.
-- Fizičko lice mora imati GCC, osnov i opis povezanosti, osnov posebnog odnosa te početni i završni datum.
+- Fizičko lice mora imati osnov i opis povezanosti, osnov posebnog odnosa te početni i završni datum. GCC se ne unosi kroz formu niti prikazuje u Excel izvozu; postojeći podaci ostaju pohranjeni u bazi.
 - Rezidentno pravno lice mora imati porezni broj od 13 cifara; nerezident mora imati numerički FBA ID do 10 cifara.
-- Pravno lice mora imati naziv, GCC, osnov i opis povezanosti te početni datum.
+- Pravno lice mora imati naziv (do 100 znakova, uključujući Š, Đ, Č, Ć i Ž), osnov i opis povezanosti te početni datum. Pretraga ne razlikuje velika i mala slova; GCC se ne unosi kroz formu niti prikazuje u Excel izvozu.
 - Sistem prikazuje poslovne poruke uz konkretno polje; interne .NET/JSON poruke i tehnički detalji se ne prikazuju korisniku.
 - Nakon uspješne izmjene, verifikacije, deaktiviranja ili zaključavanja lista i status se odmah osvježavaju; ručno dugme za osvježavanje nije potrebno.
 - Padajući meniji za poslovne vrijednosti pune se iz šifrarnika u bazi; frontend zadržava samo siguran prikazni fallback ako referentni endpoint privremeno nije dostupan.
+- Export limita bez pretrage sadrži sve klijente s limitima. Kada je unesen matični broj, porezni broj ili FBA ID u pretragu, export sadrži samo tog klijenta.
+- Kapital se unosi samo jednom za datum na zasebnoj stranici. Posljednji važeći datum (ne budući) daje osnovni i regulatorni kapital svim limitima; dopunski ostaje samo u Kapitalu. Novi i izmijenjeni limit ne mijenja Kapital. Excel Kapitala izvozi sva tri iznosa i datum, a Excel Limita samo osnovni, regulatorni i datum kapitala.
+- Migracija `MakeCapitalBankWide` prenosi po jedan stari zapis za svaki datum u novu zajedničku tabelu; naredna migracija `RemoveCapitalFromLimits` uklanja duplirane kolone limita. Ako su historijski iznosi za isti datum različiti ili nenulti kapital nema datum, migracija namjerno staje: banka mora potvrditi iznos/datum prije puštanja. Napraviti backup i pregledati podatke prije odobrenog DB change postupka.
+- Excel strukture fizičkih lica, pravnih lica, limita i kapitala prate odobrena poslovna polja; dnevni i mjesečni izvještaji čuvaju presjek kapitala važećeg u trenutku generisanja.
 
 ## SQL Server i Keycloak
 

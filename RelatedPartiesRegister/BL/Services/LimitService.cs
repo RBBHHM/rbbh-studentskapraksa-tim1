@@ -22,11 +22,13 @@ public class LimitService(ConnectedPartiesDbContext dbContext) : ILimitService
     /// <inheritdoc/>
     public async Task<Result<List<LimitResponseDTO>>> GetAll()
     {
-        var items = await _dbContext.Limiti
+        var entities = await _dbContext.Limiti
             .AsNoTracking()
+            .Include(x => x.LegalEntity)
             .OrderBy(x => x.Naziv)
-            .ProjectToType<LimitResponseDTO>()
             .ToListAsync();
+        var capital = await CurrentCapital();
+        var items = entities.Select(x => ToResponse(x, capital)).ToList();
 
         return Result<List<LimitResponseDTO>>.Success(items);
     }
@@ -39,12 +41,13 @@ public class LimitService(ConnectedPartiesDbContext dbContext) : ILimitService
 
         var item = await _dbContext.Limiti
             .AsNoTracking()
+            .Include(x => x.LegalEntity)
             .FirstOrDefaultAsync(x => x.Id == id);
 
         if (item is null)
             return Result<LimitResponseDTO>.NotFoundError($"Limit s ID={id} nije pronađen.");
 
-        return Result<LimitResponseDTO>.Success(item.Adapt<LimitResponseDTO>());
+        return Result<LimitResponseDTO>.Success(ToResponse(item, await CurrentCapital()));
     }
 
     // ─── CREATE ─────────────────────────────────────────────────────────────
@@ -56,29 +59,35 @@ public class LimitService(ConnectedPartiesDbContext dbContext) : ILimitService
             dto.Naziv,
             dto.TipLimita,
             dto.IznosLimita,
-            dto.Utilizacija,
-            dto.RegulatorniKapital ?? 0,
-            dto.OsnovniKapital ?? 0);
+            dto.MaksimalnoOcekivanaUtilizacija,
+            0, 0);
 
         if (validacija is not null)
             return validacija;
 
+        var configuredTypes = _dbContext.CodeLists.Where(item => item.Kategorija == "VrstaLimita");
+        if (!await configuredTypes.AnyAsync(item => item.Kod == dto.TipLimita))
+            return Result<LimitResponseDTO>.ValidationError("Odabrani tip limita nije aktivna vrijednost šifrarnika.");
+        var client = dto.LegalEntityId.HasValue
+            ? await _dbContext.LegalEntities.FirstOrDefaultAsync(item => item.Id == dto.LegalEntityId.Value)
+            : null;
+        if (dto.LegalEntityId.HasValue && client is null)
+            return Result<LimitResponseDTO>.ValidationError("Odabrano pravno lice nije pronađeno.");
+
         var iznosLimita = dto.IznosLimita ?? 0;
-        var utilizacija = dto.Utilizacija ?? 0;
-        var raspoloziviLimit = IzracunajRaspoloziviLimit(iznosLimita, utilizacija, dto.KorigovaniLimit);
+        var maksimalnoOcekivanaUtilizacija = dto.MaksimalnoOcekivanaUtilizacija ?? 0;
 
         var entitet = new Limit
         {
-            Naziv = dto.Naziv.Trim(),
+            LegalEntityId = client?.Id,
+            Naziv = client?.Name ?? dto.Naziv.Trim(),
             TipLimita = dto.TipLimita.Trim(),
             IznosLimita = iznosLimita,
-            Utilizacija = utilizacija,
+            MaksimalnoOcekivanaUtilizacija = maksimalnoOcekivanaUtilizacija,
             KorigovaniLimit = dto.KorigovaniLimit,
-            RaspoloziviLimit = raspoloziviLimit,
             RokUtilizacije = dto.RokUtilizacije,
             Komentar = dto.Komentar?.Trim(),
-            RegulatorniKapital = dto.RegulatorniKapital ?? 0,
-            OsnovniKapital = dto.OsnovniKapital ?? 0,
+            // Legacy non-null columns remain until a controlled DB migration; capital is sourced from Capital.
             CreatedAt = DateTime.UtcNow,
             CreatedBy = korisnik,
         };
@@ -86,7 +95,8 @@ public class LimitService(ConnectedPartiesDbContext dbContext) : ILimitService
         _dbContext.Limiti.Add(entitet);
         await _dbContext.SaveChangesAsync();
 
-        return Result<LimitResponseDTO>.Success(entitet.Adapt<LimitResponseDTO>());
+        entitet.LegalEntity = client;
+        return Result<LimitResponseDTO>.Success(ToResponse(entitet, await CurrentCapital()));
     }
 
     // ─── UPDATE ─────────────────────────────────────────────────────────────
@@ -101,12 +111,21 @@ public class LimitService(ConnectedPartiesDbContext dbContext) : ILimitService
             dto.Naziv,
             dto.TipLimita,
             dto.IznosLimita,
-            dto.Utilizacija,
-            dto.RegulatorniKapital ?? 0,
-            dto.OsnovniKapital ?? 0);
+            dto.MaksimalnoOcekivanaUtilizacija,
+            0, 0);
 
         if (validacija is not null)
             return validacija;
+
+        var configuredTypes = _dbContext.CodeLists.Where(item => item.Kategorija == "VrstaLimita");
+        if (!await configuredTypes.AnyAsync(item => item.Kod == dto.TipLimita))
+            return Result<LimitResponseDTO>.ValidationError("Odabrani tip limita nije aktivna vrijednost šifrarnika.");
+
+        var client = dto.LegalEntityId.HasValue
+            ? await _dbContext.LegalEntities.FirstOrDefaultAsync(item => item.Id == dto.LegalEntityId.Value)
+            : null;
+        if (dto.LegalEntityId.HasValue && client is null)
+            return Result<LimitResponseDTO>.ValidationError("Odabrano pravno lice nije pronađeno.");
 
         var entitet = await _dbContext.Limiti
             .AsTracking()
@@ -116,44 +135,23 @@ public class LimitService(ConnectedPartiesDbContext dbContext) : ILimitService
             return Result<LimitResponseDTO>.NotFoundError($"Limit s ID={id} nije pronađen.");
 
         var iznosLimita = dto.IznosLimita ?? 0;
-        var utilizacija = dto.Utilizacija ?? 0;
-        var raspoloziviLimit = IzracunajRaspoloziviLimit(iznosLimita, utilizacija, dto.KorigovaniLimit);
+        var maksimalnoOcekivanaUtilizacija = dto.MaksimalnoOcekivanaUtilizacija ?? 0;
 
-        entitet.Naziv = dto.Naziv.Trim();
+        entitet.LegalEntityId = client?.Id ?? entitet.LegalEntityId;
+        entitet.Naziv = client?.Name ?? dto.Naziv.Trim();
         entitet.TipLimita = dto.TipLimita.Trim();
         entitet.IznosLimita = iznosLimita;
-        entitet.Utilizacija = utilizacija;
+        entitet.MaksimalnoOcekivanaUtilizacija = maksimalnoOcekivanaUtilizacija;
         entitet.KorigovaniLimit = dto.KorigovaniLimit;
-        entitet.RaspoloziviLimit = raspoloziviLimit;
         entitet.RokUtilizacije = dto.RokUtilizacije;
         entitet.Komentar = dto.Komentar?.Trim();
-        if (dto.RegulatorniKapital.HasValue) entitet.RegulatorniKapital = dto.RegulatorniKapital.Value;
-        if (dto.OsnovniKapital.HasValue) entitet.OsnovniKapital = dto.OsnovniKapital.Value;
         entitet.ModifiedAt = DateTime.UtcNow;
         entitet.ModifiedBy = korisnik;
 
         await _dbContext.SaveChangesAsync();
 
-        return Result<LimitResponseDTO>.Success(entitet.Adapt<LimitResponseDTO>());
-    }
-
-    public async Task<Result<LimitResponseDTO>> UpdateCapital(int id, UpdateCapitalDTO dto, string korisnik)
-    {
-        if (id < 1) return Result<LimitResponseDTO>.ValidationError("ID nije validan.");
-        if (!dto.RegulatorniKapital.HasValue || dto.RegulatorniKapital < 0)
-            return Result<LimitResponseDTO>.ValidationError("Regulatorni kapital je obavezan i ne može biti negativan.");
-        if (!dto.OsnovniKapital.HasValue || dto.OsnovniKapital < 0)
-            return Result<LimitResponseDTO>.ValidationError("Osnovni kapital je obavezan i ne može biti negativan.");
-
-        var entity = await _dbContext.Limiti.AsTracking().FirstOrDefaultAsync(item => item.Id == id);
-        if (entity is null) return Result<LimitResponseDTO>.NotFoundError($"Limit s ID={id} nije pronađen.");
-
-        entity.RegulatorniKapital = dto.RegulatorniKapital.Value;
-        entity.OsnovniKapital = dto.OsnovniKapital.Value;
-        entity.ModifiedAt = DateTime.UtcNow;
-        entity.ModifiedBy = korisnik;
-        await _dbContext.SaveChangesAsync();
-        return Result<LimitResponseDTO>.Success(entity.Adapt<LimitResponseDTO>());
+        entitet.LegalEntity = client ?? entitet.LegalEntity;
+        return Result<LimitResponseDTO>.Success(ToResponse(entitet, await CurrentCapital()));
     }
 
     // ─── DELETE ─────────────────────────────────────────────────────────────
@@ -180,28 +178,15 @@ public class LimitService(ConnectedPartiesDbContext dbContext) : ILimitService
     // ─── Privatne metode ────────────────────────────────────────────────────
 
     /// <summary>
-    /// Automatski obračun raspoloživog limita:
-    /// ako je korigovani limit popunjen koristi se on, inače se koristi iznos limita.
-    /// </summary>
-    private static decimal IzracunajRaspoloziviLimit(
-        decimal iznosLimita,
-        decimal utilizacija,
-        decimal? korigovaniLimit)
-    {
-        var osnovica = korigovaniLimit ?? iznosLimita;
-        return osnovica - utilizacija;
-    }
-
-    /// <summary>
     /// Validacije: Naziv obavezan (max 100 karaktera), Tip limita obavezan,
-    /// Iznos limita obavezan broj, Utilizacija obavezan broj,
+    /// Iznos limita i maksimalno očekivana utilizacija ne mogu biti negativni,
     /// Regulatorni kapital obavezan broj, Osnovni kapital obavezan broj.
     /// </summary>
     private static Result<LimitResponseDTO>? ValidateDto(
         string naziv,
         string tipLimita,
         decimal? iznosLimita,
-        decimal? utilizacija,
+        decimal? maksimalnoOcekivanaUtilizacija,
         decimal? regulatorniKapital,
         decimal? osnovniKapital)
     {
@@ -217,8 +202,8 @@ public class LimitService(ConnectedPartiesDbContext dbContext) : ILimitService
         if (iznosLimita.HasValue && iznosLimita < 0)
             return Result<LimitResponseDTO>.ValidationError("Iznos limita ne može biti negativan.");
 
-        if (utilizacija.HasValue && utilizacija < 0)
-            return Result<LimitResponseDTO>.ValidationError("Utilizacija ne može biti negativna.");
+        if (maksimalnoOcekivanaUtilizacija.HasValue && maksimalnoOcekivanaUtilizacija < 0)
+            return Result<LimitResponseDTO>.ValidationError("Maksimalno očekivana utilizacija ne može biti negativna.");
 
         if (regulatorniKapital is null)
             return Result<LimitResponseDTO>.ValidationError("Regulatorni kapital je obavezan i mora biti broj.");
@@ -234,4 +219,24 @@ public class LimitService(ConnectedPartiesDbContext dbContext) : ILimitService
 
         return null;
     }
+
+    private Task<RBBH.ConnectedParties.DL.Entities.Capital.Capital?> CurrentCapital() => _dbContext.Capitals.AsNoTracking()
+        .Where(x => x.DatumKapitala <= DateTime.UtcNow.Date)
+        .OrderByDescending(x => x.DatumKapitala).ThenByDescending(x => x.Id).FirstOrDefaultAsync();
+
+    private static LimitResponseDTO ToResponse(Limit item, RBBH.ConnectedParties.DL.Entities.Capital.Capital? capital) => new()
+    {
+        Id = item.Id, LegalEntityId = item.LegalEntityId,
+        IsResident = item.LegalEntity?.IsResident, FbaId = item.LegalEntity?.FbaId,
+        TaxNumber = item.LegalEntity?.TaxNumber,
+        MaticniBroj = item.LegalEntity?.Matbroj ?? item.LegalEntity?.MaticniBroj,
+        GCCNumber = item.LegalEntity?.GCCNumber, GCCName = item.LegalEntity?.GCCName,
+        LegalEntityName = item.LegalEntity?.Name ?? item.Naziv,
+        Naziv = item.LegalEntity?.Name ?? item.Naziv, TipLimita = item.TipLimita,
+        IznosLimita = item.IznosLimita, MaksimalnoOcekivanaUtilizacija = item.MaksimalnoOcekivanaUtilizacija,
+        KorigovaniLimit = item.KorigovaniLimit, RokUtilizacije = item.RokUtilizacije, Komentar = item.Komentar,
+        RegulatorniKapital = capital?.RegulatorniKapital, OsnovniKapital = capital?.OsnovniKapital,
+        DatumKapitala = capital?.DatumKapitala,
+        CreatedAt = item.CreatedAt, CreatedBy = item.CreatedBy, ModifiedAt = item.ModifiedAt, ModifiedBy = item.ModifiedBy
+    };
 }

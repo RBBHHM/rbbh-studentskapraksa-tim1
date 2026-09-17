@@ -16,8 +16,8 @@ namespace UnitTests.Services.ReportServiceTests
     ///
     /// Izvor podataka za izvještaj je tabela Limiti; agregati:
     ///   TotalClients = broj različitih naziva (Distinct Naziv)
-    ///   ClientsWithBreachedLimit = broj limita gdje je RaspoloziviLimit < 0
-    ///   TotalExposure = suma Utilizacija
+    ///   ClientsWithBreachedLimit = broj limita gdje očekivana utilizacija prelazi limit
+    ///   TotalExposure = suma MaksimalnoOcekivanaUtilizacija
     /// </summary>
     public class ReportGenerationTests
     {
@@ -33,9 +33,8 @@ namespace UnitTests.Services.ReportServiceTests
         {
             Naziv = naziv,
             TipLimita = tip,
-            IznosLimita = 1000m,
-            Utilizacija = utilizacija,
-            RaspoloziviLimit = raspolozivi,
+            IznosLimita = utilizacija + raspolozivi,
+            MaksimalnoOcekivanaUtilizacija = utilizacija,
             RegulatorniKapital = 5000m,
             OsnovniKapital = 4000m,
             CreatedBy = "seed",
@@ -76,7 +75,7 @@ namespace UnitTests.Services.ReportServiceTests
             report.ReportType.Should().Be("DAILY");
             report.ReportDate.Should().Be(DateTime.UtcNow.Date);
             report.TotalClients.Should().Be(2, "ACME i BETA su 2 različita klijenta");
-            report.ClientsWithBreachedLimit.Should().Be(1, "samo BETA ima RaspoloziviLimit < 0");
+            report.ClientsWithBreachedLimit.Should().Be(1, "samo BETA ima očekivanu utilizaciju iznad limita");
             report.TotalExposure.Should().Be(600m, "200 + 100 + 300");
             ctx.Reports.Should().ContainSingle(r => r.ReportType == "DAILY");
         }

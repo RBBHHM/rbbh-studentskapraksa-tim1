@@ -27,7 +27,6 @@ public class LegalEntityService : ILegalEntityService
         new("Matični broj / Registration number", "Matbroj", "Matični broj", "Registration number"),
         new("Osnov povezanosti / Connection basis", "Osnov povezanosti", "Connection basis"),
         new("Opis povezanosti / Connection description", "Opis povezanosti", "Connection description"),
-        new("Povezano lice s Bankom / Related to the Bank", "Pov. lice sa Bankom", "Povezano lice s Bankom", "Related to the Bank"),
         new("Datum od / Date from", "Datum od", "Date from"),
         new("Datum do / Date to", "Datum do", "Date to")
     ];
@@ -49,16 +48,11 @@ public class LegalEntityService : ILegalEntityService
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var term = search.Trim();
-            query = _context.Database.IsRelational()
-                ? query.Where(e => EF.Functions.Like(e.Name, $"%{term}%")
-                    || (e.TaxNumber != null && e.TaxNumber.Contains(term))
-                    || (e.MaticniBroj != null && e.MaticniBroj.Contains(term))
-                    || (e.FbaId != null && EF.Functions.Like(e.FbaId, $"%{term}%")))
-                : query.Where(e => e.Name.ToLower().Contains(term.ToLower())
-                    || (e.TaxNumber != null && e.TaxNumber.Contains(term))
-                    || (e.MaticniBroj != null && e.MaticniBroj.Contains(term))
-                    || (e.FbaId != null && e.FbaId.ToLower().Contains(term.ToLower())));
+            var term = search.Trim().ToLowerInvariant();
+            query = query.Where(e => e.Name.ToLower().Contains(term)
+                || (e.TaxNumber != null && e.TaxNumber.Contains(term))
+                || (e.MaticniBroj != null && e.MaticniBroj.Contains(term))
+                || (e.FbaId != null && e.FbaId.ToLower().Contains(term)));
         }
 
         var total = await query.CountAsync();
@@ -103,9 +97,6 @@ public class LegalEntityService : ILegalEntityService
         ValidateCreateDto(dto);
         await ValidateUniqueIdentifierAsync(dto.IsResident, dto.TaxNumber, dto.FbaId);
 
-        if (dto.ConnectedWithBank is null)
-            throw new ValidationException("connectedWithBank", "Polje 'Povezano lice sa Bankom' je obavezno.");
-
         var entity = new LegalEntity
         {
             IsResident = dto.IsResident,
@@ -116,8 +107,8 @@ public class LegalEntityService : ILegalEntityService
             Matbroj = string.IsNullOrWhiteSpace(dto.Matbroj) ? null : dto.Matbroj.Trim(),
             BasisOfConnection = dto.BasisOfConnection.Trim(),
             ConnectionDescription = dto.ConnectionDescription?.Trim(),
-            ConnectedWithBank = dto.ConnectedWithBank,
-            DateFrom = dto.DateFrom,
+            SpecialRelationBasis = dto.SpecialRelationBasis?.Trim(),
+            DateFrom = dto.DateFrom!.Value,
             DateTo = dto.DateTo,
             Status = "Draft",
             CreatedBy = createdBy,
@@ -148,9 +139,6 @@ public class LegalEntityService : ILegalEntityService
         ValidateUpdateDto(dto);
         await ValidateUniqueIdentifierAsync(dto.IsResident, dto.TaxNumber, dto.FbaId, id);
 
-        if (dto.ConnectedWithBank is null)
-            throw new ValidationException("connectedWithBank", "Polje 'Povezano lice sa Bankom' je obavezno.");
-
         entity.IsResident = dto.IsResident;
         entity.TaxNumber = dto.IsResident ? dto.TaxNumber?.Trim() : null;
         entity.FbaId = dto.IsResident ? null : dto.FbaId?.Trim();
@@ -159,8 +147,8 @@ public class LegalEntityService : ILegalEntityService
         entity.Matbroj = string.IsNullOrWhiteSpace(dto.Matbroj) ? null : dto.Matbroj.Trim();
         entity.BasisOfConnection = dto.BasisOfConnection.Trim();
         entity.ConnectionDescription = dto.ConnectionDescription?.Trim();
-        entity.ConnectedWithBank = dto.ConnectedWithBank;
-        entity.DateFrom = dto.DateFrom;
+        entity.SpecialRelationBasis = dto.SpecialRelationBasis?.Trim();
+        entity.DateFrom = dto.DateFrom!.Value;
         entity.DateTo = dto.DateTo;
         if (!string.IsNullOrWhiteSpace(dto.Status)) entity.Status = dto.Status.Trim();
         entity.ModifiedBy = modifiedBy;
@@ -209,6 +197,9 @@ public class LegalEntityService : ILegalEntityService
         if (string.Equals(entity.Status, "Verified", StringComparison.OrdinalIgnoreCase))
             throw new ValidationException("status", "Pravno lice je već verificirano.");
 
+        if (SameUser(entity.CreatedBy, verifiedBy))
+            throw new ValidationException("verifiedBy", "Korisnik koji je unio pravno lice ne može verificirati vlastiti unos.");
+
         entity.Status = "Verified";
         entity.VerifiedBy = verifiedBy;
         entity.VerifiedAt = DateTime.UtcNow;
@@ -232,12 +223,9 @@ public class LegalEntityService : ILegalEntityService
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var term = search.Trim();
-            query = _context.Database.IsRelational()
-                ? query.Where(e => EF.Functions.Like(e.Name, $"%{term}%")
-                    || (e.MaticniBroj != null && e.MaticniBroj.Contains(term)))
-                : query.Where(e => e.Name.ToLower().Contains(term.ToLower())
-                    || (e.MaticniBroj != null && e.MaticniBroj.Contains(term)));
+            var term = search.Trim().ToLowerInvariant();
+            query = query.Where(e => e.Name.ToLower().Contains(term)
+                || (e.MaticniBroj != null && e.MaticniBroj.Contains(term)));
         }
 
         return await query
@@ -267,6 +255,8 @@ public class LegalEntityService : ILegalEntityService
                 TaxNumber = e.TaxNumber,
                 MaticniBroj = e.MaticniBroj,
                 Name = e.Name
+                ,GCCNumber = e.GCCNumber
+                ,GCCName = e.GCCName
             })
             .FirstOrDefaultAsync();
     }
@@ -392,9 +382,8 @@ public class LegalEntityService : ILegalEntityService
                 var matbroj        = ws.Cell(row, 5).GetString().Trim();
                 var basisOfConn    = ws.Cell(row, 6).GetString().Trim();
                 var connDesc       = ws.Cell(row, 7).GetString().Trim();
-                var connBankStr    = ws.Cell(row, 8).GetString().Trim();
-                var dateFromStr    = ws.Cell(row, 9).GetString().Trim();
-                var dateToStr      = ws.Cell(row, 10).GetString().Trim();
+                var dateFromStr    = ws.Cell(row, 8).GetString().Trim();
+                var dateToStr      = ws.Cell(row, 9).GetString().Trim();
 
                 if (string.IsNullOrWhiteSpace(name))
                     continue; // prazan red — preskoči bez greške
@@ -410,15 +399,6 @@ public class LegalEntityService : ILegalEntityService
                 if (!isResident && !isNonResident)
                     throw new InvalidOperationException("Tip mora biti 'Rezident/Resident' ili 'Nerezident/Non-resident'.");
 
-                bool? connectedWithBank = connBankStr.Equals("DA", StringComparison.OrdinalIgnoreCase) ? true
-                    : connBankStr.Equals("YES", StringComparison.OrdinalIgnoreCase) ? true
-                    : connBankStr.Equals("NE", StringComparison.OrdinalIgnoreCase) ? false
-                    : connBankStr.Equals("NO", StringComparison.OrdinalIgnoreCase) ? false
-                    : null;
-
-                if (connectedWithBank is null)
-                    throw new InvalidOperationException("Kolona 'Povezano lice s Bankom' mora sadržavati DA/NE ili YES/NO.");
-
                 DateTime? dateFrom = ParseOptionalDate(dateFromStr, "Datum od");
                 DateTime? dateTo   = ParseOptionalDate(dateToStr, "Datum do");
 
@@ -431,13 +411,10 @@ public class LegalEntityService : ILegalEntityService
                     Matbroj            = string.IsNullOrWhiteSpace(matbroj) ? null : matbroj,
                     BasisOfConnection  = basisOfConn,
                     ConnectionDescription = string.IsNullOrWhiteSpace(connDesc) ? null : connDesc,
-                    ConnectedWithBank  = connectedWithBank,
                     DateFrom           = dateFrom,
                     DateTo             = dateTo
                 };
                 ValidateCreateDto(dto);
-                if (dto.ConnectedWithBank is null)
-                    throw new InvalidOperationException("Kolona 'Povezano lice s Bankom' mora sadržavati DA/NE ili YES/NO.");
                 var identifier = isResident ? taxNumber : fbaId;
                 var identifiers = isResident ? usedTaxNumbers : usedFbaIds;
                 if (!identifiers.Add(identifier))
@@ -454,8 +431,7 @@ public class LegalEntityService : ILegalEntityService
                     Matbroj = dto.Matbroj,
                     BasisOfConnection = dto.BasisOfConnection,
                     ConnectionDescription = dto.ConnectionDescription,
-                    ConnectedWithBank = dto.ConnectedWithBank,
-                    DateFrom = dto.DateFrom,
+                    DateFrom = dto.DateFrom!.Value,
                     DateTo = dto.DateTo,
                     Status             = "Draft",
                     IsActive           = true,
@@ -497,9 +473,11 @@ public class LegalEntityService : ILegalEntityService
         FbaId = e.FbaId,
         Name = e.Name,
         Matbroj = e.Matbroj,
+        GCCNumber = e.GCCNumber,
+        GCCName = e.GCCName,
         BasisOfConnection = e.BasisOfConnection,
         ConnectionDescription = e.ConnectionDescription,
-        ConnectedWithBank = e.ConnectedWithBank,
+        SpecialRelationBasis = e.SpecialRelationBasis,
         DateFrom = e.DateFrom,
         DateTo = e.DateTo,
         Status = e.Status,
@@ -510,4 +488,7 @@ public class LegalEntityService : ILegalEntityService
         VerifiedBy = e.VerifiedBy,
         VerifiedAt = e.VerifiedAt
     };
+
+    private static bool SameUser(string first, string second) =>
+        string.Equals(first?.Trim(), second?.Trim(), StringComparison.OrdinalIgnoreCase);
 }

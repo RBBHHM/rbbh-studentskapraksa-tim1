@@ -12,6 +12,9 @@ public class Limit
     [Key]
     public int Id { get; set; }
 
+    public Guid? LegalEntityId { get; set; }
+    public virtual RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntity? LegalEntity { get; set; }
+
     /// <summary>Naziv limita — obavezan, maksimalno 100 karaktera.</summary>
     [Required]
     [StringLength(100)]
@@ -27,35 +30,34 @@ public class Limit
     [Column(TypeName = "decimal(18,2)")]
     public decimal IznosLimita { get; set; }
 
-    /// <summary>Iskorišteni dio limita.</summary>
+    /// <summary>Maksimalno očekivana utilizacija.</summary>
     [Required]
     [Column(TypeName = "decimal(18,2)")]
-    public decimal Utilizacija { get; set; }
+    public decimal MaksimalnoOcekivanaUtilizacija { get; set; }
 
     /// <summary>Korigovani limit — opcionalan. Ako je popunjen, koristi se za obračun raspoloživog limita.</summary>
     [Column(TypeName = "decimal(18,2)")]
     public decimal? KorigovaniLimit { get; set; }
 
-    /// <summary>Automatski obračunat raspoloživi limit.</summary>
-    [Column(TypeName = "decimal(18,2)")]
-    public decimal RaspoloziviLimit { get; set; }
-
-    /// <summary>Rok max očekivane utilizacije — datum, neobavezno.</summary>
+    /// <summary>Rok maksimalno očekivane utilizacije — datum, neobavezno.</summary>
     public DateTime? RokUtilizacije { get; set; }
 
     /// <summary>Komentar — slobodan tekst, neobavezno.</summary>
     [StringLength(1000)]
     public string? Komentar { get; set; }
     
-    /// <summary>Regulatorni kapital — obavezan broj.</summary>
-    [Required]
-    [Column(TypeName = "decimal(18,2)")]
+    // Compatibility only for deserializing historical report snapshots; no longer a Limit DB field.
+    [NotMapped]
     public decimal RegulatorniKapital { get; set; }
 
-    /// <summary>Osnovni kapital — obavezan broj.</summary>
-    [Required]
-    [Column(TypeName = "decimal(18,2)")]
+    [NotMapped]
     public decimal OsnovniKapital { get; set; }
+
+    [NotMapped]
+    public decimal DopunskiKapital { get; set; }
+
+    [NotMapped]
+    public DateTime? DatumKapitala { get; set; }
 
     // ─── Audit polja ────────────────────────────────────────────────────────
 

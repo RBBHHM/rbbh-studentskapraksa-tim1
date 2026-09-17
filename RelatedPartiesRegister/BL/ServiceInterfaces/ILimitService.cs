@@ -29,5 +29,4 @@ public interface ILimitService
     /// <param name="id">ID limita koji se briše.</param>
     Task<Result<bool>> Delete(int id);
 
-    Task<Result<LimitResponseDTO>> UpdateCapital(int id, UpdateCapitalDTO dto, string korisnik);
 }

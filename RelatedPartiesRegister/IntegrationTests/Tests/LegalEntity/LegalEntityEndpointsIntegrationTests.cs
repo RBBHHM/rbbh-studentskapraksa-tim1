@@ -64,7 +64,6 @@ namespace IntegrationTests.Tests.LegalEntity
             Name = "Rezidentno DOO",
             BasisOfConnection = "Vlasništvo",
             ConnectionDescription = "Vlasništvo",
-            ConnectedWithBank = true,
             DateFrom = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
         };
 
@@ -75,7 +74,6 @@ namespace IntegrationTests.Tests.LegalEntity
             Name = "Nerezidentno LLC",
             BasisOfConnection = "Vlasništvo",
             ConnectionDescription = "Vlasništvo",
-            ConnectedWithBank = true,
             DateFrom = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
         };
 
