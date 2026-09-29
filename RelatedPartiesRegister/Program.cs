@@ -6,7 +6,9 @@ using RBBH.ConnectedParties.IoC.Extensions.Swagger;
 using RBBH.ConnectedParties.IoC.Middleware;
 using RBBH.ConnectedParties.IoC.Extensions.Authentication;
 using RBBH.ConnectedParties.IoC.Extensions.Databases;
+using RBBH.ConnectedParties.DL.Persistence;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.EntityFrameworkCore;
 using dotenv.net;
 
 DotEnv.Load();
@@ -18,8 +20,9 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor |
         ForwardedHeaders.XForwardedHost |
         ForwardedHeaders.XForwardedProto;
-    options.ForwardLimit = 2;
-    // OCP/IIS proxy addresses are dynamic and controlled by the hosting network.
+    // IIS -> 3scale APIcast -> OCP Route/HAProxy -> app: 3 reverse-proxy hops.
+    options.ForwardLimit = 3;
+    // OCP/IIS/3scale proxy addresses are dynamic and controlled by the hosting network.
     options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
 });

@@ -103,7 +103,24 @@ public class RelatedPersonController(
         var result = await _relatedPersonService.Create(dto, korisnik);
 
         if (result.IsSuccessful)
+        {
+            await _auditService.LogAsync(new AuditEntry
+            {
+                TableName = "RelatedPerson",
+                RecordId = result.Value.Id.ToString(),
+                Action = "INSERT",
+                NewValues = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    firstName = result.Value.FirstName,
+                    lastName = result.Value.LastName,
+                    status = result.Value.StatusLabel
+                }),
+                UserId = korisnik,
+                Username = korisnik,
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+            });
             return Created($"{Request.Path}/{result.Value.Id}", result.Value);
+        }
 
         return HTTPExceptiontFromResult(result);
     }
@@ -118,6 +135,26 @@ public class RelatedPersonController(
     {
         var korisnik = GetKorisnik();
         var result = await _relatedPersonService.Update(id, dto, korisnik);
+
+        if (result.IsSuccessful)
+        {
+            await _auditService.LogAsync(new AuditEntry
+            {
+                TableName = "RelatedPerson",
+                RecordId = id.ToString(),
+                Action = "UPDATE",
+                NewValues = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    firstName = result.Value.FirstName,
+                    lastName = result.Value.LastName,
+                    status = result.Value.StatusLabel
+                }),
+                UserId = korisnik,
+                Username = korisnik,
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+            });
+        }
+
         return HandleResult(result);
     }
 
@@ -132,7 +169,20 @@ public class RelatedPersonController(
         var result = await _relatedPersonService.Delete(id, korisnik);
 
         if (result.IsSuccessful)
+        {
+            await _auditService.LogAsync(new AuditEntry
+            {
+                TableName = "RelatedPerson",
+                RecordId = id.ToString(),
+                Action = "DELETE",
+                OldValues = System.Text.Json.JsonSerializer.Serialize(new { isActive = true }),
+                NewValues = System.Text.Json.JsonSerializer.Serialize(new { isActive = false }),
+                UserId = korisnik,
+                Username = korisnik,
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+            });
             return Ok(new { message = "Povezano fizičko lice je uspješno obrisano." });
+        }
 
         return HTTPExceptiontFromResult(result).Result!;
     }
@@ -188,7 +238,24 @@ public class RelatedPersonController(
         var result = await _relatedPersonService.AddFamilyMember(id, dto, korisnik);
 
         if (result.IsSuccessful)
+        {
+            await _auditService.LogAsync(new AuditEntry
+            {
+                TableName = "FamilyMember",
+                RecordId = result.Value.Id.ToString(),
+                Action = "INSERT",
+                NewValues = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    relatedPersonId = id,
+                    firstName = result.Value.FirstName,
+                    lastName = result.Value.LastName
+                }),
+                UserId = korisnik,
+                Username = korisnik,
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+            });
             return Created($"{Request.Path}/{result.Value.Id}", result.Value);
+        }
 
         return HTTPExceptiontFromResult(result);
     }
@@ -206,6 +273,26 @@ public class RelatedPersonController(
     {
         var korisnik = GetKorisnik();
         var result = await _relatedPersonService.UpdateFamilyMember(id, familyMemberId, dto, korisnik);
+
+        if (result.IsSuccessful)
+        {
+            await _auditService.LogAsync(new AuditEntry
+            {
+                TableName = "FamilyMember",
+                RecordId = familyMemberId.ToString(),
+                Action = "UPDATE",
+                NewValues = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    relatedPersonId = id,
+                    firstName = result.Value.FirstName,
+                    lastName = result.Value.LastName
+                }),
+                UserId = korisnik,
+                Username = korisnik,
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+            });
+        }
+
         return HandleResult(result);
     }
 
@@ -221,7 +308,20 @@ public class RelatedPersonController(
         var result = await _relatedPersonService.DeleteFamilyMember(id, familyMemberId, korisnik);
 
         if (result.IsSuccessful)
+        {
+            await _auditService.LogAsync(new AuditEntry
+            {
+                TableName = "FamilyMember",
+                RecordId = familyMemberId.ToString(),
+                Action = "DELETE",
+                OldValues = System.Text.Json.JsonSerializer.Serialize(new { isActive = true, relatedPersonId = id }),
+                NewValues = System.Text.Json.JsonSerializer.Serialize(new { isActive = false }),
+                UserId = korisnik,
+                Username = korisnik,
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+            });
             return Ok(new { message = "Član porodice je uspješno obrisan." });
+        }
 
         return HTTPExceptiontFromResult(result).Result!;
     }

@@ -33,8 +33,8 @@
       "title": "Fizička lica",
       "description": "Pregled povezanih fizičkih lica i porodičnih veza."
     },
-    "limits": { "title": "Limiti", "description": "Regulatorni limiti i raspoložive vrijednosti." },
-    "capital": { "title": "Kapital", "description": "Upravljanje regulatornim i osnovnim kapitalom za limite." },
+    "limits": { "title": "Limiti", "description": "Limiti dodijeljeni pravnim licima, prema vrsti iz šifarnika." },
+    "capital": { "title": "Kapital", "description": "Regulatorni i osnovni kapital pravnih lica, korišten za auto-popunjavanje limita." },
     "reports": {
       "title": "Regulatorno izvještavanje",
       "description": "Mjesečni izvještaji i priprema izvoza."

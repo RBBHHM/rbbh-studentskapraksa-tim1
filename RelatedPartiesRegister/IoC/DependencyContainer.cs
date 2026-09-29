@@ -50,6 +50,7 @@ namespace RBBH.ConnectedParties.IoC
             services.AddScoped<ILegalEntityService, LegalEntityService>();
             services.AddScoped<IReportService, ReportService>();
             services.AddScoped<ILimitService, LimitService>();
+            services.AddScoped<ICapitalService, CapitalService>();
             // ── Email ─────────────────────────────────────────────────────────
             services.Configure<EmailSettings>(configuration.GetSection("Email"));
             services.AddSingleton<EmailLogStore>();

@@ -16,6 +16,8 @@ public class ClientLimitConfiguration : IEntityTypeConfiguration<ClientLimit>
 
         builder.Property(e => e.RegulatoryCapital).HasPrecision(18, 2);
         builder.Property(e => e.CoreCapital).HasPrecision(18, 2);
+        builder.Property(e => e.SupplementaryCapital).HasPrecision(18, 2);
+        builder.Property(e => e.CapitalDate).HasColumnType("date");
         builder.Property(e => e.ExposureLimit).HasPrecision(18, 2);
         builder.Property(e => e.CurrentExposure).HasPrecision(18, 2);
         builder.Property(e => e.Currency).HasMaxLength(3).IsRequired();

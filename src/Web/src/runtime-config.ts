@@ -1,8 +1,5 @@
 export interface RuntimeConfig {
   readonly API_BASE_URL?: string;
-  readonly KEYCLOAK_URL?: string;
-  readonly KEYCLOAK_REALM?: string;
-  readonly KEYCLOAK_CLIENT_ID?: string;
   readonly LOCALIZATION_MANIFEST_URL?: string;
   readonly LOCALIZATION_REQUEST_TIMEOUT_MS?: string;
   readonly LOCALIZATION_MANIFEST_REVALIDATION_MS?: string;

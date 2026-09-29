@@ -24,13 +24,15 @@ export interface RegistryResource {
   readonly displayColumns?: readonly string[];
   readonly accessRole?: ApplicationAccessRole;
   readonly adminOnly?: boolean;
+  readonly clientFilterEndpoint?: string;
+  readonly exportEndpoint?: string;
 }
 
 export interface ResourceField {
   readonly key: string;
   readonly labelBs: string;
   readonly labelEn: string;
-  readonly type?: "text" | "number" | "date" | "checkbox" | "select" | "segmented" | "textarea";
+  readonly type?: "text" | "number" | "date" | "checkbox" | "select" | "search-select" | "segmented" | "textarea";
   readonly required?: boolean;
   readonly minLength?: number;
   readonly maxLength?: number;
@@ -117,7 +119,7 @@ export const registryResources: readonly RegistryResource[] = [
           { value: false, labelBs: "Nerezident", labelEn: "Non-resident" },
         ] },
         { key: "taxNumber", labelBs: "Porezni broj", labelEn: "Tax number", pattern: "[0-9]{13}", minLength: 13, maxLength: 13 },
-        { key: "maticniBroj", labelBs: "Matični broj", labelEn: "Registration number", pattern: "[0-9]*" },
+        { key: "maticniBroj", labelBs: "Matični broj", labelEn: "Registration number", pattern: "[0-9]*", maxLength: 50 },
         { key: "fbaId", labelBs: "FBA ID", labelEn: "FBA ID", pattern: "[0-9]{1,10}", maxLength: 10 },
         {
           key: "basisOfConnection",
@@ -225,41 +227,47 @@ export const registryResources: readonly RegistryResource[] = [
     key: "limits",
     path: "/app/limits",
     endpoint: "/api/limiti",
+    displayColumns: ["naziv", "tipLimita", "odobreniLimit", "maksimalnaOcekivanaUtilizacija", "rokOcekivaneUtilizacije", "regulatorniKapital", "osnovniKapital"],
     icon: Scale,
     area: "work",
     accessRole: "limiti",
+    clientFilterEndpoint: "/api/legal-entities/limits/search",
+    exportEndpoint: "/api/limiti/export",
     capabilities: {
       create: true,
       update: true,
       remove: true,
       fields: [
-        { key: "naziv", labelBs: "Naziv", labelEn: "Name", required: true },
-        { key: "tipLimita", labelBs: "Tip limita", labelEn: "Limit type", type: "select", required: true, codeListCategory: "VrstaLimita", options: [
-          { value: "REG", labelBs: "Regulatorni limit", labelEn: "Regulatory limit" },
-          { value: "INT", labelBs: "Interni limit", labelEn: "Internal limit" },
-        ] },
-        { key: "iznosLimita", labelBs: "Iznos limita", labelEn: "Limit amount", type: "number" },
-        { key: "utilizacija", labelBs: "Utilizacija", labelEn: "Utilisation", type: "number" },
         {
-          key: "korigovaniLimit",
-          labelBs: "Korigovani limit",
-          labelEn: "Adjusted limit",
+          key: "legalEntityId",
+          labelBs: "Pravno lice",
+          labelEn: "Legal entity",
+          type: "search-select",
+          required: true,
+          lookupEndpoint: "/api/legal-entities/limits/search",
+        },
+        { key: "tipLimita", labelBs: "Tip limita", labelEn: "Limit type", type: "select", required: true, codeListCategory: "VrstaLimita" },
+        { key: "odobreniLimit", labelBs: "Odobreni limit", labelEn: "Approved limit", type: "number" },
+        {
+          key: "maksimalnaOcekivanaUtilizacija",
+          labelBs: "Maksimalna očekivana utilizacija",
+          labelEn: "Maximum expected utilisation",
           type: "number",
         },
         {
-          key: "rokUtilizacije",
-          labelBs: "Rok utilizacije",
-          labelEn: "Utilisation deadline",
+          key: "rokOcekivaneUtilizacije",
+          labelBs: "Rok očekivane utilizacije",
+          labelEn: "Expected utilisation deadline",
           type: "date",
         },
-        { key: "komentar", labelBs: "Komentar", labelEn: "Comment" },
+        { key: "komentar", labelBs: "Komentar", labelEn: "Comment", type: "textarea" },
       ],
     },
   },
   {
     key: "capital",
     path: "/app/capital",
-    endpoint: "/api/limiti",
+    endpoint: "/api/capital",
     icon: Landmark,
     area: "work",
     accessRole: "kapital",

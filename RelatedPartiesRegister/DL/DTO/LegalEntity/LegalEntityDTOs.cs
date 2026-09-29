@@ -60,6 +60,7 @@ public class UpdateLegalEntityDTO
     public string Name { get; set; } = string.Empty;
     
     [StringLength(50)]
+    [RegularExpression(@"^\d*$", ErrorMessage = "Matični broj smije sadržavati samo cifre.")]
     public string? MaticniBroj { get; set; }
 
     [StringLength(50)]
@@ -136,5 +137,8 @@ public class LegalEntityLimitFormDataDTO
     public string? FbaId { get; set; }
     public string? TaxNumber { get; set; }
     public string? MaticniBroj { get; set; }
+    public string? Matbroj { get; set; }
     public string Name { get; set; } = string.Empty;
+    public decimal? RegulatoryCapital { get; set; }
+    public decimal? CoreCapital { get; set; }
 }

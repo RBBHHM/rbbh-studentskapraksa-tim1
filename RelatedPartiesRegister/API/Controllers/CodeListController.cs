@@ -19,9 +19,10 @@ namespace RBBH.ConnectedParties.API.Controllers;
 [ApiController]
 [Route("api/code-lists")]
 [Authorize(Policy = ApplicationPolicies.CodeListsRead)]
-public class CodeListController(ICodeListService codeListService, ConnectedPartiesDbContext db) : BaseResuItController
+public class CodeListController(ICodeListService codeListService, ConnectedPartiesDbContext db, IAuditService auditService) : BaseResuItController
 {
     private readonly ICodeListService _codeListService = codeListService;
+    private readonly IAuditService _auditService = auditService;
 
     // ─── Lista kategorija ─────────────────────────────────────────────────────
 
@@ -45,9 +46,22 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
             return BadRequest(new ProblemDetails { Title = "Naziv nije ispravan", Detail = "Naziv definicije mora imati između 2 i 100 znakova." });
         if (await db.CodeListDefinitions.AnyAsync(item => item.Name == name) || await db.CodeLists.IgnoreQueryFilters().AnyAsync(item => item.Kategorija == name))
             return Conflict(new ProblemDetails { Title = "Definicija već postoji", Detail = $"Šifrarnik '{name}' već postoji." });
-        var definition = new CodeListDefinition { Name = name, Description = dto.Description?.Trim(), CreatedBy = GetKorisnik() };
+        var korisnik = GetKorisnik();
+        var definition = new CodeListDefinition { Name = name, Description = dto.Description?.Trim(), CreatedBy = korisnik };
         db.CodeListDefinitions.Add(definition);
         await db.SaveChangesAsync();
+
+        await _auditService.LogAsync(new AuditEntry
+        {
+            TableName = "CodeList",
+            RecordId = definition.Id.ToString(),
+            Action = "CODELIST_ADD",
+            NewValues = System.Text.Json.JsonSerializer.Serialize(new { name = definition.Name, description = definition.Description }),
+            UserId = korisnik,
+            Username = korisnik,
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+        });
+
         return Created($"{Request.Path}/{definition.Id}", new { definition.Id, definition.Name, definition.Description });
     }
 
@@ -61,8 +75,19 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<object>> DeleteCategory([FromRoute] string name)
     {
-        var result = await _codeListService.DeleteCategory(name, GetKorisnik());
+        var korisnik = GetKorisnik();
+        var result = await _codeListService.DeleteCategory(name, korisnik);
         if (!result.IsSuccessful) return HandleResult(result);
+
+        await _auditService.LogAsync(new AuditEntry
+        {
+            TableName = "CodeList",
+            RecordId = name,
+            Action = "CODELIST_DELETE",
+            UserId = korisnik,
+            Username = korisnik,
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+        });
 
         return Ok(new { message = $"Šifrarnik '{name}' je uspješno obrisan." });
     }
@@ -123,7 +148,19 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
         var result   = await _codeListService.Create(dto, korisnik);
 
         if (result.IsSuccessful)
+        {
+            await _auditService.LogAsync(new AuditEntry
+            {
+                TableName = "CodeList",
+                RecordId = result.Value.ID.ToString(),
+                Action = "CODELIST_ADD",
+                NewValues = System.Text.Json.JsonSerializer.Serialize(new { kategorija = result.Value.Kategorija, naziv = result.Value.Naziv }),
+                UserId = korisnik,
+                Username = korisnik,
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+            });
             return Created($"{Request.Path}/{result.Value.ID}", result.Value);
+        }
 
         return HTTPExceptiontFromResult(result);
     }
@@ -162,6 +199,18 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
         if (result.IsSuccessful)
         {
             var item = result.Value;
+
+            await _auditService.LogAsync(new AuditEntry
+            {
+                TableName = "CodeList",
+                RecordId = item.ID.ToString(),
+                Action = "CODELIST_ADD",
+                NewValues = System.Text.Json.JsonSerializer.Serialize(new { kategorija, naziv = item.Naziv }),
+                UserId = korisnik,
+                Username = korisnik,
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+            });
+
             return Created($"{Request.Path}/{item.ID}", new
             {
                 id         = item.ID,
@@ -193,6 +242,18 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
         if (!result.IsSuccessful) return HandleResult(result);
 
         var x = result.Value;
+
+        await _auditService.LogAsync(new AuditEntry
+        {
+            TableName = "CodeList",
+            RecordId = id.ToString(),
+            Action = "CODELIST_UPDATE",
+            NewValues = System.Text.Json.JsonSerializer.Serialize(new { kategorija = x.Kategorija, naziv = x.Naziv }),
+            UserId = korisnik,
+            Username = korisnik,
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+        });
+
         return Ok(new
         {
             id         = x.ID,
@@ -219,7 +280,18 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
         var result = await _codeListService.Delete(id, korisnik);
 
         if (result.IsSuccessful)
+        {
+            await _auditService.LogAsync(new AuditEntry
+            {
+                TableName = "CodeList",
+                RecordId = id.ToString(),
+                Action = "CODELIST_DELETE",
+                UserId = korisnik,
+                Username = korisnik,
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+            });
             return Ok(new { message = "Šifarnik je uspješno obrisan." });
+        }
 
         return HTTPExceptiontFromResult(result);
     }
@@ -334,6 +406,23 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
 
             if (result.IsSuccessful) preview.Imported++;
         }
+
+        await _auditService.LogAsync(new AuditEntry
+        {
+            TableName = "CodeList",
+            RecordId = "-",
+            Action = "IMPORT",
+            NewValues = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                kategorija,
+                fileName = file.FileName,
+                imported = preview.Imported,
+                failed = preview.Errors.Count
+            }),
+            UserId = korisnik,
+            Username = korisnik,
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+        });
 
         return Ok(preview);
     }

@@ -79,7 +79,7 @@ public class AppUserService(ConnectedPartiesDbContext dbContext, KeycloakAdminSe
         return result;
     }
 
-    public async Task<Result<UserDTO>> CreateUserAsync(CreateUserDTO dto, string createdBy)
+    public async Task<Result<UserDTO>> CreateUserAsync(CreateUserDTO dto, string createdBy, string? ipAddress = null)
     {
         var requestedRoleIds = dto.RoleIds
             .Concat(Guid.TryParse(dto.RoleId, out var legacyRoleId) ? [legacyRoleId] : [])
@@ -154,7 +154,8 @@ public class AppUserService(ConnectedPartiesDbContext dbContext, KeycloakAdminSe
             NewValues = System.Text.Json.JsonSerializer.Serialize(new
                 { user.Username, user.Email, user.IsActive, Roles = roleNames }),
             UserId    = createdBy,
-            Username  = createdBy
+            Username  = createdBy,
+            IpAddress = ipAddress
         });
 
         return Result<UserDTO>.Success(new UserDTO

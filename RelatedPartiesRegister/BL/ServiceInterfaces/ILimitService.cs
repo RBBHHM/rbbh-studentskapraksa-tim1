@@ -8,8 +8,8 @@ namespace RBBH.ConnectedParties.BL.ServiceInterfaces;
 /// </summary>
 public interface ILimitService
 {
-    /// <summary>Vraća sve limite.</summary>
-    Task<Result<List<LimitResponseDTO>>> GetAll();
+    /// <summary>Vraća limite, opcionalno filtrirano po pravnom licu ili matičnom broju.</summary>
+    Task<Result<List<LimitResponseDTO>>> GetAll(Guid? legalEntityId = null, string? matbroj = null);
 
     /// <summary>Vraća jedan limit po ID-u.</summary>
     Task<Result<LimitResponseDTO>> GetByID(int id);
@@ -28,6 +28,4 @@ public interface ILimitService
     /// <summary>Briše limit.</summary>
     /// <param name="id">ID limita koji se briše.</param>
     Task<Result<bool>> Delete(int id);
-
-    Task<Result<LimitResponseDTO>> UpdateCapital(int id, UpdateCapitalDTO dto, string korisnik);
 }

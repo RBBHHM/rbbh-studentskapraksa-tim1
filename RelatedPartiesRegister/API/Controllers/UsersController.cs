@@ -60,7 +60,7 @@ public class UsersController(IAppUserService appUserService, KeycloakAdminServic
                      ?? User.Identity?.Name
                      ?? "system";
 
-        var result = await _appUserService.CreateUserAsync(dto, createdBy);
+        var result = await _appUserService.CreateUserAsync(dto, createdBy, HttpContext.Connection.RemoteIpAddress?.ToString());
 
         if (result.IsSuccessful)
             return Created($"{Request.Path}/{result.Value.Id}", result.Value);
@@ -92,7 +92,8 @@ public class UsersController(IAppUserService appUserService, KeycloakAdminServic
         if (localUser is null)
             return NotFound(new ProblemDetails { Title = "Korisnik nije pronađen" });
 
-        if (roleIds.Count == 0)
+        var isRemoval = roleIds.Count == 0;
+        if (isRemoval)
         {
             var assignments = await _db.UserRoles.Where(item => item.UserId == localUser.Id).ToListAsync();
             _db.UserRoles.RemoveRange(assignments);
@@ -104,9 +105,10 @@ public class UsersController(IAppUserService appUserService, KeycloakAdminServic
 
         await _audit.LogAsync(new AuditEntry
         {
-            TableName = "AppUser", RecordId = userId, Action = "ROLE_ASSIGN",
+            TableName = "AppUser", RecordId = userId, Action = isRemoval ? "ROLE_REMOVE" : "ROLE_ASSIGN",
             NewValues = System.Text.Json.JsonSerializer.Serialize(new { Roles = localRoles.Select(role => role.Name) }),
-            UserId = CurrentUsername(), Username = CurrentUsername()
+            UserId = CurrentUsername(), Username = CurrentUsername(),
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
         });
 
         return Ok(new { message = "Role korisnika su uspješno ažurirane.", roles = localRoles.Select(role => role.Name) });
@@ -151,7 +153,8 @@ public class UsersController(IAppUserService appUserService, KeycloakAdminServic
             TableName = "AppUser", RecordId = userId, Action = "DEACTIVATE",
             OldValues = System.Text.Json.JsonSerializer.Serialize(new { IsActive = true }),
             NewValues = System.Text.Json.JsonSerializer.Serialize(new { IsActive = false }),
-            UserId = CurrentUsername(), Username = CurrentUsername()
+            UserId = CurrentUsername(), Username = CurrentUsername(),
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
         });
         return Ok(new { message = "Korisnik uspješno deaktiviran." });
     }
@@ -176,7 +179,8 @@ public class UsersController(IAppUserService appUserService, KeycloakAdminServic
             TableName = "AppUser", RecordId = userId, Action = "REACTIVATE",
             OldValues = System.Text.Json.JsonSerializer.Serialize(new { IsActive = false }),
             NewValues = System.Text.Json.JsonSerializer.Serialize(new { IsActive = true }),
-            UserId = CurrentUsername(), Username = CurrentUsername()
+            UserId = CurrentUsername(), Username = CurrentUsername(),
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
         });
         return Ok(new { message = "Korisnik uspješno reaktiviran." });
     }
@@ -204,7 +208,7 @@ public class UsersController(IAppUserService appUserService, KeycloakAdminServic
             _db.AppUsers.Remove(localUser);
             await _db.SaveChangesAsync();
         }
-        await _audit.LogAsync(new AuditEntry { TableName = "AppUser", RecordId = userId, Action = "DELETE", UserId = CurrentUsername(), Username = CurrentUsername() });
+        await _audit.LogAsync(new AuditEntry { TableName = "AppUser", RecordId = userId, Action = "DELETE", UserId = CurrentUsername(), Username = CurrentUsername(), IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() });
         return Ok(new { message = "Korisnik je obrisan." });
     }
 }

@@ -1,10 +1,12 @@
 using FluentAssertions;
 using RBBH.ConnectedParties.API.Controllers;
+using RBBH.ConnectedParties.BL.ServiceInterfaces;
 using RBBH.ConnectedParties.BL.Services;
 using RBBH.ConnectedParties.DL.DTO.Sifarnici;
 using IntegrationTests.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Moq;
 
 namespace IntegrationTests.Tests
 {
@@ -24,7 +26,7 @@ namespace IntegrationTests.Tests
         private CodeListController NewController()
         {
             var context = _fixture.CreateContext();
-            return new CodeListController(new CodeListService(context), context).WithHttpContext();
+            return new CodeListController(new CodeListService(context), context, new Mock<IAuditService>().Object).WithHttpContext();
         }
 
         private ReferenceDataController NewReferenceController()

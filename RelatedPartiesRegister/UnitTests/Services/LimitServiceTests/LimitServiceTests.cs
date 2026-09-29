@@ -29,6 +29,14 @@ namespace UnitTests.Services.LimitServiceTests
             Assert.True(result.Value.Count >= 2);
         }
 
+        [Fact]
+        public async Task GetAll_FilteredByLegalEntityId_ReturnsOnlyThatClient()
+        {
+            var result = await _service.GetAll(legalEntityId: _fixture.ValidLegalEntityId);
+            Assert.True(result.IsSuccessful);
+            Assert.All(result.Value, item => Assert.Equal(_fixture.ValidLegalEntityId, item.LegalEntityId));
+        }
+
         // GetByID
 
         [Fact]
@@ -62,79 +70,67 @@ namespace UnitTests.Services.LimitServiceTests
         {
             var dto = new CreateLimitDTO
             {
-                Naziv = "Novi limit",
-                TipLimita = "Regulatorni",
-                IznosLimita = 500_000m,
-                Utilizacija = 50_000m,
-                RegulatorniKapital = 2_000_000m,
-                OsnovniKapital = 1_000_000m
+                LegalEntityId = _fixture.ValidLegalEntityId,
+                TipLimita = LimitFixture.ValidTipLimita,
+                OdobreniLimit = 500_000m,
+                MaksimalnaOcekivanaUtilizacija = 50_000m
             };
 
             var result = await _service.Create(dto, "test.user");
 
             Assert.True(result.IsSuccessful);
             Assert.NotNull(result.Value);
-            Assert.Equal("Novi limit", result.Value.Naziv);
-            Assert.Equal(450_000m, result.Value.RaspoloziviLimit);
+            Assert.Equal(_fixture.ValidLegalEntityId, result.Value.LegalEntityId);
+            Assert.Equal(LimitFixture.ValidTipLimita, result.Value.TipLimita);
+            Assert.Equal(500_000m, result.Value.OdobreniLimit);
         }
 
         [Fact]
-        public async Task Create_WithKorigovaniLimit_CalculatesRaspoloziviLimitCorrectly()
+        public async Task Create_LowercaseTipLimita_IsNormalizedToUppercase()
         {
             var dto = new CreateLimitDTO
             {
-                Naziv = "Limit s korigovanim",
-                TipLimita = "Interni",
-                IznosLimita = 1_000_000m,
-                Utilizacija = 100_000m,
-                KorigovaniLimit = 800_000m,
-                RegulatorniKapital = 3_000_000m,
-                OsnovniKapital = 2_000_000m
+                LegalEntityId = _fixture.ValidLegalEntityId,
+                TipLimita = LimitFixture.ValidTipLimita.ToLower(),
+                OdobreniLimit = 100_000m
             };
 
             var result = await _service.Create(dto, "test.user");
 
             Assert.True(result.IsSuccessful);
-            Assert.Equal(700_000m, result.Value!.RaspoloziviLimit);
+            Assert.Equal(LimitFixture.ValidTipLimita.ToUpper(), result.Value!.TipLimita);
         }
 
         // Create - validacije
 
         [Fact]
-        public async Task Create_WithEmptyNaziv_ReturnsValidationError()
+        public async Task Create_WithEmptyLegalEntityId_ReturnsValidationError()
         {
             var dto = new CreateLimitDTO
             {
-                Naziv = "",
-                TipLimita = "Regulatorni",
-                IznosLimita = 100_000m,
-                Utilizacija = 10_000m,
-                RegulatorniKapital = 500_000m,
-                OsnovniKapital = 300_000m
+                LegalEntityId = Guid.Empty,
+                TipLimita = LimitFixture.ValidTipLimita
             };
 
             var result = await _service.Create(dto, "test.user");
 
             Assert.True(result.IsValidationError);
-            Assert.Equal("Naziv je obavezan.", result.ExceptionMessage);
+            Assert.Equal("Pravno lice je obavezno.", result.ExceptionMessage);
         }
 
         [Fact]
-        public async Task Create_WithNazivLongerThan100Chars_ReturnsValidationError()
+        public async Task Create_WithNonExistentLegalEntityId_ReturnsValidationError()
         {
             var dto = new CreateLimitDTO
             {
-                Naziv = new string('A', 101),
-                TipLimita = "Regulatorni",
-                IznosLimita = 100_000m,
-                Utilizacija = 10_000m,
-                RegulatorniKapital = 500_000m,
-                OsnovniKapital = 300_000m
+                LegalEntityId = Guid.NewGuid(),
+                TipLimita = LimitFixture.ValidTipLimita
             };
 
             var result = await _service.Create(dto, "test.user");
 
             Assert.True(result.IsValidationError);
+            Assert.Equal("Odabrano pravno lice ne postoji.", result.ExceptionMessage);
         }
 
         [Fact]
@@ -142,12 +138,8 @@ namespace UnitTests.Services.LimitServiceTests
         {
             var dto = new CreateLimitDTO
             {
-                Naziv = "Validan naziv",
-                TipLimita = "",
-                IznosLimita = 100_000m,
-                Utilizacija = 10_000m,
-                RegulatorniKapital = 500_000m,
-                OsnovniKapital = 300_000m
+                LegalEntityId = _fixture.ValidLegalEntityId,
+                TipLimita = ""
             };
 
             var result = await _service.Create(dto, "test.user");
@@ -157,41 +149,63 @@ namespace UnitTests.Services.LimitServiceTests
         }
 
         [Fact]
-        public async Task Create_WithNullRegulatorniKapital_UsesZeroUntilCapitalIsEnteredSeparately()
+        public async Task Create_WithTipLimitaNotInCodeList_ReturnsValidationError()
         {
             var dto = new CreateLimitDTO
             {
-                Naziv = "Validan naziv",
-                TipLimita = "Regulatorni",
-                IznosLimita = 100_000m,
-                Utilizacija = 10_000m,
-                RegulatorniKapital = null,
-                OsnovniKapital = 300_000m
+                LegalEntityId = _fixture.ValidLegalEntityId,
+                TipLimita = "NEPOSTOJECI"
             };
 
             var result = await _service.Create(dto, "test.user");
 
-            Assert.True(result.IsSuccessful);
-            Assert.Equal(0, result.Value!.RegulatorniKapital);
+            Assert.True(result.IsValidationError);
         }
 
         [Fact]
-        public async Task Create_WithNullOsnovniKapital_UsesZeroUntilCapitalIsEnteredSeparately()
+        public async Task Create_WithInactiveTipLimita_ReturnsValidationError()
         {
             var dto = new CreateLimitDTO
             {
-                Naziv = "Validan naziv",
-                TipLimita = "Regulatorni",
-                IznosLimita = 100_000m,
-                Utilizacija = 10_000m,
-                RegulatorniKapital = 500_000m,
-                OsnovniKapital = null
+                LegalEntityId = _fixture.ValidLegalEntityId,
+                TipLimita = LimitFixture.InactiveTipLimita
             };
 
             var result = await _service.Create(dto, "test.user");
 
-            Assert.True(result.IsSuccessful);
-            Assert.Equal(0, result.Value!.OsnovniKapital);
+            Assert.True(result.IsValidationError);
+        }
+
+        [Fact]
+        public async Task Create_WithNegativeOdobreniLimit_ReturnsValidationError()
+        {
+            var dto = new CreateLimitDTO
+            {
+                LegalEntityId = _fixture.ValidLegalEntityId,
+                TipLimita = LimitFixture.ValidTipLimita,
+                OdobreniLimit = -1m
+            };
+
+            var result = await _service.Create(dto, "test.user");
+
+            Assert.True(result.IsValidationError);
+            Assert.Equal("Odobreni limit ne može biti negativan.", result.ExceptionMessage);
+        }
+
+        [Fact]
+        public async Task Create_WithNegativeMaksimalnaOcekivanaUtilizacija_ReturnsValidationError()
+        {
+            var dto = new CreateLimitDTO
+            {
+                LegalEntityId = _fixture.ValidLegalEntityId,
+                TipLimita = LimitFixture.ValidTipLimita,
+                MaksimalnaOcekivanaUtilizacija = -1m
+            };
+
+            var result = await _service.Create(dto, "test.user");
+
+            Assert.True(result.IsValidationError);
+            Assert.Equal("Maksimalna očekivana utilizacija ne može biti negativna.", result.ExceptionMessage);
         }
 
         // Update
@@ -201,19 +215,16 @@ namespace UnitTests.Services.LimitServiceTests
         {
             var dto = new UpdateLimitDTO
             {
-                Naziv = "Izmijenjeni naziv",
-                TipLimita = "Regulatorni",
-                IznosLimita = 900_000m,
-                Utilizacija = 100_000m,
-                RegulatorniKapital = 5_000_000m,
-                OsnovniKapital = 3_000_000m
+                LegalEntityId = _fixture.ValidLegalEntityId2,
+                TipLimita = LimitFixture.ValidTipLimita2,
+                OdobreniLimit = 900_000m,
+                MaksimalnaOcekivanaUtilizacija = 100_000m
             };
 
             var result = await _service.Update(_fixture.ValidLimitId2, dto, "test.user");
 
             Assert.True(result.IsSuccessful);
-            Assert.Equal("Izmijenjeni naziv", result.Value!.Naziv);
-            Assert.Equal(800_000m, result.Value.RaspoloziviLimit);
+            Assert.Equal(900_000m, result.Value!.OdobreniLimit);
         }
 
         [Fact]
@@ -221,12 +232,8 @@ namespace UnitTests.Services.LimitServiceTests
         {
             var dto = new UpdateLimitDTO
             {
-                Naziv = "Naziv",
-                TipLimita = "Regulatorni",
-                IznosLimita = 100_000m,
-                Utilizacija = 10_000m,
-                RegulatorniKapital = 500_000m,
-                OsnovniKapital = 300_000m
+                LegalEntityId = _fixture.ValidLegalEntityId,
+                TipLimita = LimitFixture.ValidTipLimita
             };
 
             var result = await _service.Update(0, dto, "test.user");
@@ -240,12 +247,8 @@ namespace UnitTests.Services.LimitServiceTests
         {
             var dto = new UpdateLimitDTO
             {
-                Naziv = "Naziv",
-                TipLimita = "Regulatorni",
-                IznosLimita = 100_000m,
-                Utilizacija = 10_000m,
-                RegulatorniKapital = 500_000m,
-                OsnovniKapital = 300_000m
+                LegalEntityId = _fixture.ValidLegalEntityId,
+                TipLimita = LimitFixture.ValidTipLimita
             };
 
             var result = await _service.Update(99999, dto, "test.user");
@@ -254,22 +257,18 @@ namespace UnitTests.Services.LimitServiceTests
         }
 
         [Fact]
-        public async Task Update_WithEmptyNaziv_ReturnsValidationError()
+        public async Task Update_WithNonExistentLegalEntityId_ReturnsValidationError()
         {
             var dto = new UpdateLimitDTO
             {
-                Naziv = "   ",
-                TipLimita = "Regulatorni",
-                IznosLimita = 100_000m,
-                Utilizacija = 10_000m,
-                RegulatorniKapital = 500_000m,
-                OsnovniKapital = 300_000m
+                LegalEntityId = Guid.NewGuid(),
+                TipLimita = LimitFixture.ValidTipLimita
             };
 
             var result = await _service.Update(_fixture.ValidLimitId, dto, "test.user");
 
             Assert.True(result.IsValidationError);
-            Assert.Equal("Naziv je obavezan.", result.ExceptionMessage);
+            Assert.Equal("Odabrano pravno lice ne postoji.", result.ExceptionMessage);
         }
 
         // Delete
@@ -279,12 +278,8 @@ namespace UnitTests.Services.LimitServiceTests
         {
             var createDto = new CreateLimitDTO
             {
-                Naziv = "Limit za brisanje",
-                TipLimita = "Interni",
-                IznosLimita = 100_000m,
-                Utilizacija = 0m,
-                RegulatorniKapital = 500_000m,
-                OsnovniKapital = 300_000m
+                LegalEntityId = _fixture.ValidLegalEntityId,
+                TipLimita = LimitFixture.ValidTipLimita
             };
             var created = await _service.Create(createDto, "test.user");
             var idZaBrisanje = created.Value!.Id;

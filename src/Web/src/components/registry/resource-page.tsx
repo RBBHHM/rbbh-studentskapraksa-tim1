@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Heading, Text } from "@/components/ui/typography";
+import { ExportButton } from "@/components/registry/export-button";
 import { IconIndicator, type IndicatorKind } from "@/components/registry/icon-indicator";
 import { apiClient, apiErrorMessage } from "@/lib/api/http-client";
 import { getLegacyRecords, type LegacyRecord } from "@/lib/api/legacy-client";
@@ -31,11 +32,16 @@ export function ResourcePage({ resource, toolbar }: { readonly resource: Registr
   const [search, setSearch] = useState("");
   const [editor, setEditor] = useState<EditorState>(null);
   const [deleteId, setDeleteId] = useState<string>();
+  const [filterEntityId, setFilterEntityId] = useState("");
+  const [filterEntityName, setFilterEntityName] = useState("");
   const canWrite = canWriteApplicationAccess(resource.accessRole);
-  const queryKey = useMemo(() => ["registry", resource.key] as const, [resource.key]);
+  const queryKey = useMemo(() => ["registry", resource.key, filterEntityId] as const, [resource.key, filterEntityId]);
   const query = useQuery({
     queryKey,
-    queryFn: () => getLegacyRecords(resource.endpoint!),
+    queryFn: () =>
+      getLegacyRecords(
+        filterEntityId ? `${resource.endpoint}?legalEntityId=${encodeURIComponent(filterEntityId)}` : resource.endpoint!,
+      ),
     enabled: Boolean(resource.endpoint),
   });
   useEffect(() => {
@@ -100,6 +106,12 @@ export function ResourcePage({ resource, toolbar }: { readonly resource: Registr
         </div>
         <div className="flex flex-wrap gap-2">
           {toolbar}
+          {resource.exportEndpoint && (
+            <ExportButton
+              endpoint={filterEntityId ? `${resource.exportEndpoint}?legalEntityId=${encodeURIComponent(filterEntityId)}` : resource.exportEndpoint}
+              fileName={`${resource.key}.xlsx`}
+            />
+          )}
           {canWrite && resource.capabilities?.create && (
             <Button onClick={() => setEditor({ mode: "create" })}>
               <Plus className="size-4" />
@@ -109,16 +121,28 @@ export function ResourcePage({ resource, toolbar }: { readonly resource: Registr
         </div>
       </div>
 
-      <label className="mt-6 flex max-w-md items-center gap-2 rounded-sm border border-border-subtle bg-surface-default px-3 focus-within:border-border-brand">
-        <Search className="size-4 shrink-0 text-text-tertiary" />
-        <span className="sr-only">{bs ? "Pretraga" : "Search"}</span>
-        <input
-          className="h-11 w-full bg-transparent text-sm outline-none"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={bs ? "Pretraži sve kolone…" : "Search all columns…"}
-        />
-      </label>
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-start">
+        <label className="flex max-w-md flex-1 items-center gap-2 rounded-sm border border-border-subtle bg-surface-default px-3 focus-within:border-border-brand">
+          <Search className="size-4 shrink-0 text-text-tertiary" />
+          <span className="sr-only">{bs ? "Pretraga" : "Search"}</span>
+          <input
+            className="h-11 w-full bg-transparent text-sm outline-none"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={bs ? "Pretraži sve kolone…" : "Search all columns…"}
+          />
+        </label>
+        {resource.clientFilterEndpoint && (
+          <ClientFilterPicker
+            bs={bs}
+            lookupEndpoint={resource.clientFilterEndpoint}
+            value={filterEntityId}
+            valueName={filterEntityName}
+            onSelect={(id, name) => { setFilterEntityId(id); setFilterEntityName(name); }}
+            onClear={() => { setFilterEntityId(""); setFilterEntityName(""); }}
+          />
+        )}
+      </div>
 
       <div className="mt-5 overflow-hidden rounded-sm border border-border-subtle bg-surface-default">
         {query.isLoading && <Loading label={t("states.loading")} />}
@@ -259,6 +283,13 @@ function Editor({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [step, setStep] = useState<1 | 2>(1);
   const isPhysical = resource.key === "physicalPersons";
+  const isLimits = resource.key === "limits";
+  const legalEntityId = String(values["legalEntityId"] ?? "");
+  const limitFormData = useQuery({
+    queryKey: ["limit-form-data", legalEntityId],
+    queryFn: () => apiClient.getLegacy<Record<string, unknown>>(`/api/legal-entities/${legalEntityId}/limit-form-data`),
+    enabled: isLimits && Boolean(legalEntityId),
+  });
   const immediateFamily = isImmediateFamily(values["specialRelationBasis"]);
   const visibleFields = (isPhysical
     ? fields.filter((_, index) => step === 1 ? index < 6 : index >= 6)
@@ -346,10 +377,27 @@ function Editor({
               disabled={isConditionallyDisabled(resource.key, field.key, values)}
               error={fieldErrors[field.key] ?? ""}
               onBlur={() => { if (isPhysical) void checkIdentity(field.key, values[field.key]); }}
+              initialLabel={field.type === "search-select" ? String(state.record?.["naziv"] ?? state.record?.["Naziv"] ?? "") : undefined}
               set={(value) => { setFieldErrors((current) => ({ ...current, [field.key]: "" })); setValues((current) => updateFieldValues(resource.key, field, value, current, bs)); }}
             />
           ))}
         </div>
+        {isLimits && legalEntityId && (
+          <div className="mt-4 grid gap-2 rounded-sm border border-border-subtle bg-surface-subtle p-3 text-sm sm:grid-cols-2">
+            {limitFormData.isLoading && <Text tone="secondary">{bs ? "Učitavanje podataka pravnog lica…" : "Loading legal entity data…"}</Text>}
+            {limitFormData.data && (
+              <>
+                <InfoItem label={bs ? "Naziv" : "Name"} value={String(limitFormData.data["name"] ?? "—")} />
+                <InfoItem label={bs ? "Rezidentnost" : "Residency"} value={limitFormData.data["isResident"] ? (bs ? "Rezident" : "Resident") : (bs ? "Nerezident" : "Non-resident")} />
+                <InfoItem label={bs ? "FBA ID" : "FBA ID"} value={String(limitFormData.data["fbaId"] ?? "—")} />
+                <InfoItem label={bs ? "Porezni broj" : "Tax number"} value={String(limitFormData.data["taxNumber"] ?? "—")} />
+                <InfoItem label={bs ? "Matični broj" : "Registration number"} value={String(limitFormData.data["matbroj"] ?? limitFormData.data["maticniBroj"] ?? "—")} />
+                <InfoItem label={bs ? "Regulatorni kapital" : "Regulatory capital"} value={formatCapital(limitFormData.data["regulatoryCapital"], bs)} />
+                <InfoItem label={bs ? "Osnovni kapital" : "Core capital"} value={formatCapital(limitFormData.data["coreCapital"], bs)} />
+              </>
+            )}
+          </div>
+        )}
         {validationError && (
           <div role="alert" className="mt-5 flex items-start gap-2 rounded-sm border border-feedback-danger bg-feedback-danger/10 p-3 text-sm text-feedback-danger">
             <AlertCircle className="mt-0.5 size-4 shrink-0" />
@@ -376,6 +424,7 @@ function Field({
   disabled = false,
   error,
   onBlur,
+  initialLabel,
 }: {
   field: ResourceField;
   value: unknown;
@@ -384,12 +433,13 @@ function Field({
   disabled?: boolean;
   error?: string;
   onBlur?: () => void;
+  initialLabel?: string | undefined;
 }) {
   const label = bs ? field.labelBs : field.labelEn;
   const codeList = useQuery({
     queryKey: ["field-options", field.codeListCategory, field.lookupEndpoint],
     queryFn: () => getLegacyRecords(field.lookupEndpoint ?? `/api/code-lists/dropdown/${encodeURIComponent(field.codeListCategory!)}`),
-    enabled: Boolean(field.codeListCategory || field.lookupEndpoint),
+    enabled: field.type !== "search-select" && Boolean(field.codeListCategory || field.lookupEndpoint),
     staleTime: 30_000,
   });
   const dynamicOptions = (codeList.data ?? []).map((item) => ({
@@ -402,8 +452,11 @@ function Field({
     labelEn: field.lookupEndpoint
       ? `${String(item["firstName"] ?? "")} ${String(item["lastName"] ?? "")}`.trim()
       : field.options?.find((option) => String(option.value) === String(item["kod"] ?? item["Kod"] ?? ""))?.labelEn ?? String(item["naziv"] ?? item["Naziv"] ?? ""),
+    opis: field.lookupEndpoint ? undefined : String(item["opis"] ?? item["Opis"] ?? ""),
   })).filter((item) => item.value);
   const options = dynamicOptions.length > 0 ? dynamicOptions : field.options;
+  if (field.type === "search-select")
+    return <SearchSelectField field={field} value={value} bs={bs} disabled={disabled} initialLabel={initialLabel} set={set} />;
   if (field.type === "checkbox")
     return (
       <label className="flex min-h-11 items-center gap-3 rounded-sm border border-border-subtle px-3 text-sm font-medium">
@@ -417,7 +470,8 @@ function Field({
         {label}
       </label>
     );
-  if (field.type === "select")
+  if (field.type === "select") {
+    const selectedOpis = dynamicOptions.find((option) => String(option.value) === String(value ?? ""))?.opis;
     return (
       <label className="grid gap-1.5 text-sm font-medium">
         <span>{label}{field.required && " *"}</span>
@@ -435,8 +489,10 @@ function Field({
           <option value="">{bs ? "Odaberite…" : "Select…"}</option>
           {options?.map((option) => <option key={String(option.value)} value={String(option.value)}>{bs ? option.labelBs : option.labelEn}</option>)}
         </select>
+        {selectedOpis ? <span className="text-xs text-text-tertiary">{selectedOpis}</span> : null}
       </label>
     );
+  }
   if (field.type === "segmented")
     return (
       <fieldset className="grid gap-1.5 text-sm font-medium">
@@ -508,6 +564,172 @@ function Field({
   );
 }
 
+function InfoItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid gap-0.5">
+      <span className="text-xs font-semibold text-text-tertiary">{label}</span>
+      <span className="text-text-primary">{value || "—"}</span>
+    </div>
+  );
+}
+function formatCapital(value: unknown, bs: boolean) {
+  if (value == null) return bs ? "Nije unesen" : "Not entered";
+  return new Intl.NumberFormat(bs ? "bs-BA" : "en-GB", { style: "currency", currency: "BAM" }).format(Number(value));
+}
+function SearchSelectField({
+  field,
+  value,
+  bs,
+  disabled,
+  initialLabel,
+  set,
+}: {
+  field: ResourceField;
+  value: unknown;
+  bs: boolean;
+  disabled: boolean;
+  initialLabel?: string | undefined;
+  set: (value: unknown) => void;
+}) {
+  const label = bs ? field.labelBs : field.labelEn;
+  const [query, setQuery] = useState(initialLabel ?? "");
+  const [debounced, setDebounced] = useState("");
+  const [open, setOpen] = useState(false);
+  useEffect(() => setQuery(initialLabel ?? ""), [initialLabel]);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(query.trim()), 250);
+    return () => clearTimeout(timer);
+  }, [query]);
+  const results = useQuery({
+    queryKey: ["search-select", field.lookupEndpoint, debounced],
+    queryFn: () => getLegacyRecords(`${field.lookupEndpoint}?search=${encodeURIComponent(debounced)}`),
+    enabled: Boolean(field.lookupEndpoint) && debounced.length > 0,
+    staleTime: 10_000,
+  });
+  return (
+    <div className="relative grid gap-1.5 text-sm font-medium">
+      <span>{label}{field.required && " *"}</span>
+      <input
+        type="text"
+        required={field.required && !value}
+        disabled={disabled}
+        value={query}
+        placeholder={bs ? "Pretraži naziv ili matični broj…" : "Search by name or registration number…"}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setOpen(true);
+          if (!e.target.value) set(null);
+        }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        className="h-11 min-w-0 rounded-sm border border-border-subtle bg-surface-default px-3 outline-none focus:border-border-brand disabled:bg-surface-muted disabled:text-text-tertiary"
+      />
+      {open && debounced.length > 0 && (
+        <ul className="absolute top-full z-10 mt-1 max-h-56 w-full overflow-auto rounded-sm border border-border-subtle bg-surface-raised shadow-lg">
+          {results.isLoading && <li className="px-3 py-2 text-text-tertiary">{bs ? "Pretraga…" : "Searching…"}</li>}
+          {!results.isLoading && (results.data ?? []).length === 0 && (
+            <li className="px-3 py-2 text-text-tertiary">{bs ? "Nema rezultata." : "No results."}</li>
+          )}
+          {(results.data ?? []).map((item) => {
+            const id = String(item["id"] ?? item["Id"] ?? "");
+            const name = String(item["name"] ?? item["Name"] ?? "");
+            return (
+              <li key={id}>
+                <button
+                  type="button"
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-surface-subtle"
+                  onClick={() => {
+                    set(id);
+                    setQuery(name);
+                    setOpen(false);
+                  }}
+                >
+                  {name}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function ClientFilterPicker({
+  bs,
+  lookupEndpoint,
+  value,
+  valueName,
+  onSelect,
+  onClear,
+}: {
+  bs: boolean;
+  lookupEndpoint: string;
+  value: string;
+  valueName: string;
+  onSelect: (id: string, name: string) => void;
+  onClear: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [debounced, setDebounced] = useState("");
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(query.trim()), 250);
+    return () => clearTimeout(timer);
+  }, [query]);
+  const results = useQuery({
+    queryKey: ["client-filter", lookupEndpoint, debounced],
+    queryFn: () => getLegacyRecords(`${lookupEndpoint}?search=${encodeURIComponent(debounced)}`),
+    enabled: debounced.length > 0,
+    staleTime: 10_000,
+  });
+  if (value) {
+    return (
+      <div className="flex h-11 max-w-md flex-1 items-center justify-between gap-2 rounded-sm border border-border-brand bg-surface-subtle px-3 text-sm">
+        <span className="truncate">{bs ? "Klijent" : "Client"}: <strong>{valueName}</strong></span>
+        <Button type="button" variant="ghost" size="icon" title={bs ? "Ukloni filter" : "Clear filter"} onClick={onClear}>
+          <X className="size-4" />
+        </Button>
+      </div>
+    );
+  }
+  return (
+    <div className="relative max-w-md flex-1">
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        placeholder={bs ? "Filtriraj po klijentu…" : "Filter by client…"}
+        className="h-11 w-full rounded-sm border border-border-subtle bg-surface-default px-3 text-sm outline-none focus:border-border-brand"
+      />
+      {open && debounced.length > 0 && (
+        <ul className="absolute top-full z-10 mt-1 max-h-56 w-full overflow-auto rounded-sm border border-border-subtle bg-surface-raised shadow-lg">
+          {!results.isLoading && (results.data ?? []).length === 0 && (
+            <li className="px-3 py-2 text-sm text-text-tertiary">{bs ? "Nema rezultata." : "No results."}</li>
+          )}
+          {(results.data ?? []).map((item) => {
+            const id = String(item["id"] ?? item["Id"] ?? "");
+            const name = String(item["name"] ?? item["Name"] ?? "");
+            return (
+              <li key={id}>
+                <button
+                  type="button"
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-surface-subtle"
+                  onClick={() => { onSelect(id, name); setQuery(""); setOpen(false); }}
+                >
+                  {name}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function initialValue(field: ResourceField, record?: LegacyRecord) {
   const value = record?.[field.key] ?? record?.[field.key[0]!.toUpperCase() + field.key.slice(1)];
   return value ?? (field.type === "checkbox" ? false : "");
@@ -567,7 +789,7 @@ function validateResource(resource: RegistryResource, values: Record<string, unk
         : "FBA ID is required for a non-resident legal entity.";
   }
   if (key === "limits") {
-    for (const field of ["iznosLimita", "utilizacija", "korigovaniLimit"]) {
+    for (const field of ["odobreniLimit", "maksimalnaOcekivanaUtilizacija"]) {
       const value = values[field];
       if (value != null && value !== "" && Number(value) < 0)
         return bs ? "Novčani iznosi ne mogu biti negativni." : "Monetary amounts cannot be negative.";
@@ -658,6 +880,8 @@ function fieldLabel(resource: RegistryResource, key: string, bs: boolean) {
     subject: ["Naslov", "Subject"], audience: ["Grupa primalaca", "Audience"], sentAt: ["Poslano", "Sent"],
     purpose: ["Poslovna svrha", "Business purpose"], deliveryStatus: ["Status dostave", "Delivery status"],
     personTypeLabel: ["Vrsta lica", "Person type"],
+    naziv: ["Naziv", "Name"], regulatorniKapital: ["Regulatorni kapital", "Regulatory capital"],
+    osnovniKapital: ["Osnovni kapital", "Core capital"],
   };
   return field ? (bs ? field.labelBs : field.labelEn) : known[key]?.[bs ? 0 : 1] ?? humanize(key);
 }

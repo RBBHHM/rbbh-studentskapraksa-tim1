@@ -25,6 +25,12 @@ public class ClientLimit
     /// <summary>Osnovni kapital banke.</summary>
     public decimal CoreCapital { get; set; }
 
+    /// <summary>Dopunski kapital banke.</summary>
+    public decimal SupplementaryCapital { get; set; }
+
+    /// <summary>Datum na koji se odnose iznosi kapitala.</summary>
+    public DateTime CapitalDate { get; set; }
+
     /// <summary>Iznos limita izloženosti prema klijentu.</summary>
     public decimal ExposureLimit { get; set; }
 

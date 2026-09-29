@@ -11,20 +11,8 @@ public class LimitConfiguration : IEntityTypeConfiguration<Limit>
 
         builder.HasKey(e => e.Id);
 
-        builder.Property(e => e.Naziv)
-               .HasMaxLength(100)
-               .IsRequired();
-
         builder.Property(e => e.TipLimita)
                .HasMaxLength(100)
-               .IsRequired();
-
-        builder.Property(e => e.RegulatorniKapital)
-               .HasColumnType("decimal(18,2)")
-               .IsRequired();
-
-        builder.Property(e => e.OsnovniKapital)
-               .HasColumnType("decimal(18,2)")
                .IsRequired();
 
         builder.Property(e => e.CreatedBy)
@@ -34,7 +22,12 @@ public class LimitConfiguration : IEntityTypeConfiguration<Limit>
         builder.Property(e => e.ModifiedBy)
                .HasMaxLength(100);
 
+        builder.HasOne(e => e.LegalEntity)
+               .WithMany()
+               .HasForeignKey(e => e.LegalEntityId)
+               .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(e => e.LegalEntityId);
         builder.HasIndex(e => e.TipLimita);
-        builder.HasIndex(e => e.Naziv);
     }
 }

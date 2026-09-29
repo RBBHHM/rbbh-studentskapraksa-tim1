@@ -3,6 +3,7 @@ using ClosedXML.Excel;
 using FluentAssertions;
 using RBBH.ConnectedParties.BL.Services;
 using RBBH.ConnectedParties.DL.Entities.Limiti;
+using RBBH.ConnectedParties.DL.Entities.Report;
 using RBBH.ConnectedParties.DL.Persistence;
 using RBBH.ConnectedParties.Exceptions;
 using LegalEntityEntity = RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntity;
@@ -18,17 +19,18 @@ namespace UnitTests.Services.ReportServiceTests
     ///   - Export po matičnom broju / poreznom broju / FBA ID-u (ExportClientByIdAsync)
     ///   - Export svih klijenata (ExportAllClientsWithLimitsAsync)
     ///   - Tačnost podataka u Excel fajlu (čitanje generisanog .xlsx preko ClosedXML)
-    ///   - Ispravnost filtera (identifikator, case-insensitive, samo aktivni, match po nazivu)
+    ///   - Ispravnost filtera (identifikator, case-insensitive, samo aktivni, match po pravnom licu)
     ///   - Performanse exporta sa većim brojem zapisa
     ///
-    /// Kolone u Excelu (header red = 3, podaci od reda 4):
-    ///   1 Naziv | 2 Tip limita | 3 Iznos limita | 4 Utilizacija | 5 Korigovani limit |
-    ///   6 Raspoloživi limit | 7 Regulatorni kapital | 8 Osnovni kapital | 9 Kreirao
+    /// Kolone u Excelu (RegistryExcelExporter — header red = 1, podaci od reda 2):
+    ///   1 Naziv | 2 Rezidentnost | 3 FBA ID | 4 Porezni broj | 5 Matični broj | 6 Matbroj |
+    ///   7 Tip limita | 8 Odobreni limit | 9 Maksimalna očekivana utilizacija |
+    ///   10 Rok očekivane utilizacije | 11 Komentar | 12 Regulatorni kapital | 13 Osnovni kapital
     /// </summary>
     public class ExcelExportTests
     {
-        private const int HeaderRow = 3;
-        private const int FirstDataRow = 4;
+        private const int HeaderRow = 1;
+        private const int FirstDataRow = 2;
 
         private static ReportService NewService(out ConnectedPartiesDbContext ctx)
         {
@@ -54,16 +56,26 @@ namespace UnitTests.Services.ReportServiceTests
             IsActive = active
         };
 
-        private static Limit NewLimit(string naziv, decimal iznos = 1000m, decimal util = 200m,
-            decimal raspolozivi = 100m, string tip = "Izloženost") => new()
+        private static Limit NewLimit(Guid legalEntityId, string tip = "MM",
+            decimal? odobreniLimit = 1000m, decimal? maksUtil = 200m, string? komentar = null) => new()
         {
-            Naziv = naziv,
+            LegalEntityId = legalEntityId,
             TipLimita = tip,
-            IznosLimita = iznos,
-            Utilizacija = util,
-            RaspoloziviLimit = raspolozivi,
-            RegulatorniKapital = 5000m,
-            OsnovniKapital = 4000m,
+            OdobreniLimit = odobreniLimit,
+            MaksimalnaOcekivanaUtilizacija = maksUtil,
+            Komentar = komentar,
+            CreatedBy = "seed",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        private static ClientLimit NewClientLimit(Guid legalEntityId, decimal regulatoryCapital = 5000m, decimal coreCapital = 4000m) => new()
+        {
+            LegalEntityId = legalEntityId,
+            RegulatoryCapital = regulatoryCapital,
+            CoreCapital = coreCapital,
+            ExposureLimit = 1000m,
+            CurrentExposure = 0m,
+            Currency = "BAM",
             CreatedBy = "seed",
             CreatedAt = DateTime.UtcNow
         };
@@ -126,8 +138,9 @@ namespace UnitTests.Services.ReportServiceTests
         public async Task ExportClientByIdAsync_ByTaxNumber_ReturnsNonEmptyExcel()
         {
             var service = NewService(out var ctx);
-            ctx.LegalEntities.Add(NewEntity("ACME", tax: "1111111111111"));
-            ctx.Limiti.Add(NewLimit("ACME"));
+            var entity = NewEntity("ACME", tax: "1111111111111");
+            ctx.LegalEntities.Add(entity);
+            ctx.Limiti.Add(NewLimit(entity.Id));
             await ctx.SaveChangesAsync();
 
             var bytes = await service.ExportClientByIdAsync("1111111111111");
@@ -141,8 +154,9 @@ namespace UnitTests.Services.ReportServiceTests
         public async Task ExportClientByIdAsync_ByFbaId_ReturnsExcel()
         {
             var service = NewService(out var ctx);
-            ctx.LegalEntities.Add(NewEntity("NEREZ", resident: false, fba: "1234567890"));
-            ctx.Limiti.Add(NewLimit("NEREZ"));
+            var entity = NewEntity("NEREZ", resident: false, fba: "1234567890");
+            ctx.LegalEntities.Add(entity);
+            ctx.Limiti.Add(NewLimit(entity.Id));
             await ctx.SaveChangesAsync();
 
             var bytes = await service.ExportClientByIdAsync("1234567890");
@@ -155,8 +169,9 @@ namespace UnitTests.Services.ReportServiceTests
         public async Task ExportClientByIdAsync_ByMatbroj_ReturnsExcel()
         {
             var service = NewService(out var ctx);
-            ctx.LegalEntities.Add(NewEntity("MATB", matbroj: "MB12345"));
-            ctx.Limiti.Add(NewLimit("MATB"));
+            var entity = NewEntity("MATB", matbroj: "MB12345");
+            ctx.LegalEntities.Add(entity);
+            ctx.Limiti.Add(NewLimit(entity.Id));
             await ctx.SaveChangesAsync();
 
             var bytes = await service.ExportClientByIdAsync("MB12345");
@@ -169,8 +184,9 @@ namespace UnitTests.Services.ReportServiceTests
         public async Task ExportClientByIdAsync_ByMaticniBroj_ReturnsExcel()
         {
             var service = NewService(out var ctx);
-            ctx.LegalEntities.Add(NewEntity("MATICNI", maticni: "4400001"));
-            ctx.Limiti.Add(NewLimit("MATICNI"));
+            var entity = NewEntity("MATICNI", maticni: "4400001");
+            ctx.LegalEntities.Add(entity);
+            ctx.Limiti.Add(NewLimit(entity.Id));
             await ctx.SaveChangesAsync();
 
             var bytes = await service.ExportClientByIdAsync("4400001");
@@ -183,8 +199,9 @@ namespace UnitTests.Services.ReportServiceTests
         public async Task ExportClientByIdAsync_IsCaseInsensitive()
         {
             var service = NewService(out var ctx);
-            ctx.LegalEntities.Add(NewEntity("CI", matbroj: "AbC123"));
-            ctx.Limiti.Add(NewLimit("CI"));
+            var entity = NewEntity("CI", matbroj: "AbC123");
+            ctx.LegalEntities.Add(entity);
+            ctx.Limiti.Add(NewLimit(entity.Id));
             await ctx.SaveChangesAsync();
 
             var bytes = await service.ExportClientByIdAsync("abc123");
@@ -197,8 +214,9 @@ namespace UnitTests.Services.ReportServiceTests
         public async Task ExportClientByIdAsync_IgnoresInactiveEntity_ThrowsNotFound()
         {
             var service = NewService(out var ctx);
-            ctx.LegalEntities.Add(NewEntity("STARI", tax: "9999999999999", active: false));
-            ctx.Limiti.Add(NewLimit("STARI"));
+            var entity = NewEntity("STARI", tax: "9999999999999", active: false);
+            ctx.LegalEntities.Add(entity);
+            ctx.Limiti.Add(NewLimit(entity.Id));
             await ctx.SaveChangesAsync();
 
             var act = async () => await service.ExportClientByIdAsync("9999999999999");
@@ -211,19 +229,19 @@ namespace UnitTests.Services.ReportServiceTests
         public async Task ExportClientByIdAsync_IncludesOnlyMatchingClientLimits()
         {
             var service = NewService(out var ctx);
-            ctx.LegalEntities.Add(NewEntity("ACME", tax: "1111111111111"));
+            var acme = NewEntity("ACME", tax: "1111111111111");
+            var beta = NewEntity("BETA");
+            ctx.LegalEntities.AddRange(acme, beta);
             ctx.Limiti.AddRange(
-                NewLimit("ACME", tip: "Izloženost"),
-                NewLimit("ACME", tip: "Interni"),
-                NewLimit("BETA") // drugi klijent — ne smije biti u exportu
-            );
+                NewLimit(acme.Id, tip: "MM"),
+                NewLimit(acme.Id, tip: "SATAFXs"),
+                NewLimit(beta.Id)); // drugi klijent — ne smije biti u exportu
             await ctx.SaveChangesAsync();
 
             var bytes = await service.ExportClientByIdAsync("1111111111111");
 
             var ws = OpenSheet(bytes);
             DataRowCount(ws).Should().Be(2, "samo ACME limiti");
-            // Provjeri da nijedan red nije BETA
             for (int r = FirstDataRow; r < FirstDataRow + 2; r++)
                 ws.Cell(r, 1).GetString().Should().Be("ACME");
         }
@@ -235,7 +253,11 @@ namespace UnitTests.Services.ReportServiceTests
         public async Task ExportAllClientsWithLimitsAsync_ReturnsRowPerLimit()
         {
             var service = NewService(out var ctx);
-            ctx.Limiti.AddRange(NewLimit("A"), NewLimit("B"), NewLimit("C"));
+            var a = NewEntity("A");
+            var b = NewEntity("B");
+            var c = NewEntity("C");
+            ctx.LegalEntities.AddRange(a, b, c);
+            ctx.Limiti.AddRange(NewLimit(a.Id), NewLimit(b.Id), NewLimit(c.Id));
             await ctx.SaveChangesAsync();
 
             var bytes = await service.ExportAllClientsWithLimitsAsync();
@@ -260,7 +282,11 @@ namespace UnitTests.Services.ReportServiceTests
         public async Task ExportAllClientsWithLimitsAsync_OrdersByNaziv()
         {
             var service = NewService(out var ctx);
-            ctx.Limiti.AddRange(NewLimit("Zeta"), NewLimit("Alpha"), NewLimit("Mid"));
+            var zeta = NewEntity("Zeta");
+            var alpha = NewEntity("Alpha");
+            var mid = NewEntity("Mid");
+            ctx.LegalEntities.AddRange(zeta, alpha, mid);
+            ctx.Limiti.AddRange(NewLimit(zeta.Id), NewLimit(alpha.Id), NewLimit(mid.Id));
             await ctx.SaveChangesAsync();
 
             var bytes = await service.ExportAllClientsWithLimitsAsync();
@@ -277,18 +303,19 @@ namespace UnitTests.Services.ReportServiceTests
         public async Task ExportAllClients_ExcelHasExpectedHeaders()
         {
             var service = NewService(out var ctx);
-            ctx.Limiti.Add(NewLimit("A"));
+            var entity = NewEntity("A");
+            ctx.LegalEntities.Add(entity);
+            ctx.Limiti.Add(NewLimit(entity.Id));
             await ctx.SaveChangesAsync();
 
             var ws = OpenSheet(await service.ExportAllClientsWithLimitsAsync());
 
             ws.Cell(HeaderRow, 1).GetString().Should().Be("Naziv");
-            ws.Cell(HeaderRow, 2).GetString().Should().Be("Tip limita");
-            ws.Cell(HeaderRow, 3).GetString().Should().Be("Iznos limita");
-            ws.Cell(HeaderRow, 4).GetString().Should().Be("Utilizacija");
-            ws.Cell(HeaderRow, 6).GetString().Should().Be("Raspoloživi limit");
-            ws.Cell(HeaderRow, 7).GetString().Should().Be("Regulatorni kapital");
-            ws.Cell(HeaderRow, 9).GetString().Should().Be("Kreirao");
+            ws.Cell(HeaderRow, 2).GetString().Should().Be("Rezidentnost");
+            ws.Cell(HeaderRow, 7).GetString().Should().Be("Tip limita");
+            ws.Cell(HeaderRow, 8).GetString().Should().Be("Odobreni limit");
+            ws.Cell(HeaderRow, 12).GetString().Should().Be("Regulatorni kapital");
+            ws.Cell(HeaderRow, 13).GetString().Should().Be("Osnovni kapital");
         }
 
         // Tačnost podataka - vrijednosti u ćelijama odgovaraju podacima iz baze
@@ -296,18 +323,22 @@ namespace UnitTests.Services.ReportServiceTests
         public async Task ExportAllClients_ExcelCellsMatchSourceData()
         {
             var service = NewService(out var ctx);
-            ctx.Limiti.Add(NewLimit("ACME", iznos: 1500.50m, util: 750.25m, raspolozivi: 749.75m, tip: "Izloženost"));
+            var entity = NewEntity("ACME", tax: "1111111111111");
+            ctx.LegalEntities.Add(entity);
+            ctx.Limiti.Add(NewLimit(entity.Id, tip: "SATAFXs", odobreniLimit: 1500.50m, maksUtil: 750.25m, komentar: "Test komentar"));
+            ctx.ClientLimits.Add(NewClientLimit(entity.Id, regulatoryCapital: 5000m, coreCapital: 4000m));
             await ctx.SaveChangesAsync();
 
             var ws = OpenSheet(await service.ExportAllClientsWithLimitsAsync());
 
             ws.Cell(FirstDataRow, 1).GetString().Should().Be("ACME");
-            ws.Cell(FirstDataRow, 2).GetString().Should().Be("Izloženost");
-            ws.Cell(FirstDataRow, 3).GetValue<decimal>().Should().Be(1500.50m);
-            ws.Cell(FirstDataRow, 4).GetValue<decimal>().Should().Be(750.25m);
-            ws.Cell(FirstDataRow, 6).GetValue<decimal>().Should().Be(749.75m);
-            ws.Cell(FirstDataRow, 7).GetValue<decimal>().Should().Be(5000m);
-            ws.Cell(FirstDataRow, 9).GetString().Should().Be("seed");
+            ws.Cell(FirstDataRow, 2).GetString().Should().Be("Rezident");
+            ws.Cell(FirstDataRow, 7).GetString().Should().Be("SATAFXs");
+            ws.Cell(FirstDataRow, 8).GetValue<decimal>().Should().Be(1500.50m);
+            ws.Cell(FirstDataRow, 9).GetValue<decimal>().Should().Be(750.25m);
+            ws.Cell(FirstDataRow, 11).GetString().Should().Be("Test komentar");
+            ws.Cell(FirstDataRow, 12).GetValue<decimal>().Should().Be(5000m);
+            ws.Cell(FirstDataRow, 13).GetValue<decimal>().Should().Be(4000m);
         }
 
         // Tačnost podataka - produkovani fajl je validan .xlsx (može se otvoriti)
@@ -315,7 +346,9 @@ namespace UnitTests.Services.ReportServiceTests
         public async Task ExportAllClients_ProducesValidXlsxWorkbook()
         {
             var service = NewService(out var ctx);
-            ctx.Limiti.Add(NewLimit("A"));
+            var entity = NewEntity("A");
+            ctx.LegalEntities.Add(entity);
+            ctx.Limiti.Add(NewLimit(entity.Id));
             await ctx.SaveChangesAsync();
 
             var bytes = await service.ExportAllClientsWithLimitsAsync();
@@ -334,7 +367,11 @@ namespace UnitTests.Services.ReportServiceTests
             var service = NewService(out var ctx);
             const int count = 2000;
             for (int i = 0; i < count; i++)
-                ctx.Limiti.Add(NewLimit($"Klijent {i:D5}", util: i, raspolozivi: i % 7 == 0 ? -1m : 10m));
+            {
+                var entity = NewEntity($"Klijent {i:D5}");
+                ctx.LegalEntities.Add(entity);
+                ctx.Limiti.Add(NewLimit(entity.Id, maksUtil: i));
+            }
             await ctx.SaveChangesAsync();
 
             // Act

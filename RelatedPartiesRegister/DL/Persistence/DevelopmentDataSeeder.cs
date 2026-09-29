@@ -38,8 +38,17 @@ public static class DevelopmentDataSeeder
             Code("TipLica", "PL", "Pravno lice", 2, now),
             Code("OsnovPovezanosti", "VL", "Vlasništvo", 1, now),
             Code("OsnovPovezanosti", "UP", "Upravljačka povezanost", 2, now),
-            Code("VrstaLimita", "REG", "Regulatorni limit", 1, now),
-            Code("VrstaLimita", "INT", "Interni limit", 2, now),
+            Code("VrstaLimita", "MM", "MM", 1, now, "Izvor: manuelna evidencija."),
+            Code("VrstaLimita", "SATAFXs", "SATA FX spot", 2, now, "Izvor: SATA. Iskorištenost FXs limita se po FBA ponderiše sa 1% — planirana i stvarna iskorištenost prikazuju se u ponderisanom iznosu od 1%."),
+            Code("VrstaLimita", "SATAFXD", "SATA FX derivati", 3, now, "Izvor: SATA."),
+            Code("VrstaLimita", "SATAOVL", "SATA overnight limit", 4, now, "Izvor: SATA."),
+            Code("VrstaLimita", "OVL_CUSTODY", "OVL Custody", 5, now, "Izvor: manuelna evidencija."),
+            Code("VrstaLimita", "SFL_NET", "SFL Net", 6, now, "Izvor: manuelna evidencija."),
+            Code("VrstaLimita", "LG", "LG", 7, now, "Izvor: manuelna evidencija."),
+            Code("VrstaLimita", "LT", "LT", 8, now, "Izvor: manuelna evidencija."),
+            Code("VrstaLimita", "ST", "ST", 9, now, "Izvor: manuelna evidencija."),
+            Code("VrstaLimita", "SPRL", "SPRL", 10, now, "Izvor: manuelna evidencija."),
+            Code("VrstaLimita", "LEASING", "Leasing", 11, now, "Izvor: manuelna evidencija."),
             Code("Status", "DRAFT", "Nacrt", 1, now),
             Code("Status", "VERIFIED", "Verificirano", 2, now),
             Code("Status", "REJECTED", "Odbijeno", 3, now),
@@ -66,10 +75,6 @@ public static class DevelopmentDataSeeder
             Code("OsnovPosebnogOdnosa", "B1", "B1", 5, now),
             Code("OsnovPosebnogOdnosa", "UZA_PORODICA", "Član uže porodice povezanog lica", 6, now));
 
-        db.Limiti.AddRange(
-            new Limit { Naziv = "Ukupna izloženost", TipLimita = "REG", IznosLimita = 1_000_000, Utilizacija = 425_000, RaspoloziviLimit = 575_000, RegulatorniKapital = 5_000_000, OsnovniKapital = 4_000_000, CreatedBy = "seed" },
-            new Limit { Naziv = "Interni operativni limit", TipLimita = "INT", IznosLimita = 500_000, Utilizacija = 125_000, RaspoloziviLimit = 375_000, RegulatorniKapital = 5_000_000, OsnovniKapital = 4_000_000, CreatedBy = "seed" });
-
         var resident = new RelatedPerson { FirstName = "Amina", LastName = "Hadžić", Residency = ResidencyType.Resident, JMBG = "0101990170003", RelationBasis = "ZOB-2-V-5", RelationDescription = "Član uprave banke i članovi uže porodice.", SpecialRelationBasis = "UPRAVA", IsIdentifiedStaff = true, DeclarationNoFamilyMembers = false, ConnectedWithBank = true, SpecialRelationshipWithBank = true, SpecialContract = false, MalusClawback = true, DateFrom = now.Date.AddYears(-2), DateTo = now.Date.AddYears(1), Status = RelatedPersonStatus.Verified, CreatedBy = "seed" };
         var nonResident = new RelatedPerson { FirstName = "Marko", LastName = "Kovač", Residency = ResidencyType.NonResident, PassportNumber = "P-DEMO-2026", FBAId = "1002", RelationBasis = "ZOB-2-V-8", RelationDescription = "Lice sa značajnim uticajem ili mogućim sukobom interesa.", SpecialRelationBasis = "PROKURISTA", IsIdentifiedStaff = true, DeclarationNoFamilyMembers = false, ConnectedWithBank = false, SpecialRelationshipWithBank = true, SpecialContract = true, MalusClawback = false, DateFrom = now.Date.AddYears(-1), DateTo = now.Date.AddYears(1), Status = RelatedPersonStatus.Draft, CreatedBy = "seed" };
         var rejected = new RelatedPerson { FirstName = "Lejla", LastName = "Testić", Residency = ResidencyType.NonResident, PassportNumber = "P-REJECT-01", FBAId = "1003", RelationBasis = "ZOB-2-V-7", RelationDescription = "Član organa upravljanja člana bankarske grupe.", SpecialRelationBasis = "NKF", IsIdentifiedStaff = true, DeclarationNoFamilyMembers = false, ConnectedWithBank = false, SpecialRelationshipWithBank = false, SpecialContract = false, MalusClawback = false, DateFrom = now.Date.AddMonths(-6), DateTo = now.Date.AddMonths(6), Status = RelatedPersonStatus.Rejected, CreatedBy = "seed" };
@@ -80,6 +85,10 @@ public static class DevelopmentDataSeeder
         var legalResident = new LegalEntity { IsResident = true, TaxNumber = "4200000000001", Name = "RBI Poslovni partner d.o.o.", BasisOfConnection = "Član 4. stav (1) tačka a) ZOB", ConnectionDescription = "Član 4. stav (1) tačka a) ZOB", ConnectedWithBank = true, DateFrom = now.Date.AddYears(-3), Status = "VERIFIED", CreatedBy = "seed", VerifiedBy = "demo.verifier", VerifiedAt = now.AddDays(-2) };
         var legalForeign = new LegalEntity { IsResident = false, FbaId = "2002", Name = "International Partner GmbH", BasisOfConnection = "Član 4. stav (1) tačka b) ZOB", ConnectionDescription = "Član 4. stav (1) tačka b) ZOB", ConnectedWithBank = false, DateFrom = now.Date.AddMonths(-8), Status = "DRAFT", CreatedBy = "seed" };
         db.Set<LegalEntity>().AddRange(legalResident, legalForeign);
+
+        db.Limiti.AddRange(
+            new Limit { LegalEntityId = legalResident.Id, TipLimita = "MM", OdobreniLimit = 1_000_000, MaksimalnaOcekivanaUtilizacija = 750_000, RokOcekivaneUtilizacije = now.Date.AddMonths(6), Komentar = "Testni limit za rezidentno pravno lice.", CreatedBy = "seed" },
+            new Limit { LegalEntityId = legalForeign.Id, TipLimita = "SATAFXS", OdobreniLimit = 500_000, MaksimalnaOcekivanaUtilizacija = 300_000, RokOcekivaneUtilizacije = now.Date.AddMonths(3), Komentar = "Testni limit za nerezidentno pravno lice.", CreatedBy = "seed" });
 
         var admin = new AppUser { KeycloakId = "local-admin", Username = "admin1", FirstName = "Lokalni", LastName = "Korisnik", Email = "admin@localhost", CreatedBy = "seed" };
         var verifier = new AppUser { KeycloakId = "local-multi-access", Username = "user1", FirstName = "Vera", LastName = "Korisnik", Email = "user@localhost", CreatedBy = "seed" };
@@ -105,8 +114,11 @@ public static class DevelopmentDataSeeder
             new Report { ReportType = "DAILY", ReportDate = now.Date, TotalClients = 4, ClientsWithBreachedLimit = 1, TotalExposure = 550000, CreatedBy = "seed" },
             new Report { ReportType = "MONTHLY", ReportDate = new DateTime(now.Year, now.Month, 1), TotalClients = 4, ClientsWithBreachedLimit = 1, TotalExposure = 550000, CreatedBy = "seed" });
         db.ClientLimits.AddRange(
-            new ClientLimit { LegalEntityId = legalResident.Id, RegulatoryCapital = 5000000, CoreCapital = 4000000, ExposureLimit = 1000000, CurrentExposure = 425000, Currency = "BAM", CreatedBy = "seed" },
-            new ClientLimit { LegalEntityId = legalForeign.Id, RegulatoryCapital = 5000000, CoreCapital = 4000000, ExposureLimit = 100000, CurrentExposure = 125000, Currency = "EUR", IsLimitBreached = true, CreatedBy = "seed" });
+            new ClientLimit { LegalEntityId = legalResident.Id, RegulatoryCapital = 5000000, CoreCapital = 4000000, SupplementaryCapital = 500000, CapitalDate = now.Date, ExposureLimit = 1000000, CurrentExposure = 425000, Currency = "BAM", CreatedBy = "seed" },
+            new ClientLimit { LegalEntityId = legalForeign.Id, RegulatoryCapital = 5000000, CoreCapital = 4000000, SupplementaryCapital = 500000, CapitalDate = now.Date, ExposureLimit = 100000, CurrentExposure = 125000, Currency = "EUR", IsLimitBreached = true, CreatedBy = "seed" });
+
+        db.Capitals.Add(
+            new Capital { RegulatoryCapital = 5000000, CoreCapital = 4000000, SupplementaryCapital = 500000, CapitalDate = now.Date, CreatedBy = "seed" });
 
         db.AuditLogs.AddRange(
             new AuditLog { TableName = "RelatedPerson", RecordId = resident.Id.ToString(), Action = "VERIFY", NewValues = "{\"status\":\"Verified\",\"verifiedBy\":\"demo.verifier\"}", UserId = verifier.Username, Username = verifier.Username, IpAddress = "127.0.0.1", Timestamp = now.AddHours(-2) },
@@ -118,14 +130,24 @@ public static class DevelopmentDataSeeder
     }
 
     private static CodeList Code(string category, string code, string name, int order, DateTime now, string? description = null) =>
-        new() { Kategorija = category, Kod = code, Naziv = name, Opis = description, RedoslijedPrikaza = order, Aktivan = true, KreiranDatum = now, KreiraoKorisnik = "seed" };
+        new() { Kategorija = category, Kod = code.Trim().ToUpper(), Naziv = name, Opis = description, RedoslijedPrikaza = order, Aktivan = true, KreiranDatum = now, KreiraoKorisnik = "seed" };
 
     private static async Task EnsureReferenceCodeListsAsync(ConnectedPartiesDbContext db, CancellationToken ct)
     {
         var now = DateTime.UtcNow;
         var required = new[]
         {
-            Code("VrstaLimita", "REG", "Regulatorni limit", 1, now), Code("VrstaLimita", "INT", "Interni limit", 2, now),
+            Code("VrstaLimita", "MM", "MM", 1, now, "Izvor: manuelna evidencija."),
+            Code("VrstaLimita", "SATAFXs", "SATA FX spot", 2, now, "Izvor: SATA. Iskorištenost FXs limita se po FBA ponderiše sa 1% — planirana i stvarna iskorištenost prikazuju se u ponderisanom iznosu od 1%."),
+            Code("VrstaLimita", "SATAFXD", "SATA FX derivati", 3, now, "Izvor: SATA."),
+            Code("VrstaLimita", "SATAOVL", "SATA overnight limit", 4, now, "Izvor: SATA."),
+            Code("VrstaLimita", "OVL_CUSTODY", "OVL Custody", 5, now, "Izvor: manuelna evidencija."),
+            Code("VrstaLimita", "SFL_NET", "SFL Net", 6, now, "Izvor: manuelna evidencija."),
+            Code("VrstaLimita", "LG", "LG", 7, now, "Izvor: manuelna evidencija."),
+            Code("VrstaLimita", "LT", "LT", 8, now, "Izvor: manuelna evidencija."),
+            Code("VrstaLimita", "ST", "ST", 9, now, "Izvor: manuelna evidencija."),
+            Code("VrstaLimita", "SPRL", "SPRL", 10, now, "Izvor: manuelna evidencija."),
+            Code("VrstaLimita", "LEASING", "Leasing", 11, now, "Izvor: manuelna evidencija."),
             Code("Srodstvo", "1", "Bračni partner", 1, now), Code("Srodstvo", "2", "Partner", 2, now), Code("Srodstvo", "3", "Roditelj", 3, now),
             Code("Srodstvo", "4", "Dijete", 4, now), Code("Srodstvo", "5", "Brat ili sestra", 5, now), Code("Srodstvo", "6", "Očuh ili maćeha", 6, now),
             Code("Srodstvo", "7", "Pastorak", 7, now), Code("Srodstvo", "8", "Staratelj", 8, now), Code("Srodstvo", "99", "Drugo", 9, now),

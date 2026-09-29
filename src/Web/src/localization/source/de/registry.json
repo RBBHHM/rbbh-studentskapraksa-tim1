@@ -33,8 +33,8 @@
       "title": "Natürliche Personen",
       "description": "Verbundene natürliche Personen und Familienbeziehungen anzeigen."
     },
-    "limits": { "title": "Limite", "description": "Regulatorische Limite und verfügbare Beträge." },
-    "capital": { "title": "Kapital", "description": "Regulatorisches und Kernkapital für Limite verwalten." },
+    "limits": { "title": "Limite", "description": "Limite, die juristischen Personen nach Typ aus der Codeliste zugewiesen sind." },
+    "capital": { "title": "Kapital", "description": "Regulatorisches und Kernkapital juristischer Personen zur automatischen Befüllung von Limiten." },
     "reports": {
       "title": "Regulatorisches Berichtswesen",
       "description": "Monatsberichte und Exportvorbereitung."

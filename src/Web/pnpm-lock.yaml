@@ -128,9 +128,6 @@ importers:
       intl-messageformat:
         specifier: ^11.2.13
         version: 11.2.13
-      keycloak-js:
-        specifier: 26.2.0
-        version: 26.2.0
       lucide-react:
         specifier: ^0.575.0
         version: 0.575.0(react@19.2.8)
@@ -2575,9 +2572,6 @@ packages:
 
   json-stable-stringify-without-jsonify@1.0.1:
     resolution: {integrity: sha512-Bdboy+l7tA3OGW6FjyFHWkP5LuByj1Tk33Ljyq0axyzdk9//JSi2u3fP1QSmd1KNwq6VOKYGlAu87CisVir6Pw==}
-
-  keycloak-js@26.2.0:
-    resolution: {integrity: sha512-CrFcXTN+d6J0V/1v3Zpioys6qHNWE6yUzVVIsCUAmFn9H14GZ0vuYod+lt+SSpMgWGPuneDZBSGBAeLBFuqjsw==}
 
   keyv@4.5.4:
     resolution: {integrity: sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==}
@@ -6082,8 +6076,6 @@ snapshots:
   json-schema-traverse@1.0.0: {}
 
   json-stable-stringify-without-jsonify@1.0.1: {}
-
-  keycloak-js@26.2.0: {}
 
   keyv@4.5.4:
     dependencies:

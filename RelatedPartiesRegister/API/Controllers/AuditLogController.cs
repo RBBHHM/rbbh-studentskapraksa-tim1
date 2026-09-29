@@ -33,6 +33,7 @@ public class AuditLogController(ConnectedPartiesDbContext db) : ControllerBase
         ["UNLOCK_REQUEST_NEEDS_INFO"]  = "Zahtjev za informacije",
         ["IMPORT"]                     = "Uvoz podataka",
         ["EXPORT"]                     = "Izvoz podataka",
+        ["GENERATE"]                   = "Generisanje izvještaja",
         ["WORK_AUTH_INSERT"]           = "Dodjela ovlaštenja",
         ["WORK_AUTH_UPDATE"]           = "Izmjena ovlaštenja",
         ["WORK_AUTH_DELETE"]           = "Uklanjanje ovlaštenja"
@@ -119,7 +120,7 @@ public class AuditLogController(ConnectedPartiesDbContext db) : ControllerBase
             "INSERT" => "Create", "UPDATE" => "Update", "DELETE" => "Delete", "VERIFY" => "Verify",
             "CREATE" => "Create user", "DEACTIVATE" => "Deactivate user", "REACTIVATE" => "Reactivate user",
             "ROLE_ASSIGN" => "Assign access", "ROLE_REMOVE" => "Remove access", "IMPORT" => "Import data",
-            "EXPORT" => "Export data", "PERIOD_LOCK" => "Lock period", "PERIOD_UNLOCK" => "Unlock period",
+            "EXPORT" => "Export data", "GENERATE" => "Generate report", "PERIOD_LOCK" => "Lock period", "PERIOD_UNLOCK" => "Unlock period",
             "UNLOCK_REQUEST" => "Unlock request", "UNLOCK_REQUEST_REJECTED" => "Reject request",
             "UNLOCK_REQUEST_NEEDS_INFO" => "Request more information", _ => action
         };
@@ -130,6 +131,7 @@ public class AuditLogController(ConnectedPartiesDbContext db) : ControllerBase
         "RelatedPerson" => english ? "Individuals" : "Fizička lica",
         "LegalEntity" => english ? "Legal entities" : "Pravna lica",
         "Limit" or "Limiti" => english ? "Limits" : "Limiti",
+        "FamilyMember" => english ? "Individuals" : "Fizička lica",
         "AppUser" => english ? "Users" : "Korisnici",
         "PeriodLock" or "UnlockRequest" => english ? "Period management" : "Upravljanje periodom",
         "CodeList" => english ? "Code lists" : "Šifrarnici",

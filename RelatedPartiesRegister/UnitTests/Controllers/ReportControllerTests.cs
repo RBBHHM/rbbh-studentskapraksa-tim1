@@ -22,7 +22,7 @@ namespace UnitTests.Controllers
         private static ReportController CreateController(Mock<IReportService> service)
         {
             var identity = new ClaimsIdentity(new[] { new Claim(ClaimTypes.Name, "tester") }, "TestAuth");
-            return new ReportController(service.Object)
+            return new ReportController(service.Object, new Mock<IAuditService>().Object)
             {
                 ControllerContext = new ControllerContext
                 {

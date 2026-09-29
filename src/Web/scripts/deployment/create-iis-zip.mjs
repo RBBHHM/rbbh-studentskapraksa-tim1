@@ -6,9 +6,9 @@ const source = resolve("dist");
 const output = resolve("artifacts", "connected-parties-iis.zip");
 const files = {};
 const backendOriginIndex = process.argv.indexOf("--backend-origin");
-const backendOriginValue = backendOriginIndex >= 0 ? process.argv[backendOriginIndex + 1] : process.env.OCP_BACKEND_ORIGIN;
+const backendOriginValue = (backendOriginIndex >= 0 ? process.argv[backendOriginIndex + 1] : process.env.OCP_BACKEND_ORIGIN)?.trim();
 const keycloakOriginIndex = process.argv.indexOf("--keycloak-origin");
-const keycloakOriginValue = keycloakOriginIndex >= 0 ? process.argv[keycloakOriginIndex + 1] : process.env.KEYCLOAK_PUBLIC_ORIGIN;
+const keycloakOriginValue = (keycloakOriginIndex >= 0 ? process.argv[keycloakOriginIndex + 1] : process.env.KEYCLOAK_PUBLIC_ORIGIN)?.trim();
 
 if (!backendOriginValue) throw new Error("Provide --backend-origin or OCP_BACKEND_ORIGIN.");
 if (!keycloakOriginValue) throw new Error("Provide --keycloak-origin or KEYCLOAK_PUBLIC_ORIGIN.");

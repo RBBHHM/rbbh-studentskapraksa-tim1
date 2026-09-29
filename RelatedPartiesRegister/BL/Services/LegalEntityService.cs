@@ -256,19 +256,29 @@ public class LegalEntityService : ILegalEntityService
     /// <inheritdoc />
     public async Task<LegalEntityLimitFormDataDTO?> GetLimitFormDataAsync(Guid legalEntityId)
     {
-        return await _context.LegalEntities
-            .AsNoTracking()
-            .Where(e => e.Id == legalEntityId && e.IsActive)
-            .Select(e => new LegalEntityLimitFormDataDTO
+        var result = await _context.LegalEntities.AsNoTracking()
+            .Where(entity => entity.Id == legalEntityId && entity.IsActive)
+            .Select(entity => new LegalEntityLimitFormDataDTO
             {
-                Id = e.Id,
-                IsResident = e.IsResident,
-                FbaId = e.FbaId,
-                TaxNumber = e.TaxNumber,
-                MaticniBroj = e.MaticniBroj,
-                Name = e.Name
+                Id = entity.Id,
+                IsResident = entity.IsResident,
+                FbaId = entity.FbaId,
+                TaxNumber = entity.TaxNumber,
+                MaticniBroj = entity.MaticniBroj,
+                Matbroj = entity.Matbroj,
+                Name = entity.Name,
             })
             .FirstOrDefaultAsync();
+
+        if (result is null)
+            return null;
+
+        // Kapital je jedan globalni zapis (nije po pravnom licu) — čita se odvojeno.
+        var capital = await _context.Capitals.AsNoTracking().FirstOrDefaultAsync();
+        result.RegulatoryCapital = capital?.RegulatoryCapital;
+        result.CoreCapital = capital?.CoreCapital;
+
+        return result;
     }
 
     // ── Privatni pomoćni metodi ───────────────────────────────────────────────
