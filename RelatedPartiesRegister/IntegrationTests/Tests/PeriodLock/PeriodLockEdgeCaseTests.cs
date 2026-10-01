@@ -6,6 +6,7 @@ using RBBH.ConnectedParties.DL.Entities.PeriodLock;
 using IntegrationTests.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace IntegrationTests.Tests.PeriodLock
@@ -31,13 +32,17 @@ namespace IntegrationTests.Tests.PeriodLock
             var auditService = new AuditService(ctx);
             var emailService = new Mock<IEmailService>();
             var configuration = new Mock<IConfiguration>();
+            var appUserService = new Mock<IAppUserService>();
+            var logger = new Mock<ILogger<PeriodLockController>>();
             return new PeriodLockController(
                 new PeriodLockRepository(ctx),
                 new UnlockRequestRepository(ctx),
                 new PeriodLockService(),
                 auditService,
                 emailService.Object,
-                configuration.Object
+                configuration.Object,
+                appUserService.Object,
+                logger.Object
             ).WithHttpContext(AdminUser);
         }
 
@@ -47,13 +52,17 @@ namespace IntegrationTests.Tests.PeriodLock
             var auditService = new AuditService(ctx);
             var emailService = new Mock<IEmailService>();
             var configuration = new Mock<IConfiguration>();
+            var appUserService = new Mock<IAppUserService>();
+            var logger = new Mock<ILogger<PeriodLockController>>();
             return new PeriodLockController(
                 new PeriodLockRepository(ctx),
                 new UnlockRequestRepository(ctx),
                 new PeriodLockService(),
                 auditService,
                 emailService.Object,
-                configuration.Object
+                configuration.Object,
+                appUserService.Object,
+                logger.Object
             ).WithHttpContext(RegularUser);
         }
 

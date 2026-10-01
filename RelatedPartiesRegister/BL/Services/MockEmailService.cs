@@ -76,6 +76,32 @@ public sealed class MockEmailService(
         return Task.CompletedTask;
     }
 
+    public Task SendPeriodLockedBroadcastAsync(
+        IEnumerable<string> recipientEmails, string lockedBy, int year, int month)
+    {
+        var subject = $"Period zaključan — {EmailTemplates.MonthDisplay(year, month)}";
+        var html    = EmailTemplates.PeriodLocked(lockedBy, year, month, AppBaseUrl);
+        foreach (var to in recipientEmails.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            store.Add(new EmailLogEntry { To = to, Subject = subject, HtmlBody = html, Audience = "broadcast" });
+            Log(to, subject);
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task SendPeriodUnlockedBroadcastAsync(
+        IEnumerable<string> recipientEmails, string unlockedBy, int year, int month)
+    {
+        var subject = $"Period otključan — {EmailTemplates.MonthDisplay(year, month)}";
+        var html    = EmailTemplates.PeriodUnlocked(unlockedBy, year, month, AppBaseUrl);
+        foreach (var to in recipientEmails.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            store.Add(new EmailLogEntry { To = to, Subject = subject, HtmlBody = html, Audience = "broadcast" });
+            Log(to, subject);
+        }
+        return Task.CompletedTask;
+    }
+
     private void Log(string to, string subject) =>
         logger.LogInformation("[EMAIL DEMO] Prima: {To} | Naslov: {Subject}", to, subject);
 }

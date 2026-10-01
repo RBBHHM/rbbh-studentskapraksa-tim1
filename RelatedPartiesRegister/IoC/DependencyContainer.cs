@@ -56,7 +56,9 @@ namespace RBBH.ConnectedParties.IoC
             services.AddSingleton<EmailLogStore>();
 
             var emailProvider = configuration["Email:Provider"] ?? "demo";
-            if (emailProvider.Equals("smtp", StringComparison.OrdinalIgnoreCase))
+            if (emailProvider.Equals("httpapi", StringComparison.OrdinalIgnoreCase))
+                services.AddScoped<IEmailService, HttpApiEmailService>();
+            else if (emailProvider.Equals("smtp", StringComparison.OrdinalIgnoreCase))
                 services.AddScoped<IEmailService, SmtpEmailService>();
             else
                 services.AddScoped<IEmailService, MockEmailService>();

@@ -19,7 +19,9 @@ public class PeriodLockController(
     IPeriodLockService periodLockService,
     IAuditService auditService,
     IEmailService emailService,
-    IConfiguration configuration) : ControllerBase
+    IConfiguration configuration,
+    IAppUserService appUserService,
+    ILogger<PeriodLockController> logger) : ControllerBase
 {
     private string CurrentUser() =>
         User.FindFirst(ClaimTypes.Name)?.Value
@@ -29,6 +31,39 @@ public class PeriodLockController(
     // Functional access is assigned directly to users and is intentionally
     // independent of their organizational unit.
     private static string? CurrentDepartment() => null;
+
+    /// <summary>
+    /// Obavještava sve aktivne korisnike aplikacije (email + email-log zapis) da je period
+    /// zaključan/otključan. Greške u slanju ne smiju rušiti lock/unlock transakciju.
+    /// </summary>
+    private async Task NotifyAllUsersAsync(bool locked, string actedBy, int year, int month)
+    {
+        try
+        {
+            var usersResult = await appUserService.GetUsersAsync(1, 500, null, null);
+            if (!usersResult.IsSuccessful)
+                return;
+
+            var emails = usersResult.Value.Users
+                .Where(u => u.IsActive && !string.IsNullOrWhiteSpace(u.Email))
+                .Select(u => u.Email)
+                .ToList();
+
+            if (emails.Count == 0)
+                return;
+
+            if (locked)
+                await emailService.SendPeriodLockedBroadcastAsync(emails, actedBy, year, month);
+            else
+                await emailService.SendPeriodUnlockedBroadcastAsync(emails, actedBy, year, month);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "Slanje broadcast obavijesti za period {Year}-{Month} (locked={Locked}) nije uspjelo.",
+                year, month, locked);
+        }
+    }
 
     [HttpGet("current")]
     public async Task<IActionResult> GetCurrentState([FromQuery] string? department = null)
@@ -118,6 +153,8 @@ public class PeriodLockController(
             IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
         });
 
+        await NotifyAllUsersAsync(locked: true, username, year, month);
+
         var deptLabel = dept is not null ? $" ({dept})" : "";
         return Ok(new { message = $"Period {periodLockService.GetMonthDisplayName(year, month)}{deptLabel} uspješno zaključan." });
     }
@@ -157,6 +194,8 @@ public class PeriodLockController(
                 IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
             });
 
+            await NotifyAllUsersAsync(locked: false, username, year, month);
+
             var label1 = dept is not null ? $" ({dept})" : "";
             return Ok(new { message = $"Period {periodLockService.GetMonthDisplayName(year, month)}{label1} uspješno otključan." });
         }
@@ -186,6 +225,8 @@ public class PeriodLockController(
                 UserId = username, Username = username,
                 IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
             });
+
+            await NotifyAllUsersAsync(locked: false, username, year, month);
 
             var label2 = dept is not null ? $" ({dept})" : "";
             return Ok(new { message = $"Period {periodLockService.GetMonthDisplayName(year, month)}{label2} uspješno otključan." });

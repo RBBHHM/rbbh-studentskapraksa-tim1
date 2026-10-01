@@ -27,4 +27,12 @@ public interface IEmailService
     Task SendHrPhysicalPersonExpiredAsync(
         string hrEmail, string personName, string updatedBy,
         string relationBasis, DateTime dateTo);
+
+    /// <summary>Broadcast svim korisnicima aplikacije: period je zaključan (ručno ili automatski).</summary>
+    Task SendPeriodLockedBroadcastAsync(
+        IEnumerable<string> recipientEmails, string lockedBy, int year, int month);
+
+    /// <summary>Broadcast svim korisnicima aplikacije: period je otključan (ručno ili automatski).</summary>
+    Task SendPeriodUnlockedBroadcastAsync(
+        IEnumerable<string> recipientEmails, string unlockedBy, int year, int month);
 }

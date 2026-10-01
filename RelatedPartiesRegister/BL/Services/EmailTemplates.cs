@@ -293,4 +293,82 @@ internal static class EmailTemplates
                   </tr>
             """ + ActionButton(appLink, "Unesite podatke") + Footer();
     }
+
+    // ── Broadcast obavijesti: svi korisnici, lock/unlock perioda ──────────────
+
+    /// <summary>Email svim korisnicima: period je zaključan (ručno ili automatski).</summary>
+    internal static string PeriodLocked(
+        string actedBy, int year, int month, string appBaseUrl)
+    {
+        var period    = MonthDisplay(year, month);
+        var timestamp = DateTime.Now.ToString("dd.MM.yyyy. HH:mm");
+        var appLink   = $"{appBaseUrl.TrimEnd('/')}/app/admin/period";
+        var actedByLabel = actedBy == "system" ? "Automatski (sistem)" : actedBy;
+
+        return Header() + $"""
+                  <tr>
+                    <td style="padding:36px 32px 24px;">
+                      <table cellpadding="0" cellspacing="0" style="margin-bottom:18px;">
+                        <tr>
+                          <td style="background:#FDEDEC;border-radius:20px;padding:6px 16px;
+                                     color:#C0392B;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;">
+                            &#128274; Period zaključan
+                          </td>
+                        </tr>
+                      </table>
+                      <h1 style="color:#1A1A1A;font-size:20px;font-weight:700;margin:0 0 10px;">
+                        Period {period} je zaključan
+                      </h1>
+                      <p style="color:#555555;font-size:14px;line-height:1.7;margin:0 0 24px;">
+                        Unos i izmjena podataka u Registru povezanih lica za ovaj period
+                        nisu više mogući. Ova obavijest je automatski poslana svim
+                        korisnicima aplikacije.
+                      </p>
+                      {InfoTable(
+                          ("Period",      period,       true),
+                          ("Zaključao/la", actedByLabel, false),
+                          ("Vrijeme",     timestamp,     true)
+                      )}
+                    </td>
+                  </tr>
+            """ + ActionButton(appLink, "Otvorite aplikaciju") + Footer();
+    }
+
+    /// <summary>Email svim korisnicima: period je otključan (ručno ili automatski).</summary>
+    internal static string PeriodUnlocked(
+        string actedBy, int year, int month, string appBaseUrl)
+    {
+        var period    = MonthDisplay(year, month);
+        var timestamp = DateTime.Now.ToString("dd.MM.yyyy. HH:mm");
+        var appLink   = $"{appBaseUrl.TrimEnd('/')}/app/admin/period";
+        var actedByLabel = actedBy == "system" ? "Automatski (sistem)" : actedBy;
+
+        return Header() + $"""
+                  <tr>
+                    <td style="padding:36px 32px 24px;">
+                      <table cellpadding="0" cellspacing="0" style="margin-bottom:18px;">
+                        <tr>
+                          <td style="background:#E8F8EF;border-radius:20px;padding:6px 16px;
+                                     color:#1E8449;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;">
+                            &#128275; Period otključan
+                          </td>
+                        </tr>
+                      </table>
+                      <h1 style="color:#1A1A1A;font-size:20px;font-weight:700;margin:0 0 10px;">
+                        Period {period} je otključan
+                      </h1>
+                      <p style="color:#555555;font-size:14px;line-height:1.7;margin:0 0 24px;">
+                        Unos i izmjena podataka u Registru povezanih lica za ovaj period
+                        su ponovo mogući. Ova obavijest je automatski poslana svim
+                        korisnicima aplikacije.
+                      </p>
+                      {InfoTable(
+                          ("Period",       period,       true),
+                          ("Otključao/la", actedByLabel, false),
+                          ("Vrijeme",      timestamp,     true)
+                      )}
+                    </td>
+                  </tr>
+            """ + ActionButton(appLink, "Otvorite aplikaciju") + Footer();
+    }
 }

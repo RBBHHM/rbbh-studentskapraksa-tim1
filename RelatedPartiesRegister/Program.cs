@@ -20,8 +20,10 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor |
         ForwardedHeaders.XForwardedHost |
         ForwardedHeaders.XForwardedProto;
-    // IIS -> 3scale APIcast -> OCP Route/HAProxy -> app: 3 reverse-proxy hops.
-    options.ForwardLimit = 3;
+    // IIS -> OCP Route/HAProxy -> app: 2 reverse-proxy hops. IIS proxies this app's own
+    // login/API traffic straight to the OCP Route; 3scale is reserved for external API
+    // consumers and is never on the path between IIS and this backend.
+    options.ForwardLimit = 2;
     // OCP/IIS/3scale proxy addresses are dynamic and controlled by the hosting network.
     options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();

@@ -2,10 +2,12 @@ namespace RBBH.ConnectedParties.BL.Services;
 
 public sealed class EmailSettings
 {
-    public string Provider    { get; set; } = "demo"; // "demo" | "smtp"
+    public string Provider    { get; set; } = "demo"; // "demo" | "smtp" | "httpapi"
     public string AdminEmail  { get; set; } = "admin@raiffeisenbank.ba";
     public string HrEmail     { get; set; } = "hr@raiffeisenbank.ba";
     public string AppBaseUrl  { get; set; } = "http://localhost:5001";
+    public string From        { get; set; } = "rbbh.data-platform@rbbh.ba";
+    public string? SendEmailWithHtmlBodyUrl { get; set; }
     public SmtpSettings Smtp  { get; set; } = new();
 }
 
