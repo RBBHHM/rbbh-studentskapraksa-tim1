@@ -19,6 +19,12 @@ These wire/database names remain unchanged; display names may use FL, PL,
 Kapital, Limiti, Admin and Guest. No DB migration, rename, reseed or Keycloak
 role reassignment is part of this bounded authorization change.
 
+The native RBI permission interface requires semantic dot names. An app-owned
+name adapter maps e.g. `fl.update`→`FL_EDIT`, `reports.generate`→`KAPITAL_CREATE`
+and `administration.manage`→`ADMINISTRATION_MANAGE`. It only checks those codes
+against the effective backend response; no frontend role→grant map is added.
+The real RBI authorization pipeline is regression-tested for this boundary.
+
 ## Approved reporting exception
 
 Generating a report persists an archived snapshot through ReportService, unlike

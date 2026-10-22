@@ -7,6 +7,12 @@ Template SHA256:
 No RBI component implementations are copied into the application. Runtime
 dependencies are NuGet packages, not project references to the platform checkout.
 
+The owner-approved file-transport extension is consumed as local pre-release
+`RBI.ApiCore` and `RBI.Authentication` **0.1.1-migration.1**, built from platform
+commit `a38b94c` on `codex/api-file-transport`. Other RBI packages remain0.1.0.
+This is not a published corporate release. Restore both new packages from the
+approved isolated local feed; do not overwrite/reuse older0.1.0 binaries.
+
 This is a side-by-side migration, **not the canonical production frontend yet**.
 React and existing backend deployment remain unchanged. Consult
 `docs/BLAZOR-MIGRATION-{INVENTORY,AUTHORIZATION,PARITY}.md` at repository root.
@@ -56,6 +62,8 @@ application's current DB-owned role/permission codes. The frontend never accesse
 the DB, assigns realm roles or infers application grants from provider claims.
 Reporting read is authenticated; persisted generation requires the backend's
 `KAPITAL_CREATE` permission (Kapital/Admin). API enforcement remains authoritative.
+The app adapts RBI semantic permission names (for example `reports.generate`)
+to existing backend codes; it does not map identity-provider roles to grants.
 
 RBI.Localization discovers only app-owned BS/EN catalogs, with BS default. The
 removed inherited DE starter catalog is not an advertised business language.

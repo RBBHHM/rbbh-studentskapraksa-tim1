@@ -1,6 +1,9 @@
 using System.Security.Claims;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Components.Authorization;
+using RBI.Authorization;
 using Moq;
 using RBI.ApiCore;
 using RBBH.RelatedPartiesRegister.Web.Api;
@@ -10,6 +13,32 @@ namespace Web.Blazor.Tests;
 
 public sealed class AuthorizationContractTests
 {
+    [Theory]
+    [InlineData("reports.generate", "KAPITAL_CREATE")]
+    [InlineData("fl.update", "FL_EDIT")]
+    [InlineData("administration.manage", "ADMINISTRATION_MANAGE")]
+    [InlineData("codelists.read", "CODE_LISTS_VIEW")]
+    public async Task RealRbiPermissionPipelineMapsSemanticNamesToExistingBackendCodes(string permission, string backendCode)
+    {
+        var api = new Mock<IProfileApi>();
+        api.Setup(item => item.GetAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ApplicationProfile("u", "User", "user", "user@example.test", [], [backendCode]));
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddApplicationAuthorization();
+        services.AddSingleton(api.Object);
+        services.AddSingleton<AuthenticationStateProvider>(new FixtureState());
+        await using var provider = services.BuildServiceProvider();
+        await using var scope = provider.CreateAsyncScope();
+        Assert.True(await scope.ServiceProvider.GetRequiredService<IRbiPermissionService>().HasPermissionAsync(permission));
+        Assert.False(await scope.ServiceProvider.GetRequiredService<IRbiPermissionService>().HasPermissionAsync("unknown.permission"));
+    }
+
+    private sealed class FixtureState : AuthenticationStateProvider
+    {
+        public override Task<AuthenticationState> GetAuthenticationStateAsync() => Task.FromResult(new AuthenticationState(Identity()));
+    }
+
     private static ClaimsPrincipal Identity(bool authenticated = true) => new(new ClaimsIdentity(
         [new Claim(ClaimTypes.Email, "ordinary@example.test"), new Claim(ClaimTypes.Role, "Admin"),
          new Claim("permission", "KAPITAL_CREATE")], authenticated ? "test-only" : null));
@@ -23,9 +52,9 @@ public sealed class AuthorizationContractTests
     }
 
     [Theory]
-    [InlineData("KAPITAL_CREATE")]
-    [InlineData("ADMINISTRATION_MANAGE")]
-    [InlineData("FL_EDIT")]
+    [InlineData("reports.generate")]
+    [InlineData("administration.manage")]
+    [InlineData("fl.update")]
     public async Task RealmAndTokenGrantsNeverSubstituteForBackendPermissions(string permission)
     {
         var api = new Mock<IProfileApi>();
@@ -42,12 +71,12 @@ public sealed class AuthorizationContractTests
         var api = new Mock<IProfileApi>();
         api.Setup(item => item.GetAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ApplicationProfile("u", "User", "user", "user@example.test", [role], ["KAPITAL_CREATE"]));
-        Assert.True(await new AppPermissionSource(api.Object).HasPermissionAsync(Identity(), "KAPITAL_CREATE"));
+        Assert.True(await new AppPermissionSource(api.Object).HasPermissionAsync(Identity(), "reports.generate"));
     }
 
     [Theory]
     [InlineData("reports.read")]
-    [InlineData("KAPITAL_CREATE")]
+    [InlineData("reports.generate")]
     public async Task AnonymousNeverReceivesGrants(string permission)
     {
         var api = new Mock<IProfileApi>(MockBehavior.Strict);
@@ -61,7 +90,7 @@ public sealed class AuthorizationContractTests
         var api = new Mock<IProfileApi>();
         api.Setup(item => item.GetAsync(It.IsAny<CancellationToken>())).ThrowsAsync(new RegistryApiException());
         await Assert.ThrowsAsync<RegistryApiException>(async () =>
-            await new AppPermissionSource(api.Object).HasPermissionAsync(Identity(), "KAPITAL_CREATE"));
+            await new AppPermissionSource(api.Object).HasPermissionAsync(Identity(), "reports.generate"));
     }
 
     [Theory]

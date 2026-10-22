@@ -1,5 +1,6 @@
 ﻿<Project>
 <PropertyGroup>
 <RbiPackageVersion>0.1.0</RbiPackageVersion>
+<RbiTransportPackageVersion>0.1.1-migration.1</RbiTransportPackageVersion>
 </PropertyGroup>
 </Project>

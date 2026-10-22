@@ -10,8 +10,9 @@
   <ItemGroup>
     <PackageReference Include="RBI.DesignSystem" Version="$(RbiPackageVersion)" />
     <PackageReference Include="RBI.Hosting" Version="$(RbiPackageVersion)" />
-    <PackageReference Include="RBI.ApiCore" Version="$(RbiPackageVersion)" />
-    <PackageReference Include="RBI.Authentication" Version="$(RbiPackageVersion)" />
+    <PackageReference Include="RBI.ApiCore" Version="$(RbiTransportPackageVersion)" />
+    <PackageReference Include="RBI.Authentication" Version="$(RbiTransportPackageVersion)" />
+    <PackageReference Include="RBI.Forms" Version="$(RbiPackageVersion)" />
     <PackageReference Include="RBI.Authorization" Version="$(RbiPackageVersion)" />
     <PackageReference Include="RBI.Localization" Version="$(RbiPackageVersion)" />
   </ItemGroup>
