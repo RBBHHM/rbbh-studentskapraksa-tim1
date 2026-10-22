@@ -21,6 +21,7 @@ using RBBH.ConnectedParties.Middlewares;
 using RBBH.ConnectedParties.DL.Persistence;
 using RBBH.ConnectedParties.Helpers.Constants;
 using RBBH.ConnectedParties.IoC.Extensions.Authentication;
+using RBBH.ConnectedParties.IoC.Extensions.ExceptionHandling;
 using RBBH.RelatedPartiesRegister.Web.Api;
 using RBI.ApiCore;
 
@@ -61,6 +62,7 @@ internal static class BrowserHostProgram
         builder.WebHost.UseTestServer();
         builder.Logging.ClearProviders();
         builder.Services.AddControllers().AddApplicationPart(typeof(RelatedPersonController).Assembly);
+        builder.Services.AddExceptionHandlingExtension(builder.Environment);
         builder.Services.AddSingleton(user);
         builder.Services.AddDbContext<ConnectedPartiesDbContext>(options => options.UseInMemoryDatabase(database.Name));
         builder.Services.AddAuthentication("BrowserFixture").AddScheme<AuthenticationSchemeOptions, FixtureIdentity>("BrowserFixture", _ => { });
@@ -71,13 +73,15 @@ internal static class BrowserHostProgram
         builder.Services.AddScoped<IPeriodLockRepository, PeriodLockRepository>();
         builder.Services.AddScoped<IAuditService, AuditService>();
         builder.Services.AddSingleton(Mock.Of<IEmailService>());
-        builder.Services.AddSingleton(Mock.Of<ILegalEntityService>());
+        builder.Services.AddScoped<ILegalEntityService, LegalEntityService>();
         builder.Services.Configure<EmailSettings>(_ => { });
         var app = builder.Build();
+        app.UseExceptionHandler();
         app.Use(async (context, next) =>
         {
             database.LastCulture = context.Request.Headers.AcceptLanguage.ToString();
-            if (HttpMethods.IsPost(context.Request.Method) && context.Request.Path.StartsWithSegments("/api/related-persons")) database.MutationAttempts++;
+            if ((HttpMethods.IsPost(context.Request.Method) || HttpMethods.IsPut(context.Request.Method) || HttpMethods.IsDelete(context.Request.Method)) &&
+                (context.Request.Path.StartsWithSegments("/api/related-persons") || context.Request.Path.StartsWithSegments("/api/legal-entities"))) database.MutationAttempts++;
             if (database.Unavailable || (database.CodebooksUnavailable && context.Request.Path.StartsWithSegments("/api/code-lists/dropdown")))
             { context.Response.StatusCode = 503; await context.Response.WriteAsync("private-fixture-detail-not-for-ui"); return; }
             await next(context);
@@ -85,7 +89,10 @@ internal static class BrowserHostProgram
         app.UseAuthentication(); app.UseAuthorization(); app.UseMiddleware<PeriodLockMiddleware>(); app.MapControllers();
         app.MapGet("/api/auth/profile", (ClaimsPrincipal principal) => Results.Ok(new
         {
-            userId = "fixture-user", fullName = "Browser Fixture", username = user.Email, email = user.Email,
+            userId = "fixture-user",
+            fullName = "Browser Fixture",
+            username = user.Email,
+            email = user.Email,
             roles = principal.FindAll(ClaimTypes.Role).Select(claim => claim.Value).ToArray(),
             permissions = principal.FindAll("permission").Select(claim => claim.Value).ToArray()
         })).RequireAuthorization();
@@ -109,9 +116,17 @@ internal static class BrowserHostProgram
         if (user.Role == ApplicationAccessRoles.Guest)
             db.RelatedPersons.Add(new RBBH.ConnectedParties.DL.Entities.RelatedPersons.RelatedPerson
             {
-                FirstName = "ReadOnly", LastName = "Fixture", Residency = RBBH.ConnectedParties.DL.Entities.RelatedPersons.ResidencyType.NonResident,
-                PassportNumber = "READ12345", FBAId = "998877", RelationBasis = "ZOB-2-V-5", RelationDescription = "Fixture relationship",
-                SpecialRelationBasis = "UPRAVA", IsIdentifiedStaff = true, IsActive = true, CreatedBy = "fixture"
+                FirstName = "ReadOnly",
+                LastName = "Fixture",
+                Residency = RBBH.ConnectedParties.DL.Entities.RelatedPersons.ResidencyType.NonResident,
+                PassportNumber = "READ12345",
+                FBAId = "998877",
+                RelationBasis = "ZOB-2-V-5",
+                RelationDescription = "Fixture relationship",
+                SpecialRelationBasis = "UPRAVA",
+                IsIdentifiedStaff = true,
+                IsActive = true,
+                CreatedBy = "fixture"
             });
         await db.SaveChangesAsync();
     }
@@ -133,6 +148,12 @@ internal static class BrowserHostProgram
         string[] values = ["Import", "Fixture", "NonResident", "", "IMP9876", "987654", "ZOB-2-V-5", "UPRAVA", "2026-01-01", "2026-12-31", "No", "Yes", "No", "No", "No"];
         for (var index = 0; index < headers.Length; index++) { sheet.Cell(1, index + 1).Value = headers[index]; sheet.Cell(2, index + 1).Value = values[index]; }
         valid.SaveAs(Path.Combine(directory, "valid-physical.xlsx"));
+        using var legal = new XLWorkbook();
+        var legalSheet = legal.AddWorksheet("Legal entities");
+        string[] legalHeaders = ["Name", "Type", "Tax number", "FBA ID", "Registration number", "Connection basis", "Connection description", "Related to the Bank", "Date from", "Date to"];
+        string[] legalValues = ["Imported Company", "Non-resident", "", "777888", "55555", "ZOB-2-V-5", "Fixture relationship", "Yes", "2026-01-01", "2026-12-31"];
+        for (var index = 0; index < legalHeaders.Length; index++) { legalSheet.Cell(1, index + 1).Value = legalHeaders[index]; legalSheet.Cell(2, index + 1).Value = legalValues[index]; }
+        legal.SaveAs(Path.Combine(directory, "valid-legal.xlsx"));
         using var invalid = new XLWorkbook();
         invalid.AddWorksheet("Invalid").Cell(1, 1).Value = "Wrong header";
         invalid.SaveAs(Path.Combine(directory, "invalid-physical.xlsx"));
@@ -146,7 +167,10 @@ internal static class BrowserHostProgram
             builder.UseContentRoot(Path.Combine(FindRoot(), "src", "Web.Blazor"));
             builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Authentication:Authority"] = "", ["Authentication:ClientId"] = "", ["Authentication:ClientSecret"] = "", ["Apis:BaseUrl"] = "http://backend.fixture/"
+                ["Authentication:Authority"] = "",
+                ["Authentication:ClientId"] = "",
+                ["Authentication:ClientSecret"] = "",
+                ["Apis:BaseUrl"] = "http://backend.fixture/"
             }));
             builder.ConfigureTestServices(services =>
             {
@@ -159,11 +183,14 @@ internal static class BrowserHostProgram
                 }).AddScheme<AuthenticationSchemeOptions, FixtureIdentity>("BrowserFixture", _ => { });
                 // Configure real production typed clients explicitly: minimal-host
                 // config callbacks may run after Program has inspected empty URLs.
-                services.RemoveAll<IProfileApi>(); services.RemoveAll<IRelatedPersonsApi>();
+                services.RemoveAll<IProfileApi>(); services.RemoveAll<IRelatedPersonsApi>(); services.RemoveAll<ILegalEntitiesApi>();
                 services.AddRbiApiClient<IProfileApi, ProfileApi>("BrowserProfile", options => options.BaseUrl = new("http://backend.fixture/"))
                     .AddHttpMessageHandler<ApplicationCultureHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
                 services.AddRbiApiClient<IRelatedPersonsApi, RelatedPersonsApi>("BrowserPersons", options => options.BaseUrl = new("http://backend.fixture/"))
+                    .AddHttpMessageHandler<ApplicationCultureHandler>()
+                    .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
+                services.AddRbiApiClient<ILegalEntitiesApi, LegalEntitiesApi>("BrowserLegal", options => options.BaseUrl = new("http://backend.fixture/"))
                     .AddHttpMessageHandler<ApplicationCultureHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
             });
@@ -198,6 +225,13 @@ internal static class BrowserHostProgram
                     }
                     if (context.Request.Path == "/__fixtures/culture" && HttpMethods.IsGet(context.Request.Method))
                     { await context.Response.WriteAsJsonAsync(new { language = database.LastCulture }); return; }
+                    if (context.Request.Path == "/__fixtures/legal-record" && HttpMethods.IsGet(context.Request.Method))
+                    {
+                        await using var scope = backend.Services.CreateAsyncScope();
+                        var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                        await context.Response.WriteAsJsonAsync(await db.LegalEntities.IgnoreQueryFilters().OrderBy(item => item.CreatedAt).Select(item => new { item.Name, item.Matbroj, item.MaticniBroj, item.Status, item.IsActive, item.VerifiedBy, item.ConnectedWithBank, item.DateTo }).ToArrayAsync());
+                        return;
+                    }
                     if (!HttpMethods.IsPost(context.Request.Method)) { context.Response.StatusCode = 404; return; }
                     switch (context.Request.Path.Value)
                     {
@@ -209,6 +243,31 @@ internal static class BrowserHostProgram
                         case "/__fixtures/unavailable": database.Unavailable = true; break;
                         case "/__fixtures/available": database.Unavailable = false; break;
                         case "/__fixtures/codebooks-unavailable": database.CodebooksUnavailable = true; break;
+                        case "/__fixtures/legal-existing":
+                        case "/__fixtures/legal-pages":
+                            await using (var scope = backend.Services.CreateAsyncScope())
+                            {
+                                var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                                var count = context.Request.Path == "/__fixtures/legal-pages" ? 22 : 1;
+                                for (var index = 0; index < count; index++) db.LegalEntities.Add(new RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntity
+                                {
+                                    Name = $"Existing Company {index:D2}",
+                                    IsResident = false,
+                                    FbaId = (100000 + index).ToString(System.Globalization.CultureInfo.InvariantCulture),
+                                    MaticniBroj = "12345",
+                                    Matbroj = "SERVER-ONLY-789",
+                                    BasisOfConnection = "ZOB-2-V-5",
+                                    ConnectionDescription = "Fixture relationship description",
+                                    ConnectedWithBank = true,
+                                    DateFrom = new(2026, 1, 1),
+                                    Status = "Draft",
+                                    CreatedBy = "fixture-author",
+                                    IsActive = true,
+                                    CreatedAt = new DateTime(2026, 1, 1).AddMinutes(index)
+                                });
+                                await db.SaveChangesAsync();
+                            }
+                            break;
                         case "/__fixtures/lock":
                             await using (var scope = backend.Services.CreateAsyncScope())
                             {
