@@ -17,6 +17,7 @@ body { background: var(--surface-default); }
 .registry-persons-table { min-width: 1050px; }
 .registry-capital-table { min-width: 520px; }
 .registry-reports-table { min-width: 720px; }
+.registry-notifications-table { min-width: 720px; }
 .registry-persons-table .registry-toolbar { flex-wrap: nowrap; white-space: nowrap; }
 fieldset { min-inline-size: 0; border: 0; padding: 0; margin: 0; }
 @media (max-width: 767px) { .registry-form-grid { grid-template-columns: minmax(0, 1fr); } }

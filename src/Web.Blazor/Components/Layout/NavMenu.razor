@@ -13,6 +13,7 @@
         </Authorized></AuthorizeView>
         @if (_capital)
         {
+            <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["notifications.title"]" Href="/app/notifications" Icon="RbiIconName.Gauge" Active="@IsActive("app/notifications")" /></RbiSidebarPart>
             <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["capital.title"]" Href="/app/capital" Icon="RbiIconName.Gauge" Active="@IsActive("app/capital")" /></RbiSidebarPart>
         }
         @if (_limits)

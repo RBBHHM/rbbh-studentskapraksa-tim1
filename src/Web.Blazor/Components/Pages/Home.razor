@@ -19,6 +19,10 @@
             </RbiCard>
             @if (_capital)
             {
+                <RbiCard Title="@T["notifications.title"]">
+                    <ChildContent><RbiText>@T["notifications.subtitle"]</RbiText></ChildContent>
+                    <Footer><RbiButton Href="/app/notifications">@T["notifications.title"]</RbiButton></Footer>
+                </RbiCard>
                 <RbiCard Title="@T["capital.title"]">
                     <ChildContent><RbiText>@T["capital.subtitle"]</RbiText></ChildContent>
                     <Footer><RbiButton Href="/app/capital">@T["capital.title"]</RbiButton></Footer>
