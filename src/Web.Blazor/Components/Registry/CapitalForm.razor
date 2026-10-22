@@ -1,0 +1,39 @@
+@using RBI.DesignSystem.Components.Forms
+@using RBI.Forms
+@implements IDisposable
+
+<EditForm EditContext="_context" OnSubmit="SubmitAsync" FormName="capital" novalidate>
+    <div role="alert" tabindex="-1" @ref="_summary"><ValidationSummary /></div>
+    <fieldset disabled="@_submission.IsSubmitting">
+        <legend>@T["capital.edit"]</legend>
+        <div class="registry-form-grid">
+            <RbiField TValue="decimal?" Id="capital-regulatory" Label="@T["limit.regulatory"]" Required For="@(() => Model.RegulatoryCapital)"><InputNumber TValue="decimal?" id="capital-regulatory" class="rbi-control" @bind-Value="Model.RegulatoryCapital" min="0" step="0.01" ParsingErrorMessage="@T["limit.number"]" /></RbiField>
+            <RbiField TValue="decimal?" Id="capital-core" Label="@T["limit.core"]" Required For="@(() => Model.CoreCapital)"><InputNumber TValue="decimal?" id="capital-core" class="rbi-control" @bind-Value="Model.CoreCapital" min="0" step="0.01" ParsingErrorMessage="@T["limit.number"]" /></RbiField>
+            <RbiField TValue="decimal?" Id="capital-supplementary" Label="@T["capital.supplementary"]" Required For="@(() => Model.SupplementaryCapital)"><InputNumber TValue="decimal?" id="capital-supplementary" class="rbi-control" @bind-Value="Model.SupplementaryCapital" min="0" step="0.01" ParsingErrorMessage="@T["limit.number"]" /></RbiField>
+            <RbiField TValue="DateTime?" Id="capital-date" Label="@T["capital.date"]" Required For="@(() => Model.CapitalDate)"><InputDate TValue="DateTime?" id="capital-date" class="rbi-control" @bind-Value="Model.CapitalDate" ParsingErrorMessage="@T["validation.date"]" /></RbiField>
+        </div>
+        <div class="registry-toolbar"><RbiButton OnClick="Cancel" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton><RbiButton Type="RbiButtonType.Submit">@T["common.save"]</RbiButton></div>
+    </fieldset>
+</EditForm>
+@code {
+    [Parameter, EditorRequired] public CapitalDraft Model { get; set; } = null!;
+    [Parameter] public EventCallback<CapitalRequest> Save { get; set; }
+    [Parameter] public EventCallback Cancel { get; set; }
+    private EditContext _context = null!;
+    private RbiServerValidation _validation = null!;
+    private readonly RbiFormSubmissionState _submission = new();
+    private ElementReference _summary;
+    private bool _focusErrors;
+    protected override void OnInitialized() { _context = new(Model); _validation = new(_context); }
+    protected override async Task OnAfterRenderAsync(bool firstRender) { if (_focusErrors) { _focusErrors = false; await _summary.FocusAsync(); } }
+    private async Task SubmitAsync() => await _submission.SubmitAsync(async () =>
+    {
+        var parsed = _context.Validate(); var errors = Model.Validate();
+        _validation.DisplayErrors(errors.ToDictionary(item => item.Key, item => item.Value.Select(key => T[key]).ToArray()));
+        if (!parsed || errors.Count > 0) { _focusErrors = true; return; }
+        try { await Save.InvokeAsync(Model.ToRequest()); }
+        catch (RegistryApiException exception) { _validation.DisplayFormError(T[exception.MessageKey]); _focusErrors = true; }
+        catch (OperationCanceledException) { /* The owning route cancels on disposal. */ }
+    });
+    public void Dispose() => _validation.Dispose();
+}

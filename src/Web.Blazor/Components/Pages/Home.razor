@@ -13,6 +13,13 @@
                     <Footer><RbiButton Href="/app/physical-persons">@T["person.title"]</RbiButton></Footer>
                 </RbiCard>
             }
+            @if (_capital)
+            {
+                <RbiCard Title="@T["capital.title"]">
+                    <ChildContent><RbiText>@T["capital.subtitle"]</RbiText></ChildContent>
+                    <Footer><RbiButton Href="/app/capital">@T["capital.title"]</RbiButton></Footer>
+                </RbiCard>
+            }
             @if (_limits)
             {
                 <RbiCard Title="@T["limit.title"]">
@@ -36,10 +43,10 @@
     <NotAuthorized><IdentityNotice /></NotAuthorized>
 </AuthorizeView>
 @code {
-    private bool _physical, _legal, _limits;
+    private bool _physical, _legal, _limits, _capital;
     protected override async Task OnInitializedAsync()
     {
-        try { _physical = await Permissions.HasPermissionAsync("fl.read"); _legal = await Permissions.HasPermissionAsync("pl.read"); _limits = await Permissions.HasPermissionAsync("limiti.read"); }
-        catch (RegistryApiException) { _physical = _legal = _limits = false; }
+        try { _physical = await Permissions.HasPermissionAsync("fl.read"); _legal = await Permissions.HasPermissionAsync("pl.read"); _limits = await Permissions.HasPermissionAsync("limiti.read"); _capital = await Permissions.HasPermissionAsync("kapital.read"); }
+        catch (RegistryApiException) { _physical = _legal = _limits = _capital = false; }
     }
 }
