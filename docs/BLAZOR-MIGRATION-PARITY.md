@@ -20,7 +20,7 @@ BLAZOR-MIGRATION-AUTHORIZATION.md for identity/application permission separation
 | `/app/reports` | archive/generate/download → native reporting module | reports | authenticated read; DB KAPITAL_CREATE generate/persist | reports closure:15 added frontend tests,9 Kapital+9 Admin+2 Guest browser cases; backend12 HTTP preserved | PARITY |
 | `/app/notifications` | email log → native recorded-notification list | email-log | DB KAPITAL_VIEW | notifications closure:6 browser cases × 6 current DB roles, no SMTP delivery claim or HTML rendering | PARITY |
 | `/app/admin/period` | lock/request/process/respond → native period workflow | period-lock | existing Admin route + CapitalWrite API | pending tests | NOT_STARTED |
-| `/app/admin/users` | functional role/user administration → native module | users, roles | ADMINISTRATION_* | pending tests | NOT_STARTED |
+| `/app/admin/users` | functional role/user administration → native module | users, roles | ADMINISTRATION_* | USERS-SAFETY-BLOCKER:real HTTP self-ID guard bypass and sole-Admin removal; decision required | BLOCKED |
 | `/app/admin/code-lists` | category/value CRUD/import → native module | code-lists | existing Admin route, ADMINISTRATION_MANAGE mutations | pending tests | NOT_STARTED |
 | `/app/admin/audit` | actual business audit → native table/filter/paging | audit-logs | exact admin from current DB profile | audit closure:5 Admin browser cases + denied/forged-claim coverage for5 other DB roles; real AuditService metadata/paging | PARITY |
 | `/app/profile` | identity/effective permissions → template-based profile | auth/profile | authenticated | signed-out HTTP smoke + effective permission tests; integrated identity/browser pending | IN_PROGRESS |
@@ -43,6 +43,10 @@ Notifications follows in BLAZOR-MIGRATION-NOTIFICATIONS-CLOSURE.md
 Audit follows in BLAZOR-MIGRATION-AUDIT-CLOSURE.md (407 .NET/122 browser),
 including DB-owned Admin access and encoded audit metadata.
 Remaining administration/guide modules are incomplete.
+User administration is blocked by the confirmed destructive-access risk in
+BLAZOR-MIGRATION-USERS-SAFETY-BLOCKER.md. Its uncommitted discovery cases are
+2 FAIL/1 PASS; the accepted 407-test checkpoint must not be confused with the
+current working tree containing those red cases.
 Real SQL/SSO/OCP parity is not claimed.
 
 ## Required end-to-end closure ledger
@@ -74,8 +78,8 @@ may be weakened to manufacture completion.
 | 19 | notifications/provider empty state | notifications | PARITY: recorded rows, safe body search and explicit SMTP empty-state semantics across all6 DB roles |
 | 20 | create user | admin/users | NOT_STARTED |
 | 21 | assign functional permissions via roles | admin/users | NOT_STARTED |
-| 22 | deactivate/reactivate user | admin/users | NOT_STARTED |
-| 23 | delete user with confirmation | admin/users | NOT_STARTED |
+| 22 | deactivate/reactivate user | admin/users | BLOCKED: existing self-deactivation guard compares local ID to identity-provider subject |
+| 23 | delete user with confirmation | admin/users | BLOCKED: self-deletion guard bypass and sole-Admin removal require safety decision |
 | 24 | code-list CRUD/preview/import/referenced-value rejection | admin/code-lists | NOT_STARTED |
 | 25 | audit visible after mutation | admin/audit | PARITY: real AuditService entry, metadata/search/paging, DB Admin only and forged-provider denial |
 | 26 | current identity/permissions profile | profile | NOT_STARTED |
