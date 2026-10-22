@@ -1,0 +1,37 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject NavigationManager Navigation
+
+<a class="app-skip" href="#app-main">@T["nav.skip"]</a>
+<RbiSidebar @key="_route" AccessibleLabel="@T["nav.title"]" ToggleLabel="@T["nav.toggle"]"
+            Collapse="RbiSidebarCollapse.Icon" @bind-Open="_open" StateCookieName="rbbh_sidebar">
+    <ChildContent>
+        <RbiSidebarPart Kind="RbiSidebarPartKind.Header"><RbiText>RBBH.RelatedPartiesRegister.Web</RbiText></RbiSidebarPart>
+        <RbiSidebarPart Kind="RbiSidebarPartKind.Content">
+            <NavMenu />
+            <LanguageSwitcher />
+        </RbiSidebarPart>
+    </ChildContent>
+    <MainContent>
+        <header class="app-toolbar"><RbiSidebarToggle /><RbiText>RBBH.RelatedPartiesRegister.Web</RbiText></header>
+        <main id="app-main" tabindex="-1" class="app-main"><RbiContainer Class="app-content">@Body</RbiContainer></main>
+    </MainContent>
+</RbiSidebar>
+
+@code {
+    private bool _open = true;
+    private string _route = string.Empty;
+    protected override void OnInitialized()
+    {
+        _route = Navigation.Uri;
+        Navigation.LocationChanged += RouteChanged;
+    }
+    private void RouteChanged(object? sender, LocationChangedEventArgs args)
+    {
+        // Close the app's mobile sheet on route changes without duplicating
+        // package JS or losing the layout's controlled desktop preference.
+        _route = args.Location;
+        _ = InvokeAsync(StateHasChanged);
+    }
+    public void Dispose() => Navigation.LocationChanged -= RouteChanged;
+}

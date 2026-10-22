@@ -1,0 +1,13 @@
+@inject NavigationManager Navigation
+
+<nav aria-label="@T["nav.title"]">
+    <RbiSidebarPart Kind="RbiSidebarPartKind.Menu">
+        <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["nav.home"]" Href="/" Icon="RbiIconName.Gauge" Active="@IsActive("")" /></RbiSidebarPart>
+        <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["nav.audit"]" Href="/audit-log" Icon="RbiIconName.FileText" Active="@IsActive("audit-log")" /></RbiSidebarPart>
+        <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["nav.profile"]" Href="/profile" Icon="RbiIconName.UserRound" Active="@IsActive("profile")" /></RbiSidebarPart>
+    </RbiSidebarPart>
+</nav>
+
+@code {
+    private bool IsActive(string path) => Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].Trim('/') == path;
+}

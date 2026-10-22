@@ -1,0 +1,87 @@
+@page "/audit-log"
+@implements IDisposable
+@inject IAuditLogApi AuditApi
+
+<PageTitle>@T["audit.title"]</PageTitle>
+<HeroBar Title="@T["audit.title"]" Description="@T["audit.description"]" />
+<section aria-label="@T["audit.title"]" aria-busy="@_loading.ToString().ToLowerInvariant()">
+    @if (_loading)
+    {
+        <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton Shape="RbiSkeletonShape.Rectangle" /></div>
+    }
+    else if (_error)
+    {
+        <RbiAlert Tone="RbiAlertTone.Danger" Title="@T["state.error"]" Announcement="RbiAlertAnnouncement.Assertive">@T["audit.unavailable"]</RbiAlert>
+        <RbiButton OnClick="() => LoadAsync(_currentPage)">@T["state.retry"]</RbiButton>
+    }
+    else if (_page.Items.Count == 0)
+    {
+        <RbiCard Title="@T["audit.empty"]"><ChildContent><RbiText>@T["audit.empty.description"]</RbiText></ChildContent></RbiCard>
+    }
+    else
+    {
+        <RbiTable AccessibleLabel="@T["audit.title"]">
+            <caption>@T["audit.title"]</caption>
+            <thead><tr><th scope="col">@T["audit.timestamp"]</th><th scope="col">@T["audit.subject"]</th><th scope="col">@T["audit.action"]</th><th scope="col">@T["audit.resource"]</th><th scope="col">@T["audit.result"]</th><th scope="col">@T["audit.details"]</th></tr></thead>
+            <tbody>
+                @foreach (var entry in _page.Items)
+                {
+                    <tr @key="entry.Id">
+                        <td><time datetime="@entry.Timestamp.ToString("O", System.Globalization.CultureInfo.InvariantCulture)">@entry.Timestamp.UtcDateTime.ToString("u")</time></td>
+                        <td>@entry.User</td><td>@entry.Action</td><td>@entry.Resource</td>
+                        <td><RbiBadge>@entry.Result</RbiBadge></td>
+                        <td><RbiButton Variant="RbiButtonVariant.Ghost" OnClick="() => _selected = entry">@T["audit.details"]</RbiButton></td>
+                    </tr>
+                }
+            </tbody>
+        </RbiTable>
+        @if (TotalPages > 1)
+        {
+            <RbiPagination CurrentPage="_currentPage" CurrentPageChanged="LoadAsync" TotalPages="TotalPages"
+                           AccessibleLabel="@T["audit.pagination"]" PreviousAccessibleLabel="@T["audit.previous"]"
+                           NextAccessibleLabel="@T["audit.next"]" PreviousLabel="@T["audit.previous"]" NextLabel="@T["audit.next"]"
+                           PageAccessibleLabel="@(page => T.Format("audit.page", page))" />
+        }
+    }
+</section>
+<RbiDialog Open="@(_selected is not null)" OpenChanged="CloseDetails" Title="@T["audit.details"]" CloseLabel="@T["common.close"]">
+    <DialogBody>
+        @if (_selected is { } selected)
+        {
+            <dl><dt>@T["audit.subject"]</dt><dd>@selected.User</dd><dt>@T["audit.resource"]</dt><dd>@selected.Resource</dd><dt>@T["audit.details"]</dt><dd>@selected.Details</dd><dt>@T["audit.correlation"]</dt><dd>@selected.CorrelationId</dd></dl>
+        }
+    </DialogBody>
+</RbiDialog>
+
+@code {
+    private const int PageSize = 10;
+    private AuditLogPage _page = new([], 0);
+    private AuditLogEntry? _selected;
+    private CancellationTokenSource? _cancellation;
+    private int _currentPage = 1, _requestVersion;
+    private bool _loading = true, _error, _disposed;
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling(_page.TotalCount / (double)PageSize));
+    protected override Task OnInitializedAsync() => LoadAsync(1);
+
+    private async Task LoadAsync(int page)
+    {
+        var version = ++_requestVersion;
+        _cancellation?.Cancel();
+        _cancellation?.Dispose();
+        _cancellation = new();
+        var token = _cancellation.Token;
+        _loading = true;
+        _error = false;
+        try
+        {
+            var result = await AuditApi.GetPageAsync(page, PageSize, token);
+            if (!_disposed && version == _requestVersion) { _page = result; _currentPage = page; }
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        catch (AuditLogUnavailableException) { if (!_disposed && version == _requestVersion) _error = true; }
+        finally { if (!_disposed && version == _requestVersion) _loading = false; }
+    }
+
+    private void CloseDetails(bool open) { if (!open) _selected = null; }
+    public void Dispose() { _disposed = true; _cancellation?.Cancel(); _cancellation?.Dispose(); }
+}

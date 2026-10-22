@@ -1,0 +1,11 @@
+/* Application composition only; component visuals come from RBI.DesignSystem. */
+html, body { margin: 0; min-height: 100%; }
+body { background: var(--surface-default); }
+.app-toolbar { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-6); }
+.app-main { min-width: 0; padding: var(--space-6); }
+.app-content { box-sizing: border-box; }
+.app-language { padding: var(--space-3); }
+.app-hero { margin-block-end: var(--space-6); }
+.app-skip { position: fixed; inset-inline-start: var(--space-3); top: var(--space-3); transform: translateY(-200%); z-index: 100; }
+.app-skip:focus { transform: none; background: var(--surface-default); padding: var(--space-3); }
+@media (max-width: 767px) { .app-main { padding: var(--space-3); } }

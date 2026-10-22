@@ -1,0 +1,12 @@
+@page "/error"
+@using RBI.Localization
+@inject IRbiLocalizer L
+
+<PageTitle>@Title</PageTitle>
+
+<HeroBar Title="@Title" Description="@Description" />
+
+@code {
+    private string Title => L["errors.generic.title"];
+    private string Description => L["errors.generic.description"];
+}

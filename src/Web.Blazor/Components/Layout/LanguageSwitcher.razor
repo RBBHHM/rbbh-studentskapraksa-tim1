@@ -1,0 +1,24 @@
+@using System.Globalization
+@using RBI.Localization
+@using RBI.DesignSystem.Components.Forms
+@inject RbiCultureCatalog Cultures
+@inject NavigationManager Navigation
+
+<form action="@Action" method="post" data-enhance="false" class="app-language">
+    <AntiforgeryToken />
+    <RbiStack Gap="RbiStackGap.Small">
+        <label for="app-culture">@T["common.language"]</label>
+        <RbiSelect TValue="string" id="app-culture" @bind-Value="_culture">
+            @foreach (var culture in Cultures.SupportedCultures)
+            {
+                <option value="@culture">@CultureInfo.GetCultureInfo(culture).NativeName</option>
+            }
+        </RbiSelect>
+        <RbiButton Type="RbiButtonType.Submit" Variant="RbiButtonVariant.Secondary">@T["common.apply"]</RbiButton>
+    </RbiStack>
+</form>
+
+@code {
+    private string _culture = CultureInfo.CurrentUICulture.Name;
+    private string Action => $"/rbi-localization/culture/{Uri.EscapeDataString(_culture)}?returnUrl={Uri.EscapeDataString("/" + Navigation.ToBaseRelativePath(Navigation.Uri))}";
+}

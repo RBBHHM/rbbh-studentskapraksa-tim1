@@ -1,0 +1,178 @@
+name: Deploy application to OpenShift
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target GitHub/OpenShift environment
+        required: true
+        default: UAT
+        type: choice
+        options: [Development, UAT, PROD]
+      image_tag:
+        description: Existing immutable image tag to deploy
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to OpenShift
+    timeout-minutes: 20
+    runs-on: rbbh-ghr-0
+    environment: ${{ inputs.environment }}
+    concurrency:
+      group: ocp-${{ inputs.environment }}-${{ vars.IMAGE_NAME }}
+      cancel-in-progress: false
+    env:
+      ARTIFACTORY_REGISTRY: ${{ vars.ARTIFACTORY_REGISTRY }}
+      ARTIFACTORY_REPOSITORY: ${{ vars.ARTIFACTORY_REPOSITORY }}
+      IMAGE_NAME: ${{ vars.IMAGE_NAME }}
+      IMAGE_TAG: ${{ inputs.image_tag }}
+      OCP_SERVER: ${{ vars.OCP_SERVER }}
+      OCP_PROJECT_NAME: ${{ vars.OCP_PROJECT_NAME }}
+      OCP_TOKEN: ${{ secrets.OCP_TOKEN }}
+      ARTIFACTORY_USERNAME: ${{ secrets.ARTIFACTORY_USERNAME }}
+      ARTIFACTORY_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
+    steps:
+      - name: Validate deployment configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in ARTIFACTORY_REGISTRY ARTIFACTORY_REPOSITORY IMAGE_NAME IMAGE_TAG OCP_SERVER OCP_PROJECT_NAME OCP_TOKEN ARTIFACTORY_USERNAME ARTIFACTORY_TOKEN; do
+            if [ -z "${!name:-}" ]; then
+              echo "Missing required GitHub environment value: ${name}" >&2
+              exit 1
+            fi
+          done
+          if ! [[ "$IMAGE_NAME" =~ ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$ ]]; then
+            echo "IMAGE_NAME must be a valid lowercase OpenShift resource name." >&2
+            exit 1
+          fi
+          if ! [[ "$IMAGE_TAG" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
+            echo "IMAGE_TAG is not a valid container image tag." >&2
+            exit 1
+          fi
+          if [ "$IMAGE_TAG" = "latest" ]; then
+            echo "Deployment requires an immutable tag, not latest." >&2
+            exit 1
+          fi
+      - name: Validate source image manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          manifest_url="https://${ARTIFACTORY_REGISTRY}/v2/${ARTIFACTORY_REPOSITORY}/${IMAGE_NAME}/manifests/${IMAGE_TAG}"
+          curl --fail --silent --show-error \
+            --user "${ARTIFACTORY_USERNAME}:${ARTIFACTORY_TOKEN}" \
+            --header "Accept: application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json" \
+            --output /dev/null \
+            "$manifest_url"
+      - name: Sign in to OpenShift
+        shell: bash
+        run: |
+          set -euo pipefail
+          oc login --server="$OCP_SERVER" --token="$OCP_TOKEN"
+          oc project "$OCP_PROJECT_NAME"
+          oc get configmap ca-certificates >/dev/null
+      - name: Configure registry access
+        shell: bash
+        run: |
+          set -euo pipefail
+          oc create secret docker-registry "${IMAGE_NAME}-registry" \
+            --docker-server="$ARTIFACTORY_REGISTRY" \
+            --docker-username="$ARTIFACTORY_USERNAME" \
+            --docker-password="$ARTIFACTORY_TOKEN" \
+            --dry-run=client --output=yaml | oc apply -f -
+          oc secrets link default "${IMAGE_NAME}-registry" --for=pull
+      - name: Import immutable image
+        shell: bash
+        run: |
+          set -euo pipefail
+          oc apply -f - <<EOF
+          apiVersion: image.openshift.io/v1
+          kind: ImageStream
+          metadata:
+            name: ${IMAGE_NAME}
+          EOF
+          oc import-image "${IMAGE_NAME}:${IMAGE_TAG}" \
+            --from="${ARTIFACTORY_REGISTRY}/${ARTIFACTORY_REPOSITORY}/${IMAGE_NAME}:${IMAGE_TAG}" \
+            --reference-policy=local --confirm
+      - name: Apply application resources
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${{ inputs.environment }}" in
+            PROD) aspnet_environment=Production ;;
+            UAT) aspnet_environment=UAT ;;
+            Development) aspnet_environment=Development ;;
+            *) echo "Unsupported environment." >&2; exit 1 ;;
+          esac
+          oc apply -f - <<EOF
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: ${IMAGE_NAME}
+            labels: { app: ${IMAGE_NAME} }
+          spec:
+            replicas: 1
+            selector:
+              matchLabels: { app: ${IMAGE_NAME} }
+            template:
+              metadata:
+                labels: { app: ${IMAGE_NAME} }
+              spec:
+                containers:
+                  - name: ${IMAGE_NAME}
+                    image: image-registry.openshift-image-registry.svc:5000/${OCP_PROJECT_NAME}/${IMAGE_NAME}:${IMAGE_TAG}
+                    imagePullPolicy: Always
+                    ports:
+                      - { name: http, containerPort: 8080 }
+                    env:
+                      - { name: ASPNETCORE_URLS, value: "http://+:8080" }
+                      - { name: ASPNETCORE_ENVIRONMENT, value: "${aspnet_environment}" }
+                      - { name: TZ, value: Europe/Sarajevo }
+                      - { name: SSL_CERT_DIR, value: "/etc/ssl/certs:/etc/ssl/certs/additional-certs" }
+                    envFrom:
+                      - configMapRef: { name: "${IMAGE_NAME}-config", optional: true }
+                      - secretRef: { name: "${IMAGE_NAME}-secrets", optional: true }
+                    readinessProbe:
+                      httpGet: { path: /health/ready, port: http }
+                      initialDelaySeconds: 10
+                      periodSeconds: 10
+                      timeoutSeconds: 3
+                      failureThreshold: 3
+                    livenessProbe:
+                      httpGet: { path: /health/live, port: http }
+                      initialDelaySeconds: 15
+                      periodSeconds: 20
+                      timeoutSeconds: 3
+                      failureThreshold: 3
+                    securityContext:
+                      allowPrivilegeEscalation: false
+                      capabilities: { drop: [ALL] }
+                      runAsNonRoot: true
+                    volumeMounts:
+                      - name: ca-certificates
+                        mountPath: /etc/ssl/certs/additional-certs
+                        readOnly: true
+                volumes:
+                  - name: ca-certificates
+                    configMap: { name: ca-certificates }
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: ${IMAGE_NAME}
+            labels: { app: ${IMAGE_NAME} }
+          spec:
+            selector: { app: ${IMAGE_NAME} }
+            ports:
+              - { name: http, port: 8080, targetPort: http }
+          EOF
+      - name: Wait for rollout
+        shell: bash
+        run: |
+          set -euo pipefail
+          oc rollout status "deployment/${IMAGE_NAME}" --timeout=5m

@@ -1,0 +1,13 @@
+@page "/"
+<PageTitle>@T["app.title"]</PageTitle>
+<HeroBar Title="@T["app.title"]" Description="@T["app.welcome"]" />
+<RbiGrid Columns="RbiGridColumns.Two">
+    <RbiCard Title="@T["nav.audit"]">
+        <ChildContent><RbiText>@T["audit.description"]</RbiText></ChildContent>
+        <Footer><RbiButton Href="/audit-log">@T["nav.audit"]</RbiButton></Footer>
+    </RbiCard>
+    <RbiCard Title="@T["nav.profile"]">
+        <ChildContent><RbiText>@T["app.extend"]</RbiText></ChildContent>
+        <Footer><RbiButton Href="/profile">@T["nav.profile"]</RbiButton></Footer>
+    </RbiCard>
+</RbiGrid>

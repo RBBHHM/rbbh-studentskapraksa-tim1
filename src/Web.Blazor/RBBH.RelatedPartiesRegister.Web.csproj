@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <WarningsAsErrors>$(WarningsAsErrors);RZ10012</WarningsAsErrors>
+    <UserSecretsId>rbbh-webapp-16f22a6a-7621-42b8-8523-7d710990540b</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="RBI.DesignSystem" Version="$(RbiPackageVersion)" />
+    <PackageReference Include="RBI.Hosting" Version="$(RbiPackageVersion)" />
+    <PackageReference Include="RBI.ApiCore" Version="$(RbiPackageVersion)" />
+    <PackageReference Include="RBI.Authentication" Version="$(RbiPackageVersion)" />
+    <PackageReference Include="RBI.Authorization" Version="$(RbiPackageVersion)" />
+    <PackageReference Include="RBI.Localization" Version="$(RbiPackageVersion)" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Update="Localization/**/*.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,45 @@
+@page "/profile"
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationState
+
+<PageTitle>@T["profile.title"]</PageTitle>
+<HeroBar Title="@T["profile.title"]" Description="@T["profile.description"]" />
+<RbiCard>
+    <ChildContent>
+        <RbiStack Gap="RbiStackGap.Medium">
+            <RbiAvatar Fallback="@Initials" AccessibleLabel="@T["profile.visual"]" />
+            @if (_loading)
+            {
+                <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div>
+            }
+            else if (_user?.Identity?.IsAuthenticated == true)
+            {
+                <dl>
+                    @if (DisplayName is { } displayName) { <dt>@T["profile.name"]</dt><dd>@displayName</dd> }
+                    @if ((Claim(ClaimTypes.Upn) ?? Claim("preferred_username")) is { } username) { <dt>@T["profile.username"]</dt><dd>@username</dd> }
+                    @if ((Claim(ClaimTypes.Email) ?? Claim("email")) is { } email) { <dt>@T["profile.email"]</dt><dd>@email</dd> }
+                    @if ((Claim(ClaimTypes.NameIdentifier) ?? Claim("sub")) is { } subject) { <dt>@T["profile.subject"]</dt><dd>@subject</dd> }
+                    @if (Roles.Count > 0) { <dt>@T["profile.roles"]</dt><dd>@string.Join(", ", Roles)</dd> }
+                </dl>
+            }
+            else { <RbiText>@T[Configured ? "profile.signedout" : "profile.unconfigured"]</RbiText> }
+        </RbiStack>
+    </ChildContent>
+</RbiCard>
+
+@code {
+    private ClaimsPrincipal? _user = null;
+    private bool _loading = true;
+    private const bool Configured = true;
+    protected override async Task OnInitializedAsync()
+    {
+        _user = (await AuthenticationState.GetAuthenticationStateAsync()).User;
+        _loading = false;
+    }
+    private string? Claim(string type) => _user?.FindFirst(type)?.Value;
+    private string? DisplayName => Claim(ClaimTypes.Name) ?? Claim("name") ?? _user?.Identity?.Name;
+    private string Initials => string.IsNullOrWhiteSpace(DisplayName) ? "?" : DisplayName[..1].ToUpperInvariant();
+    private IReadOnlyList<string> Roles => _user?.Identities.SelectMany(identity => identity.FindAll(identity.RoleClaimType))
+        .Select(claim => claim.Value).Distinct(StringComparer.Ordinal).ToArray() ?? [];
+}

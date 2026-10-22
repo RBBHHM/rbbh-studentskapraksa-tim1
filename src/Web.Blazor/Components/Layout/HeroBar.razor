@@ -1,0 +1,13 @@
+<header class="app-hero">
+    <RbiStack Gap="RbiStackGap.Small">
+        <RbiHeading Level="1">@Title</RbiHeading>
+        @if (!string.IsNullOrWhiteSpace(Description)) { <RbiText>@Description</RbiText> }
+        @Actions
+    </RbiStack>
+</header>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? Description { get; set; }
+    [Parameter] public RenderFragment? Actions { get; set; }
+}
