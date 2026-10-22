@@ -38,6 +38,21 @@ in the frontend, change persistence, suppress failed rows or claim all rows
 were successfully imported. More precise structured safe backend error codes
 may be introduced separately if required; do not display raw SQL/stack traces.
 
+## Legal business validation HTTP status — locally corrected
+
+The real LegalEntityService throws the root business ValidationException, which
+the global handler previously classified as HTTP 500. Isolated HTTP regression
+tests proved duplicate FBA and reversed dates failed as server errors (2 failed,
+1 privacy test passed). The handler now returns HTTP 400 for this specific
+exception and adds a field-keyed `errors` collection with generic safe guidance.
+It does not expose raw business messages, interpolated identifiers or unexpected
+exception details. Validation rules, persistence, schema and controllers are
+unchanged. The unexpected-exception privacy test still returns a redacted 500.
+Green evidence: `artifacts/migration-template/legal-validation-green.log` (3/3)
+and `legal-validation-regression.log` (58 frontend + 210 unit + 67 integration =
+335/335, no skips). These receipts use isolated InMemory/test identity, not SQL
+or deployed SSO. Existing dependency advisories remain unsuppressed.
+
 ## Known dependency advisories — unresolved release risk
 
 The preserved backend dependency graph resolves

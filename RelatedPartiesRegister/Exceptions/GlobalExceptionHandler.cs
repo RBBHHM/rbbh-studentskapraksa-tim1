@@ -33,6 +33,15 @@ namespace RBBH.ConnectedParties.Exceptions
                 Instance = $"{httpContext.Request.Method} {httpContext.Request.Path}"
             };
             problem.Extensions["traceId"] = httpContext.TraceIdentifier;
+            if (exception is ValidationException { Field: { Length: > 0 } field })
+            {
+                // Business messages can interpolate identifiers. Publish the field,
+                // not raw exception text or submitted personal/business data.
+                problem.Extensions["errors"] = new Dictionary<string, string[]>
+                {
+                    [field] = ["Provjerite unesene podatke i pokušajte ponovo."]
+                };
+            }
             await httpContext.Response.WriteAsJsonAsync(problem, cancellationToken);
             return true;
         }
