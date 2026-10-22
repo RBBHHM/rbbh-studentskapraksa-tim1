@@ -31,6 +31,7 @@ test("create keeps zero/null and backend-derived capital, edit and confirmed del
   await dialog.getByLabel("Komentar", { exact: false }).fill("Native fixture");
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).not.toBeVisible();
   const row = page.getByRole("row", { name: /Existing Company 00/ }); await expect(row).toBeVisible();
+  await page.getByLabel("Pretraži zapise", { exact: true }).fill("  fixture  "); await expect(row).toBeVisible();
   await expect(row.getByText("1.234.567,89", { exact: true })).toBeVisible();
   let records = await (await request.get("/__fixtures/limits", { headers })).json();
   expect(records).toHaveLength(1); expect(records[0].odobreniLimit).toBe(0); expect(records[0].maksimalnaOcekivanaUtilizacija).toBeNull();

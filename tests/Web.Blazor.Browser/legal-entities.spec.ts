@@ -100,6 +100,8 @@ test("paged data remains reachable and metadata search stays scoped to displayed
   await expect(page.getByRole("row", { name: /Existing Company 21/ })).toBeVisible();
   await page.getByLabel("Pretraga podataka na prikazanoj stranici", { exact: true }).fill("fixture-author");
   await expect(page.getByRole("row", { name: /Existing Company 21/ })).toBeVisible();
+  await page.getByLabel("Pretraga podataka na prikazanoj stranici", { exact: true }).fill("  fixture-author  ");
+  await expect(page.getByRole("row", { name: /Existing Company 21/ })).toBeVisible();
   await page.getByRole("button", { name: "Sljedeća stranica", exact: true }).click();
   await expect(page.getByRole("row", { name: /Existing Company 00/ })).toBeVisible();
   await expect(page.getByRole("row", { name: /Existing Company 21/ })).toHaveCount(0);

@@ -11,10 +11,11 @@ public sealed record LimitRecord(int Id, Guid LegalEntityId, string Naziv, bool 
     public bool Matches(string? search)
     {
         if (string.IsNullOrWhiteSpace(search)) return true;
+        var term = search.Trim();
         object?[] values = [Id, LegalEntityId, Naziv, IsResident, FbaId, TaxNumber, MaticniBroj, Matbroj,
             TipLimita, OdobreniLimit, MaksimalnaOcekivanaUtilizacija, RokOcekivaneUtilizacije?.ToString("O"), Komentar,
             RegulatorniKapital, OsnovniKapital, DatumKapitala?.ToString("O"), CreatedAt.ToString("O"), CreatedBy, ModifiedAt?.ToString("O"), ModifiedBy];
-        return values.Any(value => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture)?.Contains(search, StringComparison.OrdinalIgnoreCase) == true);
+        return values.Any(value => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture)?.Contains(term, StringComparison.OrdinalIgnoreCase) == true);
     }
 }
 public sealed record LimitRequest(Guid LegalEntityId, string TipLimita, decimal? OdobreniLimit,

@@ -14,6 +14,7 @@ public sealed record RelatedPerson(Guid Id, string FirstName, string LastName, i
     public bool Matches(string? search)
     {
         if (string.IsNullOrWhiteSpace(search)) return true;
+        var term = search.Trim();
         // Same scalar response values as the existing client-side search; no
         // generic object/envelope normalization or server-side query rewrite.
         object?[] values = [Id, FirstName, LastName, Residency, ResidencyLabel, Jmbg, PassportNumber, FbaId,
@@ -22,7 +23,7 @@ public sealed record RelatedPerson(Guid Id, string FirstName, string LastName, i
             SpecialContract, MalusClawback, RelatedToPersonId, RelatedToPersonName, Status, StatusLabel,
             CreatedAt.ToString("O"), CreatedBy, ModifiedAt?.ToString("O"), ModifiedBy, VerifiedBy, VerifiedAt?.ToString("O"),
             FamilyMemberCount, PersonType, PersonTypeLabel];
-        return values.Any(value => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture)?.Contains(search, StringComparison.OrdinalIgnoreCase) == true);
+        return values.Any(value => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture)?.Contains(term, StringComparison.OrdinalIgnoreCase) == true);
     }
 }
 

@@ -13,11 +13,12 @@ public sealed record LegalEntity(Guid Id, bool IsResident, string? TaxNumber, st
     public bool Matches(string? search)
     {
         if (string.IsNullOrWhiteSpace(search)) return true;
+        var term = search.Trim();
         object?[] values = [Id, IsResident, TaxNumber, MaticniBroj, FbaId, Name, Matbroj,
             BasisOfConnection, ConnectionDescription, ConnectedWithBank, DateFrom?.ToString("O"),
             DateTo?.ToString("O"), Status, CreatedBy, CreatedAt.ToString("O"), ModifiedBy,
             ModifiedAt?.ToString("O"), VerifiedBy, VerifiedAt?.ToString("O")];
-        return values.Any(value => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture)?.Contains(search, StringComparison.OrdinalIgnoreCase) == true);
+        return values.Any(value => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture)?.Contains(term, StringComparison.OrdinalIgnoreCase) == true);
     }
 }
 public sealed record LegalEntityPage(IReadOnlyList<LegalEntity> Items, int Total, int Page, int PageSize);

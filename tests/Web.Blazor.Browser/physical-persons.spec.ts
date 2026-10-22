@@ -227,6 +227,8 @@ test("search covers identity and existing backend audit values, with no-result r
   await expect(page.getByRole("row", { name: /Search Fixture/ })).toBeVisible();
   await search.fill("FL@fixture.test");
   await expect(page.getByRole("row", { name: /Search Fixture/ })).toBeVisible();
+  await search.fill("  FL@fixture.test  ");
+  await expect(page.getByRole("row", { name: /Search Fixture/ })).toBeVisible();
   await search.fill("");
   await expect(page.getByRole("row", { name: /Search Fixture/ })).toBeVisible();
 });
