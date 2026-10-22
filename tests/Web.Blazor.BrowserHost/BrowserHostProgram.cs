@@ -79,6 +79,9 @@ internal static class BrowserHostProgram
         builder.Services.AddScoped<ILimitService, LimitService>();
         builder.Services.AddScoped<ICapitalService, CapitalService>();
         builder.Services.AddScoped<IReportService, ReportService>();
+        builder.Services.AddScoped<IAppUserService, AppUserService>();
+        builder.Configuration["KeycloakSettings:Enabled"] = "false";
+        builder.Services.AddHttpClient<KeycloakAdminService>().ConfigurePrimaryHttpMessageHandler(() => new NoIdentityNetwork());
         builder.Services.AddScoped(_ => database.MailStore);
         builder.Configuration["Email:Provider"] = "demo";
         builder.Services.Configure<EmailSettings>(_ => { });
@@ -271,6 +274,30 @@ internal static class BrowserHostProgram
                     }
                     if (context.Request.Path == "/__fixtures/culture" && HttpMethods.IsGet(context.Request.Method))
                     { await context.Response.WriteAsJsonAsync(new { language = database.LastCulture }); return; }
+                    if (context.Request.Path == "/__fixtures/users-state" && HttpMethods.IsGet(context.Request.Method))
+                    {
+                        await using var scope = backend.Services.CreateAsyncScope();
+                        var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                        await context.Response.WriteAsJsonAsync(new
+                        {
+                            users = await db.AppUsers.Select(item => new { item.Id, item.Email, item.IsActive }).ToArrayAsync(),
+                            roles = await db.Roles.Select(item => new { item.Id, item.Name }).ToArrayAsync(),
+                            audit = await db.AuditLogs.Select(item => new { item.Action, item.RecordId, item.Username }).ToArrayAsync()
+                        }); return;
+                    }
+                    if (context.Request.Path == "/__fixtures/users-mutation" && HttpMethods.IsPost(context.Request.Method))
+                    {
+                        var input = await context.Request.ReadFromJsonAsync<UsersMutationFixture>();
+                        using var client = backend.GetTestClient();
+                        using var response = input!.Action switch
+                        {
+                            "deactivate" => await client.DeleteAsync($"/api/users/{input.Id}"),
+                            "delete" => await client.DeleteAsync($"/api/users/{input.Id}/permanent"),
+                            "roles" => await client.PutAsJsonAsync($"/api/users/{input.Id}/role", new { roleIds = input.RoleIds ?? [] }),
+                            _ => throw new InvalidOperationException("Unknown test operation.")
+                        };
+                        await context.Response.WriteAsJsonAsync(new { status = (int)response.StatusCode }); return;
+                    }
                     if (context.Request.Path == "/__fixtures/audit-requests" && HttpMethods.IsGet(context.Request.Method))
                     { await context.Response.WriteAsJsonAsync(new { count = database.AuditRequests }); return; }
                     if (context.Request.Path == "/__fixtures/audit-status" && HttpMethods.IsGet(context.Request.Method))
@@ -329,6 +356,19 @@ internal static class BrowserHostProgram
                             database.MutationAttempts = 0;
                             await SeedAsync(backend, user); break;
                         case "/__fixtures/unavailable": database.Unavailable = true; break;
+                        case "/__fixtures/users-reference":
+                            await using (var scope = backend.Services.CreateAsyncScope())
+                            {
+                                var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                                foreach (var roleName in new[] { ApplicationAccessRoles.Administrator, ApplicationAccessRoles.PhysicalPersons })
+                                {
+                                    var other = new AppUser { Email = $"other-{roleName}@fixture.test", Username = $"other-{roleName}", KeycloakId = Guid.NewGuid().ToString(), FirstName = "Fixture", LastName = roleName };
+                                    db.AppUsers.Add(other);
+                                    db.UserRoles.Add(new UserRole { UserId = other.Id, RoleId = (await db.Roles.SingleAsync(role => role.Name == roleName)).Id });
+                                }
+                                await db.SaveChangesAsync();
+                            }
+                            break;
                         case "/__fixtures/available": database.Unavailable = false; break;
                         case "/__fixtures/codebooks-unavailable": database.CodebooksUnavailable = true; break;
                         case "/__fixtures/profile-unavailable": database.ProfileUnavailable = true; break;
@@ -491,9 +531,15 @@ internal static class BrowserHostProgram
     {
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
-            var claims = new List<Claim> { new(ClaimTypes.Email, user.Email), new(ClaimTypes.Name, user.Email) };
+            var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, "fixture-user"), new(ClaimTypes.Email, user.Email), new(ClaimTypes.Name, user.Email) };
             if (database.ForgeAdmin) claims.AddRange([new(ClaimTypes.Role, "admin"), new("permission", "ADMINISTRATION_MANAGE"), new("rct_done", "1")]);
             return Task.FromResult(AuthenticateResult.Success(new(new ClaimsPrincipal(new ClaimsIdentity(claims, "BrowserFixture")), "BrowserFixture")));
         }
+    }
+    private sealed record UsersMutationFixture(Guid Id, string Action, Guid[]? RoleIds);
+    private sealed class NoIdentityNetwork : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Browser fixtures never call the identity provider.");
     }
 }

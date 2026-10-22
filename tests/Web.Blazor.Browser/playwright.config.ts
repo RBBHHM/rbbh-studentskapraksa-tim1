@@ -6,12 +6,12 @@ const roleTests = role === "gost" ? ["read-only.spec.ts", "legal-read-only.spec.
   : role === "PL" ? ["legal-entities.spec.ts"] : role === "limiti" ? ["limits.spec.ts"]
   : role === "kapital" || role === "admin" ? ["capital.spec.ts", "reports.spec.ts"] : ["physical-persons.spec.ts"];
 export default defineConfig({
-  testDir: ".", testMatch: ["notifications.spec.ts", role === "admin" ? "audit.spec.ts" : "audit-denied.spec.ts", ...roleTests], workers: 1, retries: 0,
+  testDir: ".", testMatch: ["notifications.spec.ts", ...(role === "admin" ? ["audit.spec.ts", "users-safety.spec.ts"] : ["audit-denied.spec.ts"]), ...roleTests], workers: 1, retries: 0,
   use: { baseURL: url, browserName: "chromium", locale: "bs-BA", viewport: { width: 1440, height: 1000 }, trace: "retain-on-failure" },
   outputDir: `../../artifacts/migration-browser/${role}/results`,
   reporter: [["list"], ["json", { outputFile: `../../artifacts/migration-browser/${role}/results.json` }]],
   webServer: {
-    command: "dotnet run --project ../Web.Blazor.BrowserHost/Web.Blazor.BrowserHost.csproj --no-build --no-restore --no-launch-profile",
+    command: `dotnet run --project ../Web.Blazor.BrowserHost/Web.Blazor.BrowserHost.csproj ${process.env.BROWSER_SAFETY_BUILD === "true" ? "--artifacts-path ../../artifacts/users-safety" : ""} --no-build --no-restore --no-launch-profile`,
     url: `${url}/app`, reuseExistingServer: false,
   },
 });

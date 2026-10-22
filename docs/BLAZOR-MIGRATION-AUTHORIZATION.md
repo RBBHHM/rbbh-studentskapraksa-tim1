@@ -117,3 +117,14 @@ checkpoint, including ordinary-user download, Kapital/Admin actual persisted
 generation, safe uncertain outcomes and no automatic generation retry. Existing
 download/export audit entries remain; read/download does not create another
 business report snapshot. Earlier totals above describe their historical checkpoint.
+
+## Approved user-administration safety correction
+
+The later users safety checkpoint preserves Keycloak identity and DB-owned
+permissions unchanged. It rejects self-deactivation/deletion (400) after resolving
+the actual local identity link and rejects reducing the last active database
+Admin via role replacement/removal, deactivation or deletion (409). Other
+authorized user operations retain their existing meaning. SQL API replicas share
+a transaction-owned lock around validation, mutation and audit; local InMemory
+fixtures use an async gate. See BLAZOR-MIGRATION-USERS-SAFETY-BLOCKER.md for the
+resolved finding, HTTP/concurrency evidence and the outstanding live SQL gate.
