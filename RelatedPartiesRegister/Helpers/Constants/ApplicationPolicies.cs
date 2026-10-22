@@ -17,6 +17,8 @@ public static class ApplicationPolicies
     public const string CapitalCreate = "capital.create";
     public const string CapitalEdit = "capital.edit";
     public const string CapitalDelete = "capital.delete";
+    public const string ReportsRead = "reports.read";
+    public const string ReportsGenerate = "reports.generate";
     public const string LimitsRead = "limits.read";
     public const string LimitsWrite = "limits.write";
     public const string LimitsCreate = "limits.create";

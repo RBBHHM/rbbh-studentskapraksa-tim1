@@ -8,18 +8,27 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
 {
     public class RoleClaimsTransformation(ConnectedPartiesDbContext db) : IClaimsTransformation
     {
-        private const string DoneClaim = "rct_done";
+        private const string ApplicationIdentityLabel = "RBBH.ApplicationAuthorization";
 
         public async Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
         {
-            if (principal.HasClaim(DoneClaim, "1"))
-                return principal;
-
             if (principal.Identity?.IsAuthenticated != true)
                 return principal;
 
-            var identity = new ClaimsIdentity();
-            identity.AddClaim(new Claim(DoneClaim, "1"));
+            // Identity-provider claims authenticate the user, never grant application
+            // permissions. Recompute from the DB, including repeated transforms, so
+            // an incoming/serialized marker cannot bypass lookup or retain old grants.
+            var identity = principal.Identities.FirstOrDefault(item => item.Label == ApplicationIdentityLabel);
+            var addIdentity = identity is null;
+            foreach (var source in principal.Identities)
+            {
+                foreach (var claim in source.Claims.Where(claim =>
+                             claim.Type == "permission" || claim.Type == "rct_done" ||
+                             claim.Type == source.RoleClaimType || claim.Type == ClaimTypes.Role ||
+                             claim.Type == "role" || claim.Type == "roles").ToArray())
+                    source.RemoveClaim(claim);
+            }
+            identity ??= new ClaimsIdentity { Label = ApplicationIdentityLabel };
             identity.AddClaim(new Claim(ClaimTypes.Role, ApplicationAccessRoles.Guest));
 
             var email = principal.FindFirst(ClaimTypes.Email)?.Value
@@ -55,7 +64,8 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
             foreach (var permission in permissions)
                 identity.AddClaim(new Claim("permission", permission));
 
-            principal.AddIdentity(identity);
+            if (addIdentity)
+                principal.AddIdentity(identity);
             return principal;
         }
     }

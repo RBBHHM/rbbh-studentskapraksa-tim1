@@ -14,7 +14,7 @@ namespace RBBH.ConnectedParties.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/reports")]
-[Authorize(Policy = ApplicationPolicies.CapitalRead)]
+[Authorize(Policy = ApplicationPolicies.ReportsRead)]
 [Produces("application/json")]
 public class ReportController : ControllerBase
 {
@@ -36,7 +36,7 @@ public class ReportController : ControllerBase
 
     /// <summary>Kreira dnevni izvještaj za trenutni datum.</summary>
     [HttpPost("daily")]
-    [Authorize(Policy = ApplicationPolicies.CapitalCreate)]
+    [Authorize(Policy = ApplicationPolicies.ReportsGenerate)]
     [ProducesResponseType(typeof(ReportDTO), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GenerateDailyReport()
@@ -80,7 +80,7 @@ public class ReportController : ControllerBase
     /// <param name="year">Godina (npr. 2026).</param>
     /// <param name="month">Mjesec (1-12).</param>
     [HttpPost("monthly/{year:int}/{month:int}")]
-    [Authorize(Policy = ApplicationPolicies.CapitalCreate)]
+    [Authorize(Policy = ApplicationPolicies.ReportsGenerate)]
     [ProducesResponseType(typeof(ReportDTO), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

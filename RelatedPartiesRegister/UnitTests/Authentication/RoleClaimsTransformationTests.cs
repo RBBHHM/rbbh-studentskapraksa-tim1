@@ -101,6 +101,46 @@ public sealed class RoleClaimsTransformationTests
         Assert.False(principal.HasClaim("permission", ApplicationPermissions.LegalPersonsEdit));
     }
 
+    [Fact]
+    public async Task ProviderRolesPermissionsAndOldMarkerNeverGrantApplicationAccess()
+    {
+        await using var db = InMemoryContextFactory.Create();
+        await DevelopmentDataSeeder.EnsureApplicationRolesAsync(db);
+        var principal = Principal("unassigned@example.com");
+        var identity = (ClaimsIdentity)principal.Identity!;
+        identity.AddClaim(new Claim(ClaimTypes.Role, ApplicationAccessRoles.Administrator));
+        identity.AddClaim(new Claim("permission", ApplicationPermissions.CapitalCreate));
+        identity.AddClaim(new Claim("rct_done", "1"));
+
+        await new RoleClaimsTransformation(db).TransformAsync(principal);
+
+        Assert.True(principal.IsInRole(ApplicationAccessRoles.Guest));
+        Assert.False(principal.IsInRole(ApplicationAccessRoles.Administrator));
+        Assert.False(principal.HasClaim("permission", ApplicationPermissions.CapitalCreate));
+        Assert.Equal("unassigned@example.com", principal.FindFirst(ClaimTypes.Email)?.Value);
+    }
+
+    [Fact]
+    public async Task RepeatedTransformationRevokesRemovedDatabaseRoleWithoutAccumulatingIdentities()
+    {
+        await using var db = InMemoryContextFactory.Create();
+        await DevelopmentDataSeeder.EnsureApplicationRolesAsync(db);
+        await AssignAsync(db, "editor@example.com", ApplicationAccessRoles.Capital);
+        var principal = Principal("editor@example.com");
+        var transformation = new RoleClaimsTransformation(db);
+        await transformation.TransformAsync(principal);
+        Assert.True(principal.HasClaim("permission", ApplicationPermissions.CapitalCreate));
+        var identities = principal.Identities.Count();
+        db.UserRoles.RemoveRange(db.UserRoles);
+        await db.SaveChangesAsync();
+
+        await transformation.TransformAsync(principal);
+
+        Assert.False(principal.HasClaim("permission", ApplicationPermissions.CapitalCreate));
+        Assert.Equal(identities, principal.Identities.Count());
+        Assert.True(principal.IsInRole(ApplicationAccessRoles.Guest));
+    }
+
     private static ClaimsPrincipal Principal(string email) => new(new ClaimsIdentity(
         [new Claim(ClaimTypes.Email, email)], "Test"));
 
