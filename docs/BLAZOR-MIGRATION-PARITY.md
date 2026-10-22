@@ -10,10 +10,10 @@ BLAZOR-MIGRATION-AUTHORIZATION.md for identity/application permission separation
 
 | Route | Old React feature → new Blazor feature | API | Policy | Evidence | Status |
 |---|---|---|---|---|---|
-| `/app` | role-aware dashboard → native template shell/cards | auth/profile | authenticated, DB module view permissions | 17 foundation tests; remaining module cards pending | IN_PROGRESS |
-| `/app/physical-persons` | specialized list/two-step form/verify/deactivate → native module | related-persons, verification | FL_* | pending UI/API/E2E | NOT_STARTED |
-| same route | linked records and tree → unified form and native tree | detailed, relationship-tree, related-persons mutations | FL_* | pending focused family tests | NOT_STARTED |
-| same route | physical import/export → backend file workflows | related-persons/import, export | FL_CREATE / FL_VIEW | pending workbook/download tests | NOT_STARTED |
+| `/app` | role-aware dashboard → native template shell/cards | auth/profile | authenticated, DB module view permissions | physical card/route integrated; remaining module cards pending | IN_PROGRESS |
+| `/app/physical-persons` | specialized list/two-step form/verify/deactivate → native module | related-persons, verification | FL_* | physical closure report:58 frontend tests,14 FL+2 Guest browser cases | PARITY |
+| same route | linked records and tree → unified form and native tree | detailed, relationship-tree, related-persons mutations | FL_* | actual backend create/edit/deactivate/tree reload browser flow | PARITY |
+| same route | physical import/export → backend file workflows | related-persons/import, export | FL_CREATE / FL_VIEW | valid/invalid XLSX, metadata/bytes, Guest download, safe error feedback | PARITY |
 | `/app/legal-persons` | resident/nonresident CRUD/verify/import/export → native module | legal-entities, verification | PL_* | pending UI/API/E2E | NOT_STARTED |
 | `/app/limits` | legal lookup/calculated limits/CRUD/export → native module | limiti, legal-entities/*/limit-form-data | LIMITI_* | pending tests | NOT_STARTED |
 | `/app/capital` | singleton read/upsert/export → native module | capital | KAPITAL_VIEW / EDIT | pending tests | NOT_STARTED |
@@ -29,10 +29,10 @@ BLAZOR-MIGRATION-AUTHORIZATION.md for identity/application permission separation
 | reports backend | old read rule → authenticated read/download, DB-controlled persisted generation | reports | approved reporting exception | 12 integration + 16 focused unit; full backend 274 PASS | INTENTIONAL_CHANGE |
 | auth backend | provider permission leakage → exclusively DB-owned app grants | all protected endpoints | current DB matrix | forged grants red201→green403; repeated transform revocation tests | INTENTIONAL_CHANGE |
 
-Backend test totals do not prove native UI parity. Native template foundation,
-signed-out local mode and effective-profile integration are implemented (17 tests
-PASS). Full module shell/navigation is not complete. SQL/SSO/browser parity are
-not claimed.
+PARITY above means local module contract/browser equivalence, not integrated
+production acceptance. See BLAZOR-MIGRATION-PHYSICAL-CLOSURE.md:332 .NET tests
+and16 browser cases pass. The physical module is locally closed; the rest of
+the shell/modules remain incomplete. Real SQL/SSO/OCP parity is not claimed.
 
 ## Required end-to-end closure ledger
 
@@ -43,15 +43,15 @@ may be weakened to manufacture completion.
 | # | Required flow | Route | Native evidence / status |
 |---|---|---|---|
 | 1 | home, only authorized modules | /app | NOT_STARTED |
-| 2 | create resident physical person | physical-persons | NOT_STARTED |
-| 3 | create nonresident physical person | physical-persons | NOT_STARTED |
-| 4 | duplicate JMBG/passport/FBA validation | physical-persons | NOT_STARTED |
-| 5 | add/manage unified family link and tree | physical-persons | NOT_STARTED |
-| 6 | edit physical person | physical-persons | NOT_STARTED |
-| 7 | verify physical person | physical-persons | NOT_STARTED |
-| 8 | deactivate physical person | physical-persons | NOT_STARTED |
-| 9 | physical XLSX export | physical-persons | NOT_STARTED |
-| 10 | valid/invalid physical workbook import | physical-persons | NOT_STARTED |
+| 2 | create resident physical person | physical-persons | PARITY: resident browser case + draft checks |
+| 3 | create nonresident physical person | physical-persons | PARITY: real backend save and reload |
+| 4 | duplicate JMBG/passport/FBA validation | physical-persons | PARITY: field query contracts, invalid JMBG and duplicate passport browser case; shared duplicate path validates all three |
+| 5 | add/manage unified family link and tree | physical-persons | PARITY: create/edit/remove/tree reload browser case |
+| 6 | edit physical person | physical-persons | PARITY: self-exclusion, explicit flags and reload |
+| 7 | verify physical person | physical-persons | PARITY: actual status transition and action refresh |
+| 8 | deactivate physical person | physical-persons | PARITY: backend soft-delete no longer listed after reload |
+| 9 | physical XLSX export | physical-persons | PARITY: backend filename/bytes, Guest read |
+| 10 | valid/invalid physical workbook import | physical-persons | PARITY: real ClosedXML validation/import, safe result display |
 | 11 | create/edit/verify legal entity | legal-persons | NOT_STARTED |
 | 12 | legal export | legal-persons | NOT_STARTED |
 | 13 | create/edit/delete limit | limits | NOT_STARTED |
@@ -68,10 +68,10 @@ may be weakened to manufacture completion.
 | 24 | code-list CRUD/preview/import/referenced-value rejection | admin/code-lists | NOT_STARTED |
 | 25 | audit visible after mutation | admin/audit | NOT_STARTED |
 | 26 | current identity/permissions profile | profile | NOT_STARTED |
-| 27 | BS/EN switching/persistence | all | NOT_STARTED |
-| 28 | backend unavailable, safe recovery | all | NOT_STARTED |
+| 27 | BS/EN switching/persistence | all | IN_PROGRESS: physical route/cookie/backend header proven; other modules pending |
+| 28 | backend unavailable, safe recovery | all | IN_PROGRESS: physical module proven; other modules pending |
 | 29 | auth unconfigured/unavailable, no fake grants | all | NOT_STARTED |
-| 30 | period-locked mutation returns423 and visible explanation | physical/legal/limits | NOT_STARTED |
+| 30 | period-locked mutation returns423 and visible explanation | physical/legal/limits | IN_PROGRESS: physical middleware423/no writes proven; legal/limits pending |
 
 ## Release gates still pending
 

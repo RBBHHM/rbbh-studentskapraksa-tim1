@@ -1,0 +1,6 @@
+{
+  "name": "related-parties-blazor-browser-tests",
+  "private": true,
+  "scripts": { "test": "playwright test --workers=1 --retries=0" },
+  "devDependencies": { "@playwright/test": "1.64.0", "@axe-core/playwright": "4.10.2" }
+}
