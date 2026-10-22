@@ -1,0 +1,66 @@
+@using RBI.DesignSystem.Components.Forms
+@using RBI.Forms
+@implements IDisposable
+
+<EditForm EditContext="_context" OnSubmit="SubmitAsync" FormName="limit" novalidate>
+    <div role="alert" tabindex="-1" @ref="_summary"><ValidationSummary /></div>
+    <fieldset disabled="@_submission.IsSubmitting">
+        <legend>@T["limit.details"]</legend>
+        <div class="registry-form-grid">
+            <RbiField TValue="Guid?" Id="limit-entity" Label="@T["limit.entity"]" Required For="@(() => Model.LegalEntityId)">
+                <LimitEntityPicker Id="limit-entity" @bind-Value="Model.LegalEntityId" DataChanged="data => _entity = data" Disabled="_submission.IsSubmitting" />
+            </RbiField>
+            <RbiField TValue="string" Label="@T["limit.type"]" Required For="@(() => Model.TipLimita)">
+                <RbiSelect TValue="string" @bind-Value="Model.TipLimita" Placeholder="@T["common.select"]">@foreach (var type in Types) { <option value="@type.Kod">@type.Naziv</option> }</RbiSelect>
+            </RbiField>
+            <RbiField TValue="decimal?" Id="limit-approved" Label="@T["limit.approved"]" For="@(() => Model.OdobreniLimit)"><InputNumber TValue="decimal?" id="limit-approved" class="rbi-control" @bind-Value="Model.OdobreniLimit" min="0" step="any" ParsingErrorMessage="@T["limit.number"]" /></RbiField>
+            <RbiField TValue="decimal?" Id="limit-expected" Label="@T["limit.expected"]" For="@(() => Model.MaksimalnaOcekivanaUtilizacija)"><InputNumber TValue="decimal?" id="limit-expected" class="rbi-control" @bind-Value="Model.MaksimalnaOcekivanaUtilizacija" min="0" step="any" ParsingErrorMessage="@T["limit.number"]" /></RbiField>
+            <RbiField TValue="DateTime?" Id="limit-deadline" Label="@T["limit.deadline"]" For="@(() => Model.RokOcekivaneUtilizacije)"><InputDate TValue="DateTime?" id="limit-deadline" class="rbi-control" @bind-Value="Model.RokOcekivaneUtilizacije" ParsingErrorMessage="@T["validation.date"]" /></RbiField>
+            <RbiField TValue="string" Label="@T["limit.comment"]" For="@(() => Model.Komentar)"><RbiTextArea @bind-Value="Model.Komentar" /></RbiField>
+        </div>
+        @if (_entity is { } entity)
+        {
+            <section aria-labelledby="limit-derived-heading">
+                <h2 id="limit-derived-heading">@T["limit.server-data"]</h2>
+                <dl>
+                    <dt>@T["legal.name"]</dt><dd>@entity.Name</dd><dt>@T["legal.registration"]</dt><dd>@(entity.Matbroj ?? entity.MaticniBroj)</dd>
+                    <dt>@T["person.residency"]</dt><dd>@T[entity.IsResident ? "person.resident" : "person.nonresident"]</dd>
+                    <dt>@T["legal.tax"]</dt><dd>@entity.TaxNumber</dd><dt>@T["person.fba"]</dt><dd>@entity.FbaId</dd>
+                    <dt>@T["limit.regulatory"]</dt><dd>@entity.RegulatoryCapital?.ToString("N2")</dd>
+                    <dt>@T["limit.core"]</dt><dd>@entity.CoreCapital?.ToString("N2")</dd>
+                </dl>
+            </section>
+        }
+        <div class="registry-toolbar">
+            <RbiButton OnClick="Cancel" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton>
+            <RbiButton Type="RbiButtonType.Submit" Disabled="@(_entity is null || Types.Count == 0)">@T["common.save"]</RbiButton>
+        </div>
+    </fieldset>
+</EditForm>
+
+@code {
+    [Parameter, EditorRequired] public LimitDraft Model { get; set; } = null!;
+    [Parameter] public IReadOnlyList<ReferenceOption> Types { get; set; } = [];
+    [Parameter] public EventCallback<LimitRequest> Save { get; set; }
+    [Parameter] public EventCallback Cancel { get; set; }
+    private EditContext _context = null!;
+    private RbiServerValidation _validation = null!;
+    private readonly RbiFormSubmissionState _submission = new();
+    private LimitEntityData? _entity;
+    private ElementReference _summary;
+    private bool _focusErrors;
+    protected override void OnInitialized() { _context = new(Model); _validation = new(_context); }
+    protected override async Task OnAfterRenderAsync(bool firstRender) { if (_focusErrors) { _focusErrors = false; await _summary.FocusAsync(); } }
+    private async Task SubmitAsync() => await _submission.SubmitAsync(async () =>
+    {
+        var parsed = _context.Validate(); var errors = Model.Validate();
+        if (!Types.Any(type => type.Kod == Model.TipLimita)) errors[nameof(Model.TipLimita)] = ["limit.type-unavailable"];
+        _validation.DisplayErrors(errors.ToDictionary(item => item.Key, item => item.Value.Select(key => T[key]).ToArray()));
+        if (_entity is null || _entity.Id != Model.LegalEntityId) { _validation.DisplayFormError(T["errors.unavailable"]); _focusErrors = true; return; }
+        if (!parsed || errors.Count > 0) { _focusErrors = true; return; }
+        try { await Save.InvokeAsync(Model.ToRequest()); }
+        catch (RegistryApiException exception) { _validation.DisplayFormError(T[exception.MessageKey]); _focusErrors = true; }
+        catch (OperationCanceledException) { /* The owning route cancels on disposal. */ }
+    });
+    public void Dispose() => _validation.Dispose();
+}

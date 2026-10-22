@@ -8,6 +8,10 @@
         {
             <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["person.title"]" Href="/app/physical-persons" Icon="RbiIconName.UserRound" Active="@IsActive("app/physical-persons")" /></RbiSidebarPart>
         }
+        @if (_limits)
+        {
+            <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["limit.title"]" Href="/app/limits" Icon="RbiIconName.Gauge" Active="@IsActive("app/limits")" /></RbiSidebarPart>
+        }
         @if (_legal)
         {
             <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["legal.title"]" Href="/app/legal-persons" Icon="RbiIconName.UserRound" Active="@IsActive("app/legal-persons")" /></RbiSidebarPart>
@@ -17,11 +21,11 @@
 </nav>
 
 @code {
-    private bool _physical, _legal;
+    private bool _physical, _legal, _limits;
     protected override async Task OnInitializedAsync()
     {
-        try { _physical = await Permissions.HasPermissionAsync("fl.read"); _legal = await Permissions.HasPermissionAsync("pl.read"); }
-        catch (RegistryApiException) { _physical = _legal = false; }
+        try { _physical = await Permissions.HasPermissionAsync("fl.read"); _legal = await Permissions.HasPermissionAsync("pl.read"); _limits = await Permissions.HasPermissionAsync("limiti.read"); }
+        catch (RegistryApiException) { _physical = _legal = _limits = false; }
     }
     private bool IsActive(string path) => Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].Trim('/') == path;
 }

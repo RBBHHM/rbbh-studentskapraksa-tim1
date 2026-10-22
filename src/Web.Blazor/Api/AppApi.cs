@@ -16,6 +16,7 @@ public static class AppApi
             services.AddScoped<IProfileApi, UnconfiguredProfileApi>();
             services.AddScoped<IRelatedPersonsApi, UnconfiguredRelatedPersonsApi>();
             services.AddScoped<ILegalEntitiesApi, UnconfiguredLegalEntitiesApi>();
+            services.AddScoped<ILimitsApi, UnconfiguredLimitsApi>();
             return null;
         }
         if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) ||
@@ -32,6 +33,7 @@ public static class AppApi
             services.AddScoped<IProfileApi, UnconfiguredProfileApi>();
             services.AddScoped<IRelatedPersonsApi, UnconfiguredRelatedPersonsApi>();
             services.AddScoped<ILegalEntitiesApi, UnconfiguredLegalEntitiesApi>();
+            services.AddScoped<ILimitsApi, UnconfiguredLimitsApi>();
             return uri;
         }
 
@@ -56,6 +58,13 @@ public static class AppApi
         });
         legal.AddHttpMessageHandler<ApplicationCultureHandler>();
         legal.AddRbiUserAccessToken();
+        var limits = services.AddRbiApiClient<ILimitsApi, LimitsApi>("Limits", options =>
+        {
+            options.BaseUrl = uri;
+            options.Timeout = TimeSpan.FromSeconds(15);
+        });
+        limits.AddHttpMessageHandler<ApplicationCultureHandler>();
+        limits.AddRbiUserAccessToken();
         return uri;
     }
 }
