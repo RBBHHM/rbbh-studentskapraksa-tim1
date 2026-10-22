@@ -74,6 +74,7 @@ internal static class BrowserHostProgram
         builder.Services.AddScoped<IAuditService, AuditService>();
         builder.Services.AddSingleton(Mock.Of<IEmailService>());
         builder.Services.AddScoped<ILegalEntityService, LegalEntityService>();
+        builder.Services.AddScoped<ILimitService, LimitService>();
         builder.Services.Configure<EmailSettings>(_ => { });
         var app = builder.Build();
         app.UseExceptionHandler();
@@ -81,7 +82,7 @@ internal static class BrowserHostProgram
         {
             database.LastCulture = context.Request.Headers.AcceptLanguage.ToString();
             if ((HttpMethods.IsPost(context.Request.Method) || HttpMethods.IsPut(context.Request.Method) || HttpMethods.IsDelete(context.Request.Method)) &&
-                (context.Request.Path.StartsWithSegments("/api/related-persons") || context.Request.Path.StartsWithSegments("/api/legal-entities"))) database.MutationAttempts++;
+                (context.Request.Path.StartsWithSegments("/api/related-persons") || context.Request.Path.StartsWithSegments("/api/legal-entities") || context.Request.Path.StartsWithSegments("/api/limiti"))) database.MutationAttempts++;
             if (database.Unavailable || (database.CodebooksUnavailable && context.Request.Path.StartsWithSegments("/api/code-lists/dropdown")))
             { context.Response.StatusCode = 503; await context.Response.WriteAsync("private-fixture-detail-not-for-ui"); return; }
             await next(context);
@@ -184,6 +185,7 @@ internal static class BrowserHostProgram
                 // Configure real production typed clients explicitly: minimal-host
                 // config callbacks may run after Program has inspected empty URLs.
                 services.RemoveAll<IProfileApi>(); services.RemoveAll<IRelatedPersonsApi>(); services.RemoveAll<ILegalEntitiesApi>();
+                services.RemoveAll<ILimitsApi>();
                 services.AddRbiApiClient<IProfileApi, ProfileApi>("BrowserProfile", options => options.BaseUrl = new("http://backend.fixture/"))
                     .AddHttpMessageHandler<ApplicationCultureHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
@@ -191,6 +193,9 @@ internal static class BrowserHostProgram
                     .AddHttpMessageHandler<ApplicationCultureHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
                 services.AddRbiApiClient<ILegalEntitiesApi, LegalEntitiesApi>("BrowserLegal", options => options.BaseUrl = new("http://backend.fixture/"))
+                    .AddHttpMessageHandler<ApplicationCultureHandler>()
+                    .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
+                services.AddRbiApiClient<ILimitsApi, LimitsApi>("BrowserLimits", options => options.BaseUrl = new("http://backend.fixture/"))
                     .AddHttpMessageHandler<ApplicationCultureHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
             });
@@ -232,6 +237,13 @@ internal static class BrowserHostProgram
                         await context.Response.WriteAsJsonAsync(await db.LegalEntities.IgnoreQueryFilters().OrderBy(item => item.CreatedAt).Select(item => new { item.Name, item.Matbroj, item.MaticniBroj, item.Status, item.IsActive, item.VerifiedBy, item.ConnectedWithBank, item.DateTo }).ToArrayAsync());
                         return;
                     }
+                    if (context.Request.Path == "/__fixtures/limits" && HttpMethods.IsGet(context.Request.Method))
+                    {
+                        await using var scope = backend.Services.CreateAsyncScope();
+                        var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                        await context.Response.WriteAsJsonAsync(await db.Limiti.AsNoTracking().Select(item => new { item.Id, item.LegalEntityId, item.TipLimita, item.OdobreniLimit, item.MaksimalnaOcekivanaUtilizacija, item.Komentar }).ToArrayAsync());
+                        return;
+                    }
                     if (!HttpMethods.IsPost(context.Request.Method)) { context.Response.StatusCode = 404; return; }
                     switch (context.Request.Path.Value)
                     {
@@ -243,6 +255,32 @@ internal static class BrowserHostProgram
                         case "/__fixtures/unavailable": database.Unavailable = true; break;
                         case "/__fixtures/available": database.Unavailable = false; break;
                         case "/__fixtures/codebooks-unavailable": database.CodebooksUnavailable = true; break;
+                        case "/__fixtures/limit-reference":
+                            await using (var scope = backend.Services.CreateAsyncScope())
+                            {
+                                var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                                db.CodeLists.Add(new CodeList { Kategorija = "VrstaLimita", Kod = "REG", Naziv = "Regulatorni / Regulatory", KreiraoKorisnik = "fixture" });
+                                db.Capitals.Add(new RBBH.ConnectedParties.DL.Entities.Report.Capital { RegulatoryCapital = 1234567.89m, CoreCapital = 765432.10m, CapitalDate = new(2026, 1, 1), CreatedBy = "fixture" });
+                                await db.SaveChangesAsync();
+                            }
+                            break;
+                        case "/__fixtures/limit-existing":
+                            await using (var scope = backend.Services.CreateAsyncScope())
+                            {
+                                var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                                var entity = await db.LegalEntities.OrderBy(item => item.CreatedAt).FirstAsync();
+                                db.Limiti.Add(new RBBH.ConnectedParties.DL.Entities.Limiti.Limit { LegalEntityId = entity.Id, TipLimita = "REG", OdobreniLimit = 125.50m, CreatedBy = "fixture", CreatedAt = DateTime.UtcNow });
+                                await db.SaveChangesAsync();
+                            }
+                            break;
+                        case "/__fixtures/limit-no-types":
+                            await using (var scope = backend.Services.CreateAsyncScope())
+                            {
+                                var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                                foreach (var type in await db.CodeLists.AsTracking().Where(item => item.Kategorija == "VrstaLimita").ToListAsync()) type.Aktivan = false;
+                                await db.SaveChangesAsync();
+                            }
+                            break;
                         case "/__fixtures/legal-existing":
                         case "/__fixtures/legal-pages":
                             await using (var scope = backend.Services.CreateAsyncScope())

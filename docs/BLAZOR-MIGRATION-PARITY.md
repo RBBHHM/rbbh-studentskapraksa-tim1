@@ -15,7 +15,7 @@ BLAZOR-MIGRATION-AUTHORIZATION.md for identity/application permission separation
 | same route | linked records and tree → unified form and native tree | detailed, relationship-tree, related-persons mutations | FL_* | actual backend create/edit/deactivate/tree reload browser flow | PARITY |
 | same route | physical import/export → backend file workflows | related-persons/import, export | FL_CREATE / FL_VIEW | valid/invalid XLSX, metadata/bytes, Guest download, safe error feedback | PARITY |
 | `/app/legal-persons` | resident/nonresident CRUD/verify/import/export → native module | legal-entities, verification | PL_* | legal closure:17 new frontend tests,12 PL+2 Guest browser cases; preserves Matbroj/status | PARITY |
-| `/app/limits` | legal lookup/calculated limits/CRUD/export → native module | limiti, legal-entities/*/limit-form-data | LIMITI_* | pending tests | NOT_STARTED |
+| `/app/limits` | legal lookup/server-derived capital/CRUD/export → native module | limiti, legal-entities/*/limit-form-data | LIMITI_* | limits closure:13 added frontend tests,10 limiti+1 Guest browser cases, current-module regressions | PARITY |
 | `/app/capital` | singleton read/upsert/export → native module | capital | KAPITAL_VIEW / EDIT | pending tests | NOT_STARTED |
 | `/app/reports` | archive/generate/download → native reporting module | reports | reports.read / reports.generate | backend HTTP authorization 12 PASS; native pending | IN_PROGRESS |
 | `/app/notifications` | email log → native recorded-notification list | email-log | capital.read | pending tests | NOT_STARTED |
@@ -32,8 +32,9 @@ BLAZOR-MIGRATION-AUTHORIZATION.md for identity/application permission separation
 PARITY above means local module contract/browser equivalence, not integrated
 production acceptance. The historical physical checkpoint is recorded in
 BLAZOR-MIGRATION-PHYSICAL-CLOSURE.md (332 .NET/16 browser). The subsequent legal
-checkpoint is BLAZOR-MIGRATION-LEGAL-CLOSURE.md (352 .NET/30 browser). Physical
-and legal modules are locally closed; remaining modules are incomplete.
+checkpoint is BLAZOR-MIGRATION-LEGAL-CLOSURE.md (352 .NET/30 browser). The next
+limits checkpoint is BLAZOR-MIGRATION-LIMITS-CLOSURE.md (365 .NET/41 browser).
+Physical, legal and limits modules are locally closed; remaining modules are incomplete.
 Real SQL/SSO/OCP parity is not claimed.
 
 ## Required end-to-end closure ledger
@@ -56,7 +57,7 @@ may be weakened to manufacture completion.
 | 10 | valid/invalid physical workbook import | physical-persons | PARITY: real ClosedXML validation/import, safe result display |
 | 11 | create/edit/verify legal entity | legal-persons | PARITY: actual backend CRUD/status, preserved Matbroj, soft delete, resident/nonresident and duplicate validation |
 | 12 | legal export | legal-persons | PARITY: backend XLSX filename/ZIP bytes, real import/schema errors, Guest download |
-| 13 | create/edit/delete limit | limits | NOT_STARTED |
+| 13 | create/edit/delete limit | limits | PARITY: real integer-ID CRUD, search/form-data, zero/null/negative amounts, filtered XLSX and permanent-delete confirmation |
 | 14 | capital view/upsert authorization | capital | NOT_STARTED |
 | 15 | reports read/download vs authorized generation | reports | backend proven; native NOT_STARTED |
 | 16 | lock period | admin/period | NOT_STARTED |

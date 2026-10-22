@@ -20,8 +20,10 @@ public sealed class LocalHostTests
             builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(
                 new Dictionary<string, string?>
                 {
-                    ["Apis:BaseUrl"] = "", ["Authentication:Authority"] = "",
-                    ["Authentication:ClientId"] = "", ["Authentication:ClientSecret"] = ""
+                    ["Apis:BaseUrl"] = "",
+                    ["Authentication:Authority"] = "",
+                    ["Authentication:ClientId"] = "",
+                    ["Authentication:ClientSecret"] = ""
                 }));
         }
     }
@@ -30,6 +32,8 @@ public sealed class LocalHostTests
     [InlineData("/app")]
     [InlineData("/app/profile")]
     [InlineData("/app/physical-persons")]
+    [InlineData("/app/legal-persons")]
+    [InlineData("/app/limits")]
     public async Task LocalUnconfiguredHostIsHonestAndSignedOut(string path)
     {
         await using var app = new LocalApp();

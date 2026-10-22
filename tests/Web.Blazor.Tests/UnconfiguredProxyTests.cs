@@ -20,5 +20,6 @@ public sealed class UnconfiguredProxyTests
         await Assert.ThrowsAsync<RegistryApiException>(() => provider.GetRequiredService<IProfileApi>().GetAsync());
         await Assert.ThrowsAsync<RegistryApiException>(() => provider.GetRequiredService<IRelatedPersonsApi>().ListAsync());
         await Assert.ThrowsAsync<RegistryApiException>(() => provider.GetRequiredService<ILegalEntitiesApi>().ListAsync());
+        await Assert.ThrowsAsync<RegistryApiException>(() => provider.GetRequiredService<ILimitsApi>().ListAsync());
     }
 }
