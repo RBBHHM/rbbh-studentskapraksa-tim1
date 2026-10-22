@@ -75,6 +75,7 @@ internal static class BrowserHostProgram
         builder.Services.AddSingleton(Mock.Of<IEmailService>());
         builder.Services.AddScoped<ILegalEntityService, LegalEntityService>();
         builder.Services.AddScoped<ILimitService, LimitService>();
+        builder.Services.AddScoped<ICapitalService, CapitalService>();
         builder.Services.Configure<EmailSettings>(_ => { });
         var app = builder.Build();
         app.UseExceptionHandler();
@@ -82,7 +83,7 @@ internal static class BrowserHostProgram
         {
             database.LastCulture = context.Request.Headers.AcceptLanguage.ToString();
             if ((HttpMethods.IsPost(context.Request.Method) || HttpMethods.IsPut(context.Request.Method) || HttpMethods.IsDelete(context.Request.Method)) &&
-                (context.Request.Path.StartsWithSegments("/api/related-persons") || context.Request.Path.StartsWithSegments("/api/legal-entities") || context.Request.Path.StartsWithSegments("/api/limiti"))) database.MutationAttempts++;
+                (context.Request.Path.StartsWithSegments("/api/related-persons") || context.Request.Path.StartsWithSegments("/api/legal-entities") || context.Request.Path.StartsWithSegments("/api/limiti") || context.Request.Path.StartsWithSegments("/api/capital"))) database.MutationAttempts++;
             if (database.Unavailable || (database.CodebooksUnavailable && context.Request.Path.StartsWithSegments("/api/code-lists/dropdown")))
             { context.Response.StatusCode = 503; await context.Response.WriteAsync("private-fixture-detail-not-for-ui"); return; }
             await next(context);
@@ -186,6 +187,7 @@ internal static class BrowserHostProgram
                 // config callbacks may run after Program has inspected empty URLs.
                 services.RemoveAll<IProfileApi>(); services.RemoveAll<IRelatedPersonsApi>(); services.RemoveAll<ILegalEntitiesApi>();
                 services.RemoveAll<ILimitsApi>();
+                services.RemoveAll<ICapitalApi>();
                 services.AddRbiApiClient<IProfileApi, ProfileApi>("BrowserProfile", options => options.BaseUrl = new("http://backend.fixture/"))
                     .AddHttpMessageHandler<ApplicationCultureHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
@@ -196,6 +198,9 @@ internal static class BrowserHostProgram
                     .AddHttpMessageHandler<ApplicationCultureHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
                 services.AddRbiApiClient<ILimitsApi, LimitsApi>("BrowserLimits", options => options.BaseUrl = new("http://backend.fixture/"))
+                    .AddHttpMessageHandler<ApplicationCultureHandler>()
+                    .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
+                services.AddRbiApiClient<ICapitalApi, CapitalApi>("BrowserCapital", options => options.BaseUrl = new("http://backend.fixture/"))
                     .AddHttpMessageHandler<ApplicationCultureHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
             });
@@ -242,6 +247,13 @@ internal static class BrowserHostProgram
                         await using var scope = backend.Services.CreateAsyncScope();
                         var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
                         await context.Response.WriteAsJsonAsync(await db.Limiti.AsNoTracking().Select(item => new { item.Id, item.LegalEntityId, item.TipLimita, item.OdobreniLimit, item.MaksimalnaOcekivanaUtilizacija, item.Komentar }).ToArrayAsync());
+                        return;
+                    }
+                    if (context.Request.Path == "/__fixtures/capital" && HttpMethods.IsGet(context.Request.Method))
+                    {
+                        await using var scope = backend.Services.CreateAsyncScope();
+                        var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                        await context.Response.WriteAsJsonAsync(await db.Capitals.AsNoTracking().Select(item => new { item.Id, item.RegulatoryCapital, item.CoreCapital, item.SupplementaryCapital, item.CapitalDate }).ToArrayAsync());
                         return;
                     }
                     if (!HttpMethods.IsPost(context.Request.Method)) { context.Response.StatusCode = 404; return; }

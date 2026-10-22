@@ -16,7 +16,7 @@ BLAZOR-MIGRATION-AUTHORIZATION.md for identity/application permission separation
 | same route | physical import/export → backend file workflows | related-persons/import, export | FL_CREATE / FL_VIEW | valid/invalid XLSX, metadata/bytes, Guest download, safe error feedback | PARITY |
 | `/app/legal-persons` | resident/nonresident CRUD/verify/import/export → native module | legal-entities, verification | PL_* | legal closure:17 new frontend tests,12 PL+2 Guest browser cases; preserves Matbroj/status | PARITY |
 | `/app/limits` | legal lookup/server-derived capital/CRUD/export → native module | limiti, legal-entities/*/limit-form-data | LIMITI_* | limits closure:13 added frontend tests,10 limiti+1 Guest browser cases, current-module regressions | PARITY |
-| `/app/capital` | singleton read/upsert/export → native module | capital | KAPITAL_VIEW / EDIT | pending tests | NOT_STARTED |
+| `/app/capital` | optional singleton read/upsert/export → native module | capital | KAPITAL_VIEW / EDIT | capital closure:12 added frontend tests,7 Kapital+7 Admin browser cases,1 Guest case | PARITY |
 | `/app/reports` | archive/generate/download → native reporting module | reports | reports.read / reports.generate | backend HTTP authorization 12 PASS; native pending | IN_PROGRESS |
 | `/app/notifications` | email log → native recorded-notification list | email-log | capital.read | pending tests | NOT_STARTED |
 | `/app/admin/period` | lock/request/process/respond → native period workflow | period-lock | existing Admin route + CapitalWrite API | pending tests | NOT_STARTED |
@@ -34,7 +34,9 @@ production acceptance. The historical physical checkpoint is recorded in
 BLAZOR-MIGRATION-PHYSICAL-CLOSURE.md (332 .NET/16 browser). The subsequent legal
 checkpoint is BLAZOR-MIGRATION-LEGAL-CLOSURE.md (352 .NET/30 browser). The next
 limits checkpoint is BLAZOR-MIGRATION-LIMITS-CLOSURE.md (365 .NET/41 browser).
-Physical, legal and limits modules are locally closed; remaining modules are incomplete.
+The following capital checkpoint is BLAZOR-MIGRATION-CAPITAL-CLOSURE.md
+(377 .NET/56 browser). Physical, legal, limits and capital modules are locally
+closed; remaining modules are incomplete.
 Real SQL/SSO/OCP parity is not claimed.
 
 ## Required end-to-end closure ledger
@@ -58,7 +60,7 @@ may be weakened to manufacture completion.
 | 11 | create/edit/verify legal entity | legal-persons | PARITY: actual backend CRUD/status, preserved Matbroj, soft delete, resident/nonresident and duplicate validation |
 | 12 | legal export | legal-persons | PARITY: backend XLSX filename/ZIP bytes, real import/schema errors, Guest download |
 | 13 | create/edit/delete limit | limits | PARITY: real integer-ID CRUD, search/form-data, zero/null/negative amounts, filtered XLSX and permanent-delete confirmation |
-| 14 | capital view/upsert authorization | capital | NOT_STARTED |
+| 14 | capital view/upsert authorization | capital | PARITY: unset/null contract, real stable singleton upsert, Kapital/Admin write and Guest read/export |
 | 15 | reports read/download vs authorized generation | reports | backend proven; native NOT_STARTED |
 | 16 | lock period | admin/period | NOT_STARTED |
 | 17 | request unlock | admin/period | NOT_STARTED |
