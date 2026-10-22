@@ -8,6 +8,9 @@
         {
             <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["person.title"]" Href="/app/physical-persons" Icon="RbiIconName.UserRound" Active="@IsActive("app/physical-persons")" /></RbiSidebarPart>
         }
+        <AuthorizeView><Authorized>
+            <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["reports.title"]" Href="/app/reports" Icon="RbiIconName.Gauge" Active="@IsActive("app/reports")" /></RbiSidebarPart>
+        </Authorized></AuthorizeView>
         @if (_capital)
         {
             <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["capital.title"]" Href="/app/capital" Icon="RbiIconName.Gauge" Active="@IsActive("app/capital")" /></RbiSidebarPart>
