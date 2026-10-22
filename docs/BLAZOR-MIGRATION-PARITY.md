@@ -10,7 +10,7 @@ BLAZOR-MIGRATION-AUTHORIZATION.md for identity/application permission separation
 
 | Route | Old React feature → new Blazor feature | API | Policy | Evidence | Status |
 |---|---|---|---|---|---|
-| `/app` | role-aware dashboard → native template shell/cards | auth/profile | authenticated, DB module view permissions | pending native shell tests | NOT_STARTED |
+| `/app` | role-aware dashboard → native template shell/cards | auth/profile | authenticated, DB module view permissions | 17 foundation tests; remaining module cards pending | IN_PROGRESS |
 | `/app/physical-persons` | specialized list/two-step form/verify/deactivate → native module | related-persons, verification | FL_* | pending UI/API/E2E | NOT_STARTED |
 | same route | linked records and tree → unified form and native tree | detailed, relationship-tree, related-persons mutations | FL_* | pending focused family tests | NOT_STARTED |
 | same route | physical import/export → backend file workflows | related-persons/import, export | FL_CREATE / FL_VIEW | pending workbook/download tests | NOT_STARTED |
@@ -23,14 +23,16 @@ BLAZOR-MIGRATION-AUTHORIZATION.md for identity/application permission separation
 | `/app/admin/users` | functional role/user administration → native module | users, roles | ADMINISTRATION_* | pending tests | NOT_STARTED |
 | `/app/admin/code-lists` | category/value CRUD/import → native module | code-lists | existing Admin route, ADMINISTRATION_MANAGE mutations | pending tests | NOT_STARTED |
 | `/app/admin/audit` | actual business audit → native table/filter/paging | audit-logs | admin.only | pending tests | NOT_STARTED |
-| `/app/profile` | identity/effective permissions → template-based profile | auth/profile | authenticated | pending tests | NOT_STARTED |
+| `/app/profile` | identity/effective permissions → template-based profile | auth/profile | authenticated | signed-out HTTP smoke + effective permission tests; integrated identity/browser pending | IN_PROGRESS |
 | `/app/guide` | role-aware business guide → app-owned localized content | effective profile only | visible modules only | pending tests | NOT_STARTED |
 | all | BS/EN business resources → RBI.Localization catalogs | Accept-Language on API calls | no permission grant | pending culture tests | NOT_STARTED |
 | reports backend | old read rule → authenticated read/download, DB-controlled persisted generation | reports | approved reporting exception | 12 integration + 16 focused unit; full backend 274 PASS | INTENTIONAL_CHANGE |
 | auth backend | provider permission leakage → exclusively DB-owned app grants | all protected endpoints | current DB matrix | forged grants red201→green403; repeated transform revocation tests | INTENTIONAL_CHANGE |
 
-Backend test totals do not prove native UI parity. Only the two bounded backend
-changes above are currently implemented. SQL/SSO/browser parity are not claimed.
+Backend test totals do not prove native UI parity. Native template foundation,
+signed-out local mode and effective-profile integration are implemented (17 tests
+PASS). Full module shell/navigation is not complete. SQL/SSO/browser parity are
+not claimed.
 
 ## Required end-to-end closure ledger
 

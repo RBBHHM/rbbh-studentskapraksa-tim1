@@ -6,14 +6,22 @@
 <RbiSidebar @key="_route" AccessibleLabel="@T["nav.title"]" ToggleLabel="@T["nav.toggle"]"
             Collapse="RbiSidebarCollapse.Icon" @bind-Open="_open" StateCookieName="rbbh_sidebar">
     <ChildContent>
-        <RbiSidebarPart Kind="RbiSidebarPartKind.Header"><RbiText>RBBH.RelatedPartiesRegister.Web</RbiText></RbiSidebarPart>
+        <RbiSidebarPart Kind="RbiSidebarPartKind.Header"><RbiText>@T["app.title"]</RbiText></RbiSidebarPart>
         <RbiSidebarPart Kind="RbiSidebarPartKind.Content">
             <NavMenu />
             <LanguageSwitcher />
         </RbiSidebarPart>
     </ChildContent>
     <MainContent>
-        <header class="app-toolbar"><RbiSidebarToggle /><RbiText>RBBH.RelatedPartiesRegister.Web</RbiText></header>
+        <header class="app-toolbar">
+            <RbiSidebarToggle /><RbiText>@T["app.title"]</RbiText>
+            <RBI.DesignSystem.Components.Theme.RbiThemePicker Label="@T["theme.toggle"]" LightLabel="@T["theme.light"]" DarkLabel="@T["theme.dark"]" SystemLabel="@T["theme.system"]" />
+            <AuthorizeView><Authorized>
+                <form method="post" action="/authentication/logout?returnUrl=%2Fapp" data-enhance="false">
+                    <AntiforgeryToken /><RbiButton Type="RbiButtonType.Submit" Variant="RbiButtonVariant.Ghost">@T["auth.signout"]</RbiButton>
+                </form>
+            </Authorized></AuthorizeView>
+        </header>
         <main id="app-main" tabindex="-1" class="app-main"><RbiContainer Class="app-content">@Body</RbiContainer></main>
     </MainContent>
 </RbiSidebar>

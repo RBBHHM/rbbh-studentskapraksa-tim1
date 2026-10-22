@@ -2,9 +2,8 @@
 
 <nav aria-label="@T["nav.title"]">
     <RbiSidebarPart Kind="RbiSidebarPartKind.Menu">
-        <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["nav.home"]" Href="/" Icon="RbiIconName.Gauge" Active="@IsActive("")" /></RbiSidebarPart>
-        <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["nav.audit"]" Href="/audit-log" Icon="RbiIconName.FileText" Active="@IsActive("audit-log")" /></RbiSidebarPart>
-        <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["nav.profile"]" Href="/profile" Icon="RbiIconName.UserRound" Active="@IsActive("profile")" /></RbiSidebarPart>
+        <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["nav.home"]" Href="/app" Icon="RbiIconName.Gauge" Active="@(IsActive("app") || IsActive(""))" /></RbiSidebarPart>
+        <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["nav.profile"]" Href="/app/profile" Icon="RbiIconName.UserRound" Active="@IsActive("app/profile")" /></RbiSidebarPart>
     </RbiSidebarPart>
 </nav>
 

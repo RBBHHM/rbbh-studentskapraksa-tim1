@@ -1,0 +1,7 @@
+@inject IdentityConfiguration Identity
+<RbiAlert Title="@T[Identity.Enabled ? "profile.signedout" : "profile.unconfigured"]">
+    @if (Identity.Enabled)
+    {
+        <RbiButton Href="/authentication/login?returnUrl=%2Fapp">@T["auth.signin"]</RbiButton>
+    }
+</RbiAlert>
