@@ -8,4 +8,14 @@ body { background: var(--surface-default); }
 .app-hero { margin-block-end: var(--space-6); }
 .app-skip { position: fixed; inset-inline-start: var(--space-3); top: var(--space-3); transform: translateY(-200%); z-index: 100; }
 .app-skip:focus { transform: none; background: var(--surface-default); padding: var(--space-3); }
+.app-toolbar { flex-wrap: wrap; }
+.registry-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-block: var(--space-3); }
+.registry-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.registry-form-grid > * { min-width: 0; }
+.registry-tree { padding-inline-start: var(--space-5); overflow-wrap: anywhere; }
+.registry-family { margin-block-start: var(--space-6); }
+.registry-persons-table { min-width: 1050px; }
+.registry-persons-table .registry-toolbar { flex-wrap: nowrap; white-space: nowrap; }
+fieldset { min-inline-size: 0; border: 0; padding: 0; margin: 0; }
+@media (max-width: 767px) { .registry-form-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 767px) { .app-main { padding: var(--space-3); } }

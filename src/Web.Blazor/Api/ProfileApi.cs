@@ -17,7 +17,7 @@ public sealed class ProfileApi(IRbiApiTransport transport) : IProfileApi
         var result = await transport.GetAsync<ApplicationProfile>("api/auth/profile", cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         if (!result.IsSuccess || result.Value.Roles is null || result.Value.Permissions is null)
-            throw new RegistryApiException();
+            throw new RegistryApiException(result.Error?.StatusCode);
         return result.Value;
     }
 }
@@ -34,5 +34,11 @@ internal sealed class UnconfiguredProfileApi : IProfileApi
 // Never expose upstream ProblemDetails, exception messages or database errors.
 public sealed class RegistryApiException : Exception
 {
-    public RegistryApiException() : base("The application service is unavailable.") { }
+    public RegistryApiException(System.Net.HttpStatusCode? statusCode = null) : base("The application service is unavailable.") => StatusCode = statusCode;
+    public System.Net.HttpStatusCode? StatusCode { get; }
+    public string MessageKey => (int?)StatusCode switch
+    {
+        401 => "errors.unauthorized", 403 => "errors.forbidden", 409 => "errors.conflict",
+        423 => "errors.locked", 400 or 422 => "errors.validation", _ => "errors.unavailable"
+    };
 }

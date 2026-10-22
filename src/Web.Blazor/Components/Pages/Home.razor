@@ -1,10 +1,18 @@
 @page "/"
 @page "/app"
+@inject RBI.Authorization.IRbiPermissionService Permissions
 <PageTitle>@T["app.title"]</PageTitle>
 <HeroBar Title="@T["app.title"]" Description="@T["app.welcome"]" />
 <AuthorizeView>
     <Authorized>
         <RbiGrid Columns="RbiGridColumns.Two">
+            @if (_physical)
+            {
+                <RbiCard Title="@T["person.title"]">
+                    <ChildContent><RbiText>@T["person.subtitle"]</RbiText></ChildContent>
+                    <Footer><RbiButton Href="/app/physical-persons">@T["person.title"]</RbiButton></Footer>
+                </RbiCard>
+            }
             <RbiCard Title="@T["nav.profile"]">
                 <ChildContent><RbiText>@T["profile.description"]</RbiText></ChildContent>
                 <Footer><RbiButton Href="/app/profile">@T["nav.profile"]</RbiButton></Footer>
@@ -13,3 +21,11 @@
     </Authorized>
     <NotAuthorized><IdentityNotice /></NotAuthorized>
 </AuthorizeView>
+@code {
+    private bool _physical;
+    protected override async Task OnInitializedAsync()
+    {
+        try { _physical = await Permissions.HasPermissionAsync("fl.read"); }
+        catch (RegistryApiException) { _physical = false; }
+    }
+}

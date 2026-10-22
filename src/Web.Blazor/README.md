@@ -47,6 +47,9 @@ or user-secrets; HTTPS is required outside Development. Leave it empty only for
 an honest unconfigured state, never fake business data. RBI.ApiCore provides
 typed transport, timeouts, safe failures and request context; RBI.Authentication
 propagates the authenticated user's server-side token when configured.
+An API URL alone does not enable anonymous business requests: unconfigured auth
+keeps outbound domain clients unavailable, including against a legacy backend
+that independently enables Development authentication.
 
 Set `Authentication:Authority`, `ClientId`, `ClientSecret` through approved
 configuration, not source control. All empty in Development means signed out:

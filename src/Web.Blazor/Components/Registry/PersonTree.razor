@@ -1,0 +1,11 @@
+<ul class="registry-tree">
+    @foreach (var node in Nodes)
+    {
+        <li @key="node.Id">
+            <strong>@node.FirstName @node.LastName</strong>
+            <RbiBadge>@T[node.PersonType switch { "Employee" => "person.employee", "FamilyMember" => "person.family", _ => "person.related" }]</RbiBadge>
+            @if (node.Children.Count > 0) { <PersonTree Nodes="node.Children" /> }
+        </li>
+    }
+</ul>
+@code { [Parameter] public IReadOnlyList<PersonTreeNode> Nodes { get; set; } = []; }

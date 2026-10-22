@@ -12,6 +12,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 builder.Services.AddRbiHosting();
 builder.Services.AddScoped<AppText>();
+builder.Services.AddScoped<FileDelivery>();
 builder.Services.AddRbiLocalization(options => options.DefaultCulture = "bs");
 // Local-development fallback only. Production must register the approved
 // shared IDistributedCache provider before AddRbiAuthentication.

@@ -1,12 +1,23 @@
 @inject NavigationManager Navigation
+@inject RBI.Authorization.IRbiPermissionService Permissions
 
 <nav aria-label="@T["nav.title"]">
     <RbiSidebarPart Kind="RbiSidebarPartKind.Menu">
         <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["nav.home"]" Href="/app" Icon="RbiIconName.Gauge" Active="@(IsActive("app") || IsActive(""))" /></RbiSidebarPart>
+        @if (_physical)
+        {
+            <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["person.title"]" Href="/app/physical-persons" Icon="RbiIconName.UserRound" Active="@IsActive("app/physical-persons")" /></RbiSidebarPart>
+        }
         <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["nav.profile"]" Href="/app/profile" Icon="RbiIconName.UserRound" Active="@IsActive("app/profile")" /></RbiSidebarPart>
     </RbiSidebarPart>
 </nav>
 
 @code {
+    private bool _physical;
+    protected override async Task OnInitializedAsync()
+    {
+        try { _physical = await Permissions.HasPermissionAsync("fl.read"); }
+        catch (RegistryApiException) { _physical = false; }
+    }
     private bool IsActive(string path) => Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].Trim('/') == path;
 }
