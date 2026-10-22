@@ -1,5 +1,7 @@
 @inject NavigationManager Navigation
 @inject RBI.Authorization.IRbiPermissionService Permissions
+@inject IProfileApi Profile
+@inject AuthenticationStateProvider AuthenticationState
 
 <nav aria-label="@T["nav.title"]">
     <RbiSidebarPart Kind="RbiSidebarPartKind.Menu">
@@ -24,16 +26,18 @@
         {
             <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["legal.title"]" Href="/app/legal-persons" Icon="RbiIconName.UserRound" Active="@IsActive("app/legal-persons")" /></RbiSidebarPart>
         }
+        @if (_admin) { <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["audit.title"]" Href="/app/admin/audit" Icon="RbiIconName.Gauge" Active="@IsActive("app/admin/audit")" /></RbiSidebarPart> }
         <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["nav.profile"]" Href="/app/profile" Icon="RbiIconName.UserRound" Active="@IsActive("app/profile")" /></RbiSidebarPart>
     </RbiSidebarPart>
 </nav>
 
 @code {
-    private bool _physical, _legal, _limits, _capital;
+    private bool _physical, _legal, _limits, _capital, _admin;
     protected override async Task OnInitializedAsync()
     {
-        try { _physical = await Permissions.HasPermissionAsync("fl.read"); _legal = await Permissions.HasPermissionAsync("pl.read"); _limits = await Permissions.HasPermissionAsync("limiti.read"); _capital = await Permissions.HasPermissionAsync("kapital.read"); }
-        catch (RegistryApiException) { _physical = _legal = _limits = _capital = false; }
+        if ((await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated != true) return;
+        try { _admin = ApplicationAccess.IsAdministrator(await Profile.GetAsync()); _physical = await Permissions.HasPermissionAsync("fl.read"); _legal = await Permissions.HasPermissionAsync("pl.read"); _limits = await Permissions.HasPermissionAsync("limiti.read"); _capital = await Permissions.HasPermissionAsync("kapital.read"); }
+        catch (RegistryApiException) { _physical = _legal = _limits = _capital = _admin = false; }
     }
     private bool IsActive(string path) => Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].Trim('/') == path;
 }

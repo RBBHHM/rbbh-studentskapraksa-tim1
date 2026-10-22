@@ -22,7 +22,7 @@ BLAZOR-MIGRATION-AUTHORIZATION.md for identity/application permission separation
 | `/app/admin/period` | lock/request/process/respond → native period workflow | period-lock | existing Admin route + CapitalWrite API | pending tests | NOT_STARTED |
 | `/app/admin/users` | functional role/user administration → native module | users, roles | ADMINISTRATION_* | pending tests | NOT_STARTED |
 | `/app/admin/code-lists` | category/value CRUD/import → native module | code-lists | existing Admin route, ADMINISTRATION_MANAGE mutations | pending tests | NOT_STARTED |
-| `/app/admin/audit` | actual business audit → native table/filter/paging | audit-logs | admin.only | pending tests | NOT_STARTED |
+| `/app/admin/audit` | actual business audit → native table/filter/paging | audit-logs | exact admin from current DB profile | audit closure:5 Admin browser cases + denied/forged-claim coverage for5 other DB roles; real AuditService metadata/paging | PARITY |
 | `/app/profile` | identity/effective permissions → template-based profile | auth/profile | authenticated | signed-out HTTP smoke + effective permission tests; integrated identity/browser pending | IN_PROGRESS |
 | `/app/guide` | role-aware business guide → app-owned localized content | effective profile only | visible modules only | pending tests | NOT_STARTED |
 | all | BS/EN business resources → RBI.Localization catalogs | Accept-Language on API calls | no permission grant | pending culture tests | NOT_STARTED |
@@ -40,6 +40,8 @@ closed. Reporting follows in BLAZOR-MIGRATION-REPORTS-CLOSURE.md (392 .NET/76
 browser), including the approved read/download vs generate/persist split.
 Notifications follows in BLAZOR-MIGRATION-NOTIFICATIONS-CLOSURE.md
 (400 .NET/112 browser), including a source-backed registry whitespace-search fix.
+Audit follows in BLAZOR-MIGRATION-AUDIT-CLOSURE.md (407 .NET/122 browser),
+including DB-owned Admin access and encoded audit metadata.
 Remaining administration/guide modules are incomplete.
 Real SQL/SSO/OCP parity is not claimed.
 
@@ -69,13 +71,13 @@ may be weakened to manufacture completion.
 | 16 | lock period | admin/period | NOT_STARTED |
 | 17 | request unlock | admin/period | NOT_STARTED |
 | 18 | process/respond to unlock request | admin/period | NOT_STARTED |
-| 19 | notifications/provider empty state | notifications | NOT_STARTED |
+| 19 | notifications/provider empty state | notifications | PARITY: recorded rows, safe body search and explicit SMTP empty-state semantics across all6 DB roles |
 | 20 | create user | admin/users | NOT_STARTED |
 | 21 | assign functional permissions via roles | admin/users | NOT_STARTED |
 | 22 | deactivate/reactivate user | admin/users | NOT_STARTED |
 | 23 | delete user with confirmation | admin/users | NOT_STARTED |
 | 24 | code-list CRUD/preview/import/referenced-value rejection | admin/code-lists | NOT_STARTED |
-| 25 | audit visible after mutation | admin/audit | NOT_STARTED |
+| 25 | audit visible after mutation | admin/audit | PARITY: real AuditService entry, metadata/search/paging, DB Admin only and forged-provider denial |
 | 26 | current identity/permissions profile | profile | NOT_STARTED |
 | 27 | BS/EN switching/persistence | all | IN_PROGRESS: physical route/cookie/backend header proven; other modules pending |
 | 28 | backend unavailable, safe recovery | all | IN_PROGRESS: physical module proven; other modules pending |

@@ -37,6 +37,7 @@ public sealed class LocalHostTests
     [InlineData("/app/capital")]
     [InlineData("/app/reports")]
     [InlineData("/app/notifications")]
+    [InlineData("/app/admin/audit")]
     public async Task LocalUnconfiguredHostIsHonestAndSignedOut(string path)
     {
         await using var app = new LocalApp();

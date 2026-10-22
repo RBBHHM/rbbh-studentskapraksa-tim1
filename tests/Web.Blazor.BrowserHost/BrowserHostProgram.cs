@@ -64,6 +64,7 @@ internal static class BrowserHostProgram
         builder.Services.AddControllers().AddApplicationPart(typeof(RelatedPersonController).Assembly);
         builder.Services.AddExceptionHandlingExtension(builder.Environment);
         builder.Services.AddSingleton(user);
+        builder.Services.AddSingleton(database);
         builder.Services.AddDbContext<ConnectedPartiesDbContext>(options => options.UseInMemoryDatabase(database.Name));
         builder.Services.AddAuthentication("BrowserFixture").AddScheme<AuthenticationSchemeOptions, FixtureIdentity>("BrowserFixture", _ => { });
         builder.Services.AddScoped<IClaimsTransformation, RoleClaimsTransformation>();
@@ -86,6 +87,7 @@ internal static class BrowserHostProgram
         app.Use(async (context, next) =>
         {
             database.LastCulture = context.Request.Headers.AcceptLanguage.ToString();
+            if (context.Request.Path == "/api/audit-logs") database.AuditRequests++;
             if ((HttpMethods.IsPost(context.Request.Method) || HttpMethods.IsPut(context.Request.Method) || HttpMethods.IsDelete(context.Request.Method)) &&
                 (context.Request.Path.StartsWithSegments("/api/related-persons") || context.Request.Path.StartsWithSegments("/api/legal-entities") || context.Request.Path.StartsWithSegments("/api/limiti") || context.Request.Path.StartsWithSegments("/api/capital") || context.Request.Path.StartsWithSegments("/api/reports"))) database.MutationAttempts++;
             if (HttpMethods.IsPost(context.Request.Method) && context.Request.Path.StartsWithSegments("/api/reports")) database.ReportGenerationAttempts++;
@@ -186,6 +188,7 @@ internal static class BrowserHostProgram
                 services.Configure<Microsoft.AspNetCore.Components.Server.CircuitOptions>(options => options.DetailedErrors = true);
                 services.AddSingleton<IStartupFilter>(new FixtureReset(backend, user, database));
                 services.AddSingleton(user);
+                services.AddSingleton(database);
                 services.AddAuthentication(options =>
                 {
                     options.DefaultScheme = "BrowserFixture"; options.DefaultAuthenticateScheme = "BrowserFixture";
@@ -197,6 +200,7 @@ internal static class BrowserHostProgram
                 services.RemoveAll<ICapitalApi>();
                 services.RemoveAll<IReportsApi>();
                 services.RemoveAll<INotificationsApi>();
+                services.RemoveAll<IAuditApi>();
                 services.AddRbiApiClient<IProfileApi, ProfileApi>("BrowserProfile", options => options.BaseUrl = new("http://backend.fixture/"))
                     .AddHttpMessageHandler<ApplicationCultureHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
@@ -218,6 +222,9 @@ internal static class BrowserHostProgram
                 services.AddRbiApiClient<INotificationsApi, NotificationsApi>("BrowserNotifications", options => options.BaseUrl = new("http://backend.fixture/"))
                     .AddHttpMessageHandler<ApplicationCultureHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
+                services.AddRbiApiClient<IAuditApi, AuditApi>("BrowserAudit", options => options.BaseUrl = new("http://backend.fixture/"))
+                    .AddHttpMessageHandler<ApplicationCultureHandler>()
+                    .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
             });
         }
     }
@@ -235,6 +242,8 @@ internal static class BrowserHostProgram
         public bool FailGenerationAudit { get; set; }
         public int ReportGenerationAttempts { get; set; }
         public EmailLogStore MailStore { get; set; } = new();
+        public int AuditRequests { get; set; }
+        public bool ForgeAdmin { get; set; }
     }
     // Fault injection only: preserve real auditing except the explicit failure
     // after ReportService has already persisted a snapshot, before HTTP201.
@@ -262,6 +271,19 @@ internal static class BrowserHostProgram
                     }
                     if (context.Request.Path == "/__fixtures/culture" && HttpMethods.IsGet(context.Request.Method))
                     { await context.Response.WriteAsJsonAsync(new { language = database.LastCulture }); return; }
+                    if (context.Request.Path == "/__fixtures/audit-requests" && HttpMethods.IsGet(context.Request.Method))
+                    { await context.Response.WriteAsJsonAsync(new { count = database.AuditRequests }); return; }
+                    if (context.Request.Path == "/__fixtures/audit-status" && HttpMethods.IsGet(context.Request.Method))
+                    {
+                        using var client = backend.GetTestClient();
+                        using var response = await client.GetAsync("/api/audit-logs");
+                        await context.Response.WriteAsJsonAsync(new { status = (int)response.StatusCode }); return;
+                    }
+                    if (context.Request.Path == "/__fixtures/front-identity" && HttpMethods.IsGet(context.Request.Method))
+                    {
+                        var identity = await context.AuthenticateAsync("BrowserFixture");
+                        await context.Response.WriteAsJsonAsync(new { providerAdmin = identity.Principal?.IsInRole("admin") == true }); return;
+                    }
                     if (context.Request.Path == "/__fixtures/legal-record" && HttpMethods.IsGet(context.Request.Method))
                     {
                         await using var scope = backend.Services.CreateAsyncScope();
@@ -303,6 +325,7 @@ internal static class BrowserHostProgram
                             database.ProfileUnavailable = database.GeneratedDownloadUnavailable = database.FailGenerationAudit = false;
                             database.ReportGenerationAttempts = 0;
                             database.MailStore = new(); backend.Configuration["Email:Provider"] = "demo";
+                            database.AuditRequests = 0; database.ForgeAdmin = false;
                             database.MutationAttempts = 0;
                             await SeedAsync(backend, user); break;
                         case "/__fixtures/unavailable": database.Unavailable = true; break;
@@ -323,6 +346,36 @@ internal static class BrowserHostProgram
                             break;
                         case "/__fixtures/email-smtp": backend.Configuration["Email:Provider"] = "smtp"; break;
                         case "/__fixtures/email-demo": backend.Configuration["Email:Provider"] = "demo"; break;
+                        case "/__fixtures/forge-provider-admin": database.ForgeAdmin = true; break;
+                        case "/__fixtures/audit-existing":
+                            await using (var scope = backend.Services.CreateAsyncScope())
+                                await scope.ServiceProvider.GetRequiredService<IAuditService>().LogAsync(new AuditEntry
+                                {
+                                    TableName = "RelatedPerson",
+                                    RecordId = "fixture-record",
+                                    Action = "INSERT",
+                                    UserId = "fixture-user",
+                                    Username = "fixture-auditor",
+                                    IpAddress = "127.0.0.1",
+                                    NewValues = System.Text.Json.JsonSerializer.Serialize(new { note = "<img src=x onerror=\"window.__auditExecuted=true\">audit-body-needle" })
+                                });
+                            break;
+                        case "/__fixtures/audit-pages":
+                            await using (var scope = backend.Services.CreateAsyncScope())
+                            {
+                                var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                                for (var index = 0; index < 201; index++) db.AuditLogs.Add(new RBBH.ConnectedParties.DL.Entities.Audit.AuditLog
+                                {
+                                    TableName = "RelatedPerson",
+                                    RecordId = $"audit-record-{index:D3}",
+                                    Action = "INSERT",
+                                    UserId = "fixture-user",
+                                    Username = $"audit-page-{index:D3}",
+                                    Timestamp = DateTime.UtcNow.AddMinutes(-index)
+                                });
+                                await db.SaveChangesAsync();
+                            }
+                            break;
                         case "/__fixtures/report-reference":
                             await using (var scope = backend.Services.CreateAsyncScope())
                             {
@@ -433,10 +486,14 @@ internal static class BrowserHostProgram
             next(application);
         };
     }
-    private sealed class FixtureIdentity(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder, FixtureUser user)
+    private sealed class FixtureIdentity(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder, FixtureUser user, FixtureDatabase database)
         : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
     {
-        protected override Task<AuthenticateResult> HandleAuthenticateAsync() => Task.FromResult(AuthenticateResult.Success(new(
-            new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.Email, user.Email), new Claim(ClaimTypes.Name, user.Email)], "BrowserFixture")), "BrowserFixture")));
+        protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+        {
+            var claims = new List<Claim> { new(ClaimTypes.Email, user.Email), new(ClaimTypes.Name, user.Email) };
+            if (database.ForgeAdmin) claims.AddRange([new(ClaimTypes.Role, "admin"), new("permission", "ADMINISTRATION_MANAGE"), new("rct_done", "1")]);
+            return Task.FromResult(AuthenticateResult.Success(new(new ClaimsPrincipal(new ClaimsIdentity(claims, "BrowserFixture")), "BrowserFixture")));
+        }
     }
 }

@@ -1,0 +1,68 @@
+@page "/app/admin/audit"
+@using RBI.DesignSystem.Components.Forms
+@implements IDisposable
+@inject AuthenticationStateProvider AuthenticationState
+@inject IProfileApi Profile
+@inject IAuditApi Api
+
+<PageTitle>@T["audit.title"]</PageTitle>
+<HeroBar Title="@T["audit.title"]" Description="@T["audit.subtitle"]" />
+@if (!_authenticated && !_loading) { <IdentityNotice /> }
+else if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
+else if (_error is not null)
+{
+    <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_error]" />
+    <RbiButton OnClick="LoadAsync">@T["state.retry"]</RbiButton>
+}
+else if (!_admin) { <RbiAlert Title="@T["errors.forbidden"]" /> }
+else
+{
+    <div class="registry-toolbar"><RbiButton Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Secondary">@T["common.refresh"]</RbiButton></div>
+    <label for="audit-search">@T["audit.search"]</label>
+    <RbiInput Id="audit-search" @bind-Value="_search" UpdateMode="RbiInputUpdateMode.Input" />
+    @if (!Filtered.Any()) { <RbiText>@T["audit.empty"]</RbiText> }
+    else
+    {
+        <RbiTable AccessibleLabel="@T["audit.title"]" Class="registry-audit-table">
+            <caption>@T["audit.title"]</caption>
+            <thead><tr><th scope="col">@T["audit.time"]</th><th scope="col">@T["audit.action"]</th><th scope="col">@T["audit.area"]</th><th scope="col">@T["audit.change"]</th><th scope="col">@T["audit.user"]</th><th scope="col">@T["audit.ip"]</th></tr></thead>
+            <tbody>@foreach (var entry in Filtered)
+            {
+                <tr @key="entry.Id"><td>@entry.Timestamp.ToString("g")</td><td>@entry.ActionDisplay</td><td>@entry.AreaDisplay</td><td>@entry.ChangeSummary</td><td>@entry.Username</td><td>@entry.IpAddress</td></tr>
+            }</tbody>
+        </RbiTable>
+    }
+    <p role="status">@T.Format("audit.page-summary", _page, TotalPages, _result.Total)</p>
+    <RbiPagination CurrentPage="_page" CurrentPageChanged="ChangePageAsync" TotalPages="TotalPages" AccessibleLabel="@T["audit.pages"]" PreviousLabel="@T["common.back"]" PreviousAccessibleLabel="@T["legal.previous"]" NextLabel="@T["common.actions.continue"]" NextAccessibleLabel="@T["legal.next"]" PageAccessibleLabel="@(page => T.Format("legal.page", page))" />
+}
+@code {
+    private readonly CancellationTokenSource _lifetime = new();
+    private readonly CancellationToken _token;
+    public Audit() => _token = _lifetime.Token;
+    private AuditPage _result = new([], 0, 1, 200);
+    private string? _search, _error;
+    private int _page = 1;
+    private bool _disposed, _authenticated, _admin, _loading = true, _refreshing, _loaded;
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling(_result.Total / 200d));
+    private IEnumerable<AuditRecord> Filtered => _result.Logs.Where(entry => entry.Matches(_search));
+    protected override Task OnInitializedAsync() => LoadAsync();
+    private async Task LoadAsync()
+    {
+        if (_disposed || _refreshing) return; _loading = !_loaded; _refreshing = true; _error = null;
+        try
+        {
+            _authenticated = (await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true;
+            if (!_authenticated) { _admin = false; return; }
+            _admin = ApplicationAccess.IsAdministrator(await Profile.GetAsync(_token));
+            if (!_admin) return;
+            _result = await Api.GetAsync(_page, _token);
+            if (_page > TotalPages) { _page = TotalPages; _result = await Api.GetAsync(_page, _token); }
+            _loaded = true;
+        }
+        catch (RegistryApiException exception) { _error = exception.MessageKey; }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally { _loading = false; _refreshing = false; }
+    }
+    private async Task ChangePageAsync(int page) { if (_refreshing || page < 1 || page > TotalPages) return; _page = page; await LoadAsync(); }
+    public void Dispose() { _disposed = true; _lifetime.Cancel(); _lifetime.Dispose(); }
+}

@@ -20,6 +20,7 @@ public static class AppApi
             services.AddScoped<ICapitalApi, UnconfiguredCapitalApi>();
             services.AddScoped<IReportsApi, UnconfiguredReportsApi>();
             services.AddScoped<INotificationsApi, UnconfiguredNotificationsApi>();
+            services.AddScoped<IAuditApi, UnconfiguredAuditApi>();
             return null;
         }
         if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) ||
@@ -40,6 +41,7 @@ public static class AppApi
             services.AddScoped<ICapitalApi, UnconfiguredCapitalApi>();
             services.AddScoped<IReportsApi, UnconfiguredReportsApi>();
             services.AddScoped<INotificationsApi, UnconfiguredNotificationsApi>();
+            services.AddScoped<IAuditApi, UnconfiguredAuditApi>();
             return uri;
         }
 
@@ -92,6 +94,13 @@ public static class AppApi
         });
         notifications.AddHttpMessageHandler<ApplicationCultureHandler>();
         notifications.AddRbiUserAccessToken();
+        var audit = services.AddRbiApiClient<IAuditApi, AuditApi>("Audit", options =>
+        {
+            options.BaseUrl = uri;
+            options.Timeout = TimeSpan.FromSeconds(15);
+        });
+        audit.AddHttpMessageHandler<ApplicationCultureHandler>();
+        audit.AddRbiUserAccessToken();
         return uri;
     }
 }
