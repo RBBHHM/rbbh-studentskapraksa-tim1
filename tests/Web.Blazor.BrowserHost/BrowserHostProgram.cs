@@ -78,6 +78,8 @@ internal static class BrowserHostProgram
         builder.Services.AddScoped<ILimitService, LimitService>();
         builder.Services.AddScoped<ICapitalService, CapitalService>();
         builder.Services.AddScoped<IReportService, ReportService>();
+        builder.Services.AddScoped(_ => database.MailStore);
+        builder.Configuration["Email:Provider"] = "demo";
         builder.Services.Configure<EmailSettings>(_ => { });
         var app = builder.Build();
         app.UseExceptionHandler();
@@ -194,6 +196,7 @@ internal static class BrowserHostProgram
                 services.RemoveAll<ILimitsApi>();
                 services.RemoveAll<ICapitalApi>();
                 services.RemoveAll<IReportsApi>();
+                services.RemoveAll<INotificationsApi>();
                 services.AddRbiApiClient<IProfileApi, ProfileApi>("BrowserProfile", options => options.BaseUrl = new("http://backend.fixture/"))
                     .AddHttpMessageHandler<ApplicationCultureHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
@@ -212,6 +215,9 @@ internal static class BrowserHostProgram
                 services.AddRbiApiClient<IReportsApi, ReportsApi>("BrowserReports", options => options.BaseUrl = new("http://backend.fixture/"))
                     .AddHttpMessageHandler<ApplicationCultureHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
+                services.AddRbiApiClient<INotificationsApi, NotificationsApi>("BrowserNotifications", options => options.BaseUrl = new("http://backend.fixture/"))
+                    .AddHttpMessageHandler<ApplicationCultureHandler>()
+                    .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
             });
         }
     }
@@ -228,6 +234,7 @@ internal static class BrowserHostProgram
         public bool GeneratedDownloadUnavailable { get; set; }
         public bool FailGenerationAudit { get; set; }
         public int ReportGenerationAttempts { get; set; }
+        public EmailLogStore MailStore { get; set; } = new();
     }
     // Fault injection only: preserve real auditing except the explicit failure
     // after ReportService has already persisted a snapshot, before HTTP201.
@@ -295,6 +302,7 @@ internal static class BrowserHostProgram
                             database.Name = "browser-" + Guid.NewGuid(); database.Unavailable = database.CodebooksUnavailable = false;
                             database.ProfileUnavailable = database.GeneratedDownloadUnavailable = database.FailGenerationAudit = false;
                             database.ReportGenerationAttempts = 0;
+                            database.MailStore = new(); backend.Configuration["Email:Provider"] = "demo";
                             database.MutationAttempts = 0;
                             await SeedAsync(backend, user); break;
                         case "/__fixtures/unavailable": database.Unavailable = true; break;
@@ -304,6 +312,17 @@ internal static class BrowserHostProgram
                         case "/__fixtures/generated-downloads-unavailable": database.GeneratedDownloadUnavailable = true; break;
                         case "/__fixtures/generated-downloads-available": database.GeneratedDownloadUnavailable = false; break;
                         case "/__fixtures/generation-audit-fails": database.FailGenerationAudit = true; break;
+                        case "/__fixtures/email-existing":
+                            database.MailStore.Add(new EmailLogEntry
+                            {
+                                To = "fixture@example.test",
+                                Subject = "Fixture notification",
+                                Audience = "broadcast",
+                                HtmlBody = "<img src=x onerror=\"window.__notificationExecuted=true\">body-search-needle"
+                            });
+                            break;
+                        case "/__fixtures/email-smtp": backend.Configuration["Email:Provider"] = "smtp"; break;
+                        case "/__fixtures/email-demo": backend.Configuration["Email:Provider"] = "demo"; break;
                         case "/__fixtures/report-reference":
                             await using (var scope = backend.Services.CreateAsyncScope())
                             {

@@ -18,7 +18,7 @@ BLAZOR-MIGRATION-AUTHORIZATION.md for identity/application permission separation
 | `/app/limits` | legal lookup/server-derived capital/CRUD/export → native module | limiti, legal-entities/*/limit-form-data | LIMITI_* | limits closure:13 added frontend tests,10 limiti+1 Guest browser cases, current-module regressions | PARITY |
 | `/app/capital` | optional singleton read/upsert/export → native module | capital | KAPITAL_VIEW / EDIT | capital closure:12 added frontend tests,7 Kapital+7 Admin browser cases,1 Guest case | PARITY |
 | `/app/reports` | archive/generate/download → native reporting module | reports | authenticated read; DB KAPITAL_CREATE generate/persist | reports closure:15 added frontend tests,9 Kapital+9 Admin+2 Guest browser cases; backend12 HTTP preserved | PARITY |
-| `/app/notifications` | email log → native recorded-notification list | email-log | capital.read | pending tests | NOT_STARTED |
+| `/app/notifications` | email log → native recorded-notification list | email-log | DB KAPITAL_VIEW | notifications closure:6 browser cases × 6 current DB roles, no SMTP delivery claim or HTML rendering | PARITY |
 | `/app/admin/period` | lock/request/process/respond → native period workflow | period-lock | existing Admin route + CapitalWrite API | pending tests | NOT_STARTED |
 | `/app/admin/users` | functional role/user administration → native module | users, roles | ADMINISTRATION_* | pending tests | NOT_STARTED |
 | `/app/admin/code-lists` | category/value CRUD/import → native module | code-lists | existing Admin route, ADMINISTRATION_MANAGE mutations | pending tests | NOT_STARTED |
@@ -38,7 +38,9 @@ The following capital checkpoint is BLAZOR-MIGRATION-CAPITAL-CLOSURE.md
 (377 .NET/56 browser). Physical, legal, limits and capital modules are locally
 closed. Reporting follows in BLAZOR-MIGRATION-REPORTS-CLOSURE.md (392 .NET/76
 browser), including the approved read/download vs generate/persist split.
-Remaining modules are incomplete.
+Notifications follows in BLAZOR-MIGRATION-NOTIFICATIONS-CLOSURE.md
+(400 .NET/112 browser), including a source-backed registry whitespace-search fix.
+Remaining administration/guide modules are incomplete.
 Real SQL/SSO/OCP parity is not claimed.
 
 ## Required end-to-end closure ledger
