@@ -1,0 +1,218 @@
+@page "/app/legal-persons"
+@using RBBH.RelatedPartiesRegister.Web.Components.Registry
+@using RBI.DesignSystem.Components.Forms
+@using Microsoft.JSInterop
+@implements IDisposable
+@inject AuthenticationStateProvider AuthenticationState
+@inject IProfileApi Profile
+@inject ILegalEntitiesApi Api
+@inject IRelatedPersonsApi References
+@inject FileDelivery Files
+
+<PageTitle>@T["legal.title"]</PageTitle>
+<HeroBar Title="@T["legal.title"]" Description="@T["legal.subtitle"]" />
+@if (!_authenticated && !_loading) { <IdentityNotice /> }
+else if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
+else if (_error is not null)
+{
+    <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_error]" Announcement="RbiAlertAnnouncement.Assertive" />
+    <RbiButton OnClick="LoadAsync">@T["state.retry"]</RbiButton>
+}
+else if (!_canRead) { <RbiAlert Title="@T["errors.forbidden"]" /> }
+else
+{
+    @if (_notice is not null) { <div role="status"><RbiAlert Title="@T[_notice]" /></div> }
+    <div class="registry-toolbar">
+        <RbiButton Disabled="@(_busy || _openingEditor)" Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Secondary">@T["common.refresh"]</RbiButton>
+        <RbiButton Disabled="@(_busy || _openingEditor || _refreshing)" OnClick="ExportAsync" Variant="RbiButtonVariant.Secondary">@T["common.export"]</RbiButton>
+        @if (_canCreate)
+        {
+            <RbiButton Disabled="@(_busy || _openingEditor || _refreshing)" OnClick="() => _importOpen = true" Variant="RbiButtonVariant.Secondary">@T["common.import"]</RbiButton>
+            <RbiButton Disabled="@(_busy || _refreshing)" Loading="_openingEditor" LoadingLabel="@T["state.loading"]" OnClick="() => Edit(null)">@T["common.new"]</RbiButton>
+        }
+    </div>
+    <label for="legal-search">@T["legal.search"]</label>
+    <RbiInput Id="legal-search" @bind-Value="_search" UpdateMode="RbiInputUpdateMode.Input" />
+    @if (!Filtered.Any()) { <RbiText>@T["person.empty"]</RbiText> }
+    else
+    {
+        <RbiTable AccessibleLabel="@T["legal.title"]" Class="registry-persons-table">
+            <caption>@T["legal.title"]</caption>
+            <thead><tr><th scope="col">@T["legal.name"]</th><th scope="col">@T["person.residency"]</th><th scope="col">@T["legal.tax"]</th><th scope="col">@T["legal.registration"]</th><th scope="col">@T["person.fba"]</th><th scope="col">@T["person.basis"]</th><th scope="col">@T["common.status"]</th>@if (_canEdit || _canDelete) { <th scope="col">@T["common.actions"]</th> }</tr></thead>
+            <tbody>@foreach (var entity in Filtered)
+            {
+                <tr @key="entity.Id"><td>@entity.Name</td><td>@T[entity.IsResident ? "person.resident" : "person.nonresident"]</td><td>@entity.TaxNumber</td><td>@entity.MaticniBroj</td><td>@entity.FbaId</td><td>@entity.BasisOfConnection</td><td><RbiBadge>@T[$"status.{entity.Status.ToLowerInvariant()}"]</RbiBadge></td>
+                    @if (_canEdit || _canDelete)
+                    {
+                        <td><div class="registry-toolbar">
+                            @if (_canEdit)
+                            {
+                                <RbiButton Disabled="@(_busy || _refreshing)" Loading="_openingEditor" LoadingLabel="@T["state.loading"]" OnClick="() => Edit(entity)" Variant="RbiButtonVariant.Ghost">@T["common.edit"]</RbiButton>
+                                @if (!string.Equals(entity.Status, "Verified", StringComparison.OrdinalIgnoreCase)) { <RbiButton Disabled="@(_busy || _openingEditor || _refreshing)" OnClick="() => Confirm(entity, false)" Variant="RbiButtonVariant.Ghost">@T["common.verify"]</RbiButton> }
+                            }
+                            @if (_canDelete) { <RbiButton Disabled="@(_busy || _openingEditor || _refreshing)" OnClick="() => Confirm(entity, true)" Variant="RbiButtonVariant.Destructive">@T["common.deactivate"]</RbiButton> }
+                        </div></td>
+                    }
+                </tr>
+            }</tbody>
+        </RbiTable>
+    }
+    <p role="status">@T.Format("legal.page-summary", _page, TotalPages, _total)</p>
+    <RbiPagination CurrentPage="_page" CurrentPageChanged="ChangePageAsync" TotalPages="TotalPages" AccessibleLabel="@T["legal.pages"]"
+                   PreviousLabel="@T["common.back"]" PreviousAccessibleLabel="@T["legal.previous"]" NextLabel="@T["common.actions.continue"]" NextAccessibleLabel="@T["legal.next"]" PageAccessibleLabel="@(page => T.Format("legal.page", page))" />
+}
+@if (_draft is { } draft)
+{
+    <RbiDialog Open Title="@T[_editingId.HasValue ? "common.edit" : "common.new"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseEditor">
+        <DialogBody>
+            @if (_fallback) { <RbiAlert Title="@T["person.fallback"]" /> }
+            <LegalEntityForm @key="draft" Model="draft" Bases="_bases" Save="SaveAsync" Cancel="() => CloseEditor(false)" />
+        </DialogBody>
+    </RbiDialog>
+}
+<RbiAlertDialog Open="@(_action is not null)" OpenChanged="CloseAction" Title="@T[_delete ? "legal.delete-title" : "legal.verify-title"]"
+                Description="@T[_delete ? "legal.delete-description" : "legal.verify-description"]" CancelLabel="@T["common.cancel"]" ConfirmLabel="@T["common.confirm"]"
+                ConfirmLoadingLabel="@T["common.saving"]" Confirming="_busy" OnConfirm="RunActionAsync">
+    @if (_actionError is not null) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_actionError]" /> }
+</RbiAlertDialog>
+<RbiDialog Open="_importOpen" OpenChanged="CloseImport" Title="@T["common.import"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)">
+    <DialogBody>
+        <p>@T["legal.import-help"]</p>
+        <label for="legal-import">@T["import.file"]</label>
+        <InputFile id="legal-import" accept=".xlsx" OnChange="ChooseImport" disabled="@_busy" />
+        @if (_importError is not null) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_importError]" /> }
+        @if (_importResult is { } result)
+        {
+            <div role="status"><p>@T.Format("import.result", result.Imported, result.Failed)</p></div>
+            @if (result.Errors.Count > 0) { <ul>@foreach (var error in result.Errors) { <li>@SafeImportError(error)</li> }</ul> }
+        }
+        <RbiButton Disabled="@(_busy || _importFile is null)" OnClick="ImportAsync">@T["common.import"]</RbiButton>
+    </DialogBody>
+</RbiDialog>
+
+@code {
+    private readonly CancellationTokenSource _lifetime = new();
+    private readonly CancellationToken _token;
+    public LegalEntities() => _token = _lifetime.Token;
+    private IReadOnlyList<LegalEntity> _entities = [];
+    private IReadOnlyList<ReferenceOption> _bases = [];
+    private LegalEntityDraft? _draft;
+    private Guid? _editingId;
+    private LegalEntity? _action;
+    private IBrowserFile? _importFile;
+    private ImportResult? _importResult;
+    private string? _search, _error, _notice, _actionError, _importError;
+    private int _page = 1, _total;
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling(_total / 20d));
+    private bool _disposed, _authenticated, _loading = true, _busy, _canRead, _canCreate, _canEdit, _canDelete, _delete, _importOpen, _fallback;
+    private bool _loaded, _refreshing, _openingEditor;
+    private IEnumerable<LegalEntity> Filtered => _entities.Where(entity => entity.Matches(_search));
+    protected override Task OnInitializedAsync() => LoadAsync();
+    private async Task LoadAsync()
+    {
+        if (_disposed) return;
+        _loading = !_loaded; _refreshing = true; _error = null;
+        try
+        {
+            _authenticated = (await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true;
+            if (!_authenticated) return;
+            var profile = await Profile.GetAsync(_token);
+            _canRead = profile.Permissions.Contains("PL_VIEW"); _canCreate = profile.Permissions.Contains("PL_CREATE");
+            _canEdit = profile.Permissions.Contains("PL_EDIT"); _canDelete = profile.Permissions.Contains("PL_DELETE");
+            if (!_canRead) return;
+            var result = await Api.ListAsync(_page, _token);
+            _total = result.Total;
+            if (_page > TotalPages) { _page = TotalPages; result = await Api.ListAsync(_page, _token); }
+            _entities = result.Items; _loaded = true;
+        }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        catch (RegistryApiException exception) { _error = exception.MessageKey; }
+        finally { _loading = false; _refreshing = false; }
+    }
+    private async Task ChangePageAsync(int page)
+    {
+        if (_busy || _refreshing || _openingEditor || page < 1 || page > TotalPages) return;
+        _page = page; await LoadAsync();
+    }
+    private async Task Edit(LegalEntity? entity)
+    {
+        if (_busy || _openingEditor || _refreshing || _disposed || !_authenticated || (entity is null ? !_canCreate : !_canEdit)) return;
+        _openingEditor = true;
+        try
+        {
+            // Fetch the current detail to preserve server-only Matbroj on update.
+            if (entity is not null) entity = await Api.GetAsync(entity.Id, _token);
+            _editingId = entity?.Id; _bases = PhysicalPersonOptions.Bases(T); _fallback = false;
+            try
+            {
+                var bases = await References.OptionsAsync("OsnovPovezanosti", _token);
+                if (bases.Count > 0) _bases = bases.Select(item => item with { Opis = item.Opis ?? _bases.FirstOrDefault(fallback => fallback.Kod == item.Kod)?.Opis }).ToArray(); else _fallback = true;
+            }
+            catch (RegistryApiException) { _fallback = true; }
+            if (entity is not null && !_bases.Any(option => option.Kod == entity.BasisOfConnection))
+                _bases = [.. _bases, new(entity.BasisOfConnection, entity.BasisOfConnection, entity.ConnectionDescription)];
+            _draft = entity is null ? new() : LegalEntityDraft.From(entity);
+        }
+        catch (RegistryApiException exception) { _error = exception.MessageKey; }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally { _openingEditor = false; }
+    }
+    private void CloseEditor(bool open) { if (!open && !_busy) _draft = null; }
+    private async Task SaveAsync(LegalEntityRequest request)
+    {
+        if (!_authenticated || (_editingId.HasValue ? !_canEdit : !_canCreate)) throw new RegistryApiException(System.Net.HttpStatusCode.Forbidden);
+        if (_busy) return; _busy = true;
+        try { await Api.SaveAsync(_editingId, request, _token); _notice = "common.saved"; await LoadAsync(); }
+        finally { _busy = false; }
+        _draft = null;
+    }
+    private void Confirm(LegalEntity entity, bool delete) { if (!_authenticated || (delete ? !_canDelete : !_canEdit) || _openingEditor || _refreshing || _busy) return; _action = entity; _delete = delete; _actionError = null; }
+    private void CloseAction(bool open) { if (!open && !_busy) _action = null; }
+    private async Task RunActionAsync()
+    {
+        if (!_authenticated || (_delete ? !_canDelete : !_canEdit) || _busy || _action is null) return;
+        _busy = true;
+        try { if (_delete) await Api.DeleteAsync(_action.Id, _token); else await Api.VerifyAsync(_action.Id, _token); _action = null; _notice = "common.saved"; await LoadAsync(); }
+        catch (RegistryApiException exception) { _actionError = exception.MessageKey; }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally { _busy = false; }
+    }
+    private async Task ExportAsync()
+    {
+        if (!_authenticated || !_canRead || _busy) return; _busy = true;
+        try { await Files.DownloadAsync(await Api.ExportAsync(_token), _token); }
+        catch (RegistryApiException exception) { _error = exception.MessageKey; }
+        catch (JSDisconnectedException) { }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally { _busy = false; }
+    }
+    private void CloseImport(bool open) { if (!_busy) { _importOpen = open; if (!open) { _importFile = null; _importResult = null; _importError = null; } } }
+    private void ChooseImport(InputFileChangeEventArgs args)
+    {
+        _importFile = null; _importResult = null; _importError = null;
+        if (!_authenticated || !_canCreate) { _importError = "errors.forbidden"; return; }
+        var file = args.File;
+        if (file.Size is <= 0 or > 10485760 || !file.Name.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase)) { _importError = "import.invalid-file"; return; }
+        _importFile = file;
+    }
+    private async Task ImportAsync()
+    {
+        if (!_authenticated || !_canCreate) { _importError = "errors.forbidden"; return; }
+        if (_busy || _importFile is null) return; _busy = true; _importError = null;
+        try
+        {
+            await using var stream = _importFile.OpenReadStream(10485760, _token);
+            _importResult = await Api.ImportAsync(stream, _importFile.Name, _token); _importFile = null; await LoadAsync();
+        }
+        catch (RegistryApiException exception) { _importError = exception.StatusCode == System.Net.HttpStatusCode.BadRequest ? "import.invalid-workbook" : exception.MessageKey; }
+        catch (IOException) { _importError = "import.invalid-file"; }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally { _busy = false; }
+    }
+    private string SafeImportError(string error)
+    {
+        string[] columns = ["legal.name", "person.residency", "legal.tax", "person.fba", "legal.registration", "person.basis", "person.description", "person.connected-bank", "person.from", "person.to"];
+        return ImportFeedback.Format(error, T, columns);
+    }
+    public void Dispose() { _disposed = true; _lifetime.Cancel(); _lifetime.Dispose(); }
+}

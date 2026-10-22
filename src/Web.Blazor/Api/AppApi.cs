@@ -15,6 +15,7 @@ public static class AppApi
         {
             services.AddScoped<IProfileApi, UnconfiguredProfileApi>();
             services.AddScoped<IRelatedPersonsApi, UnconfiguredRelatedPersonsApi>();
+            services.AddScoped<ILegalEntitiesApi, UnconfiguredLegalEntitiesApi>();
             return null;
         }
         if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) ||
@@ -30,6 +31,7 @@ public static class AppApi
             // authentication fallback. Configured auth uses the RBI token handler.
             services.AddScoped<IProfileApi, UnconfiguredProfileApi>();
             services.AddScoped<IRelatedPersonsApi, UnconfiguredRelatedPersonsApi>();
+            services.AddScoped<ILegalEntitiesApi, UnconfiguredLegalEntitiesApi>();
             return uri;
         }
 
@@ -47,6 +49,13 @@ public static class AppApi
         });
         persons.AddHttpMessageHandler<ApplicationCultureHandler>();
         if (identity.Enabled) persons.AddRbiUserAccessToken();
+        var legal = services.AddRbiApiClient<ILegalEntitiesApi, LegalEntitiesApi>("LegalEntities", options =>
+        {
+            options.BaseUrl = uri;
+            options.Timeout = TimeSpan.FromSeconds(15);
+        });
+        legal.AddHttpMessageHandler<ApplicationCultureHandler>();
+        legal.AddRbiUserAccessToken();
         return uri;
     }
 }

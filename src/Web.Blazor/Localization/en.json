@@ -165,6 +165,26 @@
     "import.no-rows": "The workbook has no data rows below the header.",
     "import.row-limit": "The workbook contains {0} rows; the maximum is {1}.",
     "import.row-field-error": "Row {0}, {1}: {2}",
-    "import.invalid-workbook": "The workbook was rejected. Check the format and integrity of the .xlsx file."
+    "import.invalid-workbook": "The workbook was rejected. Check the format and integrity of the .xlsx file.",
+    "legal.title": "Legal entities",
+    "legal.subtitle": "Related legal entities register",
+    "legal.details": "Legal entity details",
+    "legal.name": "Name",
+    "legal.tax": "Tax number",
+    "legal.registration": "Registration number",
+    "legal.validation.name": "Enter a name of up to 100 characters.",
+    "legal.validation.tax": "Check the tax number: 13 digits with a valid check digit are required.",
+    "legal.validation.registration": "Registration number may contain up to 50 digits.",
+    "legal.search": "Search data on the displayed page",
+    "legal.page-summary": "Page {0} of {1}; total records: {2}.",
+    "legal.pages": "Legal entity pages",
+    "legal.previous": "Previous page",
+    "legal.next": "Next page",
+    "legal.page": "Page {0}",
+    "legal.delete-title": "Deactivate legal entity?",
+    "legal.delete-description": "The record will be deactivated, not permanently deleted.",
+    "legal.verify-title": "Verify legal entity?",
+    "legal.verify-description": "Confirm verification of the selected legal entity.",
+    "legal.import-help": "Choose the prescribed .xlsx template with 10 columns. The backend validates and persists data; the maximum file size is 10 MB."
   }
 }

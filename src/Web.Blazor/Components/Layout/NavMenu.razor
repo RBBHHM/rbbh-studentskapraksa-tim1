@@ -8,16 +8,20 @@
         {
             <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["person.title"]" Href="/app/physical-persons" Icon="RbiIconName.UserRound" Active="@IsActive("app/physical-persons")" /></RbiSidebarPart>
         }
+        @if (_legal)
+        {
+            <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["legal.title"]" Href="/app/legal-persons" Icon="RbiIconName.UserRound" Active="@IsActive("app/legal-persons")" /></RbiSidebarPart>
+        }
         <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["nav.profile"]" Href="/app/profile" Icon="RbiIconName.UserRound" Active="@IsActive("app/profile")" /></RbiSidebarPart>
     </RbiSidebarPart>
 </nav>
 
 @code {
-    private bool _physical;
+    private bool _physical, _legal;
     protected override async Task OnInitializedAsync()
     {
-        try { _physical = await Permissions.HasPermissionAsync("fl.read"); }
-        catch (RegistryApiException) { _physical = false; }
+        try { _physical = await Permissions.HasPermissionAsync("fl.read"); _legal = await Permissions.HasPermissionAsync("pl.read"); }
+        catch (RegistryApiException) { _physical = _legal = false; }
     }
     private bool IsActive(string path) => Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].Trim('/') == path;
 }

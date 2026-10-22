@@ -165,6 +165,26 @@
     "import.no-rows": "Datoteka nema redova podataka ispod zaglavlja.",
     "import.row-limit": "Datoteka ima {0} redova; dozvoljeno je najviše {1}.",
     "import.row-field-error": "Red {0}, {1}: {2}",
-    "import.invalid-workbook": "Excel dokument nije prihvaćen. Provjerite format i ispravnost .xlsx datoteke."
+    "import.invalid-workbook": "Excel dokument nije prihvaćen. Provjerite format i ispravnost .xlsx datoteke.",
+    "legal.title": "Pravna lica",
+    "legal.subtitle": "Registar povezanih pravnih lica",
+    "legal.details": "Podaci o pravnom licu",
+    "legal.name": "Naziv",
+    "legal.tax": "Porezni broj",
+    "legal.registration": "Matični broj",
+    "legal.validation.name": "Unesite naziv do 100 znakova.",
+    "legal.validation.tax": "Provjerite porezni broj: obavezno je 13 cifara s ispravnom kontrolnom cifrom.",
+    "legal.validation.registration": "Matični broj smije sadržavati najviše 50 cifara.",
+    "legal.search": "Pretraga podataka na prikazanoj stranici",
+    "legal.page-summary": "Stranica {0} od {1}; ukupno zapisa: {2}.",
+    "legal.pages": "Stranice pravnih lica",
+    "legal.previous": "Prethodna stranica",
+    "legal.next": "Sljedeća stranica",
+    "legal.page": "Stranica {0}",
+    "legal.delete-title": "Deaktivirati pravno lice?",
+    "legal.delete-description": "Zapis će biti deaktiviran, ne trajno obrisan.",
+    "legal.verify-title": "Verificirati pravno lice?",
+    "legal.verify-description": "Potvrdite verifikaciju odabranog pravnog lica.",
+    "legal.import-help": "Odaberite propisani .xlsx predložak s 10 kolona. Backend provjerava i snima podatke; najveća veličina datoteke je 10 MB."
   }
 }
