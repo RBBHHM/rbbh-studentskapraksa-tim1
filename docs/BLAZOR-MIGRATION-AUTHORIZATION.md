@@ -105,3 +105,15 @@ This is local authorization evidence, not a real Keycloak or SQL Server test.
 Full post-change backend regression: 210 unit + 64 integration = **274 PASS**,
 zero failures/skips. Receipts: `artifacts/migration-auth/full-trx/` and
 `artifacts/migration-baseline/backend-after-authorization.log`.
+
+## Subsequent native reporting checkpoint
+
+The native route/navigation/dashboard entry now implements the approved split,
+without a kapital.read gate on authenticated reporting read access. Backend
+profile availability controls generation only; unavailable permission lookup fails
+closed for writes but preserves archive/download access. See
+BLAZOR-MIGRATION-REPORTS-CLOSURE.md for the subsequent 392 .NET/76 browser
+checkpoint, including ordinary-user download, Kapital/Admin actual persisted
+generation, safe uncertain outcomes and no automatic generation retry. Existing
+download/export audit entries remain; read/download does not create another
+business report snapshot. Earlier totals above describe their historical checkpoint.

@@ -71,11 +71,13 @@ internal static class BrowserHostProgram
         builder.Services.AddScoped<IRelatedPersonService, RelatedPersonService>();
         builder.Services.AddScoped<ICodeListService, CodeListService>();
         builder.Services.AddScoped<IPeriodLockRepository, PeriodLockRepository>();
-        builder.Services.AddScoped<IAuditService, AuditService>();
+        builder.Services.AddScoped<AuditService>();
+        builder.Services.AddScoped<IAuditService>(services => new AuditFaults(services.GetRequiredService<AuditService>(), database));
         builder.Services.AddSingleton(Mock.Of<IEmailService>());
         builder.Services.AddScoped<ILegalEntityService, LegalEntityService>();
         builder.Services.AddScoped<ILimitService, LimitService>();
         builder.Services.AddScoped<ICapitalService, CapitalService>();
+        builder.Services.AddScoped<IReportService, ReportService>();
         builder.Services.Configure<EmailSettings>(_ => { });
         var app = builder.Build();
         app.UseExceptionHandler();
@@ -83,8 +85,11 @@ internal static class BrowserHostProgram
         {
             database.LastCulture = context.Request.Headers.AcceptLanguage.ToString();
             if ((HttpMethods.IsPost(context.Request.Method) || HttpMethods.IsPut(context.Request.Method) || HttpMethods.IsDelete(context.Request.Method)) &&
-                (context.Request.Path.StartsWithSegments("/api/related-persons") || context.Request.Path.StartsWithSegments("/api/legal-entities") || context.Request.Path.StartsWithSegments("/api/limiti") || context.Request.Path.StartsWithSegments("/api/capital"))) database.MutationAttempts++;
-            if (database.Unavailable || (database.CodebooksUnavailable && context.Request.Path.StartsWithSegments("/api/code-lists/dropdown")))
+                (context.Request.Path.StartsWithSegments("/api/related-persons") || context.Request.Path.StartsWithSegments("/api/legal-entities") || context.Request.Path.StartsWithSegments("/api/limiti") || context.Request.Path.StartsWithSegments("/api/capital") || context.Request.Path.StartsWithSegments("/api/reports"))) database.MutationAttempts++;
+            if (HttpMethods.IsPost(context.Request.Method) && context.Request.Path.StartsWithSegments("/api/reports")) database.ReportGenerationAttempts++;
+            if (database.Unavailable || (database.CodebooksUnavailable && context.Request.Path.StartsWithSegments("/api/code-lists/dropdown")) ||
+                (database.ProfileUnavailable && context.Request.Path == "/api/auth/profile") ||
+                (database.GeneratedDownloadUnavailable && context.Request.Path.StartsWithSegments("/api/reports/export/generated")))
             { context.Response.StatusCode = 503; await context.Response.WriteAsync("private-fixture-detail-not-for-ui"); return; }
             await next(context);
         });
@@ -188,6 +193,7 @@ internal static class BrowserHostProgram
                 services.RemoveAll<IProfileApi>(); services.RemoveAll<IRelatedPersonsApi>(); services.RemoveAll<ILegalEntitiesApi>();
                 services.RemoveAll<ILimitsApi>();
                 services.RemoveAll<ICapitalApi>();
+                services.RemoveAll<IReportsApi>();
                 services.AddRbiApiClient<IProfileApi, ProfileApi>("BrowserProfile", options => options.BaseUrl = new("http://backend.fixture/"))
                     .AddHttpMessageHandler<ApplicationCultureHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
@@ -203,6 +209,9 @@ internal static class BrowserHostProgram
                 services.AddRbiApiClient<ICapitalApi, CapitalApi>("BrowserCapital", options => options.BaseUrl = new("http://backend.fixture/"))
                     .AddHttpMessageHandler<ApplicationCultureHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
+                services.AddRbiApiClient<IReportsApi, ReportsApi>("BrowserReports", options => options.BaseUrl = new("http://backend.fixture/"))
+                    .AddHttpMessageHandler<ApplicationCultureHandler>()
+                    .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
             });
         }
     }
@@ -215,6 +224,17 @@ internal static class BrowserHostProgram
         public bool CodebooksUnavailable { get; set; }
         public string LastCulture { get; set; } = "";
         public int MutationAttempts { get; set; }
+        public bool ProfileUnavailable { get; set; }
+        public bool GeneratedDownloadUnavailable { get; set; }
+        public bool FailGenerationAudit { get; set; }
+        public int ReportGenerationAttempts { get; set; }
+    }
+    // Fault injection only: preserve real auditing except the explicit failure
+    // after ReportService has already persisted a snapshot, before HTTP201.
+    private sealed class AuditFaults(AuditService inner, FixtureDatabase database) : IAuditService
+    {
+        public Task LogAsync(AuditEntry entry) => database.FailGenerationAudit && entry.Action == "GENERATE"
+            ? Task.FromException(new InvalidOperationException("private-fixture-audit-failure")) : inner.LogAsync(entry);
     }
     private sealed class FixtureReset(WebApplication backend, FixtureUser user, FixtureDatabase database) : IStartupFilter
     {
@@ -256,17 +276,75 @@ internal static class BrowserHostProgram
                         await context.Response.WriteAsJsonAsync(await db.Capitals.AsNoTracking().Select(item => new { item.Id, item.RegulatoryCapital, item.CoreCapital, item.SupplementaryCapital, item.CapitalDate }).ToArrayAsync());
                         return;
                     }
+                    if (context.Request.Path == "/__fixtures/reports" && HttpMethods.IsGet(context.Request.Method))
+                    {
+                        await using var scope = backend.Services.CreateAsyncScope();
+                        var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                        await context.Response.WriteAsJsonAsync(new
+                        {
+                            attempts = database.ReportGenerationAttempts,
+                            records = await db.Reports.AsNoTracking().OrderBy(item => item.CreatedAt).Select(item => new { item.Id, item.ReportType, item.ReportDate, item.CreatedBy, item.TotalClients, item.TotalExposure, item.ClientsWithBreachedLimit, snapshotLength = item.DataSnapshot == null ? 0 : item.DataSnapshot.Length }).ToArrayAsync()
+                        });
+                        return;
+                    }
                     if (!HttpMethods.IsPost(context.Request.Method)) { context.Response.StatusCode = 404; return; }
                     switch (context.Request.Path.Value)
                     {
                         case "/__fixtures/reset":
                             // Fresh unique InMemory store; never delete an existing database.
                             database.Name = "browser-" + Guid.NewGuid(); database.Unavailable = database.CodebooksUnavailable = false;
+                            database.ProfileUnavailable = database.GeneratedDownloadUnavailable = database.FailGenerationAudit = false;
+                            database.ReportGenerationAttempts = 0;
                             database.MutationAttempts = 0;
                             await SeedAsync(backend, user); break;
                         case "/__fixtures/unavailable": database.Unavailable = true; break;
                         case "/__fixtures/available": database.Unavailable = false; break;
                         case "/__fixtures/codebooks-unavailable": database.CodebooksUnavailable = true; break;
+                        case "/__fixtures/profile-unavailable": database.ProfileUnavailable = true; break;
+                        case "/__fixtures/generated-downloads-unavailable": database.GeneratedDownloadUnavailable = true; break;
+                        case "/__fixtures/generated-downloads-available": database.GeneratedDownloadUnavailable = false; break;
+                        case "/__fixtures/generation-audit-fails": database.FailGenerationAudit = true; break;
+                        case "/__fixtures/report-reference":
+                            await using (var scope = backend.Services.CreateAsyncScope())
+                            {
+                                var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                                var entity = await db.LegalEntities.FirstAsync();
+                                db.ClientLimits.Add(new RBBH.ConnectedParties.DL.Entities.Report.ClientLimit
+                                {
+                                    LegalEntityId = entity.Id,
+                                    CurrentExposure = 125.5m,
+                                    ExposureLimit = 100m,
+                                    IsLimitBreached = true,
+                                    RegulatoryCapital = 1000m,
+                                    CoreCapital = 500m,
+                                    CreatedBy = "fixture"
+                                });
+                                // Separate current export contract uses Limiti, as in
+                                // the unchanged backend. Do not replace its dataset.
+                                db.Limiti.Add(new RBBH.ConnectedParties.DL.Entities.Limiti.Limit { LegalEntityId = entity.Id, TipLimita = "REG", OdobreniLimit = 100m, CreatedBy = "fixture" });
+                                await db.SaveChangesAsync();
+                            }
+                            break;
+                        case "/__fixtures/report-existing":
+                            await using (var scope = backend.Services.CreateAsyncScope())
+                                await scope.ServiceProvider.GetRequiredService<IReportService>().GenerateDailyReportAsync("fixture-author");
+                            break;
+                        case "/__fixtures/reports-pages":
+                            await using (var scope = backend.Services.CreateAsyncScope())
+                            {
+                                var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                                for (var index = 0; index < 101; index++) db.Reports.Add(new RBBH.ConnectedParties.DL.Entities.Report.Report
+                                {
+                                    ReportType = "DAILY",
+                                    ReportDate = DateTime.UtcNow.Date.AddDays(-index),
+                                    CreatedAt = DateTime.UtcNow.AddMinutes(-index),
+                                    CreatedBy = $"fixture-page-{index:D3}",
+                                    DataSnapshot = "[]",
+                                    IsActive = true
+                                });
+                                await db.SaveChangesAsync();
+                            }
+                            break;
                         case "/__fixtures/limit-reference":
                             await using (var scope = backend.Services.CreateAsyncScope())
                             {
