@@ -39,6 +39,7 @@ public sealed class DevelopmentAuthenticationHandler : AuthenticationHandler<Dev
             new("name", "Lokalni razvojni korisnik"),
             new("preferred_username", "admin1"),
             new(ClaimTypes.Email, "admin@localhost"),
+            new("email_verified", "true"),
         };
 
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, SchemeName));

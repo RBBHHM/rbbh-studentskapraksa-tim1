@@ -168,7 +168,7 @@ public sealed class UnlockResponseHttpTests : IAsyncLifetime
         protected override Task<AuthenticateResult> HandleAuthenticateAsync() => Task.FromResult(AuthenticateResult.Success(new(
             new ClaimsPrincipal(new ClaimsIdentity([
                 new Claim(ClaimTypes.Email, Request.Headers.ContainsKey("X-Test-Unmapped") ? "ordinary@example.test" : "period-fixture@example.test"),
-                new Claim(ClaimTypes.Name, "period-fixture"), new Claim(ClaimTypes.Role, "admin"),
+                new Claim("email_verified", "true"), new Claim(ClaimTypes.Name, "period-fixture"), new Claim(ClaimTypes.Role, "admin"),
                 new Claim("permission", ApplicationPermissions.CapitalCreate), new Claim("rct_done", "1")
             ], "PeriodFixture")), "PeriodFixture")));
     }

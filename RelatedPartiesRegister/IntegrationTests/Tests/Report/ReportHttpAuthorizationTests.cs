@@ -67,6 +67,8 @@ public sealed class ReportHttpAuthorizationTests : IAsyncLifetime
             db.AppUsers.Add(user);
             db.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = role.Id });
         }
+        // Known active user with no explicit functional role: Guest baseline.
+        db.AppUsers.Add(new AppUser { Email = "ordinary@example.test", Username = "ordinary", KeycloakId = Guid.NewGuid().ToString() });
         await db.SaveChangesAsync();
         _existingReport = (await scope.ServiceProvider.GetRequiredService<IReportService>()
             .GenerateDailyReportAsync("existing-author")).Id;
@@ -84,6 +86,21 @@ public sealed class ReportHttpAuthorizationTests : IAsyncLifetime
         Assert.Equal(new byte[] { 0x50, 0x4b }, (await download.Content.ReadAsByteArrayAsync()).Take(2).ToArray());
         Assert.Equal(HttpStatusCode.Forbidden, (await _client.PostAsJsonAsync("/api/reports/daily", new { })).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await _client.PostAsJsonAsync($"/api/reports/monthly/{DateTime.UtcNow.Year}/3", new { })).StatusCode);
+        await AssertStoredCountAsync(1);
+    }
+
+    [Theory]
+    [InlineData("GET", "/api/reports/daily")]
+    [InlineData("GET", "/api/reports/monthly")]
+    [InlineData("GET", "/api/reports/export/all-clients")]
+    [InlineData("POST", "/api/reports/daily")]
+    public async Task AuthenticatedIdentityWithoutApplicationUserCannotReadDownloadOrGenerate(string method, string path)
+    {
+        _client.DefaultRequestHeaders.Add("X-Test-Identity", "stranger@example.test");
+        var response = method == "GET" ? await _client.GetAsync(path) : await _client.PostAsJsonAsync(path, new { });
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        var download = await _client.GetAsync($"/api/reports/export/generated/{_existingReport}");
+        Assert.Equal(HttpStatusCode.Forbidden, download.StatusCode);
         await AssertStoredCountAsync(1);
     }
 
@@ -156,7 +173,7 @@ public sealed class ReportHttpAuthorizationTests : IAsyncLifetime
         {
             var email = Request.Headers["X-Test-Identity"].ToString();
             if (email.Length == 0) return Task.FromResult(AuthenticateResult.NoResult());
-            var claims = new List<Claim> { new(ClaimTypes.Email, email), new(ClaimTypes.Name, email) };
+            var claims = new List<Claim> { new(ClaimTypes.Email, email), new("email_verified", "true"), new(ClaimTypes.Name, email) };
             if (Request.Headers.ContainsKey("X-Test-Untrusted-Grants"))
             {
                 claims.Add(new Claim(ClaimTypes.Role, ApplicationAccessRoles.Administrator));

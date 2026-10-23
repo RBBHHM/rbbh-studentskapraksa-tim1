@@ -93,7 +93,8 @@ public sealed class ApplicationAuthorizationPolicyTests
     {
         var permissions = RolePermissionMatrix.Resolve(roles);
         return new ClaimsPrincipal(new ClaimsIdentity(
-            permissions.Select(permission => new Claim("permission", permission)), "Test"));
+            permissions.Select(permission => new Claim("permission", permission))
+                .Append(new Claim(ClaimTypes.Role, ApplicationAccessRoles.Guest)), "Test"));
     }
 
     private async Task AssertAllowed(ClaimsPrincipal principal, params string[] policies)

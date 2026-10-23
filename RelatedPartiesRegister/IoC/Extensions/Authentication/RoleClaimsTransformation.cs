@@ -29,25 +29,25 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
                     source.RemoveClaim(claim);
             }
             identity ??= new ClaimsIdentity { Label = ApplicationIdentityLabel };
-            identity.AddClaim(new Claim(ClaimTypes.Role, ApplicationAccessRoles.Guest));
 
-            var email = principal.FindFirst(ClaimTypes.Email)?.Value
-                ?? principal.FindFirst("email")?.Value;
-            var roles = new List<string>();
-            if (!string.IsNullOrWhiteSpace(email))
+            // Only a known, active AppUser receives application access (Guest included).
+            // An authenticated identity without an AppUser gets no business grants.
+            var user = await ResolveApplicationUserAsync(principal);
+            if (user is null)
             {
-                var normalizedEmail = email.Trim().ToLower();
-                roles = await db.AppUsers
-                    .Where(user => user.IsActive && user.Email.ToLower() == normalizedEmail)
-                    .Join(db.UserRoles.Where(userRole => userRole.IsActive), user => user.Id, userRole => userRole.UserId, (user, userRole) => userRole)
-                    .Join(db.Roles.Where(role => role.IsActive), userRole => userRole.RoleId, role => role.Id, (userRole, role) => role.Name)
-                    .Where(role => ApplicationAccessRoles.All.Contains(role))
-                    .Distinct()
-                    .ToListAsync();
-
-                foreach (var role in roles)
-                    identity.AddClaim(new Claim(ClaimTypes.Role, role));
+                if (addIdentity)
+                    principal.AddIdentity(identity);
+                return principal;
             }
+
+            identity.AddClaim(new Claim(ClaimTypes.Role, ApplicationAccessRoles.Guest));
+            var roles = await db.UserRoles.Where(userRole => userRole.IsActive && userRole.UserId == user.Id)
+                .Join(db.Roles.Where(role => role.IsActive), userRole => userRole.RoleId, role => role.Id, (userRole, role) => role.Name)
+                .Where(role => ApplicationAccessRoles.All.Contains(role))
+                .Distinct()
+                .ToListAsync();
+            foreach (var role in roles)
+                identity.AddClaim(new Claim(ClaimTypes.Role, role));
 
             var effectiveRoleNames = roles
                 .Append(ApplicationAccessRoles.Guest)
@@ -68,5 +68,37 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
                 principal.AddIdentity(identity);
             return principal;
         }
+
+        // Stable binding is the Keycloak subject. Email is only a bootstrap fallback
+        // for accounts not yet bound to a subject, and only when the provider says it
+        // is verified and exactly one active account matches the normalized address.
+        private async Task<DL.Entities.Users.AppUser?> ResolveApplicationUserAsync(ClaimsPrincipal principal)
+        {
+            var subject = (principal.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? principal.FindFirst("sub")?.Value)?.Trim();
+            if (!string.IsNullOrEmpty(subject))
+            {
+                var bound = await db.AppUsers.IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(user => user.KeycloakId == subject);
+                // A subject that belongs to an account is final: no email fallback,
+                // and an inactive account yields no access.
+                if (bound is not null)
+                    return bound.IsActive ? bound : null;
+            }
+
+            var email = (principal.FindFirst(ClaimTypes.Email)?.Value ?? principal.FindFirst("email")?.Value)?.Trim();
+            if (string.IsNullOrEmpty(email) || !IsEmailVerified(principal))
+                return null;
+
+            var normalizedEmail = email.ToLower();
+            var matches = await db.AppUsers
+                .Where(user => user.IsActive && user.Email.ToLower() == normalizedEmail)
+                .Take(2)
+                .ToListAsync();
+            return matches.Count == 1 ? matches[0] : null;
+        }
+
+        private static bool IsEmailVerified(ClaimsPrincipal principal) =>
+            principal.FindAll("email_verified").Any(claim => bool.TryParse(claim.Value, out var verified) && verified);
     }
 }

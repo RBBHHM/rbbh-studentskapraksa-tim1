@@ -106,6 +106,6 @@ public sealed class LegalEntityHttpValidationTests : IAsyncLifetime
         : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
     {
         protected override Task<AuthenticateResult> HandleAuthenticateAsync() => Task.FromResult(AuthenticateResult.Success(new(
-            new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.Email, "pl@example.test"), new Claim(ClaimTypes.Name, "fixture")], "LegalFixture")), "LegalFixture")));
+            new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.Email, "pl@example.test"), new Claim("email_verified", "true"), new Claim(ClaimTypes.Name, "fixture")], "LegalFixture")), "LegalFixture")));
     }
 }

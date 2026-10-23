@@ -314,8 +314,27 @@ public sealed class UsersSafetyHttpTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task UnverifiedEmailOfAnAdminCannotBindToThatAccount()
+    {
+        // Unknown subject + the admin's exact email, but not verified by the provider.
+        _client.DefaultRequestHeaders.Add("X-Test-Subject", Guid.NewGuid().ToString());
+        _client.DefaultRequestHeaders.Add("X-Test-Unverified-Email", "true");
+        Assert.Equal(HttpStatusCode.Forbidden, (await _client.GetAsync("/api/users")).StatusCode);
+    }
+
+    [Fact]
+    public async Task SubjectBindingWinsOverAForeignEmail()
+    {
+        // The stable subject of the admin account stays the admin even when the
+        // token carries another (verified) address; email is not the primary key.
+        _client.DefaultRequestHeaders.Add("X-Test-Email", "someone.else@example.test");
+        Assert.Equal(HttpStatusCode.OK, (await _client.GetAsync("/api/users")).StatusCode);
+    }
+
+    [Fact]
     public async Task UnmappedIdentityCannotAcquireAdministrationFromProviderClaims()
     {
+        _client.DefaultRequestHeaders.Add("X-Test-Subject", Guid.NewGuid().ToString());
         _client.DefaultRequestHeaders.Add("X-Test-Email", "ordinary@example.test");
         _client.DefaultRequestHeaders.Add("X-Test-Forge", "true");
         Assert.Equal(HttpStatusCode.Forbidden, (await Mutate(_client, _localId, "empty")).StatusCode);
@@ -388,6 +407,8 @@ public sealed class UsersSafetyHttpTests : IAsyncLifetime
                 new(raw ? "sub" : ClaimTypes.NameIdentifier, subject),
                 new(raw ? "email" : ClaimTypes.Email, Request.Headers["X-Test-Email"].FirstOrDefault() ?? Email), new(ClaimTypes.Name, "admin-fixture")
             };
+            if (!Request.Headers.ContainsKey("X-Test-Unverified-Email"))
+                claims.Add(new("email_verified", "true"));
             if (Request.Headers.ContainsKey("X-Test-Forge"))
                 claims.AddRange([new(ClaimTypes.Role, ApplicationAccessRoles.Administrator), new("permission", ApplicationPermissions.AdministrationManage), new("rct_done", "1")]);
             return Task.FromResult(AuthenticateResult.Success(new(new ClaimsPrincipal(new ClaimsIdentity(claims, "UsersFixture")), "UsersFixture")));

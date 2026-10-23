@@ -175,9 +175,12 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
                 AddPermissionPolicy(options, ApplicationPolicies.CapitalEdit, ApplicationPermissions.CapitalEdit);
                 AddPermissionPolicy(options, ApplicationPolicies.CapitalDelete, ApplicationPermissions.CapitalDelete);
                 // Reporting exception approved for this application: reading/downloading
-                // is authenticated access; generating persists a snapshot and requires
-                // the existing database-owned Kapital/Admin create permission.
-                options.AddPolicy(ApplicationPolicies.ReportsRead, policy => policy.RequireAuthenticatedUser());
+                // is open to every known application user (Guest baseline is granted only
+                // to an active AppUser, never to an unknown identity); generating persists
+                // a snapshot and requires the database-owned Kapital/Admin create permission.
+                options.AddPolicy(ApplicationPolicies.ReportsRead, policy => policy
+                    .RequireAuthenticatedUser()
+                    .RequireRole(ApplicationAccessRoles.Guest));
                 AddPermissionPolicy(options, ApplicationPolicies.ReportsGenerate, ApplicationPermissions.CapitalCreate);
                 AddPermissionPolicy(options, ApplicationPolicies.LimitsRead, ApplicationPermissions.LimitsView);
                 AddWritePolicy(options, ApplicationPolicies.LimitsWrite, ApplicationPermissions.LimitsCreate, ApplicationPermissions.LimitsEdit, ApplicationPermissions.LimitsDelete);
