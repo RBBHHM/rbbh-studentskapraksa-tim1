@@ -128,3 +128,29 @@ authorized user operations retain their existing meaning. SQL API replicas share
 a transaction-owned lock around validation, mutation and audit; local InMemory
 fixtures use an async gate. See BLAZOR-MIGRATION-USERS-SAFETY-BLOCKER.md for the
 resolved finding, HTTP/concurrency evidence and the outstanding live SQL gate.
+
+## Final local six-role HTTP matrix — 2026-10-23
+
+`authorization-matrix.spec.ts` runs once for each current DB role through actual
+protected controllers/claims transformation, with forged provider Admin claims.
+Forbidden writes must return403; authorized invalid probes reach400/404 business
+validation without a write/audit. Positive module specs independently verify
+successful mutations and persistence. This supplements, not replaces, the
+reporting/user safety HTTP tests and real SSO/SQL acceptance.
+
+| DB role | Read/download | Physical writes | Legal writes | Limits writes | Capital / report generate / period API writes | Users / code-list writes; users / audit reads |
+|---|---|---|---|---|---|---|
+| gost | yes, existing DB baseline | no | no | no | no | no |
+| FL | yes | yes | no | no | no | no |
+| PL | yes | no | yes | no | no | no |
+| limiti | yes | no | no | yes | no | no |
+| kapital | yes | no | no | no | yes | no |
+| admin | yes | yes | yes | yes | yes | yes |
+
+All four native Admin routes retain the narrower existing Admin UI guard, including
+Period. A Kapital period API permission does not silently grant that Admin page.
+Reporting read/download itself only requires authentication; the table's other
+read access is the current DB baseline, not an unconditional policy rewrite.
+Receipts: completion-matrix-{admin,gost,kapital,PL,limiti,FL}.log, 6/6 PASS.
+Earlier test totals and dependency warnings above are historical; current security
+remediation is in BLAZOR-MIGRATION-COMPLETION-SECURITY.md.

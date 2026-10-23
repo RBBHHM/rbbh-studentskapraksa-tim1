@@ -348,6 +348,34 @@ internal static class BrowserHostProgram
                         using var import = await client.PostAsync("/api/code-lists/MigrationCodes/import?dryRun=false", form);
                         await context.Response.WriteAsJsonAsync(new { read = (int)read.StatusCode, writes = new[] { (int)category.StatusCode, (int)create.StatusCode, (int)update.StatusCode, (int)delete.StatusCode, (int)deleteCategory.StatusCode, (int)import.StatusCode } }); return;
                     }
+                    if (context.Request.Path == "/__fixtures/authorization-matrix" && HttpMethods.IsPost(context.Request.Method))
+                    {
+                        using var client = backend.GetTestClient();
+                        var results = new Dictionary<string, int>();
+                        // Invalid business input must reach validation only for
+                        // authorized roles. It must never create a real record.
+                        foreach (var (key, path, body) in new (string, string, object)[]
+                        {
+                            ("physical", "/api/related-persons", new { }),
+                            ("legal", "/api/legal-entities", new { }),
+                            ("limits", "/api/limiti", new { }),
+                            ("users", "/api/users", new { }),
+                            ("codes", "/api/code-lists", new { }),
+                            ("period", $"/api/period-lock/unlock-requests/{Guid.Empty}/respond", new { message = "123456789" }),
+                            ("generate", "/api/reports/monthly/1/0", new { })
+                        })
+                        {
+                            using var response = await client.PostAsJsonAsync(path, body);
+                            results[key] = (int)response.StatusCode;
+                        }
+                        using var capital = await client.PutAsJsonAsync("/api/capital", new { regulatoryCapital = -1, coreCapital = -1, supplementaryCapital = -1, capitalDate = "2026-01-01" });
+                        results["capital"] = (int)capital.StatusCode;
+                        foreach (var (key, path) in new[] { ("reportRead", "/api/reports/daily"), ("periodRead", "/api/period-lock/current"), ("codesRead", "/api/code-lists"), ("usersRead", "/api/users"), ("auditRead", "/api/audit-logs") })
+                        {
+                            using var response = await client.GetAsync(path); results[key] = (int)response.StatusCode;
+                        }
+                        await context.Response.WriteAsJsonAsync(results); return;
+                    }
                     if (context.Request.Path == "/__fixtures/period-response" && HttpMethods.IsPost(context.Request.Method))
                     {
                         var input = await context.Request.ReadFromJsonAsync<PeriodResponseFixture>();
