@@ -378,8 +378,11 @@ public class PeriodLockController(
         [FromRoute] Guid id,
         [FromBody] RespondDto dto)
     {
-        if (dto is null || string.IsNullOrWhiteSpace(dto.Message) || dto.Message.Length < 10)
-            return BadRequest(Err("Odgovor je obavezan (min. 10 karaktera).", "message"));
+        // Keep the existing ten-character prefix and nvarchar(500) storage.
+        // Reject excess input, never truncate it to make persistence succeed.
+        if (dto is null || string.IsNullOrWhiteSpace(dto.Message)
+            || dto.Message.Length > 490 || dto.Message.Trim().Length < 10)
+            return BadRequest(Err("Dopuna mora sadržavati od 10 do 490 znakova.", "message"));
 
         var original = await unlockRequestRepository.GetByIdAsync(id);
         if (original is null)
