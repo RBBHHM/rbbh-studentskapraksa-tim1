@@ -240,6 +240,14 @@ async function beginNonresident(page: import("@playwright/test").Page, name: str
   await dialog.getByLabel("Rezidentnost", { exact: false }).selectOption("2");
   await dialog.getByLabel("Broj pasoša", { exact: false }).fill(passport);
   await dialog.getByLabel("FBA ID", { exact: false }).fill(fba);
+  // Finish real blur-triggered validation before callers activate Continue.
+  // Hold/release only the test server's final FBA lookup, never fake its result.
+  const headers = { "X-Fixture-Control": "true" };
+  await page.request.post("/__fixtures/duplicates-hold", { headers });
+  await dialog.getByLabel("FBA ID", { exact: false }).press("Tab");
+  await expect(dialog.getByRole("button", { name: "Nastavi", exact: true })).toBeDisabled();
+  await page.request.post("/__fixtures/duplicates-release", { headers });
+  await expect(dialog.getByRole("button", { name: "Nastavi", exact: true })).toBeEnabled();
   return dialog;
 }
 async function finishBusiness(dialog: import("@playwright/test").Locator) {

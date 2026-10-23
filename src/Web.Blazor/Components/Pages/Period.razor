@@ -1,0 +1,133 @@
+@page "/app/admin/period"
+@using RBI.DesignSystem.Components.Forms
+@using RBBH.RelatedPartiesRegister.Web.Components.Registry
+@implements IDisposable
+@inject AuthenticationStateProvider AuthenticationState
+@inject IProfileApi Profile
+@inject IPeriodApi Api
+
+<PageTitle>@T["period.title"]</PageTitle>
+<HeroBar Title="@T["period.title"]" Description="@T["period.subtitle"]" />
+@if (!_authenticated && !_loading) { <IdentityNotice /> }
+else if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
+else if (_error is not null) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_error]" /><RbiButton OnClick="LoadAsync">@T["state.retry"]</RbiButton> }
+else if (!_canRead) { <RbiAlert Title="@T["errors.forbidden"]" /> }
+else if (_current is { } current)
+{
+    @if (_notice) { <div role="status"><RbiAlert Title="@T["common.saved"]" /></div> }
+    <RbiCard Title="@T[current.IsLocked ? "period.locked" : "period.open"]">
+        <ChildContent><p>@current.Year / @current.Month</p><p>@current.LockedBy @current.LockedAt?.ToString("g")</p></ChildContent>
+        <Footer><div class="registry-toolbar"><RbiButton Disabled="_busy" Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Secondary">@T["common.refresh"]</RbiButton>
+            @if (_canWrite) { <RbiButton Disabled="@(_busy || _refreshing)" OnClick="ToggleAsync">@T[current.IsLocked ? "period.unlock" : "period.lock"]</RbiButton> }
+        </div></Footer>
+    </RbiCard>
+    @if (_canWrite && current.IsLocked)
+    {
+        <PeriodNoteForm @key="_requestDraft" Model="_requestDraft" LabelKey="period.reason" SubmitKey="period.send" ShowCancel="false" Save="RequestAsync" />
+    }
+    <h2>@T["period.requests"]</h2>
+    <label for="period-status">@T["users.status"]</label>
+    <RbiSelect TValue="string" Id="period-status" @bind-Value="_status" @bind-Value:after="StatusChangedAsync" Disabled="@(_busy || _refreshing)">
+        <option value="">@T["period.all"]</option>@foreach (var status in Statuses) { <option value="@status">@StatusLabel(status)</option> }
+    </RbiSelect>
+    @if (_requests.Requests.Count == 0) { <RbiText>@T["period.empty"]</RbiText> }
+    else
+    {
+        <RbiTable AccessibleLabel="@T["period.requests"]" Class="registry-period-table"><caption>@T["period.requests"]</caption>
+            <thead><tr><th scope="col">@T["period.requester"]</th><th scope="col">@T["period.period"]</th><th scope="col">@T["period.reason"]</th><th scope="col">@T["users.status"]</th><th scope="col">@T["period.note"]</th>@if (_canWrite) { <th scope="col">@T["users.actions"]</th> }</tr></thead>
+            <tbody>@foreach (var item in _requests.Requests)
+            {
+                <tr @key="item.Id"><td>@item.RequestedBy</td><td>@item.Month/@item.Year</td><td>@item.Reason</td><td>@StatusLabel(item.Status)</td><td>@item.AdminNote</td>
+                    @if (_canWrite) { <td><div class="registry-toolbar">
+                        @if (item.Status == "PENDING")
+                        {
+                            <RbiButton Disabled="@(_busy || _refreshing)" OnClick="() => ApproveAsync(item)">@T["period.approve"]</RbiButton>
+                            <RbiButton Disabled="@(_busy || _refreshing)" OnClick="() => Edit(item, PeriodNoteKind.Reject)" Variant="RbiButtonVariant.Secondary">@T["period.reject"]</RbiButton>
+                            <RbiButton Disabled="@(_busy || _refreshing)" OnClick="() => Edit(item, PeriodNoteKind.RequestInfo)" Variant="RbiButtonVariant.Secondary">@T["period.request-info"]</RbiButton>
+                        }
+                        @if (item.Status == "NEEDS_INFO") { <RbiButton Disabled="@(_busy || _refreshing)" OnClick="() => Edit(item, PeriodNoteKind.Response)">@T["period.respond"]</RbiButton> }
+                    </div></td> }
+                </tr>
+            }</tbody>
+        </RbiTable>
+    }
+    <p role="status">@T.Format("legal.page-summary", _page, TotalPages, _requests.Total)</p>
+    <RbiPagination CurrentPage="_page" CurrentPageChanged="ChangePageAsync" TotalPages="TotalPages" AccessibleLabel="@T["period.pages"]" PreviousLabel="@T["common.back"]" PreviousAccessibleLabel="@T["legal.previous"]" NextLabel="@T["common.actions.continue"]" NextAccessibleLabel="@T["legal.next"]" PageAccessibleLabel="@(page => T.Format("legal.page", page))" />
+}
+@if (_draft is { } draft)
+{
+    <RbiDialog Open Class="registry-period-dialog" Title="@T[draft.Kind == PeriodNoteKind.Response ? "period.response" : "period.note"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseEditor">
+        <DialogBody><PeriodNoteForm @key="draft" Model="draft" LabelKey="@(draft.Kind == PeriodNoteKind.Response ? "period.response" : "period.note")" Save="SaveNoteAsync" Cancel="() => CloseEditor(false)" /></DialogBody>
+    </RbiDialog>
+}
+@code {
+    private static readonly string[] Statuses = ["PENDING", "NEEDS_INFO", "APPROVED", "REJECTED"];
+    private readonly CancellationTokenSource _lifetime = new();
+    private readonly CancellationToken _token;
+    public Period() => _token = _lifetime.Token;
+    private PeriodState? _current;
+    private UnlockRequestsPage _requests = new([], 0, 1, 100);
+    private PeriodNoteDraft _requestDraft = new();
+    private PeriodNoteDraft? _draft;
+    private UnlockRequestRecord? _target;
+    private string _status = "";
+    private string? _error;
+    private int _page = 1;
+    private bool _disposed, _authenticated, _canRead, _canWrite, _busy, _loading = true, _refreshing, _loaded, _notice;
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling(_requests.Total / 100d));
+    private string StatusLabel(string status) => Statuses.Contains(status) ? T["period.status." + status.ToLowerInvariant().Replace('_', '-')] : status;
+    protected override Task OnInitializedAsync() => LoadAsync();
+    private async Task LoadAsync()
+    {
+        if (_disposed || _refreshing) return; _loading = !_loaded; _refreshing = true; _error = null;
+        try
+        {
+            _authenticated = (await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true;
+            if (!_authenticated) return;
+            var profile = await Profile.GetAsync(_token);
+            _canRead = ApplicationAccess.IsAdministrator(profile) && profile.Permissions.Contains("KAPITAL_VIEW");
+            _canWrite = _canRead && profile.Permissions.Any(code => code is "KAPITAL_CREATE" or "KAPITAL_EDIT" or "KAPITAL_DELETE");
+            if (!_canRead) return;
+            _current = await Api.CurrentAsync(_token); _requests = await Api.RequestsAsync(_status, _page, _token);
+            if (_page > TotalPages) { _page = TotalPages; _requests = await Api.RequestsAsync(_status, _page, _token); }
+            _loaded = true;
+        }
+        catch (RegistryApiException exception) { _error = exception.MessageKey; }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally { _loading = _refreshing = false; }
+    }
+    private async Task MutateAsync(Func<Task> action)
+    {
+        if (!_canWrite || _busy || _refreshing) return; _busy = true;
+        try { await action(); _notice = true; await LoadAsync(); }
+        catch (RegistryApiException exception) { _error = exception.StatusCode is null || (int)exception.StatusCode >= 500 ? "period.uncertain" : exception.MessageKey; }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally { _busy = false; }
+    }
+    private Task ToggleAsync() => _current is { } current ? MutateAsync(() => Api.SetLockedAsync(!current.IsLocked, token: _token)) : Task.CompletedTask;
+    private Task ApproveAsync(UnlockRequestRecord item) => MutateAsync(() => Api.SetLockedAsync(false, item.Year, item.Month, _token));
+    private async Task RequestAsync(string reason)
+    {
+        if (!_canWrite || _current is not { IsLocked: true } current) throw new RegistryApiException(System.Net.HttpStatusCode.Forbidden);
+        if (_busy) return; _busy = true;
+        try { await Api.RequestUnlockAsync(current.Year, current.Month, reason, _token); _notice = true; _requestDraft = new(); await LoadAsync(); }
+        finally { _busy = false; }
+    }
+    private void Edit(UnlockRequestRecord item, PeriodNoteKind kind) { if (_canWrite && !_busy && !_refreshing) { _target = item; _draft = new() { Kind = kind }; } }
+    private void CloseEditor(bool open) { if (!open && !_busy) { _draft = null; _target = null; } }
+    private async Task SaveNoteAsync(string text)
+    {
+        if (!_canWrite || _target is not { } target || _draft is not { } draft) throw new RegistryApiException(System.Net.HttpStatusCode.Forbidden);
+        if (_busy) return; _busy = true;
+        try
+        {
+            if (draft.Kind == PeriodNoteKind.Response) await Api.RespondAsync(target.Id, text, _token);
+            else await Api.ProcessAsync(target.Id, draft.Kind == PeriodNoteKind.Reject, text, _token);
+            _notice = true; _draft = null; _target = null; await LoadAsync();
+        }
+        finally { _busy = false; }
+    }
+    private async Task StatusChangedAsync() { _page = 1; await LoadAsync(); }
+    private async Task ChangePageAsync(int page) { if (_busy || _refreshing || page < 1 || page > TotalPages) return; _page = page; await LoadAsync(); }
+    public void Dispose() { _disposed = true; _lifetime.Cancel(); _lifetime.Dispose(); }
+}

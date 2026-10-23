@@ -19,7 +19,7 @@ BLAZOR-MIGRATION-AUTHORIZATION.md for identity/application permission separation
 | `/app/capital` | optional singleton read/upsert/export → native module | capital | KAPITAL_VIEW / EDIT | capital closure:12 added frontend tests,7 Kapital+7 Admin browser cases,1 Guest case | PARITY |
 | `/app/reports` | archive/generate/download → native reporting module | reports | authenticated read; DB KAPITAL_CREATE generate/persist | reports closure:15 added frontend tests,9 Kapital+9 Admin+2 Guest browser cases; backend12 HTTP preserved | PARITY |
 | `/app/notifications` | email log → native recorded-notification list | email-log | DB KAPITAL_VIEW | notifications closure:6 browser cases × 6 current DB roles, no SMTP delivery claim or HTML rendering | PARITY |
-| `/app/admin/period` | lock/request/process/respond → native period workflow | period-lock | existing Admin route + CapitalWrite API | PERIOD-RESPONSE-BLOCKER:source-valid491..500-character response becomes501..510 for SQL500; business decision required | BLOCKED |
+| `/app/admin/period` | lock/request/process/respond → native period workflow | period-lock | existing DB Admin UI route + unchanged CapitalRead/Write API | period closure:12 Admin browser cases +5-role denial,21 focused period tests; approved10..490 response limit | PARITY |
 | `/app/admin/users` | functional role/user administration → native module | users, roles | existing DB Admin route + ADMINISTRATION_* | users closure:9 Admin browser cases +5-role forged denial, create/multi-role/state/delete and28 HTTP safety regressions | PARITY |
 | `/app/admin/code-lists` | category/value CRUD/import → native module | code-lists | existing Admin route, ADMINISTRATION_MANAGE mutations | pending tests | NOT_STARTED |
 | `/app/admin/audit` | actual business audit → native table/filter/paging | audit-logs | exact admin from current DB profile | audit closure:5 Admin browser cases + denied/forged-claim coverage for5 other DB roles; real AuditService metadata/paging | PARITY |
@@ -49,10 +49,11 @@ and 435 total .NET tests PASS at that checkpoint. Its original 2 FAIL/1 PASS
 discovery remains historical evidence. Native Users follows in
 BLAZOR-MIGRATION-USERS-CLOSURE.md (450 .NET/141 browser), including safe native
 confirmations, multi-role workflows and current DB authorization.
-A subsequent period clarification discovery is documented in
-BLAZOR-MIGRATION-PERIOD-RESPONSE-BLOCKER.md:1 control PASS/2 storage-invariant
-FAIL. These uncommitted discovery cases are not part of the accepted 450-test
-Users checkpoint. No native period workflow or storage-policy change is claimed.
+The subsequent period clarification red discovery (1 PASS/2 FAIL) is historical
+evidence in BLAZOR-MIGRATION-PERIOD-RESPONSE-BLOCKER.md, now RESOLVED under the
+approved10..490 rule. BLAZOR-MIGRATION-PERIOD-CLOSURE.md records the native
+period checkpoint (478 .NET/158 browser). Code-list/guide and environment gates
+remain open; the red discovery is no longer an uncommitted failing test.
 Real SQL/SSO/OCP parity is not claimed.
 
 ## Required end-to-end closure ledger
@@ -78,9 +79,9 @@ may be weakened to manufacture completion.
 | 13 | create/edit/delete limit | limits | PARITY: real integer-ID CRUD, search/form-data, zero/null/negative amounts, filtered XLSX and permanent-delete confirmation |
 | 14 | capital view/upsert authorization | capital | PARITY: unset/null contract, real stable singleton upsert, Kapital/Admin write and Guest read/export |
 | 15 | reports read/download vs authorized generation | reports | PARITY: Guest existing archive/files with no generation; Kapital/Admin persisted daily/monthly, no automatic POST retry, failed-download and uncertain-save recovery |
-| 16 | lock period | admin/period | NOT_STARTED |
-| 17 | request unlock | admin/period | NOT_STARTED |
-| 18 | process/respond to unlock request | admin/period | BLOCKED:response prefix exceeds SQL500 for source-valid491..500-character text; approval needed before changing input/storage contract |
+| 16 | lock period | admin/period | PARITY:real current lock/unlock and audit, no fabricated open fallback |
+| 17 | request unlock | admin/period | PARITY:real PENDING record and current backend period values |
+| 18 | process/respond to unlock request | admin/period | PARITY:reject/info/respond/new PENDING/approve and audit; approved10..490 boundaries with unchanged prefix/schema |
 | 19 | notifications/provider empty state | notifications | PARITY: recorded rows, safe body search and explicit SMTP empty-state semantics across all6 DB roles |
 | 20 | create user | admin/users | PARITY: real local backend create/reload, corporate-domain/required validation and duplicate rejection; integrated Keycloak lookup gate remains |
 | 21 | assign functional permissions via roles | admin/users | PARITY: actual catalog GUIDs, multiple roles, replacement and non-final empty-role/Guest removal |

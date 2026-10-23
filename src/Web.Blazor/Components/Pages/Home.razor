@@ -46,6 +46,7 @@
             }
             @if (_admin)
             {
+                <RbiCard Title="@T["period.title"]"><ChildContent><RbiText>@T["period.subtitle"]</RbiText></ChildContent><Footer><RbiButton Href="/app/admin/period">@T["period.title"]</RbiButton></Footer></RbiCard>
                 <RbiCard Title="@T["users.title"]"><ChildContent><RbiText>@T["users.subtitle"]</RbiText></ChildContent><Footer><RbiButton Href="/app/admin/users">@T["users.title"]</RbiButton></Footer></RbiCard>
                 <RbiCard Title="@T["audit.title"]"><ChildContent><RbiText>@T["audit.subtitle"]</RbiText></ChildContent><Footer><RbiButton Href="/app/admin/audit">@T["audit.title"]</RbiButton></Footer></RbiCard>
             }

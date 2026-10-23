@@ -22,6 +22,7 @@ public static class AppApi
             services.AddScoped<INotificationsApi, UnconfiguredNotificationsApi>();
             services.AddScoped<IAuditApi, UnconfiguredAuditApi>();
             services.AddScoped<IUsersApi, UnconfiguredUsersApi>();
+            services.AddScoped<IPeriodApi, UnconfiguredPeriodApi>();
             return null;
         }
         if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) ||
@@ -44,6 +45,7 @@ public static class AppApi
             services.AddScoped<INotificationsApi, UnconfiguredNotificationsApi>();
             services.AddScoped<IAuditApi, UnconfiguredAuditApi>();
             services.AddScoped<IUsersApi, UnconfiguredUsersApi>();
+            services.AddScoped<IPeriodApi, UnconfiguredPeriodApi>();
             return uri;
         }
 
@@ -104,6 +106,11 @@ public static class AppApi
         audit.AddHttpMessageHandler<ApplicationCultureHandler>();
         audit.AddRbiUserAccessToken();
         services.AddRbiApiClient<IUsersApi, UsersApi>("Users", options =>
+        {
+            options.BaseUrl = uri;
+            options.Timeout = TimeSpan.FromSeconds(15);
+        }).AddHttpMessageHandler<ApplicationCultureHandler>().AddRbiUserAccessToken();
+        services.AddRbiApiClient<IPeriodApi, PeriodApi>("Period", options =>
         {
             options.BaseUrl = uri;
             options.Timeout = TimeSpan.FromSeconds(15);

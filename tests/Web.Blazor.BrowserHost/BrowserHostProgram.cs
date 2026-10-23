@@ -72,6 +72,8 @@ internal static class BrowserHostProgram
         builder.Services.AddScoped<IRelatedPersonService, RelatedPersonService>();
         builder.Services.AddScoped<ICodeListService, CodeListService>();
         builder.Services.AddScoped<IPeriodLockRepository, PeriodLockRepository>();
+        builder.Services.AddScoped<IUnlockRequestRepository, UnlockRequestRepository>();
+        builder.Services.AddScoped<IPeriodLockService, PeriodLockService>();
         builder.Services.AddScoped<AuditService>();
         builder.Services.AddScoped<IAuditService>(services => new AuditFaults(services.GetRequiredService<AuditService>(), database));
         builder.Services.AddSingleton(Mock.Of<IEmailService>());
@@ -90,10 +92,12 @@ internal static class BrowserHostProgram
         app.UseExceptionHandler();
         app.Use(async (context, next) =>
         {
+            if (database.DuplicateBarrier is { } barrier && context.Request.Path == "/api/related-persons/check-duplicate" && context.Request.Query.ContainsKey("fbaId"))
+                await barrier.Task.WaitAsync(context.RequestAborted);
             database.LastCulture = context.Request.Headers.AcceptLanguage.ToString();
             if (context.Request.Path == "/api/audit-logs") database.AuditRequests++;
             if ((HttpMethods.IsPost(context.Request.Method) || HttpMethods.IsPut(context.Request.Method) || HttpMethods.IsDelete(context.Request.Method)) &&
-                (context.Request.Path.StartsWithSegments("/api/related-persons") || context.Request.Path.StartsWithSegments("/api/legal-entities") || context.Request.Path.StartsWithSegments("/api/limiti") || context.Request.Path.StartsWithSegments("/api/capital") || context.Request.Path.StartsWithSegments("/api/reports") || context.Request.Path.StartsWithSegments("/api/users"))) database.MutationAttempts++;
+                (context.Request.Path.StartsWithSegments("/api/related-persons") || context.Request.Path.StartsWithSegments("/api/legal-entities") || context.Request.Path.StartsWithSegments("/api/limiti") || context.Request.Path.StartsWithSegments("/api/capital") || context.Request.Path.StartsWithSegments("/api/reports") || context.Request.Path.StartsWithSegments("/api/users") || context.Request.Path.StartsWithSegments("/api/period-lock"))) database.MutationAttempts++;
             if (HttpMethods.IsPost(context.Request.Method) && context.Request.Path.StartsWithSegments("/api/reports")) database.ReportGenerationAttempts++;
             if (database.Unavailable || (database.CodebooksUnavailable && context.Request.Path.StartsWithSegments("/api/code-lists/dropdown")) ||
                 (database.ProfileUnavailable && context.Request.Path == "/api/auth/profile") ||
@@ -206,6 +210,7 @@ internal static class BrowserHostProgram
                 services.RemoveAll<INotificationsApi>();
                 services.RemoveAll<IAuditApi>();
                 services.RemoveAll<IUsersApi>();
+                services.RemoveAll<IPeriodApi>();
                 services.AddRbiApiClient<IProfileApi, ProfileApi>("BrowserProfile", options => options.BaseUrl = new("http://backend.fixture/"))
                     .AddHttpMessageHandler<ApplicationCultureHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
@@ -233,6 +238,9 @@ internal static class BrowserHostProgram
                 services.AddRbiApiClient<IUsersApi, UsersApi>("BrowserUsers", options => options.BaseUrl = new("http://backend.fixture/"))
                     .AddHttpMessageHandler<ApplicationCultureHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
+                services.AddRbiApiClient<IPeriodApi, PeriodApi>("BrowserPeriod", options => options.BaseUrl = new("http://backend.fixture/"))
+                    .AddHttpMessageHandler<ApplicationCultureHandler>()
+                    .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
             });
         }
     }
@@ -248,6 +256,8 @@ internal static class BrowserHostProgram
         public bool ProfileUnavailable { get; set; }
         public bool GeneratedDownloadUnavailable { get; set; }
         public bool FailGenerationAudit { get; set; }
+        public bool FailPeriodAudit { get; set; }
+        public TaskCompletionSource? DuplicateBarrier { get; set; }
         public int ReportGenerationAttempts { get; set; }
         public EmailLogStore MailStore { get; set; } = new();
         public int AuditRequests { get; set; }
@@ -257,7 +267,7 @@ internal static class BrowserHostProgram
     // after ReportService has already persisted a snapshot, before HTTP201.
     private sealed class AuditFaults(AuditService inner, FixtureDatabase database) : IAuditService
     {
-        public Task LogAsync(AuditEntry entry) => database.FailGenerationAudit && entry.Action == "GENERATE"
+        public Task LogAsync(AuditEntry entry) => (database.FailGenerationAudit && entry.Action == "GENERATE") || (database.FailPeriodAudit && entry.TableName == "PeriodLock" && entry.Action == "UNLOCK_REQUEST")
             ? Task.FromException(new InvalidOperationException("private-fixture-audit-failure")) : inner.LogAsync(entry);
     }
     private sealed class FixtureReset(WebApplication backend, FixtureUser user, FixtureDatabase database) : IStartupFilter
@@ -289,6 +299,24 @@ internal static class BrowserHostProgram
                             roles = await db.Roles.Select(item => new { item.Id, item.Name }).ToArrayAsync(),
                             audit = await db.AuditLogs.Select(item => new { item.Action, item.RecordId, item.Username }).ToArrayAsync()
                         }); return;
+                    }
+                    if (context.Request.Path == "/__fixtures/period-state" && HttpMethods.IsGet(context.Request.Method))
+                    {
+                        await using var scope = backend.Services.CreateAsyncScope();
+                        var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                        await context.Response.WriteAsJsonAsync(new
+                        {
+                            requests = await db.UnlockRequests.OrderBy(item => item.CreatedAt).Select(item => new { item.Id, item.Status, item.Reason, item.RequestedBy, item.Year, item.Month }).ToArrayAsync(),
+                            locks = await db.PeriodLocks.Select(item => new { item.Year, item.Month, item.IsLocked }).ToArrayAsync(),
+                            audit = await db.AuditLogs.OrderBy(item => item.Timestamp).Select(item => new { item.Action, item.RecordId, item.Username }).ToArrayAsync()
+                        }); return;
+                    }
+                    if (context.Request.Path == "/__fixtures/period-response" && HttpMethods.IsPost(context.Request.Method))
+                    {
+                        var input = await context.Request.ReadFromJsonAsync<PeriodResponseFixture>();
+                        using var client = backend.GetTestClient();
+                        using var response = await client.PostAsJsonAsync($"/api/period-lock/unlock-requests/{input!.Id}/respond", new { message = input.Message });
+                        await context.Response.WriteAsJsonAsync(new { status = (int)response.StatusCode }); return;
                     }
                     if (context.Request.Path == "/__fixtures/users-status" && HttpMethods.IsGet(context.Request.Method))
                     {
@@ -361,12 +389,18 @@ internal static class BrowserHostProgram
                             // Fresh unique InMemory store; never delete an existing database.
                             database.Name = "browser-" + Guid.NewGuid(); database.Unavailable = database.CodebooksUnavailable = false;
                             database.ProfileUnavailable = database.GeneratedDownloadUnavailable = database.FailGenerationAudit = false;
+                            database.FailPeriodAudit = false;
+                            database.DuplicateBarrier?.TrySetResult(); database.DuplicateBarrier = null;
                             database.ReportGenerationAttempts = 0;
                             database.MailStore = new(); backend.Configuration["Email:Provider"] = "demo";
                             database.AuditRequests = 0; database.ForgeAdmin = false;
                             database.MutationAttempts = 0;
                             await SeedAsync(backend, user); break;
                         case "/__fixtures/unavailable": database.Unavailable = true; break;
+                        case "/__fixtures/period-audit-fails": database.FailPeriodAudit = true; break;
+                        case "/__fixtures/period-audit-restored": database.FailPeriodAudit = false; break;
+                        case "/__fixtures/duplicates-hold": database.DuplicateBarrier = new(TaskCreationOptions.RunContinuationsAsynchronously); break;
+                        case "/__fixtures/duplicates-release": database.DuplicateBarrier?.TrySetResult(); break;
                         case "/__fixtures/users-reference":
                             await using (var scope = backend.Services.CreateAsyncScope())
                             {
@@ -377,6 +411,18 @@ internal static class BrowserHostProgram
                                     db.AppUsers.Add(other);
                                     db.UserRoles.Add(new UserRole { UserId = other.Id, RoleId = (await db.Roles.SingleAsync(role => role.Name == roleName)).Id });
                                 }
+                                await db.SaveChangesAsync();
+                            }
+                            break;
+                        case "/__fixtures/period-reference":
+                        case "/__fixtures/period-pages":
+                            await using (var scope = backend.Services.CreateAsyncScope())
+                            {
+                                var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                                var now = DateTime.UtcNow;
+                                var count = context.Request.Path == "/__fixtures/period-pages" ? 101 : 1;
+                                for (var index = 0; index < count; index++)
+                                    db.UnlockRequests.Add(new UnlockRequest { RequestedBy = $"requester{index:D3}", RequestedByEmail = "fixture@example.test", Year = now.Year, Month = now.Month, Reason = "Fixture request for clarification", Status = count == 1 ? "NEEDS_INFO" : "PENDING", CreatedBy = "fixture", CreatedAt = now.AddSeconds(-index) });
                                 await db.SaveChangesAsync();
                             }
                             break;
@@ -557,6 +603,7 @@ internal static class BrowserHostProgram
         }
     }
     private sealed record UsersMutationFixture(Guid Id, string Action, Guid[]? RoleIds);
+    private sealed record PeriodResponseFixture(Guid Id, string Message);
     private sealed class NoIdentityNetwork : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>

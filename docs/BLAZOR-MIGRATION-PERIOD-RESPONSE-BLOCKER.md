@@ -1,11 +1,11 @@
 # Period clarification storage boundary blocker
 
-2026-10-23. **BLOCKED — new data-contract decision required.** Native Users is
+2026-10-23. **RESOLVED — explicitly approved 10..490-character response limit.** Native Users is
 closed separately at 4566a50e9d4b609d90a0a8e3712d9d45bcc02f9f; its accepted
 checkpoint has 450/450 .NET and 141/141 browser passes. The previously approved
 users/admin safety blocker remains RESOLVED; this is a different existing flow.
 
-## Confirmed contract mismatch
+## Historical contract mismatch before the fix
 
 The current React PeriodPage permits clarification text of 10..500 characters.
 `PeriodLockController.RespondToRequest` only validates the minimum, trims the
@@ -37,36 +37,59 @@ loss is claimed**. The proven problem is acceptance/construction/persistence of
 a value inconsistent with the declared relational contract. SQL deployment
 behavior still requires its own environment acceptance.
 
-## Reproduction and working-tree state
+## Historical red reproduction
 
-Uncommitted discovery file:
+At discovery the uncommitted file was:
 `RelatedPartiesRegister/IntegrationTests/Tests/PeriodLock/UnlockResponseStorageDiscoveryTests.cs`.
 
 Run the IntegrationTests project with `--artifacts-path artifacts/users-safety
 --no-restore --filter FullyQualifiedName~UnlockResponseStorageDiscoveryTests`.
 Ignored receipt: `artifacts/migration-template/period-response-storage-discovery.log`.
-Result **2 FAIL / 1 PASS**, no skips. The test is deliberately not committed as
-a passing production regression. A full run of the working tree including these
-new cases must not be described as green; the 450/141 results are the accepted
-Users checkpoint immediately before discovery.
+Result at that checkpoint: **2 FAIL / 1 PASS**, no skips. It was deliberately not
+committed as a passing production regression. The discovery has now been replaced
+by UnlockResponseHttpTests with explicit accepted/rejected boundary assertions.
+The 450/141 results describe the Users checkpoint immediately before discovery.
 
 The minimal Testing host does not execute backend Program/.env, SQL, Keycloak,
 jobs or SMTP. Email is a strict mock limited to the response notification. No
 production backend behavior, schema, migration, React source or real records was
 changed in this discovery.
 
-## Decision needed
+## Approved correction and current evidence
 
-Recommended no-schema-change option: explicitly limit the clarification itself
-to **10..490 characters**, enforced server-side and in the native UI, retaining
-the existing prefix and full accepted user text. This reduces the current UI's
-500-character allowance and therefore requires business approval; it must not be
-silently introduced as a migration detail.
+The user explicitly approved **10..490 characters** for the clarification itself,
+server-side and in the native UI, with the unchanged prefix and SQL schema. This
+is a documented intentional reduction of the old React allowance, not accidental
+parity drift. React/reference source remains unchanged.
 
-Alternatively, retaining a full 500-character clarification requires an agreed
-change in how its response marker is represented or an explicitly approved
-storage/schema change. Do not silently trim content, remove the marker, expand
-the database, fake a successful save or weaken the invariant test.
+The backend rejects raw input longer than490 and trimmed meaningful text shorter
+than10 before lookup/write/audit/email. It returns safe HTTP400 with field
+`message` and the business range, without echoing user text or internal details.
+Existing whitespace normalization remains; there is no substring/truncation of
+accepted content. The exact existing `[ODGOVOR] ` prefix remains, so the largest
+accepted final Reason is500. No entity, migration or SQL schema was changed.
 
-Period workflow migration pauses here pending that decision. Code-list/guide and
-integrated deployment gates remain incomplete. No cutover or push is approved.
+The actual native PeriodNoteForm sets minlength=10 and maxlength=490 for responses,
+performs independent model validation and shows clear BS/EN range feedback. Its
+character counter continues the existing React note-dialog pattern; it was not
+added solely for presentation. Other request/admin-note purposes retain500.
+
+- Focused period suite: **21/21 PASS**, including9 new real-HTTP cases and12
+  existing period cases. Boundary9/491/500 =>400,10/490 =>200. Accepted records
+  preserve exact prefix+text and fit the EF500 contract; rejected cases create no
+  response/audit/email. Tests also cover meaningful whitespace minimum, actual
+  NEEDS_INFO→new PENDING→unlock/approval state and audit, and forged-grant denial.
+- Full backend **210 unit +104 integration =314/314 PASS**; including frontend,
+  **478/478 .NET PASS**. No skips.
+- Native browser cases independently confirm all five boundaries. Invalid UI
+  values bypass only the HTML maxlength in the test to prove model validation;
+  direct protected HTTP probes separately prove backend authority. No assertion,
+  retry, timeout or production control was weakened.
+- See BLAZOR-MIGRATION-PERIOD-CLOSURE.md for the whole native period flow/browser
+  evidence, publish, safe unknown-outcome recovery and environment limits.
+
+Green receipts: `artifacts/migration-template/period-bound-focused.log`,
+`period-regression.log`, `period-browser-*.log`, `period-publish.log`. Builds use
+the isolated artifacts/users-safety output, without stopping running user hosts.
+Real SQL/SSO/SMTP were not exercised. Code-list/guide and integrated deployment
+gates remain incomplete; no cutover or push is approved.
