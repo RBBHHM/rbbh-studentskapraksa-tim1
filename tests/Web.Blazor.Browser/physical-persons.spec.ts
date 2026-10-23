@@ -20,13 +20,7 @@ test("actual backend empty state, labels and accessibility", async ({ page }) =>
 test("native two-step form keeps explicit choices and saves through real backend", async ({ page }) => {
   page.on("console", message => { if (message.type() === "error") console.log(`Fixture browser error: ${message.text()}`); });
   await openPhysical(page);
-  await page.getByRole("button", { name: "Novi zapis", exact: true }).click();
-  const dialog = page.getByRole("dialog");
-  await dialog.getByLabel(/^Ime/).fill("Native");
-  await dialog.getByLabel(/^Prezime/).fill("Fixture");
-  await dialog.getByLabel("Rezidentnost", { exact: false }).selectOption("2");
-  await dialog.getByLabel("Broj pasoša", { exact: false }).fill("NAT12345");
-  await dialog.getByLabel("FBA ID", { exact: false }).fill("123456");
+  const dialog = await beginNonresident(page, "Native", "NAT12345", "123456");
   await dialog.getByRole("button", { name: "Nastavi", exact: true }).click();
   await dialog.getByLabel("Osnov povezanosti", { exact: false }).selectOption("ZOB-2-V-5");
   await expect(dialog.getByLabel("Opis povezanosti", { exact: false })).toHaveValue("Fixture relationship description");
@@ -243,10 +237,10 @@ async function beginNonresident(page: import("@playwright/test").Page, name: str
   // Finish real blur-triggered validation before callers activate Continue.
   // Hold/release only the test server's final FBA lookup, never fake its result.
   const headers = { "X-Fixture-Control": "true" };
-  await page.request.post("/__fixtures/duplicates-hold", { headers });
+  expect((await page.request.post("/__fixtures/duplicates-hold", { headers })).status()).toBe(204);
   await dialog.getByLabel("FBA ID", { exact: false }).press("Tab");
   await expect(dialog.getByRole("button", { name: "Nastavi", exact: true })).toBeDisabled();
-  await page.request.post("/__fixtures/duplicates-release", { headers });
+  expect((await page.request.post("/__fixtures/duplicates-release", { headers })).status()).toBe(204);
   await expect(dialog.getByRole("button", { name: "Nastavi", exact: true })).toBeEnabled();
   return dialog;
 }
