@@ -76,10 +76,16 @@ public class PeriodLockMiddleware
         if (path.StartsWith("/api/auth/", StringComparison.OrdinalIgnoreCase))
             return true;
 
+        // Mutations that change period/reportable business data. Capital edits and
+        // entity verification change reportable state, so they are locked too.
+        // Report generation, user administration, code lists and period administration
+        // are deliberately not locked (see the route matrix in PeriodLockCoverageTests).
         var protectedBusinessPath =
             path.StartsWith("/api/related-persons", StringComparison.OrdinalIgnoreCase) ||
             path.StartsWith("/api/legal-entities", StringComparison.OrdinalIgnoreCase) ||
-            path.StartsWith("/api/limiti", StringComparison.OrdinalIgnoreCase);
+            path.StartsWith("/api/limiti", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/api/capital", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/api/verification", StringComparison.OrdinalIgnoreCase);
 
         return !protectedBusinessPath;
     }
