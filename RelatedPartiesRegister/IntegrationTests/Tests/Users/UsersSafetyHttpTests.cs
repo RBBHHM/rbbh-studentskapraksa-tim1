@@ -249,15 +249,35 @@ public sealed class UsersSafetyHttpTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.Conflict, (await Mutate(_client, _localId, "empty")).StatusCode);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SelfCannotDeleteOwnAccountByClearingRolesEvenWhenAnotherAdminRemains(bool postAlias)
+    {
+        await AddUser(ApplicationAccessRoles.Administrator, "other@example.test");
+        var payload = new { roleIds = Array.Empty<Guid>() };
+        var response = postAlias ? await _client.PostAsJsonAsync($"/api/users/{_localId}/roles", payload)
+            : await _client.PutAsJsonAsync($"/api/users/{_localId}/role", payload);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await using var scope = _app.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+        Assert.True((await db.AppUsers.SingleAsync(user => user.Id == _localId)).IsActive);
+        Assert.True(await db.UserRoles.AnyAsync(mapping => mapping.UserId == _localId && mapping.IsActive));
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+    }
+
     [Fact]
     public async Task ConcurrentRoleRemovalCannotRemoveBothActiveAdmins()
     {
         var otherId = await AddUser(ApplicationAccessRoles.Administrator, "other@example.test");
         using var second = _app.GetTestClient();
         second.DefaultRequestHeaders.Add("X-Test-Email", "other@example.test");
+        await using (var lookup = _app.Services.CreateAsyncScope())
+            second.DefaultRequestHeaders.Add("X-Test-Subject", (await lookup.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>()
+                .AppUsers.SingleAsync(user => user.Id == otherId)).KeycloakId);
         _client.DefaultRequestHeaders.Add("X-Test-Race", "true");
         second.DefaultRequestHeaders.Add("X-Test-Race", "true");
-        var outcomes = await Task.WhenAll(Mutate(_client, _localId, "empty"), Mutate(second, otherId, "empty"));
+        var outcomes = await Task.WhenAll(Mutate(_client, otherId, "empty"), Mutate(second, _localId, "empty"));
         Assert.Single(outcomes, result => result.StatusCode == HttpStatusCode.OK);
         Assert.Single(outcomes, result => result.StatusCode == HttpStatusCode.Conflict);
         await using var scope = _app.Services.CreateAsyncScope();

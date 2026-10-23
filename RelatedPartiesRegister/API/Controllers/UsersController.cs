@@ -98,6 +98,9 @@ public class UsersController(IAppUserService appUserService, KeycloakAdminServic
             return FinalAdminConflict();
 
         var isRemoval = roleIds.Count == 0;
+        // Clearing every role removes the AppUser row, so it is a self-delete.
+        if (isRemoval && IsSelf(localUser))
+            return BadRequest(new ProblemDetails { Title = "Brisanje nije dozvoljeno", Detail = "Ne možete obrisati vlastiti nalog." });
         if (isRemoval)
         {
             var assignments = await _db.UserRoles.Where(item => item.UserId == localUser.Id).ToListAsync();
