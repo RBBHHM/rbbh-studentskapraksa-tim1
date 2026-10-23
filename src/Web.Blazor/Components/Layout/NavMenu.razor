@@ -27,6 +27,7 @@
             <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["legal.title"]" Href="/app/legal-persons" Icon="RbiIconName.UserRound" Active="@IsActive("app/legal-persons")" /></RbiSidebarPart>
         }
         @if (_admin) {
+            <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["codes.title"]" Href="/app/admin/code-lists" Icon="RbiIconName.Gauge" Active="@IsActive("app/admin/code-lists")" /></RbiSidebarPart>
             <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["period.title"]" Href="/app/admin/period" Icon="RbiIconName.Gauge" Active="@IsActive("app/admin/period")" /></RbiSidebarPart>
             <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["users.title"]" Href="/app/admin/users" Icon="RbiIconName.UserRound" Active="@IsActive("app/admin/users")" /></RbiSidebarPart>
             <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["audit.title"]" Href="/app/admin/audit" Icon="RbiIconName.Gauge" Active="@IsActive("app/admin/audit")" /></RbiSidebarPart>

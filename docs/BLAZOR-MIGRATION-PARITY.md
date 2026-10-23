@@ -21,7 +21,7 @@ BLAZOR-MIGRATION-AUTHORIZATION.md for identity/application permission separation
 | `/app/notifications` | email log → native recorded-notification list | email-log | DB KAPITAL_VIEW | notifications closure:6 browser cases × 6 current DB roles, no SMTP delivery claim or HTML rendering | PARITY |
 | `/app/admin/period` | lock/request/process/respond → native period workflow | period-lock | existing DB Admin UI route + unchanged CapitalRead/Write API | period closure:12 Admin browser cases +5-role denial,21 focused period tests; approved10..490 response limit | PARITY |
 | `/app/admin/users` | functional role/user administration → native module | users, roles | existing DB Admin route + ADMINISTRATION_* | users closure:9 Admin browser cases +5-role forged denial, create/multi-role/state/delete and28 HTTP safety regressions | PARITY |
-| `/app/admin/code-lists` | category/value CRUD/import → native module | code-lists | existing Admin route, ADMINISTRATION_MANAGE mutations | pending tests | NOT_STARTED |
+| `/app/admin/code-lists` | category/value CRUD/import → native module | code-lists | existing Admin route, ADMINISTRATION_MANAGE mutations | code-list closure:10 Admin +5-role denial cases,28 API/draft cases,5 HTTP status regressions, live business dropdown refresh | PARITY |
 | `/app/admin/audit` | actual business audit → native table/filter/paging | audit-logs | exact admin from current DB profile | audit closure:5 Admin browser cases + denied/forged-claim coverage for5 other DB roles; real AuditService metadata/paging | PARITY |
 | `/app/profile` | identity/effective permissions → template-based profile | auth/profile | authenticated | signed-out HTTP smoke + effective permission tests; integrated identity/browser pending | IN_PROGRESS |
 | `/app/guide` | role-aware business guide → app-owned localized content | effective profile only | visible modules only | pending tests | NOT_STARTED |
@@ -52,8 +52,10 @@ confirmations, multi-role workflows and current DB authorization.
 The subsequent period clarification red discovery (1 PASS/2 FAIL) is historical
 evidence in BLAZOR-MIGRATION-PERIOD-RESPONSE-BLOCKER.md, now RESOLVED under the
 approved10..490 rule. BLAZOR-MIGRATION-PERIOD-CLOSURE.md records the native
-period checkpoint (478 .NET/158 browser). Code-list/guide and environment gates
-remain open; the red discovery is no longer an uncommitted failing test.
+period checkpoint (478 .NET/158 browser). The next code-list checkpoint has512
+.NET passes and15 focused browser passes, including actual reference-data
+consumption by a business form. Guide and environment gates remain open; the
+red discoveries are no longer uncommitted failing tests.
 Real SQL/SSO/OCP parity is not claimed.
 
 ## Required end-to-end closure ledger
@@ -87,7 +89,7 @@ may be weakened to manufacture completion.
 | 21 | assign functional permissions via roles | admin/users | PARITY: actual catalog GUIDs, multiple roles, replacement and non-final empty-role/Guest removal |
 | 22 | deactivate/reactivate user | admin/users | PARITY: native confirmations/cancel, actual backend state/audits, independent self/final-Admin HTTP protection |
 | 23 | delete user with confirmation | admin/users | PARITY: native permanent-delete/cancel and real record/audit, self/final-Admin server rejection |
-| 24 | code-list CRUD/preview/import/referenced-value rejection | admin/code-lists | NOT_STARTED |
+| 24 | code-list CRUD/preview/import/referenced-value rejection | admin/code-lists | PARITY:real CRUD/soft-delete/audit, guarded referenced value/category rejection, real XLSX preview/cancel/partial valid-row import, live business dropdown consumption |
 | 25 | audit visible after mutation | admin/audit | PARITY: real AuditService entry, metadata/search/paging, DB Admin only and forged-provider denial |
 | 26 | current identity/permissions profile | profile | NOT_STARTED |
 | 27 | BS/EN switching/persistence | all | IN_PROGRESS: physical route/cookie/backend header proven; other modules pending |

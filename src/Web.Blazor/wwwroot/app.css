@@ -23,6 +23,10 @@ body { background: var(--surface-default); }
 .registry-user-form { min-width: 0; max-width: 100%; }
 .registry-users-dialog { box-sizing: border-box; }
 .registry-period-dialog { box-sizing: border-box; }
+.registry-codes-dialog { box-sizing: border-box; }
+.registry-codes-form input, .registry-codes-form textarea { box-sizing: border-box; max-width: 100%; }
+.registry-codes-table { min-width: 800px; }
+.registry-codes-table td { overflow-wrap: anywhere; }
 .registry-period-form .rbi-control { box-sizing: border-box; min-width: 0; max-width: 100%; }
 .registry-period-table { min-width: 800px; }
 .registry-period-table td { overflow-wrap: anywhere; }

@@ -53,6 +53,17 @@ and `legal-validation-regression.log` (58 frontend + 210 unit + 67 integration =
 335/335, no skips). These receipts use isolated InMemory/test identity, not SQL
 or deployed SSO. Existing dependency advisories remain unsuppressed.
 
+## Code-list HTTP error wrapping — locally corrected
+
+Native browser integration found that rejected category deletion preserved data
+but returned HTTP200. Four actual HTTP regressions also proved the same wrapper
+issue for missing category and invalid/missing value updates. The narrow two-
+branch controller fix returns the existing helper's HTTP Result rather than
+serializing a typed ActionResult as an object. Five HTTP cases now pass, including
+the already-correct invalid-read400 case. Reference rules, storage, permissions
+and successful contracts are unchanged. See BLAZOR-MIGRATION-CODE-LISTS-CLOSURE.md
+for red/green receipts and unchanged no-write/no-audit rejection assertions.
+
 ## Known dependency advisories — unresolved release risk
 
 The preserved backend dependency graph resolves

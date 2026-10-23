@@ -98,6 +98,7 @@ internal static class BrowserHostProgram
             if (context.Request.Path == "/api/audit-logs") database.AuditRequests++;
             if ((HttpMethods.IsPost(context.Request.Method) || HttpMethods.IsPut(context.Request.Method) || HttpMethods.IsDelete(context.Request.Method)) &&
                 (context.Request.Path.StartsWithSegments("/api/related-persons") || context.Request.Path.StartsWithSegments("/api/legal-entities") || context.Request.Path.StartsWithSegments("/api/limiti") || context.Request.Path.StartsWithSegments("/api/capital") || context.Request.Path.StartsWithSegments("/api/reports") || context.Request.Path.StartsWithSegments("/api/users") || context.Request.Path.StartsWithSegments("/api/period-lock"))) database.MutationAttempts++;
+            if ((HttpMethods.IsPost(context.Request.Method) || HttpMethods.IsPut(context.Request.Method) || HttpMethods.IsDelete(context.Request.Method)) && context.Request.Path.StartsWithSegments("/api/code-lists")) database.MutationAttempts++;
             if (HttpMethods.IsPost(context.Request.Method) && context.Request.Path.StartsWithSegments("/api/reports")) database.ReportGenerationAttempts++;
             if (database.Unavailable || (database.CodebooksUnavailable && context.Request.Path.StartsWithSegments("/api/code-lists/dropdown")) ||
                 (database.ProfileUnavailable && context.Request.Path == "/api/auth/profile") ||
@@ -176,6 +177,14 @@ internal static class BrowserHostProgram
         using var invalid = new XLWorkbook();
         invalid.AddWorksheet("Invalid").Cell(1, 1).Value = "Wrong header";
         invalid.SaveAs(Path.Combine(directory, "invalid-physical.xlsx"));
+        using var codes = new XLWorkbook();
+        var codesSheet = codes.AddWorksheet("Values");
+        string[] codeRows = ["Value", "Existing", "New imported", "New imported", new string('x', 201), "A B"];
+        for (var index = 0; index < codeRows.Length; index++) codesSheet.Cell(index + 1, 1).Value = codeRows[index];
+        codes.SaveAs(Path.Combine(directory, "code-values.xlsx"));
+        using var invalidCodes = new XLWorkbook();
+        var invalidCodesSheet = invalidCodes.AddWorksheet("Invalid"); invalidCodesSheet.Cell(1, 1).Value = "Wrong header"; invalidCodesSheet.Cell(2, 1).Value = "Must not persist";
+        invalidCodes.SaveAs(Path.Combine(directory, "invalid-codes.xlsx"));
     }
 
     private sealed class BrowserApp(WebApplication backend, FixtureUser user, FixtureDatabase database) : WebApplicationFactory<RBBH.RelatedPartiesRegister.Web.Components.App>
@@ -211,6 +220,7 @@ internal static class BrowserHostProgram
                 services.RemoveAll<IAuditApi>();
                 services.RemoveAll<IUsersApi>();
                 services.RemoveAll<IPeriodApi>();
+                services.RemoveAll<ICodeListsApi>();
                 services.AddRbiApiClient<IProfileApi, ProfileApi>("BrowserProfile", options => options.BaseUrl = new("http://backend.fixture/"))
                     .AddHttpMessageHandler<ApplicationCultureHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
@@ -239,6 +249,9 @@ internal static class BrowserHostProgram
                     .AddHttpMessageHandler<ApplicationCultureHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
                 services.AddRbiApiClient<IPeriodApi, PeriodApi>("BrowserPeriod", options => options.BaseUrl = new("http://backend.fixture/"))
+                    .AddHttpMessageHandler<ApplicationCultureHandler>()
+                    .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
+                services.AddRbiApiClient<ICodeListsApi, CodeListsApi>("BrowserCodeLists", options => options.BaseUrl = new("http://backend.fixture/"))
                     .AddHttpMessageHandler<ApplicationCultureHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
             });
@@ -310,6 +323,30 @@ internal static class BrowserHostProgram
                             locks = await db.PeriodLocks.Select(item => new { item.Year, item.Month, item.IsLocked }).ToArrayAsync(),
                             audit = await db.AuditLogs.OrderBy(item => item.Timestamp).Select(item => new { item.Action, item.RecordId, item.Username }).ToArrayAsync()
                         }); return;
+                    }
+                    if (context.Request.Path == "/__fixtures/codes-state" && HttpMethods.IsGet(context.Request.Method))
+                    {
+                        await using var scope = backend.Services.CreateAsyncScope();
+                        var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                        await context.Response.WriteAsJsonAsync(new
+                        {
+                            values = await db.CodeLists.IgnoreQueryFilters().OrderBy(item => item.ID).Select(item => new { item.ID, item.Kategorija, item.Kod, item.Naziv, item.Opis, item.RedoslijedPrikaza, item.Aktivan, item.IzmijenioKorisnik }).ToArrayAsync(),
+                            definitions = await db.CodeListDefinitions.Select(item => new { item.Name, item.Description, item.IsActive }).ToArrayAsync(),
+                            audit = await db.AuditLogs.OrderBy(item => item.Timestamp).Select(item => new { item.Action, item.RecordId, item.Username, item.NewValues }).ToArrayAsync()
+                        }); return;
+                    }
+                    if (context.Request.Path == "/__fixtures/codes-denied-probes" && HttpMethods.IsPost(context.Request.Method))
+                    {
+                        using var client = backend.GetTestClient();
+                        using var read = await client.GetAsync("/api/code-lists");
+                        using var category = await client.PostAsJsonAsync("/api/code-lists/categories", new { name = "Forbidden" });
+                        using var create = await client.PostAsJsonAsync("/api/code-lists", new { kategorija = "MigrationCodes", kod = "FORBIDDEN", naziv = "Forbidden" });
+                        using var update = await client.PutAsJsonAsync("/api/code-lists/1", new { naziv = "Forbidden", aktivan = false });
+                        using var delete = await client.DeleteAsync("/api/code-lists/1");
+                        using var deleteCategory = await client.DeleteAsync("/api/code-lists/categories/OsnovPovezanosti");
+                        using var form = new MultipartFormDataContent(); form.Add(new ByteArrayContent([1, 2, 3]), "file", "invalid.xlsx");
+                        using var import = await client.PostAsync("/api/code-lists/MigrationCodes/import?dryRun=false", form);
+                        await context.Response.WriteAsJsonAsync(new { read = (int)read.StatusCode, writes = new[] { (int)category.StatusCode, (int)create.StatusCode, (int)update.StatusCode, (int)delete.StatusCode, (int)deleteCategory.StatusCode, (int)import.StatusCode } }); return;
                     }
                     if (context.Request.Path == "/__fixtures/period-response" && HttpMethods.IsPost(context.Request.Method))
                     {
@@ -411,6 +448,15 @@ internal static class BrowserHostProgram
                                     db.AppUsers.Add(other);
                                     db.UserRoles.Add(new UserRole { UserId = other.Id, RoleId = (await db.Roles.SingleAsync(role => role.Name == roleName)).Id });
                                 }
+                                await db.SaveChangesAsync();
+                            }
+                            break;
+                        case "/__fixtures/codes-reference":
+                            await using (var scope = backend.Services.CreateAsyncScope())
+                            {
+                                var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                                db.CodeListDefinitions.Add(new CodeListDefinition { Name = "MigrationCodes", Description = "Fixture purpose", CreatedBy = "fixture" });
+                                db.CodeLists.AddRange(new CodeList { Kategorija = "MigrationCodes", Kod = "EXISTING", Naziv = "Existing", KreiraoKorisnik = "fixture" }, new CodeList { Kategorija = "MigrationCodes", Kod = "A_B", Naziv = "Different existing name", KreiraoKorisnik = "fixture" });
                                 await db.SaveChangesAsync();
                             }
                             break;

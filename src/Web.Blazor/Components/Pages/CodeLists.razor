@@ -1,0 +1,184 @@
+@page "/app/admin/code-lists"
+@using RBI.DesignSystem.Components.Forms
+@using RBBH.RelatedPartiesRegister.Web.Components.Registry
+@implements IDisposable
+@inject AuthenticationStateProvider AuthenticationState
+@inject IProfileApi Profile
+@inject ICodeListsApi Api
+
+<PageTitle>@T["codes.title"]</PageTitle>
+<HeroBar Title="@T["codes.title"]" Description="@T["codes.subtitle"]" />
+@if (!_authenticated && !_loading) { <IdentityNotice /> }
+else if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
+else if (!_canRead && _error is null) { <RbiAlert Title="@T["errors.forbidden"]" /> }
+else
+{
+    @if (_error is not null) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_error]" /><RbiButton Disabled="_busy" OnClick="LoadAsync">@T["state.retry"]</RbiButton> }
+    @if (_canRead)
+    {
+        @if (_notice is not null) { <p role="status">@_notice</p> }
+        <fieldset disabled="@(_busy || _refreshing)"><legend>@T["codes.category"]</legend>
+            <div class="registry-toolbar">
+                <RbiButton OnClick="LoadAsync" Variant="RbiButtonVariant.Secondary">@T["common.refresh"]</RbiButton>
+                @if (_canWrite) { <RbiButton OnClick="NewDefinition">@T["codes.definition-create"]</RbiButton><RbiButton OnClick="NewValue" Disabled="@(_category.Length == 0)">@T["codes.create"]</RbiButton> }
+            </div>
+            <label for="code-category">@T["codes.category"]</label>
+            <RbiSelect TValue="string" Id="code-category" @bind-Value="_category" @bind-Value:after="CategoryChangedAsync" Disabled="@(_categories.Count == 0)">
+                @foreach (var category in _categories) { <option value="@category">@category</option> }
+            </RbiSelect>
+            @if (_canWrite && _category.Length > 0)
+            {
+                <div class="registry-toolbar"><RbiButton OnClick="() => _deleteCategory = _category" Variant="RbiButtonVariant.Secondary">@T["codes.delete-category"]</RbiButton>
+                    <label for="code-file">@T["codes.import"]</label><InputFile @key="_fileKey" id="code-file" accept=".xlsx" OnChange="PreviewAsync" />
+                </div><p>@T["codes.import-help"]</p>
+            }
+        </fieldset>
+        @if (_category.Length == 0) { <RbiText>@T["codes.no-categories"]</RbiText> }
+        else if (_values.Count == 0 && _error is null) { <RbiText>@T["codes.empty"]</RbiText> }
+        else if (_error is null)
+        {
+            <p>@T["codes.history"]</p>
+            <RbiTable AccessibleLabel="@T["codes.title"]" Class="registry-codes-table"><caption>@_category</caption>
+                <thead><tr><th scope="col">@T["codes.code"]</th><th scope="col">@T["codes.name"]</th><th scope="col">@T["codes.description"]</th><th scope="col">@T["codes.order"]</th><th scope="col">@T["codes.active"]</th><th scope="col">@T["codes.modified"]</th>@if (_canWrite) { <th scope="col">@T["users.actions"]</th> }</tr></thead>
+                <tbody>@foreach (var value in _values)
+                {
+                    <tr @key="value.Id"><td>@value.Code</td><td>@value.Value</td><td>@value.Description</td><td>@value.DisplayOrder</td><td>@T[value.IsActive ? "codes.active" : "codes.inactive"]</td><td>@value.ModifiedBy @value.ModifiedAt?.ToString("g")</td>
+                        @if (_canWrite) { <td><div class="registry-toolbar"><RbiButton Disabled="@(_busy || _refreshing)" OnClick="() => Edit(value)">@T["codes.edit"]</RbiButton><RbiButton Disabled="@(_busy || _refreshing)" OnClick="() => _deleteValue = value" Variant="RbiButtonVariant.Secondary">@T["codes.delete-value"]</RbiButton></div></td> }
+                    </tr>
+                }</tbody>
+            </RbiTable>
+        }
+    }
+}
+@if (_draft is { } draft)
+{
+    <RbiDialog Open Class="registry-codes-dialog" Title="@T[draft.Definition ? "codes.definition-create" : draft.Id is null ? "codes.create" : "codes.edit"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseEditor">
+        <DialogBody><CodeListForm @key="draft" Model="draft" Save="SaveAsync" Cancel="() => CloseEditor(false)" /></DialogBody>
+    </RbiDialog>
+}
+@if (_deleteValue is not null || _deleteCategory is not null)
+{
+    <RbiAlertDialog Open Class="registry-codes-dialog" Title="@T[_deleteValue is null ? "codes.delete-category" : "codes.delete-value"]" Description="@T["codes.delete-help"]" CancelLabel="@T["common.cancel"]" ConfirmLabel="@T["codes.delete-label"]" OnCancel="CancelDelete" OnConfirm="DeleteAsync" Confirming="_busy" ConfirmLoadingLabel="@T["state.loading"]" OpenChanged="CloseDelete" />
+}
+@if (_preview is { } preview)
+{
+    <RbiDialog Open Class="registry-codes-dialog" Title="@T["codes.preview"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="ClosePreview">
+        <DialogBody><p>@_pendingCategory — @_fileName</p><p>@T.Format("codes.preview-summary", preview.TotalRows, preview.ToImport.Count, preview.Duplicates.Count, preview.Errors.Count)</p>
+            @if (preview.ToImport.Count > 0) { <h2>@T["codes.ready"]</h2><ul>@foreach (var value in preview.ToImport) { <li>@value</li> }</ul> }
+            @if (preview.Duplicates.Count > 0) { <h2>@T["codes.duplicates"]</h2><ul>@foreach (var value in preview.Duplicates) { <li>@value</li> }</ul> }
+            @if (preview.Errors.Count > 0) { <h2>@T["codes.issues"]</h2><ul>@foreach (var error in preview.Errors) { <li>@ImportError(error)</li> }</ul> }
+            <p>@T["codes.partial-help"]</p>
+            <div class="registry-toolbar"><RbiButton Disabled="_busy" OnClick="() => ClosePreview(false)" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton><RbiButton Disabled="@(_busy || preview.ToImport.Count == 0)" OnClick="ImportAsync">@T["codes.import-valid"]</RbiButton></div>
+        </DialogBody>
+    </RbiDialog>
+}
+@code {
+    private readonly CancellationTokenSource _lifetime = new();
+    private readonly CancellationToken _token;
+    public CodeLists() => _token = _lifetime.Token;
+    private bool _disposed, _authenticated, _canRead, _canWrite, _busy, _loading = true, _refreshing, _loaded;
+    private IReadOnlyList<string> _categories = [];
+    private IReadOnlyList<CodeValue> _values = [];
+    private string _category = "", _pendingCategory = "", _fileName = "";
+    private string? _error, _notice, _deleteCategory;
+    private CodeValue? _deleteValue;
+    private CodeListDraft? _draft;
+    private CodeImportPreview? _preview;
+    private byte[]? _fileBytes;
+    private int _fileKey;
+    protected override Task OnInitializedAsync() => LoadAsync();
+    private async Task LoadAsync()
+    {
+        if (_disposed || _refreshing) return; _loading = !_loaded; _refreshing = true; _error = null;
+        try
+        {
+            _authenticated = (await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true;
+            if (!_authenticated) return;
+            var profile = await Profile.GetAsync(_token);
+            _canRead = ApplicationAccess.IsAdministrator(profile) && profile.Permissions.Contains("CODE_LISTS_VIEW");
+            _canWrite = _canRead && profile.Permissions.Contains("ADMINISTRATION_MANAGE");
+            if (!_canRead) return;
+            _categories = (await Api.CategoriesAsync(_token)).Categories;
+            if (!_categories.Contains(_category)) _category = _categories.FirstOrDefault() ?? "";
+            _values = _category.Length == 0 ? [] : (await Api.ValuesAsync(_category, _token)).Items;
+            _loaded = true;
+        }
+        catch (RegistryApiException exception) { _error = exception.MessageKey; }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally { _loading = _refreshing = false; }
+    }
+    private Task CategoryChangedAsync() { _values = []; _notice = null; return LoadAsync(); }
+    private void NewDefinition() { if (_canWrite && !_busy) _draft = new() { Definition = true }; }
+    private void NewValue() { if (_canWrite && !_busy && _category.Length > 0) _draft = new() { Category = _category }; }
+    private void Edit(CodeValue value) { if (_canWrite && !_busy) _draft = CodeListDraft.From(value); }
+    private void CloseEditor(bool open) { if (!open && !_busy) _draft = null; }
+    private async Task SaveAsync(CodeListDraft draft)
+    {
+        if (!_canWrite) throw new RegistryApiException(System.Net.HttpStatusCode.Forbidden);
+        if (_busy) return; _busy = true;
+        try
+        {
+            if (draft.Definition) { await Api.CreateCategoryAsync(draft.Name.Trim(), draft.NullDescription, _token); _category = draft.Name.Trim(); }
+            else if (draft.Id is { } id) await Api.UpdateAsync(id, draft.UpdateRequest(), _token);
+            else await Api.CreateAsync(draft.CreateRequest(), _token);
+            _draft = null; _notice = T["common.saved"]; await LoadAsync();
+        }
+        finally { _busy = false; }
+    }
+    private void CancelDelete() { if (!_busy) { _deleteValue = null; _deleteCategory = null; } }
+    private void CloseDelete(bool open) { if (!open) CancelDelete(); }
+    private async Task DeleteAsync()
+    {
+        if (!_canWrite || _busy) return; _busy = true;
+        try
+        {
+            if (_deleteValue is { } value) await Api.DeleteAsync(value.Id, _token);
+            else if (_deleteCategory is { } category) await Api.DeleteCategoryAsync(category, _token);
+            _notice = T["codes.deleted"]; await LoadAsync();
+        }
+        catch (RegistryApiException exception) { _error = (int?)exception.StatusCode == 400 ? "codes.delete-rejected" : MutationError(exception); }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally { _deleteValue = null; _deleteCategory = null; _busy = false; }
+    }
+    private async Task PreviewAsync(InputFileChangeEventArgs args)
+    {
+        if (!_canWrite || _busy || _refreshing || _category.Length == 0) return;
+        _busy = true; _error = _notice = null; _fileBytes = null; _preview = null;
+        try
+        {
+            var file = args.File;
+            if (file.Size is <= 0 or > 10 * 1024 * 1024 || !file.Name.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase)) { _error = "codes.file-invalid"; return; }
+            _pendingCategory = _category; _fileName = Path.GetFileName(file.Name);
+            await using var stream = file.OpenReadStream(10 * 1024 * 1024, _token); using var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer, _token); _fileBytes = buffer.ToArray();
+            _preview = await Api.ImportAsync(_pendingCategory, new MemoryStream(_fileBytes, writable: false), _fileName, true, _token);
+        }
+        catch (RegistryApiException exception) { _error = (int?)exception.StatusCode == 400 ? "codes.workbook-invalid" : exception.MessageKey; _fileBytes = null; }
+        catch (IOException) { _error = "codes.file-invalid"; _fileBytes = null; }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally { _fileKey++; _busy = false; }
+    }
+    private void ClosePreview(bool open) { if (!open && !_busy) { _preview = null; _fileBytes = null; } }
+    private async Task ImportAsync()
+    {
+        if (!_canWrite || _busy || _fileBytes is null || _preview is not { ToImport.Count: > 0 }) return; _busy = true;
+        try
+        {
+            var result = await Api.ImportAsync(_pendingCategory, new MemoryStream(_fileBytes, writable: false), _fileName, false, _token);
+            _notice = T.Format("codes.import-result", result.Imported, result.ToImport.Count, result.Duplicates.Count, result.Errors.Count);
+            await LoadAsync();
+        }
+        catch (RegistryApiException exception) { _error = MutationError(exception); }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally { _preview = null; _fileBytes = null; _busy = false; }
+    }
+    private string ImportError(string error)
+    {
+        var length = System.Text.RegularExpressions.Regex.Match(error, @"^Red (\d+): naziv smije imati najviše 200 znakova\.$");
+        if (length.Success) return T.Format("codes.row-length", length.Groups[1].Value);
+        var duplicate = System.Text.RegularExpressions.Regex.Match(error, @"^Redovi ([\d, ]+): vrijednost '(.*)' je ponovljena u datoteci\.$");
+        return duplicate.Success ? T.Format("codes.row-duplicate", duplicate.Groups[1].Value, duplicate.Groups[2].Value) : T["codes.row-invalid"];
+    }
+    private static string MutationError(RegistryApiException exception) => exception.StatusCode is null || (int)exception.StatusCode >= 500 ? "period.uncertain" : exception.MessageKey;
+    public void Dispose() { _disposed = true; _lifetime.Cancel(); _lifetime.Dispose(); _fileBytes = null; }
+}
