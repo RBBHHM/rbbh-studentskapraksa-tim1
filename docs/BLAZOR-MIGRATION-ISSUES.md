@@ -64,14 +64,23 @@ the already-correct invalid-read400 case. Reference rules, storage, permissions
 and successful contracts are unchanged. See BLAZOR-MIGRATION-CODE-LISTS-CLOSURE.md
 for red/green receipts and unchanged no-write/no-audit rejection assertions.
 
-## Known dependency advisories — unresolved release risk
+## Known dependency advisories — subsequently resolved locally
 
-The preserved backend dependency graph resolves
-System.Security.Cryptography.Pkcs9.0.4 with existing NU1902/NU1903 advisories
-GHSA-2fmv-rv2c-59x7 and GHSA-846f-f764-76mx. They are also reported by the
-test-only host that references the real backend. No warning suppression or
-unreviewed dependency upgrade is part of this frontend migration. Local test
-success is not a security release clearance.
+Earlier checkpoints resolved System.Security.Cryptography.Pkcs9.0.4 through
+Microsoft.Data.SqlClient6.1.3, producing NU1902/NU1903 for
+GHSA-2fmv-rv2c-59x7 and GHSA-846f-f764-76mx. The final completion task authorized
+the smallest supported fix: direct Pkcs9.0.21 on the compatible9.x line. Fresh
+restore/build and full regression pass without those warnings; no suppression
+or SqlClient/EF/TFM upgrade. See BLAZOR-MIGRATION-COMPLETION-SECURITY.md for graph,
+advisories and evidence. Deployment runtime/security acceptance remains separate.
+
+## Metadata TLS exception — resolved locally
+
+The final source review proved HTTP metadata was allowed for a localhost-prefix
+lookalike and outside Development. Both JWT/OIDC now permit the exception only
+for actual Development loopback. Six real option-pipeline cases pass, including
+four fail-closed regressions. Application authorization and identity mapping
+remain unchanged; see the final security report.
 
 ## External/integrated gates — not yet proven
 

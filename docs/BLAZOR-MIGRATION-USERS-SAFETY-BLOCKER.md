@@ -114,6 +114,9 @@ same isolated build. No running user host was stopped or restarted.
 
 Live SQL Server multi-replica lock/rollback acceptance remains an integrated
 environment gate; local HTTP/concurrency tests use InMemory and do not prove SQL
-deployment configuration. Native Users migration may now resume. Period/code-list
-administration, guide and integrated deployment gates remain incomplete.
-React/deployment are unchanged; no real records were removed or modified.
+deployment configuration. At this historical checkpoint native Users could resume;
+period/code-list administration and guide were incomplete. Their subsequent local
+closure is recorded in REACT-TO-BLAZOR-FINAL-HANDOFF.md; integrated deployment
+remains gated. React implementation/deployment were unchanged; no real records
+were removed or modified. The historical Pkcs warnings above are now locally
+remediated in BLAZOR-MIGRATION-COMPLETION-SECURITY.md.

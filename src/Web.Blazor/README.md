@@ -14,7 +14,8 @@ This is not a published corporate release. Restore both new packages from the
 approved isolated local feed; do not overwrite/reuse older0.1.0 binaries.
 
 This is a side-by-side migration, **not the canonical production frontend yet**.
-React and existing backend deployment remain unchanged. Consult
+React implementation and existing backend deployment remain unchanged; the old
+tree now has an explicit MIGRATION_REFERENCE marker. Consult
 `docs/BLAZOR-MIGRATION-{INVENTORY,AUTHORIZATION,PARITY}.md` at repository root.
 
 ## Restore, build, test
@@ -76,8 +77,13 @@ The nested generated workflow examples are not active root deployment workflows.
 Do not activate/cut over deployment until publish/startup, full module parity,
 responsive/accessibility and integrated environment gates are accepted.
 
-The 2026-10-23 local checkpoint passes 520 .NET and 209 browser tests, plus Release
-publish and actual published signed-out startup. See
-`docs/REACT-TO-BLAZOR-FINAL-HANDOFF.md` at repository root for module evidence and
-the still-blocked SSO/shared cache/SQL/SMTP/OCP/security acceptance gates.
+The earlier a24e239 checkpoint passed 520 .NET and 209 browser tests, plus Release
+publish and actual published signed-out startup. The final completion gate and
+additional localization/HTTP authorization evidence are recorded in
+`docs/REACT-TO-BLAZOR-FINAL-HANDOFF.md` at repository root:528 .NET and215 browser
+passes. It also lists the still-blocked SSO/shared cache/SQL/SMTP/OCP gates. Pkcs advisories
+are now locally patched; deployed runtime/security acceptance remains separate.
+Use repository scripts/Publish-BlazorCandidate.ps1 and
+scripts/testing/Test-BlazorPublished.ps1 for the explicit native artifact/probe;
+see docs/BLAZOR-MIGRATION-RETIREMENT-AND-DEPLOYMENT.md for the full gated procedure.
 Local green tests do not authorize React retirement or production cutover.

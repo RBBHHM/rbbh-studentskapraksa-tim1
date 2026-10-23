@@ -102,17 +102,25 @@ may be weakened to manufacture completion.
 
 ## Final local gate and remaining integrated release gates
 
-520/520 .NET (201 frontend +210 backend unit +109 integration), no skips;
-209/209 browser (Admin69, gost24, Kapital32, PL28, Limiti26, FL30), workers1,
+528/528 .NET (203 frontend +216 backend unit +109 integration), backend325, no skips;
+215/215 browser (Admin70, gost25, Kapital33, PL29, Limiti27, FL31), workers1,
 retries0, final JSON stats show no failures/flaky/skips. Build with analyzers,
 changed-new-C# format verification, Release publish, published signed-out startup
 on14 routes, actual RBI CSS and absent unconfigured login handler PASS.
 See REACT-TO-BLAZOR-FINAL-HANDOFF.md for receipts, the FL setup correction and
 all environment limitations. Module Axe/375px/culture/error checks remain intact.
+The final completion adds real platform localization discovery/key checks and a
+six-role protected-controller matrix with forged-provider claims and no-write
+assertions. The earlier520/209 checkpoint above remains historical evidence.
 
 Real SSO/shared cache/DataProtection, SQL concurrency/constraints, SMTP, private
-package publication, security disposition of existing dependency advisories and
+package publication, deployed runtime/security acceptance and
 OCP/replacement deployment proof remain BLOCKED on approved infrastructure and
 owner acceptance. No reusable component copies, frontend DB/Excel access or
 logged credentials were introduced. Keep existing source/deployment reference
 intact until cutover is accepted; never deploy two canonical frontends.
+Pkcs NU1902/NU1903 are locally remediated with9.0.21; JWT/OIDC HTTP metadata is
+restricted to Development loopback. See BLAZOR-MIGRATION-COMPLETION-SECURITY.md.
+React has only the new MIGRATION_REFERENCE marker; no implementation was removed.
+The tested native publish/manifest/ZIP and operator retirement gates are documented
+in BLAZOR-MIGRATION-RETIREMENT-AND-DEPLOYMENT.md.

@@ -33,6 +33,9 @@ period response10..490 storage guard; two code-list mutation error branches that
 now return actual400/404 rather than serializing ActionResult as200. Each change
 has focused regression evidence. API/BL/DL architecture and remaining workflows
 are preserved. No backend administration was moved to Blazor.
+The final security pass also pins transitive Pkcs to patched9.0.21 and restricts
+JWT/OIDC HTTP metadata to real Development loopback. See
+BLAZOR-MIGRATION-COMPLETION-SECURITY.md; no EF/TFM/schema or role-store redesign.
 
 ## 5. API contract changes
 
@@ -59,6 +62,9 @@ App-owned BS/EN resources through RBI.Localization, BS default, persisted cultur
 cookie and actual backend Accept-Language. No inherited DE product commitment,
 i18next providers or business translation packs inside DesignSystem. Business
 codebooks and optional RBI.Localization.Sifrarnik remain distinct concepts.
+Two completion tests additionally verify equal BS/EN key sets, no duplicates or
+empty values, actual platform catalog discovery/default, missing-key behavior and
+unsupported-culture fallback. This is not a hardcoded duplicate runtime registry.
 
 ## 8. Design system usage
 
@@ -73,11 +79,16 @@ boolean-select conversion finding is not fixed by this migration.
 ## 9. Deployment changes
 
 No active deployment workflow changed. Current React static/IIS packaging remains
-the accepted production reference. The candidate is a server-hosted .NET10
+the retained deployment reference; actual production consumers are not proven
+retired. The candidate is a server-hosted .NET10
 interactive Blazor app, not a static React artifact. Its replacement deployment
 must serve published assets and interactive circuits through the approved proxy,
 with the organization's shared-session/cache/DataProtection model. Nested template
 workflow examples are not active root CI. Do not activate them without review.
+The explicit native candidate script now publishes an app/manifest/ZIP with file
+hashes, refuses overwrite and has an actual published-DLL startup probe. See
+BLAZOR-MIGRATION-RETIREMENT-AND-DEPLOYMENT.md for tested commands, inventory and
+the operator-controlled replacement/rollback procedure. A local ZIP is not cutover.
 
 ## 10. DB impact
 
@@ -97,11 +108,19 @@ were read into chat, committed or logged.
 
 ## 12. Test totals
 
-**520/520 .NET**: 201 frontend + 210 backend unit + 109 integration, no skips.
+**528/528 .NET**: 203 frontend + 216 backend unit + 109 integration, no skips.
+Backend total is325. The completion batch adds2 localization and6 metadata tests.
 The period focus suite is21/21; five exact boundaries are regression-protected.
-**209/209 browser**: Admin 69, gost 24, Kapital 32, PL 28, Limiti 26, FL 30;
+Fresh focused real-HTTP safety regression is61/61: users28 + period21 + reporting12;
+receipt completion-focused-safety.log. These are included in109 integration tests,
+not added again to the528 total.
+**215/215 browser**: Admin 70, gost 25, Kapital 33, PL 29, Limiti 27, FL 31;
 workers=1, retries=0. Final per-role JSON stats have 0 failures/flaky/skips.
-The first FL attempt had 29 PASS/1 FAIL due to the confirmed identity-blur fixture setup race;
+The added six-role matrix verifies actual controller authorization, not only UI
+visibility, and makes no business writes. All prior module assertions remain.
+
+Historical a24e239 checkpoint:520 .NET/209 browser. Its first FL attempt had
+29 PASS/1 FAIL due to the confirmed identity-blur fixture setup race;
 its unchanged business assertions pass after using the existing settled setup
 helper. This was not an assertion relaxation or a product-code change. The
 original failure log/trace remain alongside final receipts.
@@ -112,12 +131,15 @@ empty identity/API config: 14 routes 200 and honestly signed out/BS, RBI CSS 200
 unconfigured login 404. Only that owned smoke process was stopped; user hosts
 were untouched. No SQL or identity service was contacted.
 
-Receipts: artifacts/migration-template/{final-build,final-regression,final-publish,
-final-published-startup,guide-format-verify,period-bound-focused}.log and
-final-browser-{admin,gost,kapital,PL,limiti,FL}.log. JSON/screenshots/traces are
+Current receipts: artifacts/migration-template/{completion-restore,
+completion-build,completion-regression,completion-publish,completion-startup,
+completion-format}.log and completion-browser-{admin,gost,kapital,PL,limiti,FL}.log.
+Earlier final-* and period-bound-focused receipts remain historical evidence.
+JSON/screenshots/traces are
 under artifacts/migration-browser by role. The formatter retains its existing
-workspace-load warning; build retains existing Pkcs NU1902/NU1903 advisories.
-No warning suppression or security-release clearance is implied.
+workspace-load warning; the fresh analyzer build has0 warnings/errors. The prior
+Pkcs NU1902/NU1903 advisories are fixed by9.0.21, with no warning suppression.
+No production security-release clearance is implied.
 
 ## 13. E2E evidence
 
@@ -156,16 +178,23 @@ settings; actual SSO/login/logout/refresh and identity↔application-user accept
 approved shared IDistributedCache registration/provider and shared DataProtection;
 live SQL concurrency/constraints and existing migration policy acceptance; SMTP
 delivery; private publication of approved RBI transport packages; OCP/proxy/circuit
-deployment and replacement-workflow proof; security disposition of existing Pkcs
-NU1902/NU1903 advisories. No credential guessing, live destructive-data tests,
-package upgrade or production cutover is authorized by local green tests.
+deployment and replacement-workflow proof; corporate dependency/runtime servicing
+acceptance. The Pkcs NU1902/NU1903 findings are locally fixed, not still unresolved.
+Existing OCP insecure certificate verification/UAT Development selection and
+forwarded-header network trust require explicit deployment acceptance, not reuse
+as approved native production defaults. No credential guessing, live destructive
+data tests or production cutover is authorized by local green tests.
 
 ## 18. Removed React dependencies/files
 
-**None removed from src/Web or active deployment.** Native src/Web.Blazor has no
+**None removed from src/Web or active deployment.** Its new MIGRATION_REFERENCE
+marker is the only React-tree change in final completion. Native src/Web.Blazor has no
 React/TanStack/Radix/i18next/Tailwind/keycloak-js dependency. Retiring/archive of
 the old frontend is deferred until parity/environment acceptance; preserving
 reference source is intentional, not two active production implementations.
+The274 previously tracked files and exact package/tool consumers are inventoried
+in BLAZOR-MIGRATION-RETIREMENT-AND-DEPLOYMENT.md. Current legacy keycloak-js is
+absent; no imaginary dependency removal is claimed.
 
 ## 19. Repository structure
 
