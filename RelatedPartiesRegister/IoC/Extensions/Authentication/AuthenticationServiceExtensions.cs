@@ -12,8 +12,8 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
     public static class AuthenticationServiceExtensions
     {
         /// <summary>
-        /// Registruje JWT Bearer autentikaciju prema Keycloak-u i RoleClaimsTransformation
-        /// koja čita realm_access.roles iz JWT tokena i mapira ih na ClaimTypes.Role.
+        /// Registruje Keycloak identitet; aplikacijske role/dozvole dolaze iz baze
+        /// kroz RoleClaimsTransformation, nikad iz provider permission/role claimova.
         /// </summary>
         public static IServiceCollection AddAuthenticationExtension(
             this IServiceCollection services,
@@ -51,6 +51,12 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
                 return services;
             }
 
+            // HTTP metadata is a local Development exception, not a string-prefix
+            // exception for production or hosts such as localhost.attacker.test.
+            var localDevelopmentMetadata = environment.IsDevelopment()
+                && Uri.TryCreate(issuer, UriKind.Absolute, out var issuerUri)
+                && issuerUri.Scheme == Uri.UriSchemeHttp && issuerUri.IsLoopback;
+
             services
                 .AddAuthentication(options =>
                 {
@@ -84,7 +90,7 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
                         : new[] { issuer, publicIssuer };
 
                     options.Authority = issuer;
-                    options.RequireHttpsMetadata = !issuer.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase);
+                    options.RequireHttpsMetadata = !localDevelopmentMetadata;
                     options.Audience = audience;
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
@@ -121,7 +127,7 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
                     options.Authority = issuer;
                     options.ClientId = clientId;
                     options.ClientSecret = clientSecret;
-                    options.RequireHttpsMetadata = !issuer.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase);
+                    options.RequireHttpsMetadata = !localDevelopmentMetadata;
                     options.ResponseType = OpenIdConnectResponseType.Code;
                     options.ResponseMode = OpenIdConnectResponseMode.Query;
                     options.PushedAuthorizationBehavior = PushedAuthorizationBehavior.Disable;
@@ -136,7 +142,7 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
                     options.TokenValidationParameters.RoleClaimType = ClaimTypes.Role;
                 });
 
-            // PL-18: Registracija transformacije rola iz Keycloak JWT-a
+            // Application policies consume only current database-owned grants.
             AddApplicationAuthorization(services);
 
             return services;
