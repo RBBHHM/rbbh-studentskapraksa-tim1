@@ -77,7 +77,8 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
     {
         var korisnik = GetKorisnik();
         var result = await _codeListService.DeleteCategory(name, korisnik);
-        if (!result.IsSuccessful) return HandleResult(result);
+        // Return the HTTP result, not ActionResult<bool> as an object/HTTP 200.
+        if (!result.IsSuccessful) return HandleResult(result).Result!;
 
         await _auditService.LogAsync(new AuditEntry
         {
@@ -239,7 +240,8 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
     {
         var korisnik = GetKorisnik();
         var result   = await _codeListService.Update(id, dto, korisnik);
-        if (!result.IsSuccessful) return HandleResult(result);
+        // Preserve validation/not-found status across different response DTOs.
+        if (!result.IsSuccessful) return HandleResult(result).Result!;
 
         var x = result.Value;
 
