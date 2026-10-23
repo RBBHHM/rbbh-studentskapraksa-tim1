@@ -75,3 +75,9 @@ Theme/sidebar/controls remain package-owned; only app layout composition is loca
 The nested generated workflow examples are not active root deployment workflows.
 Do not activate/cut over deployment until publish/startup, full module parity,
 responsive/accessibility and integrated environment gates are accepted.
+
+The 2026-10-23 local checkpoint passes 520 .NET and 209 browser tests, plus Release
+publish and actual published signed-out startup. See
+`docs/REACT-TO-BLAZOR-FINAL-HANDOFF.md` at repository root for module evidence and
+the still-blocked SSO/shared cache/SQL/SMTP/OCP/security acceptance gates.
+Local green tests do not authorize React retirement or production cutover.

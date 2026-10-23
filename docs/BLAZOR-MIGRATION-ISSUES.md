@@ -80,4 +80,5 @@ run backend Program/.env, SQL Server, production migrations/seeding, real SSO,
 SMTP or OCP. The app has no production fake-identity mode. The approved shared
 cache/provider, confidential client/audience configuration and deployed Keycloak,
 SQL and OCP environments must be verified before production claims or cutover.
-Other business modules remain tracked individually in the parity matrix.
+Local business modules are now closed in the parity matrix and final handoff;
+the integrated infrastructure/security/cutover gates above remain open.

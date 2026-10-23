@@ -62,6 +62,11 @@ server-side and in the native UI, with the unchanged prefix and SQL schema. This
 is a documented intentional reduction of the old React allowance, not accidental
 parity drift. React/reference source remains unchanged.
 
+The narrow backend guard and HTTP regressions are committed separately as
+`cbe95276e424c698bb482713bb32542eee6ae3e3`
+(`fix(period): bound unlock response to persisted length`). Native period UI
+and module evidence follow in `474734e`.
+
 The backend rejects raw input longer than490 and trimmed meaningful text shorter
 than10 before lookup/write/audit/email. It returns safe HTTP400 with field
 `message` and the business range, without echoing user text or internal details.
