@@ -97,10 +97,12 @@ public class UsersController(IAppUserService appUserService, KeycloakAdminServic
             && await IsFinalActiveAdmin(localUser))
             return FinalAdminConflict();
 
+        // Role assignment is an administrative action on another user. This covers
+        // adding, replacing and clearing (which also deletes the AppUser row).
+        if (IsSelf(localUser))
+            return BadRequest(new ProblemDetails { Title = "Promjena nije dozvoljena", Detail = "Ne možete mijenjati vlastite aplikacijske role." });
+
         var isRemoval = roleIds.Count == 0;
-        // Clearing every role removes the AppUser row, so it is a self-delete.
-        if (isRemoval && IsSelf(localUser))
-            return BadRequest(new ProblemDetails { Title = "Brisanje nije dozvoljeno", Detail = "Ne možete obrisati vlastiti nalog." });
         if (isRemoval)
         {
             var assignments = await _db.UserRoles.Where(item => item.UserId == localUser.Id).ToListAsync();

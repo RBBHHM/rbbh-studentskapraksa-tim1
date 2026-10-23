@@ -165,9 +165,9 @@ public sealed class UsersSafetyHttpTests : IAsyncLifetime
     [Fact]
     public async Task KeepingAdminRoleAndReactivatingOrdinaryUserRemainAllowed()
     {
-        var adminId = await RoleId(ApplicationAccessRoles.Administrator);
-        Assert.Equal(HttpStatusCode.OK, (await _client.PutAsJsonAsync($"/api/users/{_localId}/role", new { roleIds = new[] { adminId } })).StatusCode);
         var other = await AddUser(ApplicationAccessRoles.PhysicalPersons, "other@example.test");
+        var adminId = await RoleId(ApplicationAccessRoles.Administrator);
+        Assert.Equal(HttpStatusCode.OK, (await _client.PutAsJsonAsync($"/api/users/{other}/role", new { roleIds = new[] { adminId } })).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await Mutate(_client, other, "deactivate")).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await _client.PostAsJsonAsync($"/api/users/{other}/reactivate", new { })).StatusCode);
         await using var scope = _app.Services.CreateAsyncScope();
@@ -250,20 +250,46 @@ public sealed class UsersSafetyHttpTests : IAsyncLifetime
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task SelfCannotDeleteOwnAccountByClearingRolesEvenWhenAnotherAdminRemains(bool postAlias)
+    [InlineData("clear", false)]
+    [InlineData("clear", true)]
+    [InlineData("add", false)]
+    [InlineData("add", true)]
+    [InlineData("replace-without-admin", false)]
+    [InlineData("replace-without-admin", true)]
+    [InlineData("keep-admin", false)]
+    [InlineData("keep-admin", true)]
+    public async Task UserCannotChangeOwnRolesEvenWhenAnotherAdminRemains(string change, bool postAlias)
     {
         await AddUser(ApplicationAccessRoles.Administrator, "other@example.test");
-        var payload = new { roleIds = Array.Empty<Guid>() };
+        var admin = await RoleId(ApplicationAccessRoles.Administrator);
+        var legal = await RoleId(ApplicationAccessRoles.LegalPersons);
+        var roleIds = change switch
+        {
+            "clear" => Array.Empty<Guid>(),
+            "add" => new[] { admin, legal },
+            "replace-without-admin" => new[] { legal },
+            _ => new[] { admin }
+        };
+        var payload = new { roleIds };
         var response = postAlias ? await _client.PostAsJsonAsync($"/api/users/{_localId}/roles", payload)
             : await _client.PutAsJsonAsync($"/api/users/{_localId}/role", payload);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         await using var scope = _app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
         Assert.True((await db.AppUsers.SingleAsync(user => user.Id == _localId)).IsActive);
-        Assert.True(await db.UserRoles.AnyAsync(mapping => mapping.UserId == _localId && mapping.IsActive));
+        var mappings = await db.UserRoles.Where(mapping => mapping.UserId == _localId).ToListAsync();
+        Assert.Equal(admin, Assert.Single(mappings).RoleId);
+        Assert.True(mappings[0].IsActive);
         Assert.Empty(await db.AuditLogs.ToListAsync());
+    }
+
+    [Fact]
+    public async Task SelfRoleChangeIsDetectedByIdentityNotByRequestId()
+    {
+        // Same account addressed by its Keycloak id instead of the local id.
+        await AddUser(ApplicationAccessRoles.Administrator, "other@example.test");
+        var response = await _client.PutAsJsonAsync($"/api/users/{Subject}/role", new { roleIds = Array.Empty<Guid>() });
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
