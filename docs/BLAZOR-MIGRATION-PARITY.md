@@ -20,7 +20,7 @@ BLAZOR-MIGRATION-AUTHORIZATION.md for identity/application permission separation
 | `/app/reports` | archive/generate/download → native reporting module | reports | authenticated read; DB KAPITAL_CREATE generate/persist | reports closure:15 added frontend tests,9 Kapital+9 Admin+2 Guest browser cases; backend12 HTTP preserved | PARITY |
 | `/app/notifications` | email log → native recorded-notification list | email-log | DB KAPITAL_VIEW | notifications closure:6 browser cases × 6 current DB roles, no SMTP delivery claim or HTML rendering | PARITY |
 | `/app/admin/period` | lock/request/process/respond → native period workflow | period-lock | existing Admin route + CapitalWrite API | pending tests | NOT_STARTED |
-| `/app/admin/users` | functional role/user administration → native module | users, roles | ADMINISTRATION_* | safety blocker RESOLVED:28 HTTP safety regressions; native CRUD page next | IN_PROGRESS |
+| `/app/admin/users` | functional role/user administration → native module | users, roles | existing DB Admin route + ADMINISTRATION_* | users closure:9 Admin browser cases +5-role forged denial, create/multi-role/state/delete and28 HTTP safety regressions | PARITY |
 | `/app/admin/code-lists` | category/value CRUD/import → native module | code-lists | existing Admin route, ADMINISTRATION_MANAGE mutations | pending tests | NOT_STARTED |
 | `/app/admin/audit` | actual business audit → native table/filter/paging | audit-logs | exact admin from current DB profile | audit closure:5 Admin browser cases + denied/forged-claim coverage for5 other DB roles; real AuditService metadata/paging | PARITY |
 | `/app/profile` | identity/effective permissions → template-based profile | auth/profile | authenticated | signed-out HTTP smoke + effective permission tests; integrated identity/browser pending | IN_PROGRESS |
@@ -45,8 +45,10 @@ including DB-owned Admin access and encoded audit metadata.
 Remaining administration/guide modules are incomplete.
 The user-administration safety blocker is RESOLVED in
 BLAZOR-MIGRATION-USERS-SAFETY-BLOCKER.md:28 HTTP regressions, 305 backend tests
-and 435 total .NET tests PASS. Its original 2 FAIL/1 PASS discovery remains
-historical evidence, not the current result. The native Users page is still open.
+and 435 total .NET tests PASS at that checkpoint. Its original 2 FAIL/1 PASS
+discovery remains historical evidence. Native Users follows in
+BLAZOR-MIGRATION-USERS-CLOSURE.md (450 .NET/141 browser), including safe native
+confirmations, multi-role workflows and current DB authorization.
 Real SQL/SSO/OCP parity is not claimed.
 
 ## Required end-to-end closure ledger
@@ -76,10 +78,10 @@ may be weakened to manufacture completion.
 | 17 | request unlock | admin/period | NOT_STARTED |
 | 18 | process/respond to unlock request | admin/period | NOT_STARTED |
 | 19 | notifications/provider empty state | notifications | PARITY: recorded rows, safe body search and explicit SMTP empty-state semantics across all6 DB roles |
-| 20 | create user | admin/users | NOT_STARTED |
-| 21 | assign functional permissions via roles | admin/users | NOT_STARTED |
-| 22 | deactivate/reactivate user | admin/users | IN_PROGRESS: backend self/final-Admin protection and allowed reactivation HTTP tests PASS; native page pending |
-| 23 | delete user with confirmation | admin/users | IN_PROGRESS: backend self/final-Admin protection and allowed other-user deletion/audit PASS; native confirmation pending |
+| 20 | create user | admin/users | PARITY: real local backend create/reload, corporate-domain/required validation and duplicate rejection; integrated Keycloak lookup gate remains |
+| 21 | assign functional permissions via roles | admin/users | PARITY: actual catalog GUIDs, multiple roles, replacement and non-final empty-role/Guest removal |
+| 22 | deactivate/reactivate user | admin/users | PARITY: native confirmations/cancel, actual backend state/audits, independent self/final-Admin HTTP protection |
+| 23 | delete user with confirmation | admin/users | PARITY: native permanent-delete/cancel and real record/audit, self/final-Admin server rejection |
 | 24 | code-list CRUD/preview/import/referenced-value rejection | admin/code-lists | NOT_STARTED |
 | 25 | audit visible after mutation | admin/audit | PARITY: real AuditService entry, metadata/search/paging, DB Admin only and forged-provider denial |
 | 26 | current identity/permissions profile | profile | NOT_STARTED |

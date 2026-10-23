@@ -80,6 +80,7 @@ internal static class BrowserHostProgram
         builder.Services.AddScoped<ICapitalService, CapitalService>();
         builder.Services.AddScoped<IReportService, ReportService>();
         builder.Services.AddScoped<IAppUserService, AppUserService>();
+        builder.Services.AddScoped<IRoleService, RoleService>();
         builder.Configuration["KeycloakSettings:Enabled"] = "false";
         builder.Services.AddHttpClient<KeycloakAdminService>().ConfigurePrimaryHttpMessageHandler(() => new NoIdentityNetwork());
         builder.Services.AddScoped(_ => database.MailStore);
@@ -92,7 +93,7 @@ internal static class BrowserHostProgram
             database.LastCulture = context.Request.Headers.AcceptLanguage.ToString();
             if (context.Request.Path == "/api/audit-logs") database.AuditRequests++;
             if ((HttpMethods.IsPost(context.Request.Method) || HttpMethods.IsPut(context.Request.Method) || HttpMethods.IsDelete(context.Request.Method)) &&
-                (context.Request.Path.StartsWithSegments("/api/related-persons") || context.Request.Path.StartsWithSegments("/api/legal-entities") || context.Request.Path.StartsWithSegments("/api/limiti") || context.Request.Path.StartsWithSegments("/api/capital") || context.Request.Path.StartsWithSegments("/api/reports"))) database.MutationAttempts++;
+                (context.Request.Path.StartsWithSegments("/api/related-persons") || context.Request.Path.StartsWithSegments("/api/legal-entities") || context.Request.Path.StartsWithSegments("/api/limiti") || context.Request.Path.StartsWithSegments("/api/capital") || context.Request.Path.StartsWithSegments("/api/reports") || context.Request.Path.StartsWithSegments("/api/users"))) database.MutationAttempts++;
             if (HttpMethods.IsPost(context.Request.Method) && context.Request.Path.StartsWithSegments("/api/reports")) database.ReportGenerationAttempts++;
             if (database.Unavailable || (database.CodebooksUnavailable && context.Request.Path.StartsWithSegments("/api/code-lists/dropdown")) ||
                 (database.ProfileUnavailable && context.Request.Path == "/api/auth/profile") ||
@@ -204,6 +205,7 @@ internal static class BrowserHostProgram
                 services.RemoveAll<IReportsApi>();
                 services.RemoveAll<INotificationsApi>();
                 services.RemoveAll<IAuditApi>();
+                services.RemoveAll<IUsersApi>();
                 services.AddRbiApiClient<IProfileApi, ProfileApi>("BrowserProfile", options => options.BaseUrl = new("http://backend.fixture/"))
                     .AddHttpMessageHandler<ApplicationCultureHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
@@ -226,6 +228,9 @@ internal static class BrowserHostProgram
                     .AddHttpMessageHandler<ApplicationCultureHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
                 services.AddRbiApiClient<IAuditApi, AuditApi>("BrowserAudit", options => options.BaseUrl = new("http://backend.fixture/"))
+                    .AddHttpMessageHandler<ApplicationCultureHandler>()
+                    .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
+                services.AddRbiApiClient<IUsersApi, UsersApi>("BrowserUsers", options => options.BaseUrl = new("http://backend.fixture/"))
                     .AddHttpMessageHandler<ApplicationCultureHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
             });
@@ -280,10 +285,16 @@ internal static class BrowserHostProgram
                         var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
                         await context.Response.WriteAsJsonAsync(new
                         {
-                            users = await db.AppUsers.Select(item => new { item.Id, item.Email, item.IsActive }).ToArrayAsync(),
+                            users = await db.AppUsers.Select(item => new { item.Id, item.Username, item.FirstName, item.LastName, item.Email, item.IsActive }).ToArrayAsync(),
                             roles = await db.Roles.Select(item => new { item.Id, item.Name }).ToArrayAsync(),
                             audit = await db.AuditLogs.Select(item => new { item.Action, item.RecordId, item.Username }).ToArrayAsync()
                         }); return;
+                    }
+                    if (context.Request.Path == "/__fixtures/users-status" && HttpMethods.IsGet(context.Request.Method))
+                    {
+                        using var client = backend.GetTestClient();
+                        using var response = await client.GetAsync("/api/users");
+                        await context.Response.WriteAsJsonAsync(new { status = (int)response.StatusCode }); return;
                     }
                     if (context.Request.Path == "/__fixtures/users-mutation" && HttpMethods.IsPost(context.Request.Method))
                     {
@@ -366,6 +377,15 @@ internal static class BrowserHostProgram
                                     db.AppUsers.Add(other);
                                     db.UserRoles.Add(new UserRole { UserId = other.Id, RoleId = (await db.Roles.SingleAsync(role => role.Name == roleName)).Id });
                                 }
+                                await db.SaveChangesAsync();
+                            }
+                            break;
+                        case "/__fixtures/users-pages":
+                            await using (var scope = backend.Services.CreateAsyncScope())
+                            {
+                                var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                                for (var index = 0; index < 22; index++)
+                                    db.AppUsers.Add(new AppUser { Email = $"page{index}@fixture.test", Username = $"page{index:D2}", FirstName = "Page", LastName = $"Fixture{index:D2}", KeycloakId = Guid.NewGuid().ToString() });
                                 await db.SaveChangesAsync();
                             }
                             break;

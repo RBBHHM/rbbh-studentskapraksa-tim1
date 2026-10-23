@@ -1,0 +1,130 @@
+@page "/app/admin/users"
+@using RBBH.RelatedPartiesRegister.Web.Components.Registry
+@implements IDisposable
+@inject AuthenticationStateProvider AuthenticationState
+@inject IProfileApi Profile
+@inject IUsersApi Api
+
+<PageTitle>@T["users.title"]</PageTitle>
+<HeroBar Title="@T["users.title"]" Description="@T["users.subtitle"]" />
+@if (!_authenticated && !_loading) { <IdentityNotice /> }
+else if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
+else if (_error is not null)
+{
+    <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_error]" />
+    <RbiButton OnClick="LoadAsync">@T["state.retry"]</RbiButton>
+}
+else if (!_canRead) { <RbiAlert Title="@T["errors.forbidden"]" /> }
+else
+{
+    @if (_notice) { <div role="status"><RbiAlert Title="@T["common.saved"]" /></div> }
+    <div class="registry-toolbar">
+        <RbiButton Disabled="_busy" Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Secondary">@T["common.refresh"]</RbiButton>
+        @if (_canWrite) { <RbiButton Disabled="@(_busy || _refreshing)" OnClick="() => Edit(null)">@T["users.add"]</RbiButton> }
+    </div>
+    @if (_result.Users.Count == 0) { <RbiText>@T["users.empty"]</RbiText> }
+    else
+    {
+        <RbiTable AccessibleLabel="@T["users.title"]" Class="registry-users-table">
+            <caption>@T["users.title"]</caption>
+            <thead><tr><th scope="col">@T["users.user"]</th><th scope="col">@T["users.email"]</th><th scope="col">@T["users.accesses"]</th><th scope="col">@T["users.permissions"]</th><th scope="col">@T["users.status"]</th>@if (_canWrite) { <th scope="col">@T["users.actions"]</th> }</tr></thead>
+            <tbody>@foreach (var user in _result.Users)
+            {
+                <tr @key="user.Id"><td>@user.FirstName @user.LastName<br />@user.Username</td><td>@user.Email</td><td>@string.Join(", ", user.Roles.Select(RoleLabel))</td><td>@string.Join(", ", user.EffectivePermissions)</td><td>@T[user.IsActive ? "users.active" : "users.inactive"]</td>
+                @if (_canWrite)
+                {
+                    <td><div class="registry-toolbar">
+                        <RbiButton Disabled="@(_busy || _refreshing)" Variant="RbiButtonVariant.Secondary" OnClick="() => Edit(user)">@T["users.roles-edit"]</RbiButton>
+                        <RbiButton Disabled="@(_busy || _refreshing || (user.IsActive && IsSelf(user)))" Variant="RbiButtonVariant.Secondary" OnClick="() => Confirm(user, false)">@T[user.IsActive ? "users.deactivate" : "users.reactivate"]</RbiButton>
+                        <RbiButton Disabled="@(_busy || _refreshing || IsSelf(user))" Variant="RbiButtonVariant.Secondary" OnClick="() => Confirm(user, true)">@T["users.delete"]</RbiButton>
+                    </div>@if (IsSelf(user)) { <p>@T["users.self-protected"]</p> }</td>
+                }</tr>
+            }</tbody>
+        </RbiTable>
+    }
+    <p role="status">@T.Format("legal.page-summary", _page, TotalPages, _result.Total)</p>
+    <RbiPagination CurrentPage="_page" CurrentPageChanged="ChangePageAsync" TotalPages="TotalPages" AccessibleLabel="@T["users.pages"]" PreviousLabel="@T["common.back"]" PreviousAccessibleLabel="@T["legal.previous"]" NextLabel="@T["common.actions.continue"]" NextAccessibleLabel="@T["legal.next"]" PageAccessibleLabel="@(page => T.Format("legal.page", page))" />
+}
+@if (_draft is { } draft)
+{
+    <RbiDialog Open Class="registry-users-dialog" Title="@T[draft.Id is null ? "users.create" : "users.roles-edit"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseEditor">
+        <DialogBody><UserForm @key="draft" Model="draft" Save="SaveAsync" Cancel="() => CloseEditor(false)" /></DialogBody>
+    </RbiDialog>
+}
+@if (_target is { } target)
+{
+    <RbiAlertDialog Open Class="registry-users-dialog" Title="@T[_delete ? "users.delete-title" : target.IsActive ? "users.deactivate-title" : "users.reactivate-title"]" Description="@T.Format(_delete ? "users.delete-description" : "users.state-description", target.Username)" CancelLabel="@T["common.cancel"]" ConfirmLabel="@T[_delete ? "users.delete" : target.IsActive ? "users.deactivate" : "users.reactivate"]" Confirming="_busy" ConfirmLoadingLabel="@T["state.loading"]" OnConfirm="MutateAsync" OnCancel="CancelConfirmation" OpenChanged="CloseConfirmation" />
+}
+@code {
+    private readonly CancellationTokenSource _lifetime = new();
+    private readonly CancellationToken _token;
+    public Users() => _token = _lifetime.Token;
+    private UsersPage _result = new([], 0, 1, 20);
+    private RolesCatalog _roles = new([]);
+    private ApplicationProfile? _profile;
+    private UserDraft? _draft;
+    private ApplicationUser? _target;
+    private string? _error;
+    private int _page = 1;
+    private bool _disposed, _authenticated, _canRead, _canWrite, _busy, _loading = true, _refreshing, _loaded, _notice, _delete;
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling(_result.Total / 20d));
+    private string RoleLabel(string role) => role.ToLowerInvariant() is "fl" or "pl" or "kapital" or "limiti" or "admin" or "gost"
+        ? T["users.role." + role.ToLowerInvariant()] : role;
+    private bool IsSelf(ApplicationUser user) => !string.IsNullOrWhiteSpace(_profile?.Email) && string.Equals(_profile.Email.Trim(), user.Email.Trim(), StringComparison.OrdinalIgnoreCase);
+    protected override Task OnInitializedAsync() => LoadAsync();
+    private async Task LoadAsync()
+    {
+        if (_disposed || _refreshing) return; _loading = !_loaded; _refreshing = true; _error = null;
+        try
+        {
+            _authenticated = (await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true;
+            if (!_authenticated) return;
+            _profile = await Profile.GetAsync(_token);
+            _canRead = ApplicationAccess.IsAdministrator(_profile) && _profile.Permissions.Contains("ADMINISTRATION_VIEW");
+            _canWrite = _canRead && _profile.Permissions.Contains("ADMINISTRATION_MANAGE");
+            if (!_canRead) return;
+            _roles = await Api.RolesAsync(_token); _result = await Api.ListAsync(_page, _token);
+            if (_page > TotalPages) { _page = TotalPages; _result = await Api.ListAsync(_page, _token); }
+            _loaded = true;
+        }
+        catch (RegistryApiException exception) { _error = exception.MessageKey; }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally { _loading = _refreshing = false; }
+    }
+    private void Edit(ApplicationUser? user) { if (_canWrite && !_busy && !_refreshing) _draft = UserDraft.From(user, _roles); }
+    private void CloseEditor(bool open) { if (!open && !_busy) _draft = null; }
+    private async Task SaveAsync(UserDraft draft)
+    {
+        if (!_canWrite) throw new RegistryApiException(System.Net.HttpStatusCode.Forbidden);
+        if (_busy) return; _busy = true;
+        try
+        {
+            if (draft.Id is { } id) await Api.UpdateRolesAsync(id, draft.SelectedRoles, _token);
+            else await Api.CreateAsync(draft.ToRequest(), _token);
+            _notice = true; await LoadAsync(); _draft = null;
+        }
+        finally { _busy = false; }
+    }
+    private void Confirm(ApplicationUser user, bool permanent)
+    {
+        if (!_canWrite || _busy || _refreshing || (IsSelf(user) && (permanent || user.IsActive))) return;
+        _target = user; _delete = permanent;
+    }
+    private Task CancelConfirmation() { if (!_busy) _target = null; return Task.CompletedTask; }
+    private Task CloseConfirmation(bool open) => open ? Task.CompletedTask : CancelConfirmation();
+    private async Task MutateAsync()
+    {
+        if (_target is not { } target || !_canWrite || _busy || (IsSelf(target) && (_delete || target.IsActive))) return;
+        _busy = true;
+        try
+        {
+            if (_delete) await Api.DeleteAsync(target.Id, _token); else await Api.SetActiveAsync(target.Id, !target.IsActive, _token);
+            _notice = true; await LoadAsync();
+        }
+        catch (RegistryApiException exception) { _error = (int?)exception.StatusCode == 409 ? "users.safety-conflict" : exception.MessageKey; }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally { _busy = false; _target = null; }
+    }
+    private async Task ChangePageAsync(int page) { if (_busy || _refreshing || page < 1 || page > TotalPages) return; _page = page; await LoadAsync(); }
+    public void Dispose() { _disposed = true; _lifetime.Cancel(); _lifetime.Dispose(); }
+}
