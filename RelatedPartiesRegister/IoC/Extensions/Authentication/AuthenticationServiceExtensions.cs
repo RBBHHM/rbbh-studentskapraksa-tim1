@@ -57,6 +57,13 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
                 && Uri.TryCreate(issuer, UriKind.Absolute, out var issuerUri)
                 && issuerUri.Scheme == Uri.UriSchemeHttp && issuerUri.IsLoopback;
 
+            // Fail closed: a missing audience would otherwise silently accept tokens
+            // issued to any client in the realm. Development keeps the documented
+            // local behavior (audience check skipped only while it is unset).
+            if (string.IsNullOrWhiteSpace(audience) && !environment.IsDevelopment())
+                throw new InvalidOperationException(
+                    "KeycloakSettings:Audience mora biti postavljen kada je Keycloak uključen izvan Development okruženja.");
+
             services
                 .AddAuthentication(options =>
                 {

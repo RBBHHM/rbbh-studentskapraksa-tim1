@@ -21,7 +21,7 @@ postavke nisu unesene u lokalnom Development režimu.
 | `KeycloakSettings__Enabled` | produkcija | Uključuje JWT validaciju. |
 | `KeycloakSettings__Issuer` | uz Keycloak | Authority/issuer, npr. `https://id/realms/rbbh`. Iz njega se izvode realm i admin base URL. |
 | `KeycloakSettings__PublicIssuer` | samo split URL | Dodatni javni issuer ako backend i browser vide Keycloak pod različitim adresama. |
-| `KeycloakSettings__Audience` | uz Keycloak | Očekivani API audience. |
+| `KeycloakSettings__Audience` | uz Keycloak | Očekivani API audience. Obavezan izvan Development okruženja; aplikacija se ne pokreće bez njega. U Development okruženju, ako nije postavljen, audience se ne provjerava (samo lokalni razvoj). |
 | `KeycloakSettings__ClientId` / `ClientSecret` | uz Keycloak | Serverski OIDC client; secret ide samo u OCP Secret. |
 | `KeycloakSettings__AdminClientId` / `AdminClientSecret` | samo upravljanje korisnicima | Povjerljivi service account sa minimalnim realm-management pravima. |
 | `Cors__AllowedOrigins__N` | samo cross-origin | IIS origin kada browser direktno zove OCP; nije potreban uz IIS ARR same-origin proxy. |
