@@ -1,0 +1,48 @@
+@page "/app/guide"
+@using RBBH.RelatedPartiesRegister.Web.Components.Registry
+@implements IDisposable
+@inject AuthenticationStateProvider AuthenticationState
+@inject IProfileApi Profile
+
+<PageTitle>@T["guide.title"]</PageTitle>
+<HeroBar Title="@T["guide.title"]" Description="@T["guide.subtitle"]" />
+@if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
+else if (!_authenticated) { <IdentityNotice /> }
+else if (_error) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T["profile.unavailable"]" /><RbiButton OnClick="LoadAsync">@T["state.retry"]</RbiButton> }
+else if (_profile is not null)
+{
+    <section class="registry-guide" aria-label="@T["guide.title"]">
+        <RbiGrid Columns="RbiGridColumns.Two">@foreach (var state in States)
+        { <RbiCard Title="@T["guide.status." + state]" HeadingLevel="2"><ChildContent><RbiText>@T["guide.status." + state + ".description"]</RbiText></ChildContent></RbiCard> }</RbiGrid>
+        @foreach (var section in GuideContent.Visible(_profile))
+        {
+            <details open="@(section.Id == GuideContent.Visible(_profile).First().Id)">
+                <summary><strong>@T["guide." + section.Id + ".title"]</strong> — @T["guide." + section.Id + ".summary"]</summary>
+                <ol>@for (var index = 1; index <= section.Points; index++) { <li>@T["guide." + section.Id + ".point" + index]</li> }</ol>
+            </details>
+        }
+        <RbiCallout Title="@T["guide.before-title"]">@T["guide.before"]</RbiCallout>
+    </section>
+}
+@code {
+    private static readonly string[] States = ["draft", "verified", "rejected", "inactive"];
+    private readonly CancellationTokenSource _lifetime = new();
+    private readonly CancellationToken _token;
+    public Guide() => _token = _lifetime.Token;
+    private ApplicationProfile? _profile;
+    private bool _loading = true, _error, _authenticated;
+    protected override Task OnInitializedAsync() => LoadAsync();
+    private async Task LoadAsync()
+    {
+        _loading = true; _error = false; _profile = null;
+        try
+        {
+            _authenticated = (await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true;
+            if (_authenticated) _profile = await Profile.GetAsync(_token);
+        }
+        catch (RegistryApiException) { _error = true; }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally { _loading = false; }
+    }
+    public void Dispose() { _lifetime.Cancel(); _lifetime.Dispose(); }
+}

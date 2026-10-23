@@ -4,10 +4,11 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @inject AuthenticationStateProvider AuthenticationState
 @inject IProfileApi Profile
+@implements IDisposable
 
 <PageTitle>@T["profile.title"]</PageTitle>
 <HeroBar Title="@T["profile.title"]" Description="@T["profile.description"]" />
-<RbiCard>
+<RbiCard Class="registry-profile">
     <ChildContent>
         <RbiStack Gap="RbiStackGap.Medium">
             <RbiAvatar Fallback="@Initials" AccessibleLabel="@T["profile.visual"]" />
@@ -19,7 +20,7 @@
             {
                 <dl>
                     @if (DisplayName is { } displayName) { <dt>@T["profile.name"]</dt><dd>@displayName</dd> }
-                    @if ((Claim(ClaimTypes.Upn) ?? Claim("preferred_username")) is { } username) { <dt>@T["profile.username"]</dt><dd>@username</dd> }
+                    @if ((Claim(ClaimTypes.Upn) ?? Claim("preferred_username") ?? _profile?.Username) is { } username) { <dt>@T["profile.username"]</dt><dd>@username</dd> }
                     @if ((Claim(ClaimTypes.Email) ?? Claim("email")) is { } email) { <dt>@T["profile.email"]</dt><dd>@email</dd> }
                     @if ((Claim(ClaimTypes.NameIdentifier) ?? Claim("sub")) is { } subject) { <dt>@T["profile.subject"]</dt><dd>@subject</dd> }
                     @if (_profile is { } profile)
@@ -28,7 +29,7 @@
                         <dt>@T["profile.permissions"]</dt><dd>@string.Join(", ", profile.Permissions)</dd>
                     }
                 </dl>
-                @if (_error) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T["profile.unavailable"]" /> }
+                @if (_error) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T["profile.unavailable"]" /><RbiButton OnClick="LoadAsync">@T["state.retry"]</RbiButton> }
             }
             else { <IdentityNotice /> }
         </RbiStack>
@@ -40,17 +41,24 @@
     private bool _loading = true;
     private ApplicationProfile? _profile;
     private bool _error;
-    protected override async Task OnInitializedAsync()
+    private readonly CancellationTokenSource _lifetime = new();
+    private readonly CancellationToken _token;
+    public MyProfile() => _token = _lifetime.Token;
+    protected override Task OnInitializedAsync() => LoadAsync();
+    private async Task LoadAsync()
     {
+        _loading = true; _error = false; _profile = null;
         _user = (await AuthenticationState.GetAuthenticationStateAsync()).User;
         if (_user.Identity?.IsAuthenticated == true)
         {
-            try { _profile = await Profile.GetAsync(); }
+            try { _profile = await Profile.GetAsync(_token); }
             catch (RegistryApiException) { _error = true; }
+            catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         }
         _loading = false;
     }
     private string? Claim(string type) => _user?.FindFirst(type)?.Value;
     private string? DisplayName => Claim(ClaimTypes.Name) ?? Claim("name") ?? _user?.Identity?.Name;
     private string Initials => string.IsNullOrWhiteSpace(DisplayName) ? "?" : DisplayName[..1].ToUpperInvariant();
+    public void Dispose() { _lifetime.Cancel(); _lifetime.Dispose(); }
 }

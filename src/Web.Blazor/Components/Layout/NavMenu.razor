@@ -33,6 +33,7 @@
             <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["audit.title"]" Href="/app/admin/audit" Icon="RbiIconName.Gauge" Active="@IsActive("app/admin/audit")" /></RbiSidebarPart>
         }
         <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["nav.profile"]" Href="/app/profile" Icon="RbiIconName.UserRound" Active="@IsActive("app/profile")" /></RbiSidebarPart>
+        <AuthorizeView><Authorized><RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["guide.title"]" Href="/app/guide" Icon="RbiIconName.Gauge" Active="@IsActive("app/guide")" /></RbiSidebarPart></Authorized></AuthorizeView>
     </RbiSidebarPart>
 </nav>
 

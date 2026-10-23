@@ -484,6 +484,7 @@ internal static class BrowserHostProgram
                         case "/__fixtures/available": database.Unavailable = false; break;
                         case "/__fixtures/codebooks-unavailable": database.CodebooksUnavailable = true; break;
                         case "/__fixtures/profile-unavailable": database.ProfileUnavailable = true; break;
+                        case "/__fixtures/profile-available": database.ProfileUnavailable = false; break;
                         case "/__fixtures/generated-downloads-unavailable": database.GeneratedDownloadUnavailable = true; break;
                         case "/__fixtures/generated-downloads-available": database.GeneratedDownloadUnavailable = false; break;
                         case "/__fixtures/generation-audit-fails": database.FailGenerationAudit = true; break;

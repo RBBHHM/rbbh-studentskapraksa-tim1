@@ -1,6 +1,7 @@
 # Native Blazor migration parity tracker
 
-2026-10-22. Status is evidence-based, not inferred from generated markup.
+Inventory baseline2026-10-22; local closure updated2026-10-23.
+Status is evidence-based, not inferred from generated markup.
 Allowed states: NOT_STARTED, IN_PROGRESS, PARITY, INTENTIONAL_CHANGE, BLOCKED.
 React remains the active reference; no cutover is approved by this document.
 See BLAZOR-MIGRATION-INVENTORY.md for exact API/validation/state contracts and
@@ -10,7 +11,7 @@ BLAZOR-MIGRATION-AUTHORIZATION.md for identity/application permission separation
 
 | Route | Old React feature → new Blazor feature | API | Policy | Evidence | Status |
 |---|---|---|---|---|---|
-| `/app` | role-aware dashboard → native template shell/cards | auth/profile | authenticated, DB module view permissions | physical card/route integrated; remaining module cards pending | IN_PROGRESS |
+| `/app` | role-aware dashboard → native template shell/cards | auth/profile | authenticated, DB module view permissions | shell-profile-guide cases across all6 DB roles; correct read/Admin cards despite forged provider grants | PARITY |
 | `/app/physical-persons` | specialized list/two-step form/verify/deactivate → native module | related-persons, verification | FL_* | physical closure report:58 frontend tests,14 FL+2 Guest browser cases | PARITY |
 | same route | linked records and tree → unified form and native tree | detailed, relationship-tree, related-persons mutations | FL_* | actual backend create/edit/deactivate/tree reload browser flow | PARITY |
 | same route | physical import/export → backend file workflows | related-persons/import, export | FL_CREATE / FL_VIEW | valid/invalid XLSX, metadata/bytes, Guest download, safe error feedback | PARITY |
@@ -23,9 +24,9 @@ BLAZOR-MIGRATION-AUTHORIZATION.md for identity/application permission separation
 | `/app/admin/users` | functional role/user administration → native module | users, roles | existing DB Admin route + ADMINISTRATION_* | users closure:9 Admin browser cases +5-role forged denial, create/multi-role/state/delete and28 HTTP safety regressions | PARITY |
 | `/app/admin/code-lists` | category/value CRUD/import → native module | code-lists | existing Admin route, ADMINISTRATION_MANAGE mutations | code-list closure:10 Admin +5-role denial cases,28 API/draft cases,5 HTTP status regressions, live business dropdown refresh | PARITY |
 | `/app/admin/audit` | actual business audit → native table/filter/paging | audit-logs | exact admin from current DB profile | audit closure:5 Admin browser cases + denied/forged-claim coverage for5 other DB roles; real AuditService metadata/paging | PARITY |
-| `/app/profile` | identity/effective permissions → template-based profile | auth/profile | authenticated | signed-out HTTP smoke + effective permission tests; integrated identity/browser pending | IN_PROGRESS |
-| `/app/guide` | role-aware business guide → app-owned localized content | effective profile only | visible modules only | pending tests | NOT_STARTED |
-| all | BS/EN business resources → RBI.Localization catalogs | Accept-Language on API calls | no permission grant | pending culture tests | NOT_STARTED |
+| `/app/profile` | identity/effective permissions → template-based profile | auth/profile | authenticated | current claims + backend grants, outage/retry and375px/Axe per role; live SSO remains external | PARITY |
+| `/app/guide` | role-aware business guide → app-owned localized content | effective profile only | visible modules only |7 unit/resource cases; keyboard/reporting distinction/Axe/mobile/BSEN per role | PARITY |
+| all | BS/EN business resources → RBI.Localization catalogs | Accept-Language on API calls | no permission grant | every module's culture cases plus common cookie/reload/navigation checks across6 roles; no DE advertisement | PARITY |
 | reports backend | old read rule → authenticated read/download, DB-controlled persisted generation | reports | approved reporting exception | 12 integration + 16 focused unit; full backend 274 PASS | INTENTIONAL_CHANGE |
 | auth backend | provider permission leakage → exclusively DB-owned app grants | all protected endpoints | current DB matrix | forged grants red201→green403; repeated transform revocation tests | INTENTIONAL_CHANGE |
 
@@ -42,7 +43,8 @@ Notifications follows in BLAZOR-MIGRATION-NOTIFICATIONS-CLOSURE.md
 (400 .NET/112 browser), including a source-backed registry whitespace-search fix.
 Audit follows in BLAZOR-MIGRATION-AUDIT-CLOSURE.md (407 .NET/122 browser),
 including DB-owned Admin access and encoded audit metadata.
-Remaining administration/guide modules are incomplete.
+At the historical audit checkpoint, remaining administration/guide modules were
+incomplete; their subsequent closure is recorded below.
 The user-administration safety blocker is RESOLVED in
 BLAZOR-MIGRATION-USERS-SAFETY-BLOCKER.md:28 HTTP regressions, 305 backend tests
 and 435 total .NET tests PASS at that checkpoint. Its original 2 FAIL/1 PASS
@@ -54,8 +56,9 @@ evidence in BLAZOR-MIGRATION-PERIOD-RESPONSE-BLOCKER.md, now RESOLVED under the
 approved10..490 rule. BLAZOR-MIGRATION-PERIOD-CLOSURE.md records the native
 period checkpoint (478 .NET/158 browser). The next code-list checkpoint has512
 .NET passes and15 focused browser passes, including actual reference-data
-consumption by a business form. Guide and environment gates remain open; the
-red discoveries are no longer uncommitted failing tests.
+consumption by a business form. Guide was still open at that checkpoint. The
+subsequent shell/profile/guide checkpoint closes local modules with520 .NET and
+209 browser passes. The red discoveries are no longer uncommitted failing tests.
 Real SQL/SSO/OCP parity is not claimed.
 
 ## Required end-to-end closure ledger
@@ -66,7 +69,7 @@ may be weakened to manufacture completion.
 
 | # | Required flow | Route | Native evidence / status |
 |---|---|---|---|
-| 1 | home, only authorized modules | /app | NOT_STARTED |
+| 1 | home, only authorized modules | /app | PARITY:actual DB baseline read cards and Admin-only cards/navigation across6 roles, including forged provider grants |
 | 2 | create resident physical person | physical-persons | PARITY: resident browser case + draft checks |
 | 3 | create nonresident physical person | physical-persons | PARITY: real backend save and reload |
 | 4 | duplicate JMBG/passport/FBA validation | physical-persons | PARITY: field query contracts, invalid JMBG and duplicate passport browser case; shared duplicate path validates all three |
@@ -91,16 +94,25 @@ may be weakened to manufacture completion.
 | 23 | delete user with confirmation | admin/users | PARITY: native permanent-delete/cancel and real record/audit, self/final-Admin server rejection |
 | 24 | code-list CRUD/preview/import/referenced-value rejection | admin/code-lists | PARITY:real CRUD/soft-delete/audit, guarded referenced value/category rejection, real XLSX preview/cancel/partial valid-row import, live business dropdown consumption |
 | 25 | audit visible after mutation | admin/audit | PARITY: real AuditService entry, metadata/search/paging, DB Admin only and forged-provider denial |
-| 26 | current identity/permissions profile | profile | NOT_STARTED |
-| 27 | BS/EN switching/persistence | all | IN_PROGRESS: physical route/cookie/backend header proven; other modules pending |
-| 28 | backend unavailable, safe recovery | all | IN_PROGRESS: physical module proven; other modules pending |
-| 29 | auth unconfigured/unavailable, no fake grants | all | NOT_STARTED |
-| 30 | period-locked mutation returns423 and visible explanation | physical/legal/limits | IN_PROGRESS: physical middleware423/no writes proven; legal/limits pending |
+| 26 | current identity/permissions profile | profile | PARITY:template AuthenticationState identity, actual DB grants, forged provider-role rejection, permission outage/retry; live identity integration external |
+| 27 | BS/EN switching/persistence | all | PARITY:module BS/EN cases plus common cookie/reload/navigation/header cases across6 roles |
+| 28 | backend unavailable, safe recovery | all | PARITY:each data module's outage/retry, no synthetic empty/open/zero data; unknown mutation outcomes explicitly warn before resubmission |
+| 29 | auth unconfigured/unavailable, no fake grants | all | BLOCKED for real SSO acceptance; local signed-out startup/routes, missing/partial configuration, no anonymous proxy, profile failure and forged-grant cases PASS; requires approved realm/client/shared cache |
+| 30 | period-locked mutation returns423 and visible explanation | physical/legal/limits | PARITY:all3 native browser cases prove actual middleware423 with no persistence/audit; existing capital/report scope preserved |
 
-## Release gates still pending
+## Final local gate and remaining integrated release gates
 
-Native restore/build/publish/startup; module-specific tests; browser E2E;
-accessibility/responsiveness; approved integrated identity/SQL/OCP environment;
-no secrets/raw exception disclosure; no reusable component copies; no frontend
-DB access; deployment replacement proof. Keep both existing source and deployment
-reference intact until parity is accepted; never deploy two canonical frontends.
+520/520 .NET (201 frontend +210 backend unit +109 integration), no skips;
+209/209 browser (Admin69, gost24, Kapital32, PL28, Limiti26, FL30), workers1,
+retries0, final JSON stats show no failures/flaky/skips. Build with analyzers,
+changed-new-C# format verification, Release publish, published signed-out startup
+on14 routes, actual RBI CSS and absent unconfigured login handler PASS.
+See REACT-TO-BLAZOR-FINAL-HANDOFF.md for receipts, the FL setup correction and
+all environment limitations. Module Axe/375px/culture/error checks remain intact.
+
+Real SSO/shared cache/DataProtection, SQL concurrency/constraints, SMTP, private
+package publication, security disposition of existing dependency advisories and
+OCP/replacement deployment proof remain BLOCKED on approved infrastructure and
+owner acceptance. No reusable component copies, frontend DB/Excel access or
+logged credentials were introduced. Keep existing source/deployment reference
+intact until cutover is accepted; never deploy two canonical frontends.
