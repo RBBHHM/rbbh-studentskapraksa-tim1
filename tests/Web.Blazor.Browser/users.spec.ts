@@ -31,6 +31,7 @@ test("Admin sees real user/access metadata, accessible create form and disabled 
   await visit(page); const own = page.getByRole("row").filter({ hasText: "admin@fixture.test" });
   await expect(own.getByRole("button", { name: "Deaktiviraj", exact: true })).toBeDisabled();
   await expect(own.getByRole("button", { name: "Obriši korisnika", exact: true })).toBeDisabled();
+  await expect(own.getByRole("button", { name: "Promijeni funkcionalne pristupe", exact: true })).toBeDisabled();
   await expect(own).toContainText("ADMINISTRATION_MANAGE");
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
   await page.getByRole("button", { name: "Dodaj korisnika", exact: true }).click();
@@ -77,13 +78,14 @@ test("role replacement and non-final empty roles preserve the existing mapping-r
   await expect(dialog.getByText(/postojeći aplikacijski zapis se uklanja/)).toBeVisible();
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).toHaveCount(0); await expect(other).toHaveCount(0);
 });
-test("final Admin role removal stays rejected in the native form without losing access", async ({ page }) => {
-  await visit(page); await page.getByRole("button", { name: "Promijeni funkcionalne pristupe", exact: true }).click();
-  const dialog = page.getByRole("dialog"); await access(dialog, "Administrator", false);
-  await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
-  await expect(dialog.getByText(/mora ostati aktivni Admin/)).toBeVisible();
-  await dialog.getByRole("button", { name: "Odustani", exact: true }).click(); await page.reload(); await interactive(page);
-  await expect(page.getByRole("row").filter({ hasText: "admin@fixture.test" })).toContainText("ADMINISTRATION_MANAGE");
+test("own role editor is unavailable even when another active Admin exists", async ({ page, request }) => {
+  await request.post("/__fixtures/users-reference", { headers }); await visit(page);
+  const own = page.getByRole("row").filter({ hasText: "admin@fixture.test" }).filter({ hasNotText: "other-admin@fixture.test" });
+  await expect(own.getByRole("button", { name: "Promijeni funkcionalne pristupe", exact: true })).toBeDisabled();
+  await expect(own).toContainText("ADMINISTRATION_MANAGE");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("row").filter({ hasText: "other-admin@fixture.test" }).getByRole("button", { name: "Promijeni funkcionalne pristupe", exact: true })).toBeEnabled();
+  expect((await (await request.get("/__fixtures/users-state", { headers })).json()).audit).toEqual([]);
 });
 test("deactivate/reactivate and permanent delete require confirmation and preserve other Admin", async ({ page, request }) => {
   await request.post("/__fixtures/users-reference", { headers }); await visit(page);

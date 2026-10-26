@@ -65,6 +65,24 @@ test("resident identity validation blocks invalid JMBG and saves a valid residen
   await expect(page.getByRole("row", { name: /Resident Fixture/ })).toBeVisible();
 });
 
+test("locked period disables physical verification without changing the record or audit", async ({ page, request }) => {
+  const headers = { "X-Fixture-Control": "true" }; await openPhysical(page);
+  await createNonresident(page, "Locked", "LOC12345", "456789");
+  const before = await (await request.get("/__fixtures/counts", { headers })).json();
+  await request.post("/__fixtures/lock", { headers }); await page.reload(); await interactive(page);
+  await expect(page.getByRole("button", { name: "Verificiraj", exact: true })).toBeDisabled();
+  await expect(page.getByText("Period je zaključan. Izmjene nisu dozvoljene.", { exact: true })).toBeVisible();
+  expect(await (await request.get("/__fixtures/counts", { headers })).json()).toEqual(before);
+});
+test("unavailable period disables physical verification until an explicit refresh", async ({ page, request }) => {
+  const headers = { "X-Fixture-Control": "true" }; await openPhysical(page);
+  await createNonresident(page, "Unavailable", "UNA12345", "456789");
+  await request.post("/__fixtures/period-unavailable", { headers }); await page.reload(); await interactive(page);
+  await expect(page.getByRole("button", { name: "Verificiraj", exact: true })).toBeDisabled();
+  await expect(page.getByText(/Stanje perioda trenutno nije dostupno/)).toBeVisible();
+  await request.post("/__fixtures/period-available", { headers }); await page.getByRole("button", { name: "Osvježi", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Verificiraj", exact: true })).toBeEnabled();
+});
 test("duplicates block progression, edit excludes self, verification and deactivation refresh", async ({ page }) => {
   await openPhysical(page);
   await createNonresident(page, "Lifecycle", "LIF12345", "456789");

@@ -100,7 +100,7 @@ internal static class BrowserHostProgram
                 (context.Request.Path.StartsWithSegments("/api/related-persons") || context.Request.Path.StartsWithSegments("/api/legal-entities") || context.Request.Path.StartsWithSegments("/api/limiti") || context.Request.Path.StartsWithSegments("/api/capital") || context.Request.Path.StartsWithSegments("/api/reports") || context.Request.Path.StartsWithSegments("/api/users") || context.Request.Path.StartsWithSegments("/api/period-lock"))) database.MutationAttempts++;
             if ((HttpMethods.IsPost(context.Request.Method) || HttpMethods.IsPut(context.Request.Method) || HttpMethods.IsDelete(context.Request.Method)) && context.Request.Path.StartsWithSegments("/api/code-lists")) database.MutationAttempts++;
             if (HttpMethods.IsPost(context.Request.Method) && context.Request.Path.StartsWithSegments("/api/reports")) database.ReportGenerationAttempts++;
-            if (database.Unavailable || (database.CodebooksUnavailable && context.Request.Path.StartsWithSegments("/api/code-lists/dropdown")) ||
+            if (database.Unavailable || (database.PeriodUnavailable && context.Request.Path == "/api/period-lock/current") || (database.CodebooksUnavailable && context.Request.Path.StartsWithSegments("/api/code-lists/dropdown")) ||
                 (database.ProfileUnavailable && context.Request.Path == "/api/auth/profile") ||
                 (database.GeneratedDownloadUnavailable && context.Request.Path.StartsWithSegments("/api/reports/export/generated")))
             { context.Response.StatusCode = 503; await context.Response.WriteAsync("private-fixture-detail-not-for-ui"); return; }
@@ -267,6 +267,7 @@ internal static class BrowserHostProgram
         public string LastCulture { get; set; } = "";
         public int MutationAttempts { get; set; }
         public bool ProfileUnavailable { get; set; }
+        public bool PeriodUnavailable { get; set; }
         public bool GeneratedDownloadUnavailable { get; set; }
         public bool FailGenerationAudit { get; set; }
         public bool FailPeriodAudit { get; set; }
@@ -454,7 +455,7 @@ internal static class BrowserHostProgram
                             // Fresh unique InMemory store; never delete an existing database.
                             database.Name = "browser-" + Guid.NewGuid(); database.Unavailable = database.CodebooksUnavailable = false;
                             database.ProfileUnavailable = database.GeneratedDownloadUnavailable = database.FailGenerationAudit = false;
-                            database.FailPeriodAudit = false;
+                            database.FailPeriodAudit = database.PeriodUnavailable = false;
                             database.DuplicateBarrier?.TrySetResult(); database.DuplicateBarrier = null;
                             database.ReportGenerationAttempts = 0;
                             database.MailStore = new(); backend.Configuration["Email:Provider"] = "demo";
@@ -462,6 +463,19 @@ internal static class BrowserHostProgram
                             database.MutationAttempts = 0;
                             await SeedAsync(backend, user); break;
                         case "/__fixtures/unavailable": database.Unavailable = true; break;
+                        case "/__fixtures/period-unavailable": database.PeriodUnavailable = true; break;
+                        case "/__fixtures/period-available": database.PeriodUnavailable = false; break;
+                        case "/__fixtures/identity-unknown":
+                        case "/__fixtures/identity-inactive":
+                            await using (var scope = backend.Services.CreateAsyncScope())
+                            {
+                                var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                                var local = await db.AppUsers.SingleAsync(item => item.KeycloakId == "fixture-user");
+                                if (context.Request.Path == "/__fixtures/identity-inactive") local.IsActive = false;
+                                else { local.KeycloakId = "different-fixture-subject"; local.Email = "different-identity@example.test"; }
+                                await db.SaveChangesAsync();
+                            }
+                            break;
                         case "/__fixtures/period-audit-fails": database.FailPeriodAudit = true; break;
                         case "/__fixtures/period-audit-restored": database.FailPeriodAudit = false; break;
                         case "/__fixtures/duplicates-hold": database.DuplicateBarrier = new(TaskCreationOptions.RunContinuationsAsynchronously); break;

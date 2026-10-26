@@ -11,6 +11,6 @@ public static class GuideContent
         new("limits", "LIMITI_VIEW", 4), new("capital", "KAPITAL_VIEW", 2), new("reports", null, 3),
         new("notifications", "KAPITAL_VIEW", 2), new("administration", "ADMINISTRATION_MANAGE", 5, true)];
     public static IReadOnlyList<GuideSection> Visible(ApplicationProfile profile) => Sections.Where(section =>
-        (section.Permission is null || profile.Permissions.Contains(section.Permission)) &&
+        (section.Permission is null ? ApplicationAccess.IsKnownApplicationUser(profile) : profile.Permissions.Contains(section.Permission)) &&
         (!section.Administrator || ApplicationAccess.IsAdministrator(profile))).ToArray();
 }

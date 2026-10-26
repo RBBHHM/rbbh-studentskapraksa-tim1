@@ -12,11 +12,15 @@
 <PageTitle>@T["reports.title"]</PageTitle>
 <HeroBar Title="@T["reports.title"]" Description="@T["reports.subtitle"]" />
 @if (!_authenticated && !_refreshing) { <IdentityNotice /> }
+else if (_authenticated && !_canRead && !_refreshing)
+{
+    <RbiAlert Title="@T[_loadError ?? "errors.forbidden"]" />
+    <RbiButton OnClick="LoadAsync">@T["state.retry"]</RbiButton>
+}
 else if (_authenticated)
 {
     @if (_notice is not null) { <div role="status"><RbiAlert Title="@T[_notice]" /></div> }
     @if (_actionError is not null) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_actionError]" Announcement="RbiAlertAnnouncement.Assertive" /> }
-    @if (_writeUnavailable) { <RbiAlert Title="@T["reports.write-unavailable"]" /> }
     <div class="registry-toolbar">
         <RbiButton Disabled="_busy" Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Secondary">@T["common.refresh"]</RbiButton>
         <RbiButton Disabled="@(_busy || _refreshing)" OnClick="ExportAllAsync" Variant="RbiButtonVariant.Secondary">@T["reports.all-clients"]</RbiButton>
@@ -78,7 +82,7 @@ else { <div role="status">@T["state.loading"]</div> }
     private ReportArchive _daily = new([], 0, 1, 100), _monthly = new([], 0, 1, 100);
     private int _dailyPage = 1, _monthlyPage = 1, _year = DateTime.UtcNow.Year, _month = DateTime.UtcNow.Month;
     private string? _identifier, _loadError, _actionError, _notice;
-    private bool _disposed, _authenticated, _canGenerate, _busy, _refreshing = true, _writeUnavailable;
+    private bool _disposed, _authenticated, _canRead, _canGenerate, _busy, _refreshing = true;
     private int DailyPages => Math.Max(1, (int)Math.Ceiling(_daily.Total / 100d));
     private int MonthlyPages => Math.Max(1, (int)Math.Ceiling(_monthly.Total / 100d));
     private bool ValidPeriod => _year >= 2000 && _year <= DateTime.UtcNow.Year && _month is >= 1 and <= 12;
@@ -88,15 +92,15 @@ else { <div role="status">@T["state.loading"]</div> }
     protected override Task OnInitializedAsync() => LoadAsync();
     private async Task LoadAsync()
     {
-        if (_disposed) return; _refreshing = true; _loadError = null; _canGenerate = false; _writeUnavailable = false;
+        if (_disposed) return; _refreshing = true; _loadError = null; _canRead = _canGenerate = false;
         try
         {
             _authenticated = (await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true;
             if (!_authenticated) return;
-            // Profile failure must fail closed for writes without turning the
-            // approved authenticated read policy into a profile/role read gate.
-            try { _canGenerate = (await Profile.GetAsync(_token)).Permissions.Contains("KAPITAL_CREATE"); }
-            catch (RegistryApiException) { _writeUnavailable = true; }
+            var profile = await Profile.GetAsync(_token);
+            _canRead = ApplicationAccess.IsKnownApplicationUser(profile);
+            if (!_canRead) { _loadError = "errors.forbidden"; return; }
+            _canGenerate = profile.Permissions.Contains("KAPITAL_CREATE");
             var daily = Api.ListAsync(ReportKind.Daily, _dailyPage, _token);
             var monthly = Api.ListAsync(ReportKind.Monthly, _monthlyPage, _token);
             await Task.WhenAll(daily, monthly); _daily = await daily; _monthly = await monthly;
@@ -111,7 +115,7 @@ else { <div role="status">@T["state.loading"]</div> }
     private async Task ChangeMonthlyAsync(int page) { if (_busy || _refreshing || page < 1 || page > MonthlyPages) return; _monthlyPage = page; await LoadAsync(); }
     private async Task GenerateAsync(bool monthly)
     {
-        if (!_authenticated || !_canGenerate || _busy || _refreshing || (monthly && !ValidPeriod)) return;
+        if (!_authenticated || !_canRead || !_canGenerate || _busy || _refreshing || (monthly && !ValidPeriod)) return;
         _busy = true; _actionError = _notice = null;
         try
         {
@@ -134,7 +138,7 @@ else { <div role="status">@T["state.loading"]</div> }
     private Task ExportClientAsync() => ValidIdentifier ? DownloadFileAsync(token => Api.ExportClientAsync(_identifier!, token)) : Task.CompletedTask;
     private async Task DownloadFileAsync(Func<CancellationToken, Task<RbiApiFile>> request)
     {
-        if (!_authenticated || _busy || _refreshing) return; _busy = true; _actionError = null;
+        if (!_authenticated || !_canRead || _busy || _refreshing) return; _busy = true; _actionError = null;
         try { await Files.DownloadAsync(await request(_token), _token); }
         catch (RegistryApiException exception) { _actionError = exception.MessageKey; }
         catch (JSDisconnectedException) { }

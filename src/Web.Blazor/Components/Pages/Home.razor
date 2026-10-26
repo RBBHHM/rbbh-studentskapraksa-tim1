@@ -15,10 +15,13 @@
                     <Footer><RbiButton Href="/app/physical-persons">@T["person.title"]</RbiButton></Footer>
                 </RbiCard>
             }
-            <RbiCard Title="@T["reports.title"]">
-                <ChildContent><RbiText>@T["reports.subtitle"]</RbiText></ChildContent>
-                <Footer><RbiButton Href="/app/reports">@T["reports.title"]</RbiButton></Footer>
-            </RbiCard>
+            @if (_reports)
+            {
+                <RbiCard Title="@T["reports.title"]">
+                    <ChildContent><RbiText>@T["reports.subtitle"]</RbiText></ChildContent>
+                    <Footer><RbiButton Href="/app/reports">@T["reports.title"]</RbiButton></Footer>
+                </RbiCard>
+            }
             @if (_capital)
             {
                 <RbiCard Title="@T["notifications.title"]">
@@ -61,11 +64,11 @@
     <NotAuthorized><IdentityNotice /></NotAuthorized>
 </AuthorizeView>
 @code {
-    private bool _physical, _legal, _limits, _capital, _admin;
+    private bool _physical, _legal, _limits, _capital, _admin, _reports;
     protected override async Task OnInitializedAsync()
     {
         if ((await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated != true) return;
-        try { _admin = ApplicationAccess.IsAdministrator(await Profile.GetAsync()); _physical = await Permissions.HasPermissionAsync("fl.read"); _legal = await Permissions.HasPermissionAsync("pl.read"); _limits = await Permissions.HasPermissionAsync("limiti.read"); _capital = await Permissions.HasPermissionAsync("kapital.read"); }
-        catch (RegistryApiException) { _physical = _legal = _limits = _capital = _admin = false; }
+        try { _admin = ApplicationAccess.IsAdministrator(await Profile.GetAsync()); _reports = await Permissions.HasPermissionAsync("reports.read"); _physical = await Permissions.HasPermissionAsync("fl.read"); _legal = await Permissions.HasPermissionAsync("pl.read"); _limits = await Permissions.HasPermissionAsync("limiti.read"); _capital = await Permissions.HasPermissionAsync("kapital.read"); }
+        catch (RegistryApiException) { _physical = _legal = _limits = _capital = _admin = _reports = false; }
     }
 }

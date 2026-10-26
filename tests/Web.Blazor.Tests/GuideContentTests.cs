@@ -19,7 +19,8 @@ public sealed class GuideContentTests
     [Fact]
     public void ReportingReadRemainsAvailableWithoutMutationPermissionsAndAdminNeedsRealApplicationAccess()
     {
-        Assert.Equal("reports", Assert.Single(GuideContent.Visible(new("u", null, null, null, [], []))).Id);
+        Assert.Empty(GuideContent.Visible(new("u", null, null, null, [], [])));
+        Assert.Equal("reports", Assert.Single(GuideContent.Visible(new("u", null, null, null, ["gost"], []))).Id);
         Assert.DoesNotContain(GuideContent.Visible(new("u", null, null, null, ["admin"], [])), item => item.Administrator);
         Assert.Contains(GuideContent.Visible(new("u", null, null, null, ["admin"], ["ADMINISTRATION_MANAGE"])), item => item.Administrator);
     }

@@ -17,11 +17,14 @@ test("ordinary authenticated user reads and downloads existing reports, but cann
   // persisted business report generation.
   expect((await (await request.get("/__fixtures/counts", { headers })).json()).audit).toBe(3);
 });
-test("profile lookup failure disables generation without removing authenticated archive/download access", async ({ page, request }) => {
+test("profile lookup failure fails closed for Reports and explicit retry restores known Guest access", async ({ page, request }) => {
   await request.post("/__fixtures/profile-unavailable", { headers }); await page.goto("/app/reports"); await interactive(page);
-  await expect(page.getByText("Dozvolu za generisanje trenutno nije moguće provjeriti.", { exact: false })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Regulatorno izvještavanje", exact: true })).toBeVisible();
+  await expect(page.getByText("Servis trenutno nije dostupan. Pokušajte ponovo.", { exact: true }).first()).toBeVisible();
+  await expect(page.locator("nav a[href='/app/reports']")).toHaveCount(0);
   await expect(page.getByRole("button", { name: /^Generiši/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Preuzmi", exact: true })).toHaveCount(0);
+  await request.post("/__fixtures/profile-available", { headers });
+  await page.getByRole("button", { name: "Pokušaj ponovo", exact: true }).click();
   const pending = page.waitForEvent("download"); await page.getByRole("row", { name: /Dnevni/ }).getByRole("button", { name: "Preuzmi", exact: true }).click(); await pending;
   const state = await (await request.get("/__fixtures/reports", { headers })).json(); expect(state.records).toHaveLength(1); expect(state.attempts).toBe(0);
 });

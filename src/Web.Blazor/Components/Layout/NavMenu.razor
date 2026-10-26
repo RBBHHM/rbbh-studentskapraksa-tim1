@@ -10,9 +10,10 @@
         {
             <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["person.title"]" Href="/app/physical-persons" Icon="RbiIconName.UserRound" Active="@IsActive("app/physical-persons")" /></RbiSidebarPart>
         }
-        <AuthorizeView><Authorized>
+        @if (_reports)
+        {
             <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["reports.title"]" Href="/app/reports" Icon="RbiIconName.Gauge" Active="@IsActive("app/reports")" /></RbiSidebarPart>
-        </Authorized></AuthorizeView>
+        }
         @if (_capital)
         {
             <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["notifications.title"]" Href="/app/notifications" Icon="RbiIconName.Gauge" Active="@IsActive("app/notifications")" /></RbiSidebarPart>
@@ -38,12 +39,12 @@
 </nav>
 
 @code {
-    private bool _physical, _legal, _limits, _capital, _admin;
+    private bool _physical, _legal, _limits, _capital, _admin, _reports;
     protected override async Task OnInitializedAsync()
     {
         if ((await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated != true) return;
-        try { _admin = ApplicationAccess.IsAdministrator(await Profile.GetAsync()); _physical = await Permissions.HasPermissionAsync("fl.read"); _legal = await Permissions.HasPermissionAsync("pl.read"); _limits = await Permissions.HasPermissionAsync("limiti.read"); _capital = await Permissions.HasPermissionAsync("kapital.read"); }
-        catch (RegistryApiException) { _physical = _legal = _limits = _capital = _admin = false; }
+        try { _admin = ApplicationAccess.IsAdministrator(await Profile.GetAsync()); _reports = await Permissions.HasPermissionAsync("reports.read"); _physical = await Permissions.HasPermissionAsync("fl.read"); _legal = await Permissions.HasPermissionAsync("pl.read"); _limits = await Permissions.HasPermissionAsync("limiti.read"); _capital = await Permissions.HasPermissionAsync("kapital.read"); }
+        catch (RegistryApiException) { _physical = _legal = _limits = _capital = _admin = _reports = false; }
     }
     private bool IsActive(string path) => Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].Trim('/') == path;
 }

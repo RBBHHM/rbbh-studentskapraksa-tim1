@@ -6,6 +6,7 @@
 @inject AuthenticationStateProvider AuthenticationState
 @inject IProfileApi Profile
 @inject IRelatedPersonsApi Api
+@inject IPeriodApi Period
 @inject FileDelivery Files
 
 <PageTitle>@T["person.title"]</PageTitle>
@@ -20,6 +21,7 @@ else if (_error is not null)
 else if (!_canRead) { <RbiAlert Title="@T["errors.forbidden"]" /> }
 else
 {
+    @if (_canEdit && _periodLocked) { <RbiAlert Title="@T[_periodError ?? "errors.locked"]" /> }
     @if (_notice is not null) { <div role="status"><RbiAlert Title="@T[_notice]" /></div> }
     <div class="registry-toolbar">
         <RbiButton Disabled="@(_busy || _openingEditor)" Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Secondary">@T["common.refresh"]</RbiButton>
@@ -52,7 +54,7 @@ else
                                 @if (_canEdit)
                                 {
                                     <RbiButton Disabled="@(_busy || _refreshing)" Loading="_openingEditor" LoadingLabel="@T["state.loading"]" OnClick="() => Edit(person)" Variant="RbiButtonVariant.Ghost">@T["common.edit"]</RbiButton>
-                                    @if (person.Status != 3) { <RbiButton Disabled="@(_busy || _openingEditor || _refreshing)" OnClick="() => Confirm(person, false)" Variant="RbiButtonVariant.Ghost">@T["common.verify"]</RbiButton> }
+                                    @if (person.Status != 3) { <RbiButton Disabled="@(_busy || _openingEditor || _refreshing || _periodLocked)" OnClick="() => Confirm(person, false)" Variant="RbiButtonVariant.Ghost">@T["common.verify"]</RbiButton> }
                                 }
                                 @if (_canDelete) { <RbiButton Disabled="@(_busy || _openingEditor || _refreshing)" OnClick="() => Confirm(person, true)" Variant="RbiButtonVariant.Destructive">@T["common.deactivate"]</RbiButton> }
                             </div></td>
@@ -127,6 +129,8 @@ else
     private IBrowserFile? _importFile;
     private ImportResult? _importResult;
     private string? _search, _error, _notice, _actionError, _importError;
+    private string? _periodError;
+    private bool _periodLocked = true;
     private bool _authenticated, _loading = true, _busy, _canRead, _canCreate, _canEdit, _canDelete, _treeLoading, _treeError, _delete, _importOpen, _fallback;
     private bool _loaded, _refreshing, _openingEditor;
     private IEnumerable<RelatedPerson> Filtered => _people.Where(person => person.Matches(_search));
@@ -143,6 +147,8 @@ else
             _canRead = profile.Permissions.Contains("FL_VIEW"); _canCreate = profile.Permissions.Contains("FL_CREATE");
             _canEdit = profile.Permissions.Contains("FL_EDIT"); _canDelete = profile.Permissions.Contains("FL_DELETE");
             if (!_canRead) return;
+            try { _periodLocked = (await Period.CurrentAsync(_token)).IsLocked; _periodError = null; }
+            catch (RegistryApiException) { _periodLocked = true; _periodError = "period.state-unavailable"; }
             _people = await Api.ListAsync(_token);
             _loaded = true;
             if (_treePerson is { } selected && !_people.Any(person => person.Id == selected)) _treePerson = null;
@@ -187,11 +193,12 @@ else
         finally { _busy = false; }
         _draft = null;
     }
-    private void Confirm(RelatedPerson person, bool delete) { if (!_authenticated || (delete ? !_canDelete : !_canEdit) || _openingEditor || _refreshing || _busy) return; _action = person; _delete = delete; _actionError = null; }
+    private void Confirm(RelatedPerson person, bool delete) { if (!_authenticated || (!delete && _periodLocked) || (delete ? !_canDelete : !_canEdit) || _openingEditor || _refreshing || _busy) return; _action = person; _delete = delete; _actionError = null; }
     private void CloseAction(bool open) { if (!open && !_busy) _action = null; }
     private async Task RunActionAsync()
     {
         if (!_authenticated || (_delete ? !_canDelete : !_canEdit) || _busy || _action is null) return;
+        if (!_delete && _periodLocked) { _actionError = "errors.locked"; return; }
         _busy = true;
         try
         {

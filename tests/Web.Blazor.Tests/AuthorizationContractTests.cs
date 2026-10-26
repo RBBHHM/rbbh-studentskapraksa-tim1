@@ -43,12 +43,35 @@ public sealed class AuthorizationContractTests
         [new Claim(ClaimTypes.Email, "ordinary@example.test"), new Claim(ClaimTypes.Role, "Admin"),
          new Claim("permission", "KAPITAL_CREATE")], authenticated ? "test-only" : null));
 
-    [Fact]
-    public async Task AuthenticatedReportingReadDoesNotDependOnRealmRolesOrProfileAvailability()
+    [Theory]
+    [InlineData("gost")]
+    [InlineData("FL")]
+    [InlineData("PL")]
+    [InlineData("limiti")]
+    [InlineData("kapital")]
+    [InlineData("admin")]
+    public async Task ReportingReadRequiresKnownActiveApplicationRoleFromBackend(string role)
     {
-        var api = new Mock<IProfileApi>(MockBehavior.Strict);
+        var api = new Mock<IProfileApi>();
+        api.Setup(item => item.GetAsync(It.IsAny<CancellationToken>())).ReturnsAsync(new ApplicationProfile("u", null, null, null, [role], []));
         Assert.True(await new AppPermissionSource(api.Object).HasPermissionAsync(Identity(), "reports.read"));
-        api.VerifyNoOtherCalls();
+        api.Verify(item => item.GetAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UnknownOrInactiveProfileHasNoReportingReadEvenWithForgedProviderAdmin()
+    {
+        var api = new Mock<IProfileApi>();
+        api.Setup(item => item.GetAsync(It.IsAny<CancellationToken>())).ReturnsAsync(new ApplicationProfile("u", null, null, null, [], []));
+        Assert.False(await new AppPermissionSource(api.Object).HasPermissionAsync(Identity(), "reports.read"));
+    }
+
+    [Fact]
+    public async Task ReportingReadDoesNotInventGuestWhenProfileIsUnavailable()
+    {
+        var api = new Mock<IProfileApi>();
+        api.Setup(item => item.GetAsync(It.IsAny<CancellationToken>())).ThrowsAsync(new RegistryApiException());
+        await Assert.ThrowsAsync<RegistryApiException>(async () => await new AppPermissionSource(api.Object).HasPermissionAsync(Identity(), "reports.read"));
     }
 
     [Theory]

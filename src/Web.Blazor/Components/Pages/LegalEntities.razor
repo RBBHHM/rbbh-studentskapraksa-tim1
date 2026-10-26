@@ -6,6 +6,7 @@
 @inject AuthenticationStateProvider AuthenticationState
 @inject IProfileApi Profile
 @inject ILegalEntitiesApi Api
+@inject IPeriodApi Period
 @inject IRelatedPersonsApi References
 @inject FileDelivery Files
 
@@ -21,6 +22,7 @@ else if (_error is not null)
 else if (!_canRead) { <RbiAlert Title="@T["errors.forbidden"]" /> }
 else
 {
+    @if (_canEdit && _periodLocked) { <RbiAlert Title="@T[_periodError ?? "errors.locked"]" /> }
     @if (_notice is not null) { <div role="status"><RbiAlert Title="@T[_notice]" /></div> }
     <div class="registry-toolbar">
         <RbiButton Disabled="@(_busy || _openingEditor)" Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Secondary">@T["common.refresh"]</RbiButton>
@@ -48,7 +50,7 @@ else
                             @if (_canEdit)
                             {
                                 <RbiButton Disabled="@(_busy || _refreshing)" Loading="_openingEditor" LoadingLabel="@T["state.loading"]" OnClick="() => Edit(entity)" Variant="RbiButtonVariant.Ghost">@T["common.edit"]</RbiButton>
-                                @if (!string.Equals(entity.Status, "Verified", StringComparison.OrdinalIgnoreCase)) { <RbiButton Disabled="@(_busy || _openingEditor || _refreshing)" OnClick="() => Confirm(entity, false)" Variant="RbiButtonVariant.Ghost">@T["common.verify"]</RbiButton> }
+                                @if (!string.Equals(entity.Status, "Verified", StringComparison.OrdinalIgnoreCase)) { <RbiButton Disabled="@(_busy || _openingEditor || _refreshing || _periodLocked)" OnClick="() => Confirm(entity, false)" Variant="RbiButtonVariant.Ghost">@T["common.verify"]</RbiButton> }
                             }
                             @if (_canDelete) { <RbiButton Disabled="@(_busy || _openingEditor || _refreshing)" OnClick="() => Confirm(entity, true)" Variant="RbiButtonVariant.Destructive">@T["common.deactivate"]</RbiButton> }
                         </div></td>
@@ -102,6 +104,8 @@ else
     private IBrowserFile? _importFile;
     private ImportResult? _importResult;
     private string? _search, _error, _notice, _actionError, _importError;
+    private string? _periodError;
+    private bool _periodLocked = true;
     private int _page = 1, _total;
     private int TotalPages => Math.Max(1, (int)Math.Ceiling(_total / 20d));
     private bool _disposed, _authenticated, _loading = true, _busy, _canRead, _canCreate, _canEdit, _canDelete, _delete, _importOpen, _fallback;
@@ -120,6 +124,8 @@ else
             _canRead = profile.Permissions.Contains("PL_VIEW"); _canCreate = profile.Permissions.Contains("PL_CREATE");
             _canEdit = profile.Permissions.Contains("PL_EDIT"); _canDelete = profile.Permissions.Contains("PL_DELETE");
             if (!_canRead) return;
+            try { _periodLocked = (await Period.CurrentAsync(_token)).IsLocked; _periodError = null; }
+            catch (RegistryApiException) { _periodLocked = true; _periodError = "period.state-unavailable"; }
             var result = await Api.ListAsync(_page, _token);
             _total = result.Total;
             if (_page > TotalPages) { _page = TotalPages; result = await Api.ListAsync(_page, _token); }
@@ -166,11 +172,12 @@ else
         finally { _busy = false; }
         _draft = null;
     }
-    private void Confirm(LegalEntity entity, bool delete) { if (!_authenticated || (delete ? !_canDelete : !_canEdit) || _openingEditor || _refreshing || _busy) return; _action = entity; _delete = delete; _actionError = null; }
+    private void Confirm(LegalEntity entity, bool delete) { if (!_authenticated || (!delete && _periodLocked) || (delete ? !_canDelete : !_canEdit) || _openingEditor || _refreshing || _busy) return; _action = entity; _delete = delete; _actionError = null; }
     private void CloseAction(bool open) { if (!open && !_busy) _action = null; }
     private async Task RunActionAsync()
     {
         if (!_authenticated || (_delete ? !_canDelete : !_canEdit) || _busy || _action is null) return;
+        if (!_delete && _periodLocked) { _actionError = "errors.locked"; return; }
         _busy = true;
         try { if (_delete) await Api.DeleteAsync(_action.Id, _token); else await Api.VerifyAsync(_action.Id, _token); _action = null; _notice = "common.saved"; await LoadAsync(); }
         catch (RegistryApiException exception) { _actionError = exception.MessageKey; }
