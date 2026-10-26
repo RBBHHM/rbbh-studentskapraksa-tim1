@@ -150,7 +150,9 @@ public class UsersController(IAppUserService appUserService, KeycloakAdminServic
 
     private async Task<bool> IsFinalActiveAdmin(AppUser target)
     {
-        var activeAdmins = await _db.AppUsers.Where(user => user.IsActive)
+        // An unconfirmed placeholder cannot authenticate into its assigned Admin
+        // grant, so it cannot guarantee continuity of actual Admin access.
+        var activeAdmins = await _db.AppUsers.Where(user => user.IsActive && user.KeycloakSubjectConfirmed)
             .Join(_db.UserRoles.Where(assignment => assignment.IsActive), user => user.Id, assignment => assignment.UserId,
                 (user, assignment) => new { user.Id, assignment.RoleId })
             .Join(_db.Roles.Where(role => role.IsActive && role.Name == ApplicationAccessRoles.Administrator),

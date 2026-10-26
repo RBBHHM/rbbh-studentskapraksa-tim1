@@ -123,6 +123,27 @@ public sealed class UsersLastAdminSqlServerTests : UsersHttpFixture
         Assert.Equal(HttpStatusCode.OK, (await Mutate(_client, await AddUser(ApplicationAccessRoles.Limits, "third@example.test"), "delete")).StatusCode);
     }
 
+    [SqlServerFact]
+    public async Task UnconfirmedPlaceholderCannotSubstituteForTheFinalConfirmedAdminOnSqlServer()
+    {
+        await AddDatabaseOperator();
+        _client.DefaultRequestHeaders.Add("X-Test-Email", "operator@example.test");
+        var placeholder = await AddUser(ApplicationAccessRoles.Administrator, "unconfirmed@example.test");
+        await using (var scope = _app.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+            (await db.AppUsers.SingleAsync(user => user.Id == placeholder)).KeycloakSubjectConfirmed = false;
+            await db.SaveChangesAsync();
+        }
+        foreach (var action in new[] { "role", "empty", "deactivate", "delete" })
+            Assert.Equal(HttpStatusCode.Conflict, (await Mutate(_client, _localId, action)).StatusCode);
+        await using var final = _app.Services.CreateAsyncScope();
+        var finalDb = final.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+        Assert.True((await finalDb.AppUsers.SingleAsync(user => user.Id == _localId)).IsActive);
+        Assert.True((await finalDb.AppUsers.SingleAsync(user => user.Id == _localId)).KeycloakSubjectConfirmed);
+        Assert.Empty(await finalDb.AuditLogs.ToListAsync());
+    }
+
     private static void AssertOneWinnerOneRejected(HttpResponseMessage first, HttpResponseMessage second)
     {
         var codes = new[] { first.StatusCode, second.StatusCode };

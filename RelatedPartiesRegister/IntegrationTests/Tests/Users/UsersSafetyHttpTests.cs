@@ -162,6 +162,29 @@ public sealed class UsersSafetyHttpTests : UsersHttpFixture
     }
 
     [Theory]
+    [InlineData("role")]
+    [InlineData("empty")]
+    [InlineData("deactivate")]
+    [InlineData("delete")]
+    public async Task UnconfirmedAdminPlaceholderCannotStandInForTheFinalUsableAdmin(string action)
+    {
+        await AddDatabaseOperator();
+        _client.DefaultRequestHeaders.Add("X-Test-Email", "operator@example.test");
+        var placeholder = await AddUser(ApplicationAccessRoles.Administrator, "unconfirmed@example.test");
+        await using (var scope = _app.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+            (await db.AppUsers.SingleAsync(user => user.Id == placeholder)).KeycloakSubjectConfirmed = false;
+            await db.SaveChangesAsync();
+        }
+        Assert.Equal(HttpStatusCode.Conflict, (await Mutate(_client, _localId, action)).StatusCode);
+        await using var after = _app.Services.CreateAsyncScope();
+        var finalDb = after.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+        Assert.True((await finalDb.AppUsers.SingleAsync(user => user.Id == _localId)).IsActive);
+        Assert.Empty(await finalDb.AuditLogs.ToListAsync());
+    }
+
+    [Theory]
     [InlineData("role", true)]
     [InlineData("empty", true)]
     [InlineData("deactivate", true)]
