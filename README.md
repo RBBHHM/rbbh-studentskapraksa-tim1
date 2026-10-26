@@ -24,7 +24,9 @@ Stari opis sa četiri direktne Keycloak role je zastario.
 | `kapital` | kapital, generisanje izvještaja i postojeće period API dozvole |
 | `admin` | privilegovana administracija i poslovne dozvole |
 
-Izvještaje svi autentificirani korisnici smiju pregledati/preuzeti. Generisanje
+Izvještaje smiju pregledati/preuzeti poznati aktivni aplikacijski korisnici s
+Guest baseline pristupom ili jačom DB rolom. Nepoznat/inaktivan autentificirani
+identitet nije Guest. Generisanje
 trajno kreira zapis: zahtijeva DB `KAPITAL_CREATE` (Kapital/Admin), nije read-only.
 Admin stranice imaju postojeći Admin guard; period API zadržava zaseban
 CapitalRead/Write ugovor. Detalji: [authorization matrix](docs/BLAZOR-MIGRATION-AUTHORIZATION.md).

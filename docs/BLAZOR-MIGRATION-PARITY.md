@@ -18,7 +18,7 @@ BLAZOR-MIGRATION-AUTHORIZATION.md for identity/application permission separation
 | `/app/legal-persons` | resident/nonresident CRUD/verify/import/export → native module | legal-entities, verification | PL_* | legal closure:17 new frontend tests,12 PL+2 Guest browser cases; preserves Matbroj/status | PARITY |
 | `/app/limits` | legal lookup/server-derived capital/CRUD/export → native module | limiti, legal-entities/*/limit-form-data | LIMITI_* | limits closure:13 added frontend tests,10 limiti+1 Guest browser cases, current-module regressions | PARITY |
 | `/app/capital` | optional singleton read/upsert/export → native module | capital | KAPITAL_VIEW / EDIT | capital closure:12 added frontend tests,7 Kapital+7 Admin browser cases,1 Guest case | PARITY |
-| `/app/reports` | archive/generate/download → native reporting module | reports | authenticated read; DB KAPITAL_CREATE generate/persist | reports closure:15 added frontend tests,9 Kapital+9 Admin+2 Guest browser cases; backend12 HTTP preserved | PARITY |
+| `/app/reports` | archive/generate/download → native reporting module | reports | known active AppUser read; DB KAPITAL_CREATE generate/persist | original closure plus reconciled unknown/inactive/profile-outage membership denial; actual archive/download/persistence preserved | PARITY |
 | `/app/notifications` | email log → native recorded-notification list | email-log | DB KAPITAL_VIEW | notifications closure:6 browser cases × 6 current DB roles, no SMTP delivery claim or HTML rendering | PARITY |
 | `/app/admin/period` | lock/request/process/respond → native period workflow | period-lock | existing DB Admin UI route + unchanged CapitalRead/Write API | period closure:12 Admin browser cases +5-role denial,21 focused period tests; approved10..490 response limit | PARITY |
 | `/app/admin/users` | functional role/user administration → native module | users, roles | existing DB Admin route + ADMINISTRATION_* | users closure:9 Admin browser cases +5-role forged denial, create/multi-role/state/delete and28 HTTP safety regressions | PARITY |
@@ -27,7 +27,8 @@ BLAZOR-MIGRATION-AUTHORIZATION.md for identity/application permission separation
 | `/app/profile` | identity/effective permissions → template-based profile | auth/profile | authenticated | current claims + backend grants, outage/retry and375px/Axe per role; live SSO remains external | PARITY |
 | `/app/guide` | role-aware business guide → app-owned localized content | effective profile only | visible modules only |7 unit/resource cases; keyboard/reporting distinction/Axe/mobile/BSEN per role | PARITY |
 | all | BS/EN business resources → RBI.Localization catalogs | Accept-Language on API calls | no permission grant | every module's culture cases plus common cookie/reload/navigation checks across6 roles; no DE advertisement | PARITY |
-| reports backend | old read rule → authenticated read/download, DB-controlled persisted generation | reports | approved reporting exception | 12 integration + 16 focused unit; full backend 274 PASS | INTENTIONAL_CHANGE |
+| reports backend | old read rule → known active Guest baseline read/download, DB-controlled persisted generation | reports | approved reporting exception, reconciled application-membership boundary | current protected HTTP and six-role browser coverage; older12 integration/16 unit checkpoint remains historical | INTENTIONAL_CHANGE |
+| users / period UX | own role action disabled; locked Capital/verification unavailable | users, capital, verification, period-lock | self-management forbidden; authoritative period middleware | reconciled HTTP/SQL tests and native disabled/recovery/stale-editor cases | INTENTIONAL_CHANGE |
 | auth backend | provider permission leakage → exclusively DB-owned app grants | all protected endpoints | current DB matrix | forged grants red201→green403; repeated transform revocation tests | INTENTIONAL_CHANGE |
 
 PARITY above means local module contract/browser equivalence, not integrated
@@ -83,7 +84,7 @@ may be weakened to manufacture completion.
 | 12 | legal export | legal-persons | PARITY: backend XLSX filename/ZIP bytes, real import/schema errors, Guest download |
 | 13 | create/edit/delete limit | limits | PARITY: real integer-ID CRUD, search/form-data, zero/null/negative amounts, filtered XLSX and permanent-delete confirmation |
 | 14 | capital view/upsert authorization | capital | PARITY: unset/null contract, real stable singleton upsert, Kapital/Admin write and Guest read/export |
-| 15 | reports read/download vs authorized generation | reports | PARITY: Guest existing archive/files with no generation; Kapital/Admin persisted daily/monthly, no automatic POST retry, failed-download and uncertain-save recovery |
+| 15 | reports read/download vs authorized generation | reports | PARITY: known active Guest archive/files; unknown/inactive denied including forged provider claims; profile failure invents no membership; Kapital/Admin persisted daily/monthly, no automatic POST retry, failed-download/uncertain-save recovery |
 | 16 | lock period | admin/period | PARITY:real current lock/unlock and audit, no fabricated open fallback |
 | 17 | request unlock | admin/period | PARITY:real PENDING record and current backend period values |
 | 18 | process/respond to unlock request | admin/period | PARITY:reject/info/respond/new PENDING/approve and audit; approved10..490 boundaries with unchanged prefix/schema |
@@ -98,12 +99,15 @@ may be weakened to manufacture completion.
 | 27 | BS/EN switching/persistence | all | PARITY:module BS/EN cases plus common cookie/reload/navigation/header cases across6 roles |
 | 28 | backend unavailable, safe recovery | all | PARITY:each data module's outage/retry, no synthetic empty/open/zero data; unknown mutation outcomes explicitly warn before resubmission |
 | 29 | auth unconfigured/unavailable, no fake grants | all | BLOCKED for real SSO acceptance; local signed-out startup/routes, missing/partial configuration, no anonymous proxy, profile failure and forged-grant cases PASS; requires approved realm/client/shared cache |
-| 30 | period-locked mutation returns423 and visible explanation | physical/legal/limits | PARITY:all3 native browser cases prove actual middleware423 with no persistence/audit; existing capital/report scope preserved |
+| 30 | period-locked mutation returns423 and visible explanation | physical/legal/limits/capital/verification | PARITY: backend route/method + real HTTP matrix; native Capital/verify disabled/recovery and stale-editor423 cases; report-generation exclusion preserved |
 
 ## Final local gate and remaining integrated release gates
 
-528/528 .NET (203 frontend +216 backend unit +109 integration), backend325, no skips;
-215/215 browser (Admin70, gost25, Kapital33, PL29, Limiti27, FL31), workers1,
+The previous2f0a04f checkpoint was528/528 .NET (203 frontend +216 unit +109
+integration), backend325, and215/215 browser (Admin70, gost25, Kapital33, PL29,
+Limiti27, FL31). The current reconciled .NET gate is594/594 (210 frontend +248
+unit +136 integration), backend384, no skips. Current browser gate:237/237
+(Admin75, gost27, Kapital38, PL33, Limiti29, FL35); workers1,
 retries0, final JSON stats show no failures/flaky/skips. Build with analyzers,
 changed-new-C# format verification, Release publish, published signed-out startup
 on14 routes, actual RBI CSS and absent unconfigured login handler PASS.
@@ -124,3 +128,11 @@ restricted to Development loopback. See BLAZOR-MIGRATION-COMPLETION-SECURITY.md.
 React has only the new MIGRATION_REFERENCE marker; no implementation was removed.
 The tested native publish/manifest/ZIP and operator retirement gates are documented
 in BLAZOR-MIGRATION-RETIREMENT-AND-DEPLOYMENT.md.
+
+SQL qualification: five disposable SQL Server LocalDB last-Admin tests now pass
+the real transaction-owned application-lock path; production multi-replica SQL
+acceptance is still external. F3 remains PARTIAL: subject-first/verified unique
+normalized-email lookup does not persist fallback sub. Real email_verified,
+approved subject-link backfill and Keycloak export/data reconciliation remain
+mandatory before production SSO cutover. PKCS9.0.21 is locally retained; fresh
+production vulnerability-feed confirmation is external, without warning suppression.

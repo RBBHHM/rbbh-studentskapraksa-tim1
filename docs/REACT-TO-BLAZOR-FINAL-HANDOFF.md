@@ -1,6 +1,6 @@
 # Related Parties Register — native Blazor handoff
 
-2026-10-23. **LOCAL PARITY VERIFIED; production cutover BLOCKED.**
+Reconciliation updated2026-10-26. **LOCAL PARITY VERIFIED; production cutover BLOCKED.**
 This is an honest handoff of a side-by-side native implementation, not a claim
 that live SQL/SSO/OCP acceptance has passed. Never deploy two canonical frontends.
 
@@ -51,7 +51,11 @@ was copied into the frontend.
 Keycloak = identity. Current application DB = application roles/permissions.
 Baseline Gost read/export remains as defined by that DB. FL/PL/Limiti/Capital
 mutations follow actual backend permission codes; all four Admin UI routes retain
-the DB Admin guard. Reports read/download = authenticated; generate/persist =
+the DB Admin guard. Reports read/download = known ACTIVE AppUser with the DB
+Guest baseline (gost) or stronger application role, not authentication alone.
+Unknown/inactive identities receive no Guest role or business access; profile
+failure does not invent access. Native navigation, dashboard, guide and Reports
+direct route follow that boundary. Generate/persist =
 KAPITAL_CREATE (Kapital/Admin), an approved side-effect exception. The existing
 period API CapitalRead/Write distinction is not silently replaced by reporting
 read or by its narrower Admin UI guard. See the authorization matrix.
@@ -94,9 +98,13 @@ the operator-controlled replacement/rollback procedure. A local ZIP is not cutov
 
 No EF entity, migration or SQL schema change. Existing SQL nvarchar(500) response
 storage is preserved through validation, never truncation. Existing migrations,
-indexes and startup migration/seeding policy remain. Tests use unique InMemory
-stores; they are not SQL-length/transaction/concurrency deployment proof. The
-users mutation boundary requires its documented live SQL app-lock acceptance.
+indexes and startup migration/seeding policy remain. Most tests use unique
+InMemory stores. The five dedicated UsersLastAdminSqlServerTests run the actual
+HTTP/service transaction-owned sp_getapplock path on SQL Server LocalDB15.0.4382.1,
+using uniquely named RBBH_AUDIT_LASTADMIN_<guid> databases created/dropped by the
+fixture only. All five passed without skips: provider/lock path, mutual demotion,
+deactivate/delete, demote/deactivate and lock release. This is local SQL Server
+proof, not deployed SQL permissions, multi-replica or production data acceptance.
 
 ## 11. Keycloak impact
 
@@ -106,18 +114,64 @@ Actual login/logout/refresh/audience and user lookup require an approved test
 realm/environment; isolated test identity cannot certify them. No credentials
 were read into chat, committed or logged.
 
+### F3 identity binding — PARTIAL, production migration NOT implemented
+
+Subject-first lookup is implemented. A known inactive subject is denied without
+email fallback. Verified unique normalized email fallback is implemented; unknown
+or inactive users get no application access. Crucially, fallback does NOT yet
+permanently persist the discovered Keycloak sub. No backfill/migration/reseed or
+live Keycloak export was performed during reconciliation.
+
+Before production SSO cutover the owner must verify the real realm emits
+email_verified, approve a one-time subject-link migration/backfill, and reconcile
+actual Keycloak export/application data (duplicates, missing bindings and inactive
+accounts). F3 remains PARTIAL, not RESOLVED, until that controlled work is accepted.
+
+### Integrated Claude security commits (on top of2f0a04f)
+
+| Commit | Reconciled finding |
+|---|---|
+| 765e32de49381cb52a0b6cdef325ea36c8d5fc80 | self-delete through empty role assignment blocked |
+| b8d03db56baa2f19bf65788cb9e122df123a2190 | missing JWT Audience fails closed outside Development; configured audience validated |
+| 98fd264de152ca4fdd39fc76b3b957b438a6bd5b | self role-management denied, including replacement/addition/clearing |
+| 2c3234f2ca4588432cf61f49faa92d1a147ca216 | subject-first/verified-email binding and unknown != Guest; F3 still PARTIAL |
+| 56618a75dafb5c6f8b1c5a667734a6850dace720 | Capital and physical/legal verification covered by period lock; route/method matrix |
+| 106299ac6c90f657aab96b0f2ae972aef2ecd6a5 | real SQL Server last-Admin HTTP/concurrency fixture |
+
+The remaining changes are frontend-only UX/contract follow-ups, not another
+backend fix or F3 data migration: known-user Reports gating; disabled own-row
+role action with handler guard; disabled Capital edit and physical/legal verify
+while locked, with safe disabled state when period lookup fails and refresh
+recovery. Backend remains authoritative, including period changes after an editor
+was opened. Existing last-Admin and audit assertions remain in real HTTP tests.
+
 ## 12. Test totals
 
-**528/528 .NET**: 203 frontend + 216 backend unit + 109 integration, no skips.
-Backend total is325. The completion batch adds2 localization and6 metadata tests.
+**594/594 .NET**: 210 frontend + 248 backend unit + 136 integration, no skips;
+backend total384. SQL Server fixtures are enabled with the explicit disposable
+LocalDB instance, not counted as skipped successes. The original completion
+checkpoint2f0a04f had528 tests; reconciliation adds the integrated backend
+security tests and7 frontend membership contract cases.
 The period focus suite is21/21; five exact boundaries are regression-protected.
-Fresh focused real-HTTP safety regression is61/61: users28 + period21 + reporting12;
-receipt completion-focused-safety.log. These are included in109 integration tests,
-not added again to the528 total.
-**215/215 browser**: Admin 70, gost 25, Kapital 33, PL 29, Limiti 27, FL 31;
-workers=1, retries=0. Final per-role JSON stats have 0 failures/flaky/skips.
-The added six-role matrix verifies actual controller authorization, not only UI
-visibility, and makes no business writes. All prior module assertions remain.
+Fresh focused HTTP/SQL users/reporting/period regression:88/88; focused
+authentication (JWT Audience, role transformation, metadata and authorization)
+plus period route/method matrix:54/54. Receipts reconciled-focused-http.log and
+reconciled-focused-auth.log. These are subsets of594, not extra tests.
+**237/237 browser**: Admin75, gost27, Kapital38, PL33, Limiti29, FL35;
+workers=1, retries=0. Final per-role JSON stats have0 failures/flaky/skips.
+These include Axe/375px cases and22 additional identity-membership/locked-action
+cases. Historical2f0a04f browser checkpoint:215/215 (Admin70, gost25, Kapital33,
+PL29, Limiti27, FL31), likewise workers1/retries0.
+The six-role matrix verifies actual controller authorization, not only UI
+visibility, and makes no business writes. Reconciliation intentionally updates
+the obsolete authentication-only Reports/profile-outage, own-role editor and
+locked-Capital-success expectations to the newly approved security contract.
+The first reconciled Admin run had74 PASS/1 FAIL solely because the old Capital
+test attempted a now-disabled edit and expected persistence while locked. Its
+replacement explicitly requires real middleware423 and no record/audit write;
+no timeout, retry or product control was weakened. Original red log/trace are
+retained as reconciled-browser-admin-obsolete-scope-red.log and
+reconciled-capital-obsolete-scope-red-trace.zip under artifacts/migration-template.
 
 Historical a24e239 checkpoint:520 .NET/209 browser. Its first FL attempt had
 29 PASS/1 FAIL due to the confirmed identity-blur fixture setup race;
@@ -129,12 +183,20 @@ Build with analyzers, changed-new-C# format verification and Release publish PAS
 An actual published DLL was started on a temporary loopback port with explicitly
 empty identity/API config: 14 routes 200 and honestly signed out/BS, RBI CSS 200,
 unconfigured login 404. Only that owned smoke process was stopped; user hosts
-were untouched. No SQL or identity service was contacted.
+were untouched. That published-frontend startup smoke contacts neither SQL nor
+identity services; the separately enabled SQL concurrency suite is described above.
 
-Current receipts: artifacts/migration-template/{completion-restore,
-completion-build,completion-regression,completion-publish,completion-startup,
-completion-format}.log and completion-browser-{admin,gost,kapital,PL,limiti,FL}.log.
-Earlier final-* and period-bound-focused receipts remain historical evidence.
+Current receipts are under artifacts/migration-template/: reconciled-dotnet.log,
+reconciled-build.log, reconciled-backend.log, reconciled-localdb.log (5/5),
+reconciled-format.log, reconciled-publish.log, reconciled-startup.log,
+reconciled-focused-{http,auth}.log and
+reconciled-browser-{admin,gost,kapital,PL,limiti,FL}.log. Original completion-*,
+final-* and period-bound-focused receipts remain historical evidence, not newly
+executed production acceptance. The native candidate is
+artifacts/blazor-candidates/security-reconciled-20261026; its manifest records
+the pre-commit dirty tracked-source state honestly. After the reconciliation
+commits, security-reconciled-committed-20261026 is published/probed again with
+clean tracked-source provenance. These ignored artifacts are not deployed.
 JSON/screenshots/traces are
 under artifacts/migration-browser by role. The formatter retains its existing
 workspace-load warning; the fresh analyzer build has0 warnings/errors. The prior
@@ -173,13 +235,17 @@ business decisions, backend calculations and import partial-row semantics remain
 
 ## 17. Remaining release blockers
 
-Owner-provisioned/approved Keycloak confidential client and issuer/audience/redirect
+F3 one-time subject-link migration/backfill and real Keycloak export/data
+reconciliation, including actual email_verified claim; owner-provisioned/approved
+Keycloak confidential client and issuer/audience/redirect
 settings; actual SSO/login/logout/refresh and identity↔application-user acceptance;
 approved shared IDistributedCache registration/provider and shared DataProtection;
 live SQL concurrency/constraints and existing migration policy acceptance; SMTP
 delivery; private publication of approved RBI transport packages; OCP/proxy/circuit
 deployment and replacement-workflow proof; corporate dependency/runtime servicing
-acceptance. The Pkcs NU1902/NU1903 findings are locally fixed, not still unresolved.
+acceptance. Pkcs9.0.21 remains pinned and locally patched. Production vulnerability-
+feed confirmation remains external: cached/no-restore green builds are NOT fresh
+production advisory-feed evidence. NU1900/NU1902/NU1903 were not suppressed.
 Existing OCP insecure certificate verification/UAT Development selection and
 forwarded-header network trust require explicit deployment acceptance, not reuse
 as approved native production defaults. No credential guessing, live destructive

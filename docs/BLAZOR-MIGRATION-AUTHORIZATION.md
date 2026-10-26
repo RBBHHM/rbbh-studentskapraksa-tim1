@@ -11,7 +11,8 @@ The checked-out source, not the older four-Keycloak-role description, is authori
 | Authenticated identity, subject, email | Keycloak in integrated environments | Blazor uses RBI.Authentication and ClaimsPrincipal, not keycloak-js or browser protocol code |
 | Application roles/permissions | Application DB: AppUsers, UserRoles, Roles, RolePermissions, Permissions | Backend checks protected operations; Blazor consumes the backend's effective permissions, never reads the DB |
 | Effective identity/permissions wire contract | Authenticated `GET /api/auth/profile` | Keep existing `{ userId, fullName, username, email, roles, permissions }`; do not replace with realm roles |
-| Unassigned authenticated user | Existing `gost` baseline | Read access only; authentication is not a mutation grant |
+| Known ACTIVE AppUser without assigned functional role | DB `gost` baseline | Read access only; authentication alone is not application membership |
+| Unknown or inactive authenticated identity | No application role/permission | Not Guest; no reporting access; never infer membership from provider roles |
 | Unconfigured local Blazor | Explicit signed-out/unconfigured state | No fabricated production identity; authenticated fixtures belong only in tests |
 
 The backend already stores `FL`, `PL`, `kapital`, `limiti`, `admin`, `gost`.
@@ -33,10 +34,10 @@ platform's general "reporting is read-only for all" rule.
 
 | Screen/action | HTTP contract | Required backend policy | Allowed users |
 |---|---|---|---|
-| List daily reports | GET `/api/reports/daily?page&pageSize` | `reports.read`: authenticated | Every authenticated application user |
-| List monthly reports | GET `/api/reports/monthly?page&pageSize` | `reports.read` | Every authenticated application user |
-| Download existing snapshot | GET `/api/reports/export/generated/{reportId}` | `reports.read` | Every authenticated application user |
-| Download client/all clients | GET `/api/reports/export/client/{identifier}`, `/export/all-clients` | `reports.read` | Every authenticated application user |
+| List daily reports | GET `/api/reports/daily?page&pageSize` | `reports.read`: authenticated + effective DB Guest baseline | Known active application users |
+| List monthly reports | GET `/api/reports/monthly?page&pageSize` | `reports.read` | Known active application users |
+| Download existing snapshot | GET `/api/reports/export/generated/{reportId}` | `reports.read` | Known active application users |
+| Download client/all clients | GET `/api/reports/export/client/{identifier}`, `/export/all-clients` | `reports.read` | Known active application users |
 | GENERATE/PERSIST daily | POST `/api/reports/daily` | `reports.generate`: existing DB `KAPITAL_CREATE` permission | Kapital and Admin |
 | GENERATE/PERSIST monthly | POST `/api/reports/monthly/{year}/{month}` | `reports.generate`: existing DB `KAPITAL_CREATE` permission | Kapital and Admin |
 
@@ -149,8 +150,30 @@ reporting/user safety HTTP tests and real SSO/SQL acceptance.
 
 All four native Admin routes retain the narrower existing Admin UI guard, including
 Period. A Kapital period API permission does not silently grant that Admin page.
-Reporting read/download itself only requires authentication; the table's other
-read access is the current DB baseline, not an unconditional policy rewrite.
+At that historical completion checkpoint reporting read only required authentication.
+The reconciled security contract below supersedes that boundary; the table's other
+read access remains the current DB baseline, not an unconditional policy rewrite.
 Receipts: completion-matrix-{admin,gost,kapital,PL,limiti,FL}.log, 6/6 PASS.
 Earlier test totals and dependency warnings above are historical; current security
 remediation is in BLAZOR-MIGRATION-COMPLETION-SECURITY.md.
+
+## Security reconciliation — 2026-10-26
+
+JWT Audience is required outside Development, with token audience validation;
+unknown/inactive identities are not Guest. Effective reporting membership now
+requires a known active AppUser (gost baseline or stronger); native navigation,
+dashboard, guide and direct Reports route fail closed when profile membership
+cannot be established. Provider role claims never establish membership.
+
+Self role-management (including empty-role removal) is denied server-side; the
+native own-row role action is disabled. Capital and physical/legal verification
+now join the period-lock scope, including the real-pipeline HTTP matrix. Native
+Capital/verify controls are disabled on locked or unavailable period state, with
+explicit refresh recovery; the backend handles a lock arriving after form-open.
+
+F3 remains PARTIAL: subject-first and verified unique normalized-email fallback
+are implemented, but fallback does not persist the discovered sub. Production
+requires real email_verified verification, approved one-time subject-link
+backfill and Keycloak export/application-data reconciliation. No data migration
+was executed. See the current final handoff for integrated commits, exact fresh
+test totals and local SQL Server concurrency proof versus production limits.

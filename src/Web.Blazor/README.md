@@ -64,7 +64,9 @@ is Development-only. Real environment provisioning is not proven by local tests.
 Keycloak authenticates identity/email. `GET /api/auth/profile` supplies the
 application's current DB-owned role/permission codes. The frontend never accesses
 the DB, assigns realm roles or infers application grants from provider claims.
-Reporting read is authenticated; persisted generation requires the backend's
+Reporting read requires a known active application user with DB Guest baseline
+or stronger; unknown/inactive authenticated identities receive no access.
+Persisted generation requires the backend's
 `KAPITAL_CREATE` permission (Kapital/Admin). API enforcement remains authoritative.
 The app adapts RBI semantic permission names (for example `reports.generate`)
 to existing backend codes; it does not map identity-provider roles to grants.
@@ -80,10 +82,17 @@ responsive/accessibility and integrated environment gates are accepted.
 The earlier a24e239 checkpoint passed 520 .NET and 209 browser tests, plus Release
 publish and actual published signed-out startup. The final completion gate and
 additional localization/HTTP authorization evidence are recorded in
-`docs/REACT-TO-BLAZOR-FINAL-HANDOFF.md` at repository root:528 .NET and215 browser
+`docs/REACT-TO-BLAZOR-FINAL-HANDOFF.md` at repository root:594 .NET and237 browser
 passes. It also lists the still-blocked SSO/shared cache/SQL/SMTP/OCP gates. Pkcs advisories
 are now locally patched; deployed runtime/security acceptance remains separate.
 Use repository scripts/Publish-BlazorCandidate.ps1 and
 scripts/testing/Test-BlazorPublished.ps1 for the explicit native artifact/probe;
 see docs/BLAZOR-MIGRATION-RETIREMENT-AND-DEPLOYMENT.md for the full gated procedure.
 Local green tests do not authorize React retirement or production cutover.
+
+Security reconciliation: JWT Audience fails closed outside Development;
+self role-management is server-rejected and disabled on the own row; Capital
+and physical/legal verification follow period-lock enforcement. F3 remains
+PARTIAL: subject-first and verified unique normalized-email lookup work, but
+fallback does not persist sub. Real email_verified, approved one-time subject-link
+backfill and Keycloak export/data reconciliation remain production cutover gates.

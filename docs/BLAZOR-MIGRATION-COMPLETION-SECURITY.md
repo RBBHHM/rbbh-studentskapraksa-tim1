@@ -75,3 +75,23 @@ completion-metadata-red.log (4 FAIL/2 PASS), completion-regression.log (528 PASS
 completion-build.log (0 warnings/errors), completion-format.log and
 completion-matrix-{admin,gost,kapital,PL,limiti,FL}.log (1 PASS each).
 Full browser receipts and final totals are recorded in the final handoff.
+
+## Subsequent Claude reconciliation — 2026-10-26
+
+The final handoff records six cherry-picked security commits and their fresh
+regression. They supersede the original authentication-only reporting read
+boundary: unknown/inactive identity is not Guest. JWT Audience fails closed
+outside Development; self-role management is denied; Capital and verification
+are period-locked. Native UX/contract tests now follow those backend rules.
+Five actual SQL Server LocalDB last-Admin HTTP/concurrency cases pass on disposable
+databases; deployed SQL/multi-replica acceptance remains external.
+
+F3 remains PARTIAL: subject-first/verified unique normalized-email lookup does
+not permanently persist a fallback sub. Approved one-time subject-link backfill,
+actual email_verified and real Keycloak export/data reconciliation are still
+required. No production data migration was performed.
+
+Pkcs remains9.0.21. The earlier local patched-version result does not certify
+today's production vulnerability feed, base image or private-feed availability.
+Production vulnerability-feed confirmation is external; NU1900/NU1902/NU1903
+are not suppressed or reclassified as passes.
