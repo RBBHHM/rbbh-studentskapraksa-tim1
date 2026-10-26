@@ -127,6 +127,8 @@ test("real backend XLSX download and import retain counts and safe schema guidan
 test("locked period disables legal verification and preserves draft state and audit", async ({ page, request }) => {
   await request.post("/__fixtures/legal-existing", { headers }); await request.post("/__fixtures/lock", { headers }); await open(page);
   await expect(page.getByRole("button", { name: "Verificiraj", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Uredi", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Deaktiviraj", exact: true })).toBeDisabled();
   await expect(page.getByText("Period je zaključan. Izmjene nisu dozvoljene.", { exact: true })).toBeVisible();
   expect((await (await request.get("/__fixtures/legal-record", { headers })).json())[0].status).toBe("Draft");
   expect((await (await request.get("/__fixtures/counts", { headers })).json()).audit).toBe(0);
@@ -134,6 +136,8 @@ test("locked period disables legal verification and preserves draft state and au
 test("unavailable period disables legal verification until an explicit refresh", async ({ page, request }) => {
   await request.post("/__fixtures/legal-existing", { headers }); await request.post("/__fixtures/period-unavailable", { headers }); await open(page);
   await expect(page.getByRole("button", { name: "Verificiraj", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Uredi", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Deaktiviraj", exact: true })).toBeDisabled();
   await expect(page.getByText(/Stanje perioda trenutno nije dostupno/)).toBeVisible();
   await request.post("/__fixtures/period-available", { headers }); await page.getByRole("button", { name: "Osvježi", exact: true }).click();
   await expect(page.getByRole("button", { name: "Verificiraj", exact: true })).toBeEnabled();

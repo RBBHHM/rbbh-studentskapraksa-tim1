@@ -71,6 +71,8 @@ test("locked period disables physical verification without changing the record o
   const before = await (await request.get("/__fixtures/counts", { headers })).json();
   await request.post("/__fixtures/lock", { headers }); await page.reload(); await interactive(page);
   await expect(page.getByRole("button", { name: "Verificiraj", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Uredi", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Deaktiviraj", exact: true })).toBeDisabled();
   await expect(page.getByText("Period je zaključan. Izmjene nisu dozvoljene.", { exact: true })).toBeVisible();
   expect(await (await request.get("/__fixtures/counts", { headers })).json()).toEqual(before);
 });
@@ -79,6 +81,8 @@ test("unavailable period disables physical verification until an explicit refres
   await createNonresident(page, "Unavailable", "UNA12345", "456789");
   await request.post("/__fixtures/period-unavailable", { headers }); await page.reload(); await interactive(page);
   await expect(page.getByRole("button", { name: "Verificiraj", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Uredi", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Deaktiviraj", exact: true })).toBeDisabled();
   await expect(page.getByText(/Stanje perioda trenutno nije dostupno/)).toBeVisible();
   await request.post("/__fixtures/period-available", { headers }); await page.getByRole("button", { name: "Osvježi", exact: true }).click();
   await expect(page.getByRole("button", { name: "Verificiraj", exact: true })).toBeEnabled();
