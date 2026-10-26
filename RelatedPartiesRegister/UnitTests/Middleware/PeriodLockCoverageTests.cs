@@ -76,21 +76,21 @@ public sealed class PeriodLockCoverageTests
             {
                 var routeFromMethod = action.GetCustomAttributes<RouteAttribute>().FirstOrDefault()?.Template;
                 foreach (var http in action.GetCustomAttributes<HttpMethodAttribute>())
-                foreach (var method in http.HttpMethods.Where(verb => MutatingVerbs.Contains(verb)))
-                {
-                    var template = string.Join('/', new[] { classRoute, routeFromMethod, http.Template }
-                        .Where(part => !string.IsNullOrEmpty(part)));
-                    var normalized = Regex.Replace(template, @"\{(\w+):\w+\}", "{$1}");
-                    var path = "/" + Regex.Replace(normalized, @"\{(\w+)\}", match => match.Groups[1].Value switch
+                    foreach (var method in http.HttpMethods.Where(verb => MutatingVerbs.Contains(verb)))
                     {
-                        "id" or "familyMemberId" or "reportId" => Guid.NewGuid().ToString(),
-                        "year" => "2026",
-                        "month" => "3",
-                        _ => "sample"
-                    });
-                    // Normalize the id placeholders the same way the matrix does.
-                    yield return ($"{method} {Regex.Replace(normalized, @"\{(?:familyMemberId)\}", "{familyMemberId}")}", method, path);
-                }
+                        var template = string.Join('/', new[] { classRoute, routeFromMethod, http.Template }
+                            .Where(part => !string.IsNullOrEmpty(part)));
+                        var normalized = Regex.Replace(template, @"\{(\w+):\w+\}", "{$1}");
+                        var path = "/" + Regex.Replace(normalized, @"\{(\w+)\}", match => match.Groups[1].Value switch
+                        {
+                            "id" or "familyMemberId" or "reportId" => Guid.NewGuid().ToString(),
+                            "year" => "2026",
+                            "month" => "3",
+                            _ => "sample"
+                        });
+                        // Normalize the id placeholders the same way the matrix does.
+                        yield return ($"{method} {Regex.Replace(normalized, @"\{(?:familyMemberId)\}", "{familyMemberId}")}", method, path);
+                    }
             }
         }
     }
@@ -155,7 +155,7 @@ public sealed class PeriodLockCoverageTests
     private static async Task<(bool Blocked, bool NextCalled)> Run(string method, string path, bool periodLocked)
     {
         var repository = Substitute.For<IPeriodLockRepository>();
-        repository.IsCurrentPeriodLockedAsync(Arg.Any<string?>()).Returns(periodLocked);
+        repository.IsCurrentPeriodLockedAsync().Returns(periodLocked);
         var context = new DefaultHttpContext();
         context.Request.Method = method;
         context.Request.Path = path;

@@ -29,7 +29,7 @@ public sealed class RoleClaimsTransformationTests
     }
 
     [Fact]
-    public async Task AuthenticatedIdentityWithoutApplicationUserGetsNoBusinessAccess()
+    public async Task AuthenticatedUnmappedIdentityGetsOnlyVirtualGuest()
     {
         await using var db = InMemoryContextFactory.Create();
         await DevelopmentDataSeeder.EnsureApplicationRolesAsync(db);
@@ -38,8 +38,8 @@ public sealed class RoleClaimsTransformationTests
         await new RoleClaimsTransformation(db).TransformAsync(principal);
 
         Assert.True(principal.Identity!.IsAuthenticated);
-        Assert.False(principal.IsInRole(ApplicationAccessRoles.Guest));
-        Assert.Empty(principal.FindAll("permission"));
+        Assert.True(principal.IsInRole(ApplicationAccessRoles.Guest));
+        Assert.Equal(RolePermissionMatrix.Resolve([]).Order(), principal.FindAll("permission").Select(claim => claim.Value).Order());
     }
 
     [Fact]
@@ -91,8 +91,8 @@ public sealed class RoleClaimsTransformationTests
 
         await new RoleClaimsTransformation(db).TransformAsync(principal);
 
-        Assert.Empty(principal.FindAll("permission"));
-        Assert.False(principal.IsInRole(ApplicationAccessRoles.Guest));
+        Assert.False(principal.HasClaim("permission", ApplicationPermissions.AdministrationManage));
+        Assert.True(principal.IsInRole(ApplicationAccessRoles.Guest));
     }
 
     [Fact]
@@ -105,7 +105,8 @@ public sealed class RoleClaimsTransformationTests
 
         await new RoleClaimsTransformation(db).TransformAsync(principal);
 
-        Assert.Empty(principal.FindAll("permission"));
+        Assert.False(principal.HasClaim("permission", ApplicationPermissions.AdministrationManage));
+        Assert.True(principal.IsInRole(ApplicationAccessRoles.Guest));
     }
 
     [Fact]
@@ -182,7 +183,7 @@ public sealed class RoleClaimsTransformationTests
     }
 
     [Fact]
-    public async Task DeletedUserLosesAllAccess()
+    public async Task DeletedMappingLosesExplicitRolesAndRetainsOnlyVirtualGuest()
     {
         await using var db = InMemoryContextFactory.Create();
         await DevelopmentDataSeeder.EnsureApplicationRolesAsync(db);
@@ -195,7 +196,7 @@ public sealed class RoleClaimsTransformationTests
 
         await new RoleClaimsTransformation(db).TransformAsync(principal);
 
-        Assert.Empty(principal.FindAll("permission"));
+        Assert.Equal(RolePermissionMatrix.Resolve([]).Order(), principal.FindAll("permission").Select(claim => claim.Value).Order());
     }
 
     [Fact]
@@ -211,7 +212,7 @@ public sealed class RoleClaimsTransformationTests
 
         await new RoleClaimsTransformation(db).TransformAsync(principal);
 
-        Assert.False(principal.IsInRole(ApplicationAccessRoles.Guest));
+        Assert.True(principal.IsInRole(ApplicationAccessRoles.Guest));
         Assert.False(principal.IsInRole(ApplicationAccessRoles.Administrator));
         Assert.False(principal.HasClaim("permission", ApplicationPermissions.CapitalCreate));
         Assert.Equal("unassigned@example.com", principal.FindFirst(ClaimTypes.Email)?.Value);
@@ -258,14 +259,14 @@ public sealed class RoleClaimsTransformationTests
 
     private static ClaimsPrincipal Principal(string email, string? subject = null) => new(new ClaimsIdentity(
         new[] { new Claim(ClaimTypes.Email, email), new Claim("email_verified", "true") }
-            .Concat(subject is null ? [] : [new Claim("sub", subject)]), "Test"));
+            .Concat([new Claim("sub", subject ?? "subject:" + email.Trim().ToLowerInvariant())]), "Test"));
 
     private static async Task AssignAsync(
         RBBH.ConnectedParties.DL.Persistence.ConnectedPartiesDbContext db,
         string email,
         params string[] roleNames)
     {
-        var user = new AppUser { Email = email, Username = email, KeycloakId = Guid.NewGuid().ToString() };
+        var user = new AppUser { Email = email, Username = email, KeycloakSubjectConfirmed = true, KeycloakId = "subject:" + email.Trim().ToLowerInvariant() };
         db.AppUsers.Add(user);
         foreach (var roleName in roleNames)
         {

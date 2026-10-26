@@ -62,13 +62,13 @@ public sealed class ReportHttpAuthorizationTests : IAsyncLifetime
         foreach (var roleName in new[] { ApplicationAccessRoles.Capital, ApplicationAccessRoles.Administrator,
                      ApplicationAccessRoles.PhysicalPersons, ApplicationAccessRoles.LegalPersons, ApplicationAccessRoles.Limits })
         {
-            var user = new AppUser { Email = roleName + "@example.test", Username = roleName, KeycloakId = Guid.NewGuid().ToString() };
+            var user = new AppUser { Email = roleName + "@example.test", Username = roleName, KeycloakSubjectConfirmed = true, KeycloakId = "subject:" + roleName + "@example.test" };
             var role = await db.Roles.SingleAsync(role => role.Name == roleName);
             db.AppUsers.Add(user);
             db.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = role.Id });
         }
         // Known active user with no explicit functional role: Guest baseline.
-        db.AppUsers.Add(new AppUser { Email = "ordinary@example.test", Username = "ordinary", KeycloakId = Guid.NewGuid().ToString() });
+        db.AppUsers.Add(new AppUser { Email = "ordinary@example.test", Username = "ordinary", KeycloakSubjectConfirmed = true, KeycloakId = "subject:ordinary@example.test" });
         await db.SaveChangesAsync();
         _existingReport = (await scope.ServiceProvider.GetRequiredService<IReportService>()
             .GenerateDailyReportAsync("existing-author")).Id;
@@ -94,13 +94,13 @@ public sealed class ReportHttpAuthorizationTests : IAsyncLifetime
     [InlineData("GET", "/api/reports/monthly")]
     [InlineData("GET", "/api/reports/export/all-clients")]
     [InlineData("POST", "/api/reports/daily")]
-    public async Task AuthenticatedIdentityWithoutApplicationUserCannotReadDownloadOrGenerate(string method, string path)
+    public async Task AuthenticatedUnmappedIdentityReadsAndDownloadsAsGuestButCannotGenerate(string method, string path)
     {
         _client.DefaultRequestHeaders.Add("X-Test-Identity", "stranger@example.test");
         var response = method == "GET" ? await _client.GetAsync(path) : await _client.PostAsJsonAsync(path, new { });
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal(method == "GET" ? HttpStatusCode.OK : HttpStatusCode.Forbidden, response.StatusCode);
         var download = await _client.GetAsync($"/api/reports/export/generated/{_existingReport}");
-        Assert.Equal(HttpStatusCode.Forbidden, download.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, download.StatusCode);
         await AssertStoredCountAsync(1);
     }
 
@@ -173,7 +173,7 @@ public sealed class ReportHttpAuthorizationTests : IAsyncLifetime
         {
             var email = Request.Headers["X-Test-Identity"].ToString();
             if (email.Length == 0) return Task.FromResult(AuthenticateResult.NoResult());
-            var claims = new List<Claim> { new(ClaimTypes.Email, email), new("email_verified", "true"), new(ClaimTypes.Name, email) };
+            var claims = new List<Claim> { new("sub", "subject:" + email), new(ClaimTypes.Email, email), new("email_verified", "true"), new(ClaimTypes.Name, email) };
             if (Request.Headers.ContainsKey("X-Test-Untrusted-Grants"))
             {
                 claims.Add(new Claim(ClaimTypes.Role, ApplicationAccessRoles.Administrator));

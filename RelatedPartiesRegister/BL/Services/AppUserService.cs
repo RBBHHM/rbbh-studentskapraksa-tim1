@@ -11,9 +11,9 @@ namespace RBBH.ConnectedParties.BL.Services;
 
 public class AppUserService(ConnectedPartiesDbContext dbContext, KeycloakAdminService keycloakAdmin, IAuditService audit) : IAppUserService
 {
-    private readonly ConnectedPartiesDbContext _db           = dbContext;
-    private readonly KeycloakAdminService  _keycloakAdmin = keycloakAdmin;
-    private readonly IAuditService         _audit         = audit;
+    private readonly ConnectedPartiesDbContext _db = dbContext;
+    private readonly KeycloakAdminService _keycloakAdmin = keycloakAdmin;
+    private readonly IAuditService _audit = audit;
 
     public async Task<Result<GetUsersResponseDTO>> GetUsersAsync(
         int page, int pageSize, string? search, string? role)
@@ -31,9 +31,9 @@ public class AppUserService(ConnectedPartiesDbContext dbContext, KeycloakAdminSe
 
         return Result<GetUsersResponseDTO>.Success(new GetUsersResponseDTO
         {
-            Users    = paged,
-            Total    = total,
-            Page     = page,
+            Users = paged,
+            Total = total,
+            Page = page,
             PageSize = pageSize
         });
     }
@@ -53,26 +53,31 @@ public class AppUserService(ConnectedPartiesDbContext dbContext, KeycloakAdminSe
                     || u.Username.ToLower().Contains(term.ToLower()));
         }
 
-        var users    = await query.ToListAsync();
-        var userIds  = users.Select(u => u.Id).ToList();
+        var users = await query.ToListAsync();
+        var userIds = users.Select(u => u.Id).ToList();
         var userRoles = await _db.UserRoles.AsNoTracking()
             .Where(ur => userIds.Contains(ur.UserId) && ur.IsActive)
-            .Join(_db.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => new { ur.UserId, r.Name })
+            .Join(_db.Roles.Where(role => role.IsActive && ApplicationAccessRoles.Assignable.Contains(role.Name)),
+                ur => ur.RoleId, r => r.Id, (ur, r) => new { ur.UserId, r.Name })
             .ToListAsync();
         var rolesByUser = userRoles.GroupBy(x => x.UserId)
             .ToDictionary(g => g.Key, g => g.Select(x => x.Name).ToList());
+        var grants = await _db.RolePermissions.Where(mapping => mapping.Role.IsActive && mapping.Permission.IsActive)
+            .Select(mapping => new { Role = mapping.Role.Name, Permission = mapping.Permission.Code }).ToListAsync();
 
         var result = users.Select(u => new UserDTO
         {
-            Id        = u.Id,
-            Username  = u.Username,
+            Id = u.Id,
+            Username = u.Username,
             FirstName = u.FirstName,
-            LastName  = u.LastName,
-            Email     = u.Email,
-            IsActive  = u.IsActive,
-            Roles     = rolesByUser.TryGetValue(u.Id, out var r) ? r : [],
-            EffectivePermissions = RolePermissionMatrix.Resolve(
-                rolesByUser.TryGetValue(u.Id, out var assignedRoles) ? assignedRoles : []).ToList()
+            LastName = u.LastName,
+            Email = u.Email,
+            IsActive = u.IsActive,
+            Roles = rolesByUser.TryGetValue(u.Id, out var r) ? r : [],
+            EffectivePermissions = u.IsActive ? grants.Where(grant =>
+                    rolesByUser.TryGetValue(u.Id, out var assignedRoles) && assignedRoles.Contains(grant.Role))
+                .Select(grant => grant.Permission).Concat(RolePermissionMatrix.PermissionsByRole[ApplicationAccessRoles.Guest])
+                .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList() : []
         }).ToList();
         if (!string.IsNullOrWhiteSpace(role))
             result = result.Where(user => user.Roles.Contains(role, StringComparer.OrdinalIgnoreCase)).ToList();
@@ -86,8 +91,6 @@ public class AppUserService(ConnectedPartiesDbContext dbContext, KeycloakAdminSe
             .Where(id => id != Guid.Empty)
             .Distinct()
             .ToArray();
-        if (requestedRoleIds.Length == 0)
-            return Result<UserDTO>.ValidationError("Odaberite najmanje jedan funkcionalni pristup.");
         if (await _db.AppUsers.AnyAsync(u => u.Username == dto.Username))
             return Result<UserDTO>.ValidationError($"Korisnik s korisničkim imenom '{dto.Username}' već postoji.");
         var normalizedEmail = dto.Email.Trim().ToLower();
@@ -112,7 +115,7 @@ public class AppUserService(ConnectedPartiesDbContext dbContext, KeycloakAdminSe
                     keycloakUsers.ExceptionMessage ?? "Korisnika trenutno nije moguće pronaći u sistemu za prijavu.");
             var keycloakUser = keycloakUsers.Value.SingleOrDefault(user =>
                 user.Email.Equals(normalizedEmail, StringComparison.OrdinalIgnoreCase));
-            if (keycloakUser is null)
+            if (keycloakUser is null || keycloakUser.Id == Guid.Empty)
                 return Result<UserDTO>.ValidationError("Korisnik s navedenom email adresom nije pronađen u Keycloaku.");
             keycloakId = keycloakUser.Id.ToString();
             dto.Username = keycloakUser.Username;
@@ -122,14 +125,16 @@ public class AppUserService(ConnectedPartiesDbContext dbContext, KeycloakAdminSe
 
         var user = new AppUser
         {
-            KeycloakId = string.IsNullOrEmpty(keycloakId) ? Guid.NewGuid().ToString() : keycloakId,
-            Username   = dto.Username.Trim(),
-            FirstName  = dto.FirstName.Trim(),
-            LastName   = dto.LastName.Trim(),
-            Email      = normalizedEmail,
-            IsActive   = dto.IsActive,
-            CreatedBy  = createdBy,
-            CreatedAt  = DateTime.UtcNow
+            KeycloakId = keycloakId, // Unconfirmed placeholder when provider administration is disabled.
+            KeycloakSubjectConfirmed = _keycloakAdmin.IsEnabled && !string.IsNullOrEmpty(keycloakId),
+            KeycloakSubjectLinkedAt = _keycloakAdmin.IsEnabled ? DateTime.UtcNow : null,
+            Username = dto.Username.Trim(),
+            FirstName = dto.FirstName.Trim(),
+            LastName = dto.LastName.Trim(),
+            Email = normalizedEmail,
+            IsActive = dto.IsActive,
+            CreatedBy = createdBy,
+            CreatedAt = DateTime.UtcNow
         };
 
         _db.AppUsers.Add(user);
@@ -138,8 +143,12 @@ public class AppUserService(ConnectedPartiesDbContext dbContext, KeycloakAdminSe
         {
             _db.UserRoles.Add(new DL.Entities.Role.UserRole
             {
-                Id = Guid.NewGuid(), UserId = user.Id, RoleId = role.Id,
-                IsActive = true, CreatedAt = DateTime.UtcNow, CreatedBy = createdBy
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                RoleId = role.Id,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = createdBy
             });
         }
 
@@ -149,25 +158,28 @@ public class AppUserService(ConnectedPartiesDbContext dbContext, KeycloakAdminSe
         await _audit.LogAsync(new AuditEntry
         {
             TableName = "AppUser",
-            RecordId  = keycloakId,
-            Action    = "CREATE",
+            RecordId = keycloakId,
+            Action = "CREATE",
             NewValues = System.Text.Json.JsonSerializer.Serialize(new
-                { user.Username, user.Email, user.IsActive, Roles = roleNames }),
-            UserId    = createdBy,
-            Username  = createdBy,
+            { user.Username, user.Email, user.IsActive, Roles = roleNames }),
+            UserId = createdBy,
+            Username = createdBy,
             IpAddress = ipAddress
         });
 
         return Result<UserDTO>.Success(new UserDTO
         {
-            Id        = user.Id,
-            Username  = user.Username,
+            Id = user.Id,
+            Username = user.Username,
             FirstName = user.FirstName,
-            LastName  = user.LastName,
-            Email     = user.Email,
-            IsActive  = user.IsActive,
-            Roles     = roleNames,
-            EffectivePermissions = RolePermissionMatrix.Resolve(roleNames).ToList()
+            LastName = user.LastName,
+            Email = user.Email,
+            IsActive = user.IsActive,
+            Roles = roleNames,
+            EffectivePermissions = user.IsActive ? (await _db.RolePermissions
+                .Where(mapping => mapping.Role.IsActive && mapping.Permission.IsActive && roleNames.Contains(mapping.Role.Name))
+                .Select(mapping => mapping.Permission.Code).ToListAsync())
+                .Concat(RolePermissionMatrix.PermissionsByRole[ApplicationAccessRoles.Guest]).Distinct(StringComparer.Ordinal).ToList() : []
         });
     }
 }

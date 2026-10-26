@@ -3,18 +3,21 @@ using System.ComponentModel.DataAnnotations;
 namespace RBBH.ConnectedParties.DL.Entities.Users;
 
 /// <summary>
-/// Local user record — Keycloak is the source of truth.
-/// This table stores application audit data alongside the Keycloak ID.
+/// Application lifecycle and permission record. Keycloak authenticates the identity;
+/// only an explicitly confirmed subject is a durable identity link.
 /// </summary>
 public class AppUser
 {
     [Key]
     public Guid Id { get; set; } = Guid.NewGuid();
 
-    /// <summary>Keycloak user UUID — foreign key to Keycloak.</summary>
+    /// <summary>Historical identifier; trusted as a subject only after explicit confirmation.</summary>
     [Required]
     [StringLength(100)]
     public string KeycloakId { get; set; } = string.Empty;
+
+    public bool KeycloakSubjectConfirmed { get; set; }
+    public DateTime? KeycloakSubjectLinkedAt { get; set; }
 
     [Required]
     [StringLength(100)]

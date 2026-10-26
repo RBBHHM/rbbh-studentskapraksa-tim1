@@ -43,7 +43,7 @@ public sealed class CodeListHttpStatusTests : IAsyncLifetime
         await _app.StartAsync(); _client = _app.GetTestClient();
         await using var scope = _app.Services.CreateAsyncScope(); var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
         await DevelopmentDataSeeder.EnsureApplicationRolesAsync(db);
-        var user = new AppUser { Email = "codes@example.test", Username = "codes", KeycloakId = "codes-fixture" };
+        var user = new AppUser { Email = "codes@example.test", Username = "codes", KeycloakSubjectConfirmed = true, KeycloakId = "codes-fixture" };
         db.AppUsers.Add(user); db.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = (await db.Roles.SingleAsync(role => role.Name == ApplicationAccessRoles.Administrator)).Id });
         var value = new CodeList { Kategorija = "OsnovPovezanosti", Kod = "REFERENCE", Naziv = "In use", KreiraoKorisnik = "fixture" }; db.CodeLists.Add(value);
         db.LegalEntities.Add(new() { Name = "Fixture company", BasisOfConnection = "REFERENCE", IsActive = true, CreatedBy = "fixture" });

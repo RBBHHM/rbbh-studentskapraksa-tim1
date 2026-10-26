@@ -11,6 +11,7 @@ namespace RBBH.ConnectedParties.API.Controllers;
 /// <summary>
 /// CRUD API za upravljanje limitima.
 /// </summary>
+[RBBH.ConnectedParties.Helpers.RequireActorEmail]
 [ApiController]
 [Route("api/limiti")]
 [Authorize]
@@ -157,9 +158,6 @@ public class LimitController(ILimitService limitService, IAuditService auditServ
 
     private string GetKorisnik()
     {
-        return User.Identity?.Name
-            ?? User.Claims.FirstOrDefault(c => c.Type == "preferred_username")?.Value
-            ?? User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value
-            ?? Environment.MachineName;
+        return RBBH.ConnectedParties.Helpers.AuthenticatedActor.Email(User);
     }
 }

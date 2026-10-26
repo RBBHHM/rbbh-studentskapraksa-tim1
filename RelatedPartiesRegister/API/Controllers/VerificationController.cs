@@ -12,6 +12,7 @@ namespace RBBH.ConnectedParties.API.Controllers;
 /// <summary>
 /// API za verifikaciju povezanih fizičkih i pravnih lica.
 /// </summary>
+[RBBH.ConnectedParties.Helpers.RequireActorEmail]
 [ApiController]
 [Route("api/verification")]
 [Authorize]
@@ -104,9 +105,6 @@ public class VerificationController : BaseResuItController
 
     private string CurrentUser()
     {
-        return User.FindFirst(ClaimTypes.Name)?.Value
-            ?? User.FindFirst("preferred_username")?.Value
-            ?? User.FindFirst("sub")?.Value
-            ?? Environment.MachineName;
+        return RBBH.ConnectedParties.Helpers.AuthenticatedActor.Email(User);
     }
 }

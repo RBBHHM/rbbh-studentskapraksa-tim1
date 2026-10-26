@@ -90,9 +90,9 @@ public static class DevelopmentDataSeeder
             new Limit { LegalEntityId = legalResident.Id, TipLimita = "MM", OdobreniLimit = 1_000_000, MaksimalnaOcekivanaUtilizacija = 750_000, RokOcekivaneUtilizacije = now.Date.AddMonths(6), Komentar = "Testni limit za rezidentno pravno lice.", CreatedBy = "seed" },
             new Limit { LegalEntityId = legalForeign.Id, TipLimita = "SATAFXS", OdobreniLimit = 500_000, MaksimalnaOcekivanaUtilizacija = 300_000, RokOcekivaneUtilizacije = now.Date.AddMonths(3), Komentar = "Testni limit za nerezidentno pravno lice.", CreatedBy = "seed" });
 
-        var admin = new AppUser { KeycloakId = "local-admin", Username = "admin1", FirstName = "Lokalni", LastName = "Korisnik", Email = "admin@localhost", CreatedBy = "seed" };
-        var verifier = new AppUser { KeycloakId = "local-multi-access", Username = "user1", FirstName = "Vera", LastName = "Korisnik", Email = "user@localhost", CreatedBy = "seed" };
-        var inactive = new AppUser { KeycloakId = "local-inactive", Username = "inactive1", FirstName = "Neaktivni", LastName = "Korisnik", Email = "inactive@localhost", IsActive = false, CreatedBy = "seed" };
+        var admin = new AppUser { KeycloakSubjectConfirmed = true, KeycloakId = "local-admin", Username = "admin1", FirstName = "Lokalni", LastName = "Korisnik", Email = "admin@localhost", CreatedBy = "seed" };
+        var verifier = new AppUser { KeycloakSubjectConfirmed = true, KeycloakId = "local-multi-access", Username = "user1", FirstName = "Vera", LastName = "Korisnik", Email = "user@localhost", CreatedBy = "seed" };
+        var inactive = new AppUser { KeycloakSubjectConfirmed = true, KeycloakId = "local-inactive", Username = "inactive1", FirstName = "Neaktivni", LastName = "Korisnik", Email = "inactive@localhost", IsActive = false, CreatedBy = "seed" };
         db.AppUsers.AddRange(admin, verifier, inactive);
         db.UserRoles.AddRange(
             new UserRole { UserId = admin.Id, RoleId = physicalRole.Id, CreatedBy = "seed" },

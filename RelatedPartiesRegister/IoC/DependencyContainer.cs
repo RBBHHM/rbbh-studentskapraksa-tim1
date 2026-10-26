@@ -52,7 +52,15 @@ namespace RBBH.ConnectedParties.IoC
             services.AddScoped<ILimitService, LimitService>();
             services.AddScoped<ICapitalService, CapitalService>();
             // ── Email ─────────────────────────────────────────────────────────
-            services.Configure<EmailSettings>(configuration.GetSection("Email"));
+            services.AddOptions<EmailSettings>().Bind(configuration.GetSection("Email"))
+                .Validate(settings => settings.Provider.Equals("demo", StringComparison.OrdinalIgnoreCase) ||
+                    (!string.IsNullOrWhiteSpace(settings.AdminEmail) && !string.IsNullOrWhiteSpace(settings.HrEmail) &&
+                     (settings.Provider.Equals("httpapi", StringComparison.OrdinalIgnoreCase)
+                         ? !string.IsNullOrWhiteSpace(settings.From) && Uri.TryCreate(settings.SendEmailWithHtmlBodyUrl, UriKind.Absolute, out var url) && url.Scheme == Uri.UriSchemeHttps
+                         : settings.Provider.Equals("smtp", StringComparison.OrdinalIgnoreCase) &&
+                           !string.IsNullOrWhiteSpace(settings.Smtp.Host) && !string.IsNullOrWhiteSpace(settings.Smtp.FromAddress))),
+                    "Email transport, sender and required recipients must be explicitly configured.")
+                .ValidateOnStart();
             services.AddSingleton<EmailLogStore>();
 
             var emailProvider = configuration["Email:Provider"] ?? "demo";

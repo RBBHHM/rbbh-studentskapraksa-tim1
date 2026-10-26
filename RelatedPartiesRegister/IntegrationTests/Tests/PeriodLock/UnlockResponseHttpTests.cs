@@ -40,6 +40,7 @@ public sealed class UnlockResponseHttpTests : IAsyncLifetime
             ApplicationName = typeof(PeriodLockController).Assembly.FullName
         });
         builder.WebHost.UseTestServer(); builder.Logging.ClearProviders();
+        builder.Configuration["Email:AdminEmail"] = "admin@example.test";
         builder.Services.AddControllers().AddApplicationPart(typeof(PeriodLockController).Assembly);
         var database = "unlock-response-storage-discovery-" + Guid.NewGuid();
         builder.Services.AddDbContext<ConnectedPartiesDbContext>(options => options.UseInMemoryDatabase(database));
@@ -65,7 +66,7 @@ public sealed class UnlockResponseHttpTests : IAsyncLifetime
         await using var scope = _app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
         await DevelopmentDataSeeder.EnsureApplicationRolesAsync(db);
-        var user = new AppUser { Email = "period-fixture@example.test", Username = "period-fixture", KeycloakId = Guid.NewGuid().ToString() };
+        var user = new AppUser { Email = "period-fixture@example.test", Username = "period-fixture", KeycloakSubjectConfirmed = true, KeycloakId = "period-fixture-subject" };
         db.AppUsers.Add(user);
         db.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = (await db.Roles.SingleAsync(role => role.Name == ApplicationAccessRoles.Administrator)).Id });
         db.UnlockRequests.Add(new UnlockRequest
@@ -106,7 +107,7 @@ public sealed class UnlockResponseHttpTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var saved = Assert.Single(stored);
         Assert.Equal("[ODGOVOR] " + message, saved.Reason); // Exact full text, not truncation.
-        Assert.Equal("PENDING", saved.Status); Assert.Equal("period-fixture", saved.RequestedBy);
+        Assert.Equal("PENDING", saved.Status); Assert.Equal("period-fixture@example.test", saved.RequestedBy);
         Assert.Equal("NEEDS_INFO", (await db.UnlockRequests.SingleAsync(request => request.Id == _originalId)).Status);
         var maximum = db.Model.FindEntityType(typeof(UnlockRequest))!.FindProperty(nameof(UnlockRequest.Reason))!.GetMaxLength();
         Assert.Equal(500, maximum);
@@ -115,8 +116,8 @@ public sealed class UnlockResponseHttpTests : IAsyncLifetime
             "The controller adds '[ODGOVOR] ' before storing; no live SQL was executed.");
         var audit = Assert.Single(await db.AuditLogs.ToListAsync());
         Assert.Equal("UNLOCK_REQUEST", audit.Action); Assert.Equal(_originalId.ToString(), audit.RecordId);
-        Assert.Equal("period-fixture", audit.Username); Assert.Contains("user_response", audit.NewValues);
-        _mail.Verify(service => service.SendUserResponseAsync(It.IsAny<string>(), "period-fixture", 2026, 10, message), Times.Once);
+        Assert.Equal("period-fixture@example.test", audit.Username); Assert.Contains("user_response", audit.NewValues);
+        _mail.Verify(service => service.SendUserResponseAsync(It.IsAny<string>(), "period-fixture@example.test", 2026, 10, message), Times.Once);
     }
 
     [Theory]
@@ -161,15 +162,56 @@ public sealed class UnlockResponseHttpTests : IAsyncLifetime
         Assert.Equal(1, await scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>().UnlockRequests.CountAsync());
     }
 
+    [Fact]
+    public async Task MissingActorEmailCannotPersistOrSendEvenForConfirmedAdministrator()
+    {
+        _client.DefaultRequestHeaders.Add("X-Test-MissingEmail", "true");
+        Assert.Equal(HttpStatusCode.Unauthorized, (await _client.PostAsJsonAsync($"/api/period-lock/unlock-requests/{_originalId}/respond", new { message = "Complete clarification" })).StatusCode);
+        await AssertNoMutationAsync();
+    }
+
+    [Fact]
+    public async Task MissingConfiguredRecipientFailsBeforePersistenceOrNotification()
+    {
+        _app.Configuration["Email:AdminEmail"] = null;
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, (await _client.PostAsJsonAsync($"/api/period-lock/unlock-requests/{_originalId}/respond", new { message = "Complete clarification" })).StatusCode);
+        await AssertNoMutationAsync();
+    }
+
+    [Fact]
+    public async Task CurrentAndStatusExposeOnlyOneGlobalStateRegardlessOfObsoleteDepartmentQuery()
+    {
+        var now = DateTime.UtcNow;
+        Assert.Equal(HttpStatusCode.OK, (await _client.PostAsJsonAsync("/api/period-lock/lock", new { year = now.Year, month = now.Month })).StatusCode);
+        foreach (var route in new[] { "/api/period-lock/current", $"/api/period-lock/status?year={now.Year}&month={now.Month}" })
+        {
+            var first = await _client.GetStringAsync(route + (route.Contains('?') ? "&" : "?") + "department=FL");
+            var second = await _client.GetStringAsync(route + (route.Contains('?') ? "&" : "?") + "department=PL");
+            Assert.Equal(first, second);
+            using var json = System.Text.Json.JsonDocument.Parse(first);
+            Assert.True(json.RootElement.GetProperty("isLocked").GetBoolean());
+            Assert.False(json.RootElement.TryGetProperty("department", out _));
+        }
+    }
+
+    private async Task AssertNoMutationAsync()
+    {
+        await using var scope = _app.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+        Assert.Equal(1, await db.UnlockRequests.CountAsync());
+        Assert.Empty(await db.AuditLogs.ToListAsync());
+        _mail.VerifyNoOtherCalls();
+    }
+
     public async Task DisposeAsync() { _client.Dispose(); await _app.DisposeAsync(); }
     private sealed class IdentityFixture(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)
         : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
     {
         protected override Task<AuthenticateResult> HandleAuthenticateAsync() => Task.FromResult(AuthenticateResult.Success(new(
-            new ClaimsPrincipal(new ClaimsIdentity([
-                new Claim(ClaimTypes.Email, Request.Headers.ContainsKey("X-Test-Unmapped") ? "ordinary@example.test" : "period-fixture@example.test"),
+            new ClaimsPrincipal(new ClaimsIdentity(new Claim[] {
+                new Claim("sub", Request.Headers.ContainsKey("X-Test-Unmapped") ? "unknown-subject" : "period-fixture-subject"), new Claim(ClaimTypes.Email, Request.Headers.ContainsKey("X-Test-Unmapped") ? "ordinary@example.test" : "period-fixture@example.test"),
                 new Claim("email_verified", "true"), new Claim(ClaimTypes.Name, "period-fixture"), new Claim(ClaimTypes.Role, "admin"),
                 new Claim("permission", ApplicationPermissions.CapitalCreate), new Claim("rct_done", "1")
-            ], "PeriodFixture")), "PeriodFixture")));
+            }.Where(claim => !Request.Headers.ContainsKey("X-Test-MissingEmail") || claim.Type != ClaimTypes.Email), "PeriodFixture")), "PeriodFixture")));
     }
 }

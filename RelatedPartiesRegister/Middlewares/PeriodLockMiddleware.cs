@@ -23,17 +23,13 @@ public class PeriodLockMiddleware
             return;
         }
 
-        var username = context.User.FindFirst("preferred_username")?.Value
-            ?? context.User.Identity?.Name;
-        var department = DepartmentHelper.ExtractDepartment(username);
-
-        var isLocked = await periodLockRepository.IsCurrentPeriodLockedAsync(department);
+        var isLocked = await periodLockRepository.IsCurrentPeriodLockedAsync();
 
         if (isLocked)
         {
             _logger.LogWarning(
-                "Period lock blocked request. Method: {Method}, Path: {Path}, Department: {Department}",
-                context.Request.Method, context.Request.Path, department ?? "global");
+                "Global period lock blocked request. Method: {Method}, Path: {Path}",
+                context.Request.Method, context.Request.Path);
 
             context.Response.StatusCode = StatusCodes.Status423Locked;
             context.Response.ContentType = "application/json";

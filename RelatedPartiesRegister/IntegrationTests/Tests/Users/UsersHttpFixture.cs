@@ -87,6 +87,7 @@ public abstract class UsersHttpFixture : IAsyncLifetime
         {
             Id = _localId,
             KeycloakId = Subject,
+            KeycloakSubjectConfirmed = true,
             Email = Email,
             Username = "admin-fixture",
             FirstName = "Synthetic",
@@ -118,7 +119,7 @@ public abstract class UsersHttpFixture : IAsyncLifetime
     {
         await using var scope = _app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
-        var user = new AppUser { Email = email, Username = email, KeycloakId = Guid.NewGuid().ToString(), FirstName = "Synthetic", LastName = "Other" };
+        var user = new AppUser { Email = email, Username = email, KeycloakSubjectConfirmed = true, KeycloakId = Guid.NewGuid().ToString(), FirstName = "Synthetic", LastName = "Other" };
         db.AppUsers.Add(user);
         db.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = await RoleId(role) });
         await db.SaveChangesAsync();
@@ -169,7 +170,7 @@ public abstract class UsersHttpFixture : IAsyncLifetime
             var claims = new List<Claim>
             {
                 new(raw ? "sub" : ClaimTypes.NameIdentifier, subject),
-                new(raw ? "email" : ClaimTypes.Email, Request.Headers["X-Test-Email"].FirstOrDefault() ?? Email), new(ClaimTypes.Name, "admin-fixture")
+                new(ClaimTypes.Email, Request.Headers["X-Test-Email"].FirstOrDefault() ?? Email), new(ClaimTypes.Name, "admin-fixture")
             };
             if (!Request.Headers.ContainsKey("X-Test-Unverified-Email"))
                 claims.Add(new("email_verified", "true"));

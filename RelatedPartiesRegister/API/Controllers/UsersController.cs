@@ -15,6 +15,7 @@ namespace RBBH.ConnectedParties.API.Controllers;
 /// <summary>
 /// US2: Upravljanje korisnicima — lista, kreiranje, dodjela rola.
 /// </summary>
+[RBBH.ConnectedParties.Helpers.RequireActorEmail]
 [ApiController]
 [Route("api/users")]
 [Authorize(Policy = ApplicationPolicies.AdministrationRead)]
@@ -27,9 +28,7 @@ public class UsersController(IAppUserService appUserService, KeycloakAdminServic
     private readonly ConnectedPartiesDbContext _db = db;
 
     private string CurrentUsername() =>
-        User.FindFirst("preferred_username")?.Value
-        ?? User.Identity?.Name
-        ?? "system";
+        RBBH.ConnectedParties.Helpers.AuthenticatedActor.Email(User);
 
     /// <summary>
     /// Returns a paged list of all users.
@@ -56,9 +55,7 @@ public class UsersController(IAppUserService appUserService, KeycloakAdminServic
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<UserDTO>> CreateUser([FromBody] CreateUserDTO dto)
     {
-        var createdBy = User.Claims.FirstOrDefault(c => c.Type == "preferred_username")?.Value
-                     ?? User.Identity?.Name
-                     ?? "system";
+        var createdBy = RBBH.ConnectedParties.Helpers.AuthenticatedActor.Email(User);
 
         var result = await _appUserService.CreateUserAsync(dto, createdBy, HttpContext.Connection.RemoteIpAddress?.ToString());
 
@@ -98,7 +95,7 @@ public class UsersController(IAppUserService appUserService, KeycloakAdminServic
             return FinalAdminConflict();
 
         // Role assignment is an administrative action on another user. This covers
-        // adding, replacing and clearing (which also deletes the AppUser row).
+        // adding, replacing and clearing. Clearing retains identity/lifecycle state.
         if (IsSelf(localUser))
             return BadRequest(new ProblemDetails { Title = "Promjena nije dozvoljena", Detail = "Ne možete mijenjati vlastite aplikacijske role." });
 
@@ -107,7 +104,6 @@ public class UsersController(IAppUserService appUserService, KeycloakAdminServic
         {
             var assignments = await _db.UserRoles.Where(item => item.UserId == localUser.Id).ToListAsync();
             _db.UserRoles.RemoveRange(assignments);
-            _db.AppUsers.Remove(localUser);
         }
         else
             await ReplaceLocalRoles(localUser.Id, roleIds);
@@ -143,12 +139,12 @@ public class UsersController(IAppUserService appUserService, KeycloakAdminServic
 
     private bool IsSelf(AppUser target)
     {
-        var subject = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-            ?? User.FindFirst("sub")?.Value;
-        var email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value;
-        // Use the resolved persisted identity link, never a request-supplied ID
-        // or provider role. Email is also the current DB authorization lookup key.
-        return (!string.IsNullOrWhiteSpace(subject) && string.Equals(target.KeycloakId, subject, StringComparison.Ordinal))
+        var subject = User.FindFirst("sub")?.Value
+            ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+        // Local ID is stripped and recomputed by RoleClaimsTransformation, never request supplied.
+        return (Guid.TryParse(User.FindFirst("rbbh.app_user_id")?.Value, out var localId) && target.Id == localId)
+            || (target.KeycloakSubjectConfirmed && !string.IsNullOrWhiteSpace(subject) && string.Equals(target.KeycloakId, subject, StringComparison.Ordinal))
             || (!string.IsNullOrWhiteSpace(email) && string.Equals(target.Email.Trim(), email.Trim(), StringComparison.OrdinalIgnoreCase));
     }
 

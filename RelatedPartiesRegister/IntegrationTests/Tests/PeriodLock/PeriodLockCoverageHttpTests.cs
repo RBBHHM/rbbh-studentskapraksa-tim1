@@ -63,7 +63,7 @@ public sealed class PeriodLockCoverageHttpTests : IAsyncLifetime
         await using var scope = _app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
         await DevelopmentDataSeeder.EnsureApplicationRolesAsync(db);
-        var admin = new AppUser { Email = "admin@example.test", Username = "admin", KeycloakId = Guid.NewGuid().ToString() };
+        var admin = new AppUser { Email = "admin@example.test", Username = "admin", KeycloakSubjectConfirmed = true, KeycloakId = "period-admin-subject" };
         db.AppUsers.Add(admin);
         db.UserRoles.Add(new UserRole { UserId = admin.Id, RoleId = (await db.Roles.SingleAsync(role => role.Name == ApplicationAccessRoles.Administrator)).Id });
         await db.SaveChangesAsync();
@@ -141,6 +141,19 @@ public sealed class PeriodLockCoverageHttpTests : IAsyncLifetime
         Assert.Empty(await scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>().Set<RBBH.ConnectedParties.DL.Entities.Report.Capital>().ToListAsync());
     }
 
+    [Theory]
+    [InlineData("FL.fixture")]
+    [InlineData("PL.fixture")]
+    [InlineData("unprefixed")]
+    public async Task UsernamePrefixesCannotChangeTheGlobalLock(string username)
+    {
+        _client.DefaultRequestHeaders.Add("X-Test-Username", username);
+        await SetGlobalLockAsync(true);
+        Assert.Equal(HttpStatusCode.Locked, (await _client.PutAsJsonAsync("/api/capital", Capital())).StatusCode);
+        await SetGlobalLockAsync(false);
+        Assert.Equal(HttpStatusCode.OK, (await _client.PutAsJsonAsync("/api/capital", Capital())).StatusCode);
+    }
+
     public async Task DisposeAsync()
     {
         _client.Dispose();
@@ -153,8 +166,9 @@ public sealed class PeriodLockCoverageHttpTests : IAsyncLifetime
         protected override Task<AuthenticateResult> HandleAuthenticateAsync() =>
             Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(new ClaimsIdentity(
             [
-                new Claim(ClaimTypes.Email, "admin@example.test"), new Claim("email_verified", "true"),
-                new Claim(ClaimTypes.Name, "admin"), new Claim("preferred_username", "admin")
+                new Claim("sub", "period-admin-subject"), new Claim(ClaimTypes.Email, "admin@example.test"), new Claim("email_verified", "true"),
+                new Claim(ClaimTypes.Name, Request.Headers["X-Test-Username"].FirstOrDefault() ?? "admin"),
+                new Claim("preferred_username", Request.Headers["X-Test-Username"].FirstOrDefault() ?? "admin")
             ], "PeriodFixture")), "PeriodFixture")));
     }
 }

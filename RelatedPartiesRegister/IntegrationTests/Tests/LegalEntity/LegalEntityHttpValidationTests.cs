@@ -61,7 +61,7 @@ public sealed class LegalEntityHttpValidationTests : IAsyncLifetime
         await using var scope = _app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
         await DevelopmentDataSeeder.EnsureApplicationRolesAsync(db);
-        var user = new AppUser { Email = "pl@example.test", Username = "fixture", KeycloakId = "fixture" };
+        var user = new AppUser { Email = "pl@example.test", Username = "fixture", KeycloakSubjectConfirmed = true, KeycloakId = "fixture" };
         db.AppUsers.Add(user);
         db.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = (await db.Roles.SingleAsync(role => role.Name == ApplicationAccessRoles.LegalPersons)).Id });
         await db.SaveChangesAsync();
@@ -106,6 +106,6 @@ public sealed class LegalEntityHttpValidationTests : IAsyncLifetime
         : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
     {
         protected override Task<AuthenticateResult> HandleAuthenticateAsync() => Task.FromResult(AuthenticateResult.Success(new(
-            new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.Email, "pl@example.test"), new Claim("email_verified", "true"), new Claim(ClaimTypes.Name, "fixture")], "LegalFixture")), "LegalFixture")));
+            new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", "fixture"), new Claim(ClaimTypes.Email, "pl@example.test"), new Claim("email_verified", "true"), new Claim(ClaimTypes.Name, "fixture")], "LegalFixture")), "LegalFixture")));
     }
 }

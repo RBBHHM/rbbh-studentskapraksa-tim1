@@ -32,6 +32,7 @@ namespace IntegrationTests.Tests.PeriodLock
             var auditService = new AuditService(ctx);
             var emailService = new Mock<IEmailService>();
             var configuration = new Mock<IConfiguration>();
+            configuration.Setup(item => item["Email:AdminEmail"]).Returns("admin@example.test");
             var appUserService = new Mock<IAppUserService>();
             var logger = new Mock<ILogger<PeriodLockController>>();
             return new PeriodLockController(
@@ -52,6 +53,7 @@ namespace IntegrationTests.Tests.PeriodLock
             var auditService = new AuditService(ctx);
             var emailService = new Mock<IEmailService>();
             var configuration = new Mock<IConfiguration>();
+            configuration.Setup(item => item["Email:AdminEmail"]).Returns("admin@example.test");
             var appUserService = new Mock<IAppUserService>();
             var logger = new Mock<ILogger<PeriodLockController>>();
             return new PeriodLockController(

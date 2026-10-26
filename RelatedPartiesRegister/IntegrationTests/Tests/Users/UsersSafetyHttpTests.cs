@@ -26,6 +26,43 @@ namespace IntegrationTests.Tests.Users;
 // unique InMemory state are fixtures; never backend Program/.env or SQL/SSO.
 public sealed class UsersSafetyHttpTests : UsersHttpFixture
 {
+    [Fact]
+    public async Task CreateWithNoExplicitRolesRetainsIdentityAndDeactivationRemovesVirtualGuest()
+    {
+        var response = await _client.PostAsJsonAsync("/api/users", new CreateUserDTO
+        {
+            Username = "guest-fixture",
+            FirstName = "Guest",
+            LastName = "Fixture",
+            Email = "guest-fixture@raiffeisengroup.ba",
+            RoleIds = []
+        });
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var created = (await response.Content.ReadFromJsonAsync<UserDTO>())!;
+        await using (var scope = _app.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+            var user = await db.AppUsers.SingleAsync(item => item.Id == created.Id);
+            Assert.True(user.IsActive); Assert.False(user.KeycloakSubjectConfirmed);
+            Assert.False(await db.UserRoles.AnyAsync(mapping => mapping.UserId == created.Id));
+            var principal = new ClaimsPrincipal(new ClaimsIdentity([
+                new Claim("sub", "guest-fixture-subject"), new Claim(ClaimTypes.Email, user.Email)], "Fixture"));
+            await new RoleClaimsTransformation(db).TransformAsync(principal);
+            Assert.True(principal.IsInRole(ApplicationAccessRoles.Guest));
+            Assert.False(principal.HasClaim("permission", ApplicationPermissions.AdministrationManage));
+            Assert.Equal("CREATE", Assert.Single(await db.AuditLogs.ToListAsync()).Action);
+        }
+        Assert.Equal(HttpStatusCode.OK, (await Mutate(_client, created.Id, "deactivate")).StatusCode);
+        await using var disabledScope = _app.Services.CreateAsyncScope();
+        var disabledDb = disabledScope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+        var disabled = new ClaimsPrincipal(new ClaimsIdentity([
+            new Claim("sub", "guest-fixture-subject"), new Claim(ClaimTypes.Email, created.Email)], "Fixture"));
+        await new RoleClaimsTransformation(disabledDb).TransformAsync(disabled);
+        Assert.False(disabled.IsInRole(ApplicationAccessRoles.Guest));
+        Assert.Empty(disabled.FindAll("permission"));
+        Assert.Equal(2, await disabledDb.AuditLogs.CountAsync());
+    }
+
     [Theory]
     [InlineData(false, false)]
     [InlineData(true, false)]
@@ -70,12 +107,12 @@ public sealed class UsersSafetyHttpTests : UsersHttpFixture
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task SelfDetectionAlsoPreservesTheCurrentEmailToDatabaseIdentityLink(bool permanent)
+    public async Task AChangedSubjectCannotRebindTheConfirmedAdminByEmail(bool permanent)
     {
         // Authorization currently resolves DB grants by trusted authenticated
         // email. A differing subject must not bypass protection of that mapping.
         _client.DefaultRequestHeaders.Add("X-Test-Subject", Guid.NewGuid().ToString());
-        Assert.Equal(HttpStatusCode.BadRequest, (await _client.DeleteAsync($"/api/users/{_localId}" + (permanent ? "/permanent" : ""))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await _client.DeleteAsync($"/api/users/{_localId}" + (permanent ? "/permanent" : ""))).StatusCode);
     }
 
     [Theory]
@@ -141,7 +178,8 @@ public sealed class UsersSafetyHttpTests : UsersHttpFixture
         var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
         Assert.True((await db.AppUsers.SingleAsync(user => user.Id == _localId)).IsActive);
         var changed = await db.AppUsers.SingleOrDefaultAsync(user => user.Id == id);
-        if (action is "empty" or "delete") Assert.Null(changed);
+        if (action == "delete") Assert.Null(changed);
+        else if (action == "empty") { Assert.True(changed!.IsActive); Assert.False(await db.UserRoles.AnyAsync(mapping => mapping.UserId == id && mapping.IsActive)); }
         else if (action == "deactivate") Assert.False(changed!.IsActive);
         else
         {
@@ -151,7 +189,7 @@ public sealed class UsersSafetyHttpTests : UsersHttpFixture
         var audit = Assert.Single(await db.AuditLogs.ToListAsync());
         Assert.Equal("AppUser", audit.TableName);
         Assert.Equal(id.ToString(), audit.RecordId);
-        Assert.Equal("admin-fixture", audit.Username);
+        Assert.Equal(Email, audit.Username);
         Assert.Equal(action switch { "role" => "ROLE_ASSIGN", "empty" => "ROLE_REMOVE", "deactivate" => "DEACTIVATE", _ => "DELETE" }, audit.Action);
         if (action == "role") Assert.Contains(ApplicationAccessRoles.LegalPersons, audit.NewValues);
         if (action == "deactivate") { Assert.Contains("true", audit.OldValues); Assert.Contains("false", audit.NewValues); }
@@ -233,7 +271,7 @@ public sealed class UsersSafetyHttpTests : UsersHttpFixture
         Assert.Single(outcomes, result => result.StatusCode == HttpStatusCode.Conflict);
         await using var scope = _app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
-        Assert.Single(await db.AppUsers.Where(user => user.IsActive).ToListAsync());
+        Assert.Equal(2, await db.AppUsers.CountAsync(user => user.IsActive)); // Losing admin remains an active virtual Guest.
         Assert.Single(await db.UserRoles.Where(mapping => mapping.IsActive && mapping.Role.Name == ApplicationAccessRoles.Administrator).ToListAsync());
         Assert.Single(await db.AuditLogs.ToListAsync());
     }

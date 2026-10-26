@@ -16,6 +16,7 @@ namespace RBBH.ConnectedParties.API.Controllers;
 /// Izmjene se odmah reflektuju u svim padajućim menijima.
 /// Sve promjene bilježe korisnika i datum izmjene (PL-33).
 /// </summary>
+[RBBH.ConnectedParties.Helpers.RequireActorEmail]
 [ApiController]
 [Route("api/code-lists")]
 [Authorize(Policy = ApplicationPolicies.CodeListsRead)]
@@ -109,15 +110,15 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
         // Map to API contract format (English field names)
         var items = result.Value.Select(x => new
         {
-            id          = x.ID,
-            category    = x.Kategorija,
-            code        = x.Kod,
-            value       = x.Naziv,
+            id = x.ID,
+            category = x.Kategorija,
+            code = x.Kod,
+            value = x.Naziv,
             description = x.Opis,
             displayOrder = x.RedoslijedPrikaza,
-            isActive    = x.Aktivan,
-            modifiedBy  = x.IzmijenioKorisnik ?? x.KreiraoKorisnik,
-            modifiedAt  = x.IzmijenjenDatum   ?? x.KreiranDatum
+            isActive = x.Aktivan,
+            modifiedBy = x.IzmijenioKorisnik ?? x.KreiraoKorisnik,
+            modifiedAt = x.IzmijenjenDatum ?? x.KreiranDatum
         }).ToList();
 
         return Ok(new { category = kategorija, items });
@@ -146,7 +147,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
     public async Task<ActionResult<CodeListResponseDTO>> Create([FromBody] CreateCodeListDTO dto)
     {
         var korisnik = GetKorisnik();
-        var result   = await _codeListService.Create(dto, korisnik);
+        var result = await _codeListService.Create(dto, korisnik);
 
         if (result.IsSuccessful)
         {
@@ -189,9 +190,9 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
 
         var dto = new CreateCodeListDTO
         {
-            Kategorija        = kategorija,
-            Kod               = kod[..Math.Min(kod.Length, 50)],
-            Naziv             = request.Value.Trim(),
+            Kategorija = kategorija,
+            Kod = kod[..Math.Min(kod.Length, 50)],
+            Naziv = request.Value.Trim(),
             RedoslijedPrikaza = null
         };
 
@@ -214,9 +215,9 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
 
             return Created($"{Request.Path}/{item.ID}", new
             {
-                id         = item.ID,
-                value      = item.Naziv,
-                isActive   = item.Aktivan,
+                id = item.ID,
+                value = item.Naziv,
+                isActive = item.Aktivan,
                 modifiedBy = item.KreiraoKorisnik,
                 modifiedAt = item.KreiranDatum
             });
@@ -239,7 +240,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
         [FromBody] UpdateCodeListDTO dto)
     {
         var korisnik = GetKorisnik();
-        var result   = await _codeListService.Update(id, dto, korisnik);
+        var result = await _codeListService.Update(id, dto, korisnik);
         // Preserve validation/not-found status across different response DTOs.
         if (!result.IsSuccessful) return HandleResult(result).Result!;
 
@@ -258,9 +259,9 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
 
         return Ok(new
         {
-            id         = x.ID,
-            value      = x.Naziv,
-            isActive   = x.Aktivan,
+            id = x.ID,
+            value = x.Naziv,
+            isActive = x.Aktivan,
             modifiedBy = x.IzmijenioKorisnik,
             modifiedAt = x.IzmijenjenDatum
         });
@@ -376,14 +377,14 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
         foreach (var group in rawValues.GroupBy(item => item.Value, StringComparer.OrdinalIgnoreCase).Where(group => group.Count() > 1))
             validationErrors.Add($"Redovi {string.Join(", ", group.Select(item => item.Row))}: vrijednost '{group.Key}' je ponovljena u datoteci.");
 
-        var unique    = rawValues.Select(item => item.Value).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-        var toImport  = unique.Where(v => !existing.Contains(v)).ToList();
-        var duplicates = unique.Where(v =>  existing.Contains(v)).ToList();
+        var unique = rawValues.Select(item => item.Value).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var toImport = unique.Where(v => !existing.Contains(v)).ToList();
+        var duplicates = unique.Where(v => existing.Contains(v)).ToList();
 
         var preview = new ImportPreviewDto
         {
-            TotalRows  = rawValues.Count,
-            ToImport   = toImport,
+            TotalRows = rawValues.Count,
+            ToImport = toImport,
             Duplicates = duplicates,
             Errors = validationErrors
         };
@@ -402,8 +403,8 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
             var result = await _codeListService.Create(new CreateCodeListDTO
             {
                 Kategorija = kategorija,
-                Kod        = kod[..Math.Min(kod.Length, 50)],
-                Naziv      = val
+                Kod = kod[..Math.Min(kod.Length, 50)],
+                Naziv = val
             }, korisnik);
 
             if (result.IsSuccessful) preview.Imported++;
@@ -432,14 +433,11 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
     // ─── Helper ───────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Čita korisničko ime iz JWT claimova, ili fallback na host name.
+    /// Uses the authenticated email claim; no fabricated actor fallback.
     /// Prilagoditi prema konkretnoj autentifikaciji projekta.
     /// </summary>
     private string GetKorisnik()
     {
-        return User.Identity?.Name
-            ?? User.Claims.FirstOrDefault(c => c.Type == "preferred_username")?.Value
-            ?? User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value
-            ?? Environment.MachineName;
+        return RBBH.ConnectedParties.Helpers.AuthenticatedActor.Email(User);
     }
 }

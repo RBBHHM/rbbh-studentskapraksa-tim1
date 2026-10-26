@@ -20,6 +20,7 @@ namespace RBBH.ConnectedParties.API.Controllers;
 /// članova porodice (DeclarationNoFamilyMembers = true), unos novih članova nije dozvoljen.
 /// Endpoint /family-tree vraća hijerarhijski prikaz porodice.
 /// </summary>
+[RBBH.ConnectedParties.Helpers.RequireActorEmail]
 [ApiController]
 [Route("api/related-persons")]
 [Authorize(Policy = ApplicationPolicies.PhysicalPersonsRead)]
@@ -377,13 +378,10 @@ public class RelatedPersonController(
     // ─── Helper ───────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Čita korisničko ime iz JWT claimova, ili fallback na host name.
+    /// Uses the authenticated email claim; no fabricated actor fallback.
     /// </summary>
     private string GetKorisnik()
     {
-        return User.Identity?.Name
-            ?? User.Claims.FirstOrDefault(c => c.Type == "preferred_username")?.Value
-            ?? User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value
-            ?? Environment.MachineName;
+        return RBBH.ConnectedParties.Helpers.AuthenticatedActor.Email(User);
     }
 }

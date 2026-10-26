@@ -12,6 +12,7 @@ namespace RBBH.ConnectedParties.API.Controllers;
 /// <summary>
 /// Endpointi za pregled izvještaja i Excel export podataka o pravnim licima.
 /// </summary>
+[RBBH.ConnectedParties.Helpers.RequireActorEmail]
 [ApiController]
 [Route("api/reports")]
 [Authorize(Policy = ApplicationPolicies.ReportsRead)]
@@ -28,9 +29,7 @@ public class ReportController : ControllerBase
     }
 
     private string CurrentUser() =>
-        User.FindFirst(ClaimTypes.Name)?.Value
-        ?? User.FindFirst("preferred_username")?.Value
-        ?? "system";
+        RBBH.ConnectedParties.Helpers.AuthenticatedActor.Email(User);
 
     // ── Dnevni izvještaji ─────────────────────────────────────────────────────
 

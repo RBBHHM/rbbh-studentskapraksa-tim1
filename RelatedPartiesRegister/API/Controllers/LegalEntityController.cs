@@ -14,6 +14,7 @@ namespace RBBH.ConnectedParties.API.Controllers;
 /// <summary>
 /// Controller za upravljanje registrom povezanih pravnih lica.
 /// </summary>
+[RBBH.ConnectedParties.Helpers.RequireActorEmail]
 [ApiController]
 [Route("api/legal-entities")]
 [Authorize]
@@ -30,9 +31,7 @@ public class LegalEntityController : ControllerBase
     }
 
     private string CurrentUser() =>
-        User.FindFirst(ClaimTypes.Name)?.Value
-        ?? User.FindFirst("preferred_username")?.Value
-        ?? "system";
+        RBBH.ConnectedParties.Helpers.AuthenticatedActor.Email(User);
 
     /// <summary>
     /// Vraća paginiranu listu svih aktivnih pravnih lica.
@@ -84,7 +83,7 @@ public class LegalEntityController : ControllerBase
 
         return Ok(entity);
     }
-        /// <summary>
+    /// <summary>
     /// Pretražuje pravna lica za potrebe forme Limita.
     /// Pretraga se vrši po nazivu i matičnom broju.
     /// </summary>

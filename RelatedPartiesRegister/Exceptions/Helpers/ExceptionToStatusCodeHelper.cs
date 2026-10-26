@@ -14,6 +14,7 @@ namespace RBBH.ConnectedParties.Exceptions.Helpers
         {
             return exception switch
             {
+                RBBH.ConnectedParties.Helpers.MissingActorIdentityException => StatusCodes.Status401Unauthorized,
                 ValidationException => StatusCodes.Status400BadRequest,
                 ApplicationException => StatusCodes.Status400BadRequest,
                 _ => StatusCodes.Status500InternalServerError

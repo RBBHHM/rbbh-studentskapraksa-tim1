@@ -72,7 +72,7 @@ public sealed class HttpApiEmailService(
         IEnumerable<string> recipientEmails, string lockedBy, int year, int month)
     {
         var subject = $"Period zaključan — {EmailTemplates.MonthDisplay(year, month)}";
-        var html    = EmailTemplates.PeriodLocked(lockedBy, year, month, AppBaseUrl);
+        var html = EmailTemplates.PeriodLocked(lockedBy, year, month, AppBaseUrl);
         foreach (var to in recipientEmails.Distinct(StringComparer.OrdinalIgnoreCase))
             await SendAsync(to, subject, html, "broadcast");
     }
@@ -81,7 +81,7 @@ public sealed class HttpApiEmailService(
         IEnumerable<string> recipientEmails, string unlockedBy, int year, int month)
     {
         var subject = $"Period otključan — {EmailTemplates.MonthDisplay(year, month)}";
-        var html    = EmailTemplates.PeriodUnlocked(unlockedBy, year, month, AppBaseUrl);
+        var html = EmailTemplates.PeriodUnlocked(unlockedBy, year, month, AppBaseUrl);
         foreach (var to in recipientEmails.Distinct(StringComparer.OrdinalIgnoreCase))
             await SendAsync(to, subject, html, "broadcast");
     }
@@ -89,11 +89,11 @@ public sealed class HttpApiEmailService(
     private async Task SendAsync(string to, string subject, string htmlBody, string audience, Guid? requestId = null)
     {
         var emailApiUrl = options.Value.SendEmailWithHtmlBodyUrl;
-        if (string.IsNullOrWhiteSpace(emailApiUrl))
+        if (string.IsNullOrWhiteSpace(emailApiUrl) || string.IsNullOrWhiteSpace(FromAddress) || string.IsNullOrWhiteSpace(to))
         {
             logger.LogWarning(
-                "Email:SendEmailWithHtmlBodyUrl nije konfigurisan — email na {To} nije poslan.", to);
-            return;
+                "Email transport, pošiljalac ili primalac nije konfigurisan; poruka nije poslana.");
+            throw new InvalidOperationException("Email konfiguracija nije potpuna.");
         }
 
         var emailDto = new EmailDto
@@ -118,8 +118,11 @@ public sealed class HttpApiEmailService(
 
             store.Add(new EmailLogEntry
             {
-                To = to, Subject = subject, HtmlBody = htmlBody,
-                Audience = audience, RequestId = requestId
+                To = to,
+                Subject = subject,
+                HtmlBody = htmlBody,
+                Audience = audience,
+                RequestId = requestId
             });
             logger.LogInformation("Email poslan preko zajedničkog servisa na {To}: {Subject}", to, subject);
         }
