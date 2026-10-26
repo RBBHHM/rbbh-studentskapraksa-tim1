@@ -4,9 +4,10 @@
 consolidated and the wrapper/candidate/IIS scripts described below were removed.
 Do not run the historical script commands. Use the direct dotnet/docker commands
 in [README](../README.md) and the current [native pipeline](NATIVE-PIPELINE-2026-10-26.md).
-React remains untouched until Claude's visual commits are integrated and gates
-repeated. The two remaining React package.json script consumers and canonical
-solution rename are part of that final retirement, not this checkpoint.
+Claude's final visual batch has now been integrated and the tracked React source,
+remaining wrappers and old solution names retired after the integration gates.
+See NATIVE-CUTOVER-RECONCILIATION-2026-10-26.md for the final source state and
+post-retirement validation. The remaining text preserves the original checkpoint.
 
 **Local module parity; production cutover NOT APPROVED.** `src/Web` is explicitly
 MIGRATION_REFERENCE. No React implementation or existing deployment was removed.

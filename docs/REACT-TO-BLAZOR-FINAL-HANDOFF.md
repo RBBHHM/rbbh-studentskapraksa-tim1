@@ -1,6 +1,27 @@
 # Related Parties Register — native Blazor handoff
 
-## Current hardening result — 2026-10-26, after18702db
+## Current integration and source-retirement result — 2026-10-26
+
+The owner confirmed ff2d173 as Claude's final batch. It was cherry-picked as
+4d821d9 and semantically reconciled; ccca8c5 preserves global-period guards in
+the relocated header/icon actions and adds explicit disabled-row checks.
+Virtual Guest/disabled identities, reporting authorization, own-row protections,
+durable subject linking and backend business workflows remain intact.
+
+The integration gate passed624 .NET tests (including7 SQL) and247 native browser
+cases, workers1/retries0, before React retirement. The275 tracked React files,
+their two remaining root helpers and old backend-only .sln are now retired.
+RelatedPartiesRegister.slnx is the sole maintained solution; CI and test-root
+discovery use the new name. Historical React source remains recoverable in Git.
+Ignored local caches/data were not cleaned, and the user launchSettings.json
+remains untouched. Final post-retirement receipts are recorded in
+NATIVE-CUTOVER-RECONCILIATION-2026-10-26.md.
+
+No production deployment, production data backfill or push was performed.
+F3 production reconciliation and real SSO/SQL/mail/shared-state/OCP/feed gates
+remain outstanding. All following checkpoint sections are historical evidence.
+
+## Hardening checkpoint before visual integration — 2026-10-26, after18702db
 
 **LOCAL BEHAVIOR/SECURITY VERIFIED; VISUAL RECONCILIATION AND PRODUCTION CUTOVER
 OUTSTANDING.** Owner decisions supersede the earlier unknown-not-Guest rule.

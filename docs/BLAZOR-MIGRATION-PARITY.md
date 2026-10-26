@@ -3,13 +3,14 @@
 Current behavioral contract2026-10-26 supersedes the earlier membership boundary:
 unknown authenticated identities get virtual Guest, disabled identities do not.
 The global-period/durable-subject changes and fresh gates are in
-REACT-TO-BLAZOR-FINAL-HANDOFF.md. Visual parity integration is separately pending;
+REACT-TO-BLAZOR-FINAL-HANDOFF.md. Claude's confirmed final visual batch is now
+integrated and the tracked React source retired after the integration gates.
 PARITY below records local module behavior, not a pixel/cutover certificate.
 
 Inventory baseline2026-10-22; local closure updated2026-10-23.
 Status is evidence-based, not inferred from generated markup.
 Allowed states: NOT_STARTED, IN_PROGRESS, PARITY, INTENTIONAL_CHANGE, BLOCKED.
-React remains the active reference; no cutover is approved by this document.
+React reference source is retained in Git history; no production cutover is approved.
 See BLAZOR-MIGRATION-INVENTORY.md for exact API/validation/state contracts and
 BLAZOR-MIGRATION-AUTHORIZATION.md for identity/application permission separation.
 

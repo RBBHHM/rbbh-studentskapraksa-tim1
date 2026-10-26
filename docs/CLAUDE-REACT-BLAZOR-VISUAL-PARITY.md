@@ -1,5 +1,12 @@
 # React → Blazor visual parity pass
 
+Historical author checkpoint below. The owner confirmed this as the final batch;
+ff2d173 was integrated as4d821d9 with semantic global-lock follow-up ccca8c5.
+The integrated pre-retirement gate passed624 .NET and247 six-role browser tests,
+including existing Axe/375px checks. Post-retirement evidence is in
+NATIVE-CUTOVER-RECONCILIATION-2026-10-26.md. Original manual visual limitations
+below are retained; functional checks are not a pixel-equality certificate.
+
 Branch `ai/claude-visual-parity`, base `18702db`. React (`src/Web`, webpack dev server) and native Blazor (`src/Web.Blazor`) were run side by side against the same seeded backend (Kestrel harness built from `tests/Web.Blazor.BrowserHost`, kept outside the repository) and compared at 1440×900, light theme.
 
 ## Root cause

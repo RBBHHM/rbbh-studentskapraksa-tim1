@@ -1,7 +1,9 @@
 # Identity and global-period hardening — 2026-10-26
 
 These owner decisions supersede the 18702db reconciliation. They are behavioral
-and security changes, not a visual redesign. src/Web is still untouched.
+and security changes, not a visual redesign. Claude's separate visual batch was
+subsequently integrated; tracked React source was retired only after its gates.
+The identity/global-period contracts below remain current.
 
 ## Actors and recipients
 
