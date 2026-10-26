@@ -32,7 +32,7 @@ public sealed class UsersApiTests
         Assert.Throws<InvalidOperationException>(() => draft.ToRequest());
     }
     [Fact]
-    public void CreateRequiresNamesAndRolesAndNormalizesOnlySubmittedValues()
+    public void CreateRequiresNamesAndNormalizesOnlySubmittedValuesWhileRolesAreOptional()
     {
         var draft = Draft(); var request = draft.ToRequest();
         Assert.Equal("fixture", request.Username); Assert.Equal("user@raiffeisengroup.ba", request.Email);
@@ -40,7 +40,9 @@ public sealed class UsersApiTests
         draft.FirstName = " "; draft.LastName = new string('x', 101); draft.Roles[0].Selected = false;
         Assert.Contains(nameof(UserDraft.FirstName), draft.Validate().Keys);
         Assert.Contains(nameof(UserDraft.LastName), draft.Validate().Keys);
-        Assert.Contains(nameof(UserDraft.Roles), draft.Validate().Keys);
+        Assert.DoesNotContain(nameof(UserDraft.Roles), draft.Validate().Keys);
+        draft.FirstName = "First"; draft.LastName = "Last";
+        Assert.Empty(draft.Validate()); Assert.Empty(draft.ToRequest().RoleIds);
     }
     [Fact]
     public void RoleEditAllowsEmptySelectionAndRetainsActualCatalogIdsNotRealmRoles()

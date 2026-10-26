@@ -3,7 +3,7 @@ using RBI.ApiCore;
 
 namespace RBBH.RelatedPartiesRegister.Web.Api;
 
-public sealed record PeriodState(int Year, int Month, string MonthDisplay, bool IsLocked, string? LockedBy, DateTime? LockedAt, string? Department);
+public sealed record PeriodState(int Year, int Month, string MonthDisplay, bool IsLocked, string? LockedBy, DateTime? LockedAt);
 public sealed record UnlockRequestRecord(Guid Id, string RequestedBy, int Year, int Month, string MonthDisplay,
     string Reason, string Status, string? AdminNote, string? ProcessedBy, DateTime? ProcessedAt, DateTime CreatedAt);
 public sealed record UnlockRequestsPage(IReadOnlyList<UnlockRequestRecord> Requests, int Total, int Page, int PageSize);

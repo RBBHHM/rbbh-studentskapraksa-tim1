@@ -12,10 +12,11 @@
             <RbiField TValue="decimal?" Id="capital-supplementary" Label="@T["capital.supplementary"]" Required For="@(() => Model.SupplementaryCapital)"><InputNumber TValue="decimal?" id="capital-supplementary" class="rbi-control" @bind-Value="Model.SupplementaryCapital" min="0" step="0.01" ParsingErrorMessage="@T["limit.number"]" /></RbiField>
             <RbiField TValue="DateTime?" Id="capital-date" Label="@T["capital.date"]" Required For="@(() => Model.CapitalDate)"><InputDate TValue="DateTime?" id="capital-date" class="rbi-control" @bind-Value="Model.CapitalDate" ParsingErrorMessage="@T["validation.date"]" /></RbiField>
         </div>
-        <div class="registry-toolbar"><RbiButton OnClick="Cancel" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton><RbiButton Type="RbiButtonType.Submit">@T["common.save"]</RbiButton></div>
+        <div class="registry-toolbar"><RbiButton OnClick="Cancel" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton><RbiButton Type="RbiButtonType.Submit" Disabled="MutationBlocked">@T["common.save"]</RbiButton></div>
     </fieldset>
 </EditForm>
 @code {
+    [Parameter] public bool MutationBlocked { get; set; }
     [Parameter, EditorRequired] public CapitalDraft Model { get; set; } = null!;
     [Parameter] public EventCallback<CapitalRequest> Save { get; set; }
     [Parameter] public EventCallback Cancel { get; set; }
@@ -28,6 +29,7 @@
     protected override async Task OnAfterRenderAsync(bool firstRender) { if (_focusErrors) { _focusErrors = false; await _summary.FocusAsync(); } }
     private async Task SubmitAsync() => await _submission.SubmitAsync(async () =>
     {
+        if (MutationBlocked) return;
         var parsed = _context.Validate(); var errors = Model.Validate();
         _validation.DisplayErrors(errors.ToDictionary(item => item.Key, item => item.Value.Select(key => T[key]).ToArray()));
         if (!parsed || errors.Count > 0) { _focusErrors = true; return; }

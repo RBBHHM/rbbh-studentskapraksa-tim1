@@ -30,7 +30,7 @@ else
             <thead><tr><th scope="col">@T["users.user"]</th><th scope="col">@T["users.email"]</th><th scope="col">@T["users.accesses"]</th><th scope="col">@T["users.permissions"]</th><th scope="col">@T["users.status"]</th>@if (_canWrite) { <th scope="col">@T["users.actions"]</th> }</tr></thead>
             <tbody>@foreach (var user in _result.Users)
             {
-                <tr @key="user.Id"><td>@user.FirstName @user.LastName<br />@user.Username</td><td>@user.Email</td><td>@string.Join(", ", user.Roles.Select(RoleLabel))</td><td>@string.Join(", ", user.EffectivePermissions)</td><td>@T[user.IsActive ? "users.active" : "users.inactive"]</td>
+                <tr @key="user.Id"><td>@user.FirstName @user.LastName<br />@user.Username</td><td>@user.Email</td><td>@(user.IsActive && user.Roles.Count == 0 ? RoleLabel("gost") : string.Join(", ", user.Roles.Select(RoleLabel)))</td><td>@string.Join(", ", user.EffectivePermissions)</td><td>@T[user.IsActive ? "users.active" : "users.inactive"]</td>
                 @if (_canWrite)
                 {
                     <td><div class="registry-toolbar">
@@ -70,7 +70,8 @@ else
     private int TotalPages => Math.Max(1, (int)Math.Ceiling(_result.Total / 20d));
     private string RoleLabel(string role) => role.ToLowerInvariant() is "fl" or "pl" or "kapital" or "limiti" or "admin" or "gost"
         ? T["users.role." + role.ToLowerInvariant()] : role;
-    private bool IsSelf(ApplicationUser user) => !string.IsNullOrWhiteSpace(_profile?.Email) && string.Equals(_profile.Email.Trim(), user.Email.Trim(), StringComparison.OrdinalIgnoreCase);
+    private bool IsSelf(ApplicationUser user) => _profile?.ApplicationUserId is { } id ? user.Id == id
+        : !string.IsNullOrWhiteSpace(_profile?.Email) && string.Equals(_profile.Email.Trim(), user.Email.Trim(), StringComparison.OrdinalIgnoreCase);
     protected override Task OnInitializedAsync() => LoadAsync();
     private async Task LoadAsync()
     {

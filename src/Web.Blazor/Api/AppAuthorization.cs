@@ -34,7 +34,7 @@ public sealed class AppPermissionSource(IProfileApi profile) : IRbiPermissionSou
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (principal.Identity?.IsAuthenticated != true) return false;
-        if (permission == "reports.read") return ApplicationAccess.IsKnownApplicationUser(await profile.GetAsync(cancellationToken));
+        if (permission == "reports.read") return ApplicationAccess.HasEffectiveApplicationAccess(await profile.GetAsync(cancellationToken));
         if (!BackendCodes.TryGetValue(permission, out var backendCode)) return false;
         var effective = await profile.GetAsync(cancellationToken);
         return effective.Permissions.Contains(backendCode, StringComparer.Ordinal);

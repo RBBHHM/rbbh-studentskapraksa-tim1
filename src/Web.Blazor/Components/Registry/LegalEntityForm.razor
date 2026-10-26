@@ -28,12 +28,13 @@
         </div>
         <div class="registry-toolbar">
             <RbiButton OnClick="Cancel" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton>
-            <RbiButton Type="RbiButtonType.Submit">@T["common.save"]</RbiButton>
+            <RbiButton Type="RbiButtonType.Submit" Disabled="MutationBlocked">@T["common.save"]</RbiButton>
         </div>
     </fieldset>
 </EditForm>
 
 @code {
+    [Parameter] public bool MutationBlocked { get; set; }
     [Parameter, EditorRequired] public LegalEntityDraft Model { get; set; } = null!;
     [Parameter] public IReadOnlyList<ReferenceOption> Bases { get; set; } = [];
     [Parameter] public EventCallback<LegalEntityRequest> Save { get; set; }
@@ -51,6 +52,7 @@
     private void BasisChanged() => Model.ConnectionDescription = Bases.FirstOrDefault(item => item.Kod == Model.BasisOfConnection)?.Opis;
     private async Task SubmitAsync() => await _submission.SubmitAsync(async () =>
     {
+        if (MutationBlocked) return;
         var parsed = _context.Validate();
         var errors = Model.Validate();
         _validation.DisplayErrors(errors.ToDictionary(item => item.Key, item => item.Value.Select(key => T[key]).ToArray()));

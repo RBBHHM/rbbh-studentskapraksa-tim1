@@ -98,7 +98,7 @@ else { <div role="status">@T["state.loading"]</div> }
             _authenticated = (await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true;
             if (!_authenticated) return;
             var profile = await Profile.GetAsync(_token);
-            _canRead = ApplicationAccess.IsKnownApplicationUser(profile);
+            _canRead = ApplicationAccess.HasEffectiveApplicationAccess(profile);
             if (!_canRead) { _loadError = "errors.forbidden"; return; }
             _canGenerate = profile.Permissions.Contains("KAPITAL_CREATE");
             var daily = Api.ListAsync(ReportKind.Daily, _dailyPage, _token);

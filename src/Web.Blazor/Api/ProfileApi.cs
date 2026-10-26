@@ -3,7 +3,7 @@ using RBI.ApiCore;
 namespace RBBH.RelatedPartiesRegister.Web.Api;
 
 public sealed record ApplicationProfile(string? UserId, string? FullName, string? Username,
-    string? Email, IReadOnlyList<string> Roles, IReadOnlyList<string> Permissions);
+    string? Email, IReadOnlyList<string> Roles, IReadOnlyList<string> Permissions, Guid? ApplicationUserId = null);
 
 public interface IProfileApi
 {
@@ -38,7 +38,11 @@ public sealed class RegistryApiException : Exception
     public System.Net.HttpStatusCode? StatusCode { get; }
     public string MessageKey => (int?)StatusCode switch
     {
-        401 => "errors.unauthorized", 403 => "errors.forbidden", 409 => "errors.conflict",
-        423 => "errors.locked", 400 or 422 => "errors.validation", _ => "errors.unavailable"
+        401 => "errors.unauthorized",
+        403 => "errors.forbidden",
+        409 => "errors.conflict",
+        423 => "errors.locked",
+        400 or 422 => "errors.validation",
+        _ => "errors.unavailable"
     };
 }

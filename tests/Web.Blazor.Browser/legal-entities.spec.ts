@@ -139,10 +139,12 @@ test("unavailable period disables legal verification until an explicit refresh",
   await expect(page.getByRole("button", { name: "Verificiraj", exact: true })).toBeEnabled();
 });
 test("locked real period rejects persistence with zero records and audit writes", async ({ page, request }) => {
-  await request.post("/__fixtures/lock", { headers }); await open(page);
+  await open(page);
   await page.getByRole("button", { name: "Novi zapis", exact: true }).click(); const dialog = page.getByRole("dialog"); await fill(dialog, "Blocked Company");
+  await request.post("/__fixtures/lock", { headers });
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
   await expect(dialog.getByText("Period je zaključan", { exact: false }).first()).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Sačuvaj", exact: true })).toBeDisabled();
   expect(await (await request.get("/__fixtures/legal-record", { headers })).json()).toHaveLength(0);
   expect(await (await request.get("/__fixtures/counts", { headers })).json()).toEqual({ persons: 0, audit: 0, mutations: 1 });
 });

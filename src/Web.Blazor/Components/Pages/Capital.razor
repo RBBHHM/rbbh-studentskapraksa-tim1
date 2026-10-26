@@ -40,7 +40,7 @@ else
 @if (_draft is { } draft)
 {
     <RbiDialog Open Title="@T["capital.edit"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseEditor">
-        <DialogBody><CapitalForm @key="draft" Model="draft" Save="SaveAsync" Cancel="() => CloseEditor(false)" /></DialogBody>
+        <DialogBody><CapitalForm MutationBlocked="_periodLocked" @key="draft" Model="draft" Save="SaveAsync" Cancel="() => CloseEditor(false)" /></DialogBody>
     </RbiDialog>
 }
 @code {
@@ -81,6 +81,7 @@ else
         if (_periodLocked) throw new RegistryApiException((System.Net.HttpStatusCode)423);
         if (_busy) return; _busy = true;
         try { await Api.SaveAsync(request, _token); _notice = true; await LoadAsync(); }
+        catch (RegistryApiException exception) when ((int?)exception.StatusCode == 423) { _periodLocked = true; await InvokeAsync(StateHasChanged); throw; }
         finally { _busy = false; }
         _draft = null;
     }

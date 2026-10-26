@@ -81,9 +81,11 @@ test("filter and metadata search preserve scope and real XLSX download", async (
   await page.locator("#limit-filter").selectOption(""); await expect(row).toBeVisible();
 });
 test("actual period lock rejects create without record or audit writes", async ({ page, request }) => {
-  await request.post("/__fixtures/lock", { headers }); await open(page); const dialog = await begin(page);
+  await open(page); const dialog = await begin(page);
+  await request.post("/__fixtures/lock", { headers });
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
   await expect(dialog.getByText("Period je zaključan", { exact: false }).first()).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Sačuvaj", exact: true })).toBeDisabled();
   expect(await (await request.get("/__fixtures/limits", { headers })).json()).toEqual([]);
   expect(await (await request.get("/__fixtures/counts", { headers })).json()).toEqual({ persons: 0, audit: 0, mutations: 1 });
 });

@@ -22,15 +22,15 @@ else if (_error is not null)
 else if (!_canRead) { <RbiAlert Title="@T["errors.forbidden"]" /> }
 else
 {
-    @if (_canEdit && _periodLocked) { <RbiAlert Title="@T[_periodError ?? "errors.locked"]" /> }
+    @if ((_canCreate || _canEdit || _canDelete) && _periodLocked) { <RbiAlert Title="@T[_periodError ?? "errors.locked"]" /> }
     @if (_notice is not null) { <div role="status"><RbiAlert Title="@T[_notice]" /></div> }
     <div class="registry-toolbar">
         <RbiButton Disabled="@(_busy || _openingEditor)" Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Secondary">@T["common.refresh"]</RbiButton>
         <RbiButton Disabled="@(_busy || _openingEditor || _refreshing)" OnClick="ExportAsync" Variant="RbiButtonVariant.Secondary">@T["common.export"]</RbiButton>
         @if (_canCreate)
         {
-            <RbiButton Disabled="@(_busy || _openingEditor || _refreshing)" OnClick="() => _importOpen = true" Variant="RbiButtonVariant.Secondary">@T["common.import"]</RbiButton>
-            <RbiButton Disabled="@(_busy || _refreshing)" Loading="_openingEditor" LoadingLabel="@T["state.loading"]" OnClick="() => Edit(null)">@T["common.new"]</RbiButton>
+            <RbiButton Disabled="@(_busy || _openingEditor || _refreshing || _periodLocked)" OnClick="() => _importOpen = true" Variant="RbiButtonVariant.Secondary">@T["common.import"]</RbiButton>
+            <RbiButton Disabled="@(_busy || _refreshing || _periodLocked)" Loading="_openingEditor" LoadingLabel="@T["state.loading"]" OnClick="() => Edit(null)">@T["common.new"]</RbiButton>
         }
     </div>
     <label for="legal-search">@T["legal.search"]</label>
@@ -49,10 +49,10 @@ else
                         <td><div class="registry-toolbar">
                             @if (_canEdit)
                             {
-                                <RbiButton Disabled="@(_busy || _refreshing)" Loading="_openingEditor" LoadingLabel="@T["state.loading"]" OnClick="() => Edit(entity)" Variant="RbiButtonVariant.Ghost">@T["common.edit"]</RbiButton>
+                                <RbiButton Disabled="@(_busy || _refreshing || _periodLocked)" Loading="_openingEditor" LoadingLabel="@T["state.loading"]" OnClick="() => Edit(entity)" Variant="RbiButtonVariant.Ghost">@T["common.edit"]</RbiButton>
                                 @if (!string.Equals(entity.Status, "Verified", StringComparison.OrdinalIgnoreCase)) { <RbiButton Disabled="@(_busy || _openingEditor || _refreshing || _periodLocked)" OnClick="() => Confirm(entity, false)" Variant="RbiButtonVariant.Ghost">@T["common.verify"]</RbiButton> }
                             }
-                            @if (_canDelete) { <RbiButton Disabled="@(_busy || _openingEditor || _refreshing)" OnClick="() => Confirm(entity, true)" Variant="RbiButtonVariant.Destructive">@T["common.deactivate"]</RbiButton> }
+                            @if (_canDelete) { <RbiButton Disabled="@(_busy || _openingEditor || _refreshing || _periodLocked)" OnClick="() => Confirm(entity, true)" Variant="RbiButtonVariant.Destructive">@T["common.deactivate"]</RbiButton> }
                         </div></td>
                     }
                 </tr>
@@ -68,7 +68,7 @@ else
     <RbiDialog Open Title="@T[_editingId.HasValue ? "common.edit" : "common.new"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseEditor">
         <DialogBody>
             @if (_fallback) { <RbiAlert Title="@T["person.fallback"]" /> }
-            <LegalEntityForm @key="draft" Model="draft" Bases="_bases" Save="SaveAsync" Cancel="() => CloseEditor(false)" />
+            <LegalEntityForm MutationBlocked="_periodLocked" @key="draft" Model="draft" Bases="_bases" Save="SaveAsync" Cancel="() => CloseEditor(false)" />
         </DialogBody>
     </RbiDialog>
 }
@@ -81,14 +81,14 @@ else
     <DialogBody>
         <p>@T["legal.import-help"]</p>
         <label for="legal-import">@T["import.file"]</label>
-        <InputFile id="legal-import" accept=".xlsx" OnChange="ChooseImport" disabled="@_busy" />
+        <InputFile id="legal-import" accept=".xlsx" OnChange="ChooseImport" disabled="@(_busy || _periodLocked)" />
         @if (_importError is not null) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_importError]" /> }
         @if (_importResult is { } result)
         {
             <div role="status"><p>@T.Format("import.result", result.Imported, result.Failed)</p></div>
             @if (result.Errors.Count > 0) { <ul>@foreach (var error in result.Errors) { <li>@SafeImportError(error)</li> }</ul> }
         }
-        <RbiButton Disabled="@(_busy || _importFile is null)" OnClick="ImportAsync">@T["common.import"]</RbiButton>
+        <RbiButton Disabled="@(_busy || _importFile is null || _periodLocked)" OnClick="ImportAsync">@T["common.import"]</RbiButton>
     </DialogBody>
 </RbiDialog>
 
@@ -142,7 +142,7 @@ else
     }
     private async Task Edit(LegalEntity? entity)
     {
-        if (_busy || _openingEditor || _refreshing || _disposed || !_authenticated || (entity is null ? !_canCreate : !_canEdit)) return;
+        if (_periodLocked || _busy || _openingEditor || _refreshing || _disposed || !_authenticated || (entity is null ? !_canCreate : !_canEdit)) return;
         _openingEditor = true;
         try
         {
@@ -167,20 +167,22 @@ else
     private async Task SaveAsync(LegalEntityRequest request)
     {
         if (!_authenticated || (_editingId.HasValue ? !_canEdit : !_canCreate)) throw new RegistryApiException(System.Net.HttpStatusCode.Forbidden);
+        if (_periodLocked) throw new RegistryApiException((System.Net.HttpStatusCode)423);
         if (_busy) return; _busy = true;
         try { await Api.SaveAsync(_editingId, request, _token); _notice = "common.saved"; await LoadAsync(); }
+        catch (RegistryApiException exception) when ((int?)exception.StatusCode == 423) { _periodLocked = true; await InvokeAsync(StateHasChanged); throw; }
         finally { _busy = false; }
         _draft = null;
     }
-    private void Confirm(LegalEntity entity, bool delete) { if (!_authenticated || (!delete && _periodLocked) || (delete ? !_canDelete : !_canEdit) || _openingEditor || _refreshing || _busy) return; _action = entity; _delete = delete; _actionError = null; }
+    private void Confirm(LegalEntity entity, bool delete) { if (!_authenticated || _periodLocked || (delete ? !_canDelete : !_canEdit) || _openingEditor || _refreshing || _busy) return; _action = entity; _delete = delete; _actionError = null; }
     private void CloseAction(bool open) { if (!open && !_busy) _action = null; }
     private async Task RunActionAsync()
     {
         if (!_authenticated || (_delete ? !_canDelete : !_canEdit) || _busy || _action is null) return;
-        if (!_delete && _periodLocked) { _actionError = "errors.locked"; return; }
+        if (_periodLocked) { _actionError = "errors.locked"; return; }
         _busy = true;
         try { if (_delete) await Api.DeleteAsync(_action.Id, _token); else await Api.VerifyAsync(_action.Id, _token); _action = null; _notice = "common.saved"; await LoadAsync(); }
-        catch (RegistryApiException exception) { _actionError = exception.MessageKey; }
+        catch (RegistryApiException exception) { if ((int?)exception.StatusCode == 423) _periodLocked = true; _actionError = exception.MessageKey; }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         finally { _busy = false; }
     }
@@ -205,6 +207,7 @@ else
     private async Task ImportAsync()
     {
         if (!_authenticated || !_canCreate) { _importError = "errors.forbidden"; return; }
+        if (_periodLocked) { _importError = "errors.locked"; return; }
         if (_busy || _importFile is null) return; _busy = true; _importError = null;
         try
         {

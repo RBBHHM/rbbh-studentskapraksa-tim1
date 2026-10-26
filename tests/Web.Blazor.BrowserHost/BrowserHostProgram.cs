@@ -60,6 +60,7 @@ internal static class BrowserHostProgram
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Testing", ApplicationName = typeof(RelatedPersonController).Assembly.FullName });
         builder.WebHost.UseTestServer();
+        builder.Configuration["Email:AdminEmail"] = "admin@fixture.test";
         builder.Logging.ClearProviders();
         builder.Services.AddControllers().AddApplicationPart(typeof(RelatedPersonController).Assembly);
         builder.Services.AddExceptionHandlingExtension(builder.Environment);
@@ -113,6 +114,7 @@ internal static class BrowserHostProgram
             fullName = "Browser Fixture",
             username = user.Email,
             email = user.Email,
+            applicationUserId = principal.FindFirst("rbbh.app_user_id")?.Value,
             roles = principal.FindAll(ClaimTypes.Role).Select(claim => claim.Value).ToArray(),
             permissions = principal.FindAll("permission").Select(claim => claim.Value).ToArray()
         })).RequireAuthorization();
@@ -126,7 +128,7 @@ internal static class BrowserHostProgram
         await using var scope = app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
         await DevelopmentDataSeeder.EnsureApplicationRolesAsync(db);
-        var dbUser = new AppUser { Username = user.Email, Email = user.Email, KeycloakId = "fixture-user" };
+        var dbUser = new AppUser { Username = user.Email, Email = user.Email, KeycloakSubjectConfirmed = true, KeycloakId = "fixture-user" };
         db.AppUsers.Add(dbUser);
         db.UserRoles.Add(new UserRole { UserId = dbUser.Id, RoleId = (await db.Roles.SingleAsync(item => item.Name == user.Role)).Id });
         db.CodeLists.AddRange(
@@ -486,7 +488,7 @@ internal static class BrowserHostProgram
                                 var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
                                 foreach (var roleName in new[] { ApplicationAccessRoles.Administrator, ApplicationAccessRoles.PhysicalPersons })
                                 {
-                                    var other = new AppUser { Email = $"other-{roleName}@fixture.test", Username = $"other-{roleName}", KeycloakId = Guid.NewGuid().ToString(), FirstName = "Fixture", LastName = roleName };
+                                    var other = new AppUser { Email = $"other-{roleName}@fixture.test", Username = $"other-{roleName}", KeycloakSubjectConfirmed = true, KeycloakId = Guid.NewGuid().ToString(), FirstName = "Fixture", LastName = roleName };
                                     db.AppUsers.Add(other);
                                     db.UserRoles.Add(new UserRole { UserId = other.Id, RoleId = (await db.Roles.SingleAsync(role => role.Name == roleName)).Id });
                                 }

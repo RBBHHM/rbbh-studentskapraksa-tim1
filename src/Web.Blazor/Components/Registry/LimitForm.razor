@@ -33,12 +33,13 @@
         }
         <div class="registry-toolbar">
             <RbiButton OnClick="Cancel" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton>
-            <RbiButton Type="RbiButtonType.Submit" Disabled="@(_entity is null || Types.Count == 0)">@T["common.save"]</RbiButton>
+            <RbiButton Type="RbiButtonType.Submit" Disabled="@(MutationBlocked || _entity is null || Types.Count == 0)">@T["common.save"]</RbiButton>
         </div>
     </fieldset>
 </EditForm>
 
 @code {
+    [Parameter] public bool MutationBlocked { get; set; }
     [Parameter, EditorRequired] public LimitDraft Model { get; set; } = null!;
     [Parameter] public IReadOnlyList<ReferenceOption> Types { get; set; } = [];
     [Parameter] public EventCallback<LimitRequest> Save { get; set; }
@@ -53,6 +54,7 @@
     protected override async Task OnAfterRenderAsync(bool firstRender) { if (_focusErrors) { _focusErrors = false; await _summary.FocusAsync(); } }
     private async Task SubmitAsync() => await _submission.SubmitAsync(async () =>
     {
+        if (MutationBlocked) return;
         var parsed = _context.Validate(); var errors = Model.Validate();
         if (!Types.Any(type => type.Kod == Model.TipLimita)) errors[nameof(Model.TipLimita)] = ["limit.type-unavailable"];
         _validation.DisplayErrors(errors.ToDictionary(item => item.Key, item => item.Value.Select(key => T[key]).ToArray()));

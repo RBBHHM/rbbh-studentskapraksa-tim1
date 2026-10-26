@@ -25,7 +25,8 @@ public sealed class UserDraft
         FirstName = user?.FirstName ?? "",
         LastName = user?.LastName ?? "",
         Email = user?.Email ?? "",
-        Roles = catalog.Roles.Select(role => new UserRoleChoice { Id = role.Id, Name = role.Name, Selected = user?.Roles.Contains(role.Name) == true }).ToList()
+        Roles = catalog.Roles.Where(role => !role.Name.Equals("gost", StringComparison.OrdinalIgnoreCase))
+            .Select(role => new UserRoleChoice { Id = role.Id, Name = role.Name, Selected = user?.Roles.Contains(role.Name) == true }).ToList()
     };
     public Dictionary<string, string[]> Validate()
     {
@@ -35,7 +36,6 @@ public sealed class UserDraft
             if (string.IsNullOrWhiteSpace(value) || value.Trim().Length > 100) errors[field] = ["users.name-invalid"];
         if (!new EmailAddressAttribute().IsValid(Email.Trim()) || !Email.Trim().EndsWith("@raiffeisengroup.ba", StringComparison.OrdinalIgnoreCase))
             errors[nameof(Email)] = ["users.email-invalid"];
-        if (SelectedRoles.Length == 0) errors[nameof(Roles)] = ["users.roles-required"];
         return errors;
     }
     public CreateApplicationUser ToRequest()

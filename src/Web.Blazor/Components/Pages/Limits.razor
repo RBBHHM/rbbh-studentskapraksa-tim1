@@ -6,6 +6,7 @@
 @inject AuthenticationStateProvider AuthenticationState
 @inject IProfileApi Profile
 @inject ILimitsApi Api
+@inject IPeriodApi Period
 @inject IRelatedPersonsApi References
 @inject FileDelivery Files
 
@@ -21,11 +22,12 @@ else if (_error is not null)
 else if (!_canRead) { <RbiAlert Title="@T["errors.forbidden"]" /> }
 else
 {
+    @if ((_canCreate || _canEdit || _canDelete) && _periodLocked) { <RbiAlert Title="@T[_periodError ?? "errors.locked"]" /> }
     @if (_notice is not null) { <div role="status"><RbiAlert Title="@T[_notice]" /></div> }
     <div class="registry-toolbar">
         <RbiButton Disabled="@(_busy || _openingEditor)" Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Secondary">@T["common.refresh"]</RbiButton>
         <RbiButton Disabled="@(_busy || _openingEditor || _refreshing)" OnClick="ExportAsync" Variant="RbiButtonVariant.Secondary">@T["common.export"]</RbiButton>
-        @if (_canCreate) { <RbiButton Disabled="@(_busy || _refreshing)" Loading="_openingEditor" LoadingLabel="@T["state.loading"]" OnClick="() => Edit(null)">@T["common.new"]</RbiButton> }
+        @if (_canCreate) { <RbiButton Disabled="@(_busy || _refreshing || _periodLocked)" Loading="_openingEditor" LoadingLabel="@T["state.loading"]" OnClick="() => Edit(null)">@T["common.new"]</RbiButton> }
     </div>
     <label for="limit-filter">@T["limit.filter"]</label>
     <LimitEntityPicker Id="limit-filter" Value="_filter" ValueChanged="FilterAsync" RequireData="false" Disabled="@(_busy || _refreshing || _openingEditor)" />
@@ -43,8 +45,8 @@ else
                     @if (_canEdit || _canDelete)
                     {
                         <td><div class="registry-toolbar">
-                            @if (_canEdit) { <RbiButton Disabled="@(_busy || _refreshing)" Loading="_openingEditor" LoadingLabel="@T["state.loading"]" OnClick="() => Edit(record)" Variant="RbiButtonVariant.Ghost">@T["common.edit"]</RbiButton> }
-                            @if (_canDelete) { <RbiButton Disabled="@(_busy || _openingEditor || _refreshing)" OnClick="() => Confirm(record)" Variant="RbiButtonVariant.Destructive">@T["limit.delete"]</RbiButton> }
+                            @if (_canEdit) { <RbiButton Disabled="@(_busy || _refreshing || _periodLocked)" Loading="_openingEditor" LoadingLabel="@T["state.loading"]" OnClick="() => Edit(record)" Variant="RbiButtonVariant.Ghost">@T["common.edit"]</RbiButton> }
+                            @if (_canDelete) { <RbiButton Disabled="@(_busy || _openingEditor || _refreshing || _periodLocked)" OnClick="() => Confirm(record)" Variant="RbiButtonVariant.Destructive">@T["limit.delete"]</RbiButton> }
                         </div></td>
                     }
                 </tr>
@@ -57,7 +59,7 @@ else
     <RbiDialog Open Title="@T[_editingId.HasValue ? "common.edit" : "common.new"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseEditor">
         <DialogBody>
             @if (_types.Count == 0) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T["limit.no-types"]" /> }
-            <LimitForm @key="draft" Model="draft" Types="_types" Save="SaveAsync" Cancel="() => CloseEditor(false)" />
+            <LimitForm MutationBlocked="_periodLocked" @key="draft" Model="draft" Types="_types" Save="SaveAsync" Cancel="() => CloseEditor(false)" />
         </DialogBody>
     </RbiDialog>
 }
@@ -77,6 +79,8 @@ else
     private Guid? _filter;
     private LimitRecord? _action;
     private string? _search, _error, _notice, _actionError;
+    private string? _periodError;
+    private bool _periodLocked = true;
     private bool _disposed, _authenticated, _loading = true, _busy, _canRead, _canCreate, _canEdit, _canDelete;
     private bool _loaded, _refreshing, _openingEditor;
     private IEnumerable<LimitRecord> Filtered => _records.Where(record => record.Matches(_search));
@@ -92,6 +96,8 @@ else
             _canRead = profile.Permissions.Contains("LIMITI_VIEW"); _canCreate = profile.Permissions.Contains("LIMITI_CREATE");
             _canEdit = profile.Permissions.Contains("LIMITI_EDIT"); _canDelete = profile.Permissions.Contains("LIMITI_DELETE");
             if (!_canRead) return;
+            try { _periodLocked = (await Period.CurrentAsync(_token)).IsLocked; _periodError = null; }
+            catch (RegistryApiException) { _periodLocked = true; _periodError = "period.state-unavailable"; }
             _records = await Api.ListAsync(_filter, _token); _loaded = true;
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
@@ -101,7 +107,7 @@ else
     private async Task FilterAsync(Guid? entity) { if (_busy || _refreshing || _openingEditor) return; _filter = entity; await LoadAsync(); }
     private async Task Edit(LimitRecord? record)
     {
-        if (_busy || _openingEditor || _refreshing || _disposed || !_authenticated || (record is null ? !_canCreate : !_canEdit)) return;
+        if (_periodLocked || _busy || _openingEditor || _refreshing || _disposed || !_authenticated || (record is null ? !_canCreate : !_canEdit)) return;
         _openingEditor = true;
         try
         {
@@ -117,18 +123,20 @@ else
     private async Task SaveAsync(LimitRequest request)
     {
         if (!_authenticated || (_editingId.HasValue ? !_canEdit : !_canCreate)) throw new RegistryApiException(System.Net.HttpStatusCode.Forbidden);
+        if (_periodLocked) throw new RegistryApiException((System.Net.HttpStatusCode)423);
         if (_busy) return; _busy = true;
         try { await Api.SaveAsync(_editingId, request, _token); _notice = "common.saved"; await LoadAsync(); }
+        catch (RegistryApiException exception) when ((int?)exception.StatusCode == 423) { _periodLocked = true; await InvokeAsync(StateHasChanged); throw; }
         finally { _busy = false; }
         _draft = null;
     }
-    private void Confirm(LimitRecord record) { if (!_authenticated || !_canDelete || _busy || _refreshing || _openingEditor) return; _action = record; _actionError = null; }
+    private void Confirm(LimitRecord record) { if (_periodLocked || !_authenticated || !_canDelete || _busy || _refreshing || _openingEditor) return; _action = record; _actionError = null; }
     private void CloseAction(bool open) { if (!open && !_busy) _action = null; }
     private async Task DeleteAsync()
     {
-        if (!_authenticated || !_canDelete || _busy || _action is null) return; _busy = true;
+        if (_periodLocked || !_authenticated || !_canDelete || _busy || _action is null) return; _busy = true;
         try { await Api.DeleteAsync(_action.Id, _token); _action = null; _notice = "common.saved"; await LoadAsync(); }
-        catch (RegistryApiException exception) { _actionError = exception.MessageKey; }
+        catch (RegistryApiException exception) { if ((int?)exception.StatusCode == 423) _periodLocked = true; _actionError = exception.MessageKey; }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         finally { _busy = false; }
     }

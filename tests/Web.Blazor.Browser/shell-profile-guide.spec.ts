@@ -6,7 +6,7 @@ const role = process.env.BROWSER_FIXTURE_ROLE ?? "FL";
 const admin = role === "admin";
 async function visit(page: Page, route: string) { await page.goto(route); await interactive(page); }
 test.beforeEach(async ({ request }) => { expect((await request.post("/__fixtures/reset", { headers })).status()).toBe(204); });
-for (const state of ["unknown", "inactive"]) test(`Reports denies ${state} authenticated identity despite forged provider Admin`, async ({ page, request }) => {
+for (const state of ["inactive"]) test(`Reports denies ${state} authenticated identity despite forged provider Admin`, async ({ page, request }) => {
   expect((await request.post(`/__fixtures/identity-${state}`, { headers })).status()).toBe(204);
   expect((await request.post("/__fixtures/forge-provider-admin", { headers })).status()).toBe(204);
   expect((await (await request.get("/__fixtures/front-identity", { headers })).json()).providerAdmin).toBe(true);
@@ -17,6 +17,19 @@ for (const state of ["unknown", "inactive"]) test(`Reports denies ${state} authe
   await expect(page.getByRole("main").getByText("Nemate dozvolu za ovu radnju.", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: /Preuzmi|Generiši|Svi klijenti/ })).toHaveCount(0);
   expect((await (await request.get("/__fixtures/reports", { headers })).json()).records).toEqual([]);
+  expect((await (await request.get("/__fixtures/counts", { headers })).json()).audit).toBe(0);
+});
+test("unmapped authenticated identity gets virtual Guest reads but no forged Admin writes", async ({ page, request }) => {
+  await request.post("/__fixtures/identity-unknown", { headers });
+  await request.post("/__fixtures/forge-provider-admin", { headers });
+  const matrix = await (await request.post("/__fixtures/authorization-matrix", { headers })).json();
+  expect(matrix.reportRead).toBe(200);
+  for (const action of ["physical", "legal", "limits", "capital", "generate", "users", "codes"]) expect(matrix[action]).toBe(403);
+  await visit(page, "/app");
+  await expect(page.getByRole("main").locator("a[href='/app/reports']")).toBeVisible();
+  await expect(page.locator("a[href='/app/admin/users']")).toHaveCount(0);
+  await visit(page, "/app/reports");
+  await expect(page.getByRole("button", { name: /Generiši/ })).toHaveCount(0);
   expect((await (await request.get("/__fixtures/counts", { headers })).json()).audit).toBe(0);
 });
 test("dashboard and navigation reflect actual DB baseline reads and privileged Admin modules", async ({ page, request }) => {
@@ -47,7 +60,7 @@ test("business guide is permission-aware, keyboard accessible and documents appr
   await expect(page.locator("summary").filter({ hasText: "Administracija" })).toHaveCount(admin ? 1 : 0);
   const first = page.locator("details").first(); await expect(first).toHaveAttribute("open", ""); await first.locator("summary").focus(); await page.keyboard.press("Space"); await expect(first).not.toHaveAttribute("open", ""); await page.keyboard.press("Enter"); await expect(first).toHaveAttribute("open", "");
   const reporting = page.locator("details").filter({ hasText: "Arhiva, preuzimanje i generisanje izvještaja." }); await reporting.locator("summary").click();
-  await expect(reporting.getByText("Poznati aktivni aplikacijski korisnici s Guest pristupom ili jačim mogu pregledati i preuzimati postojeće izvještaje.", { exact: true })).toBeVisible(); await expect(reporting.getByText(/Nije read-only radnja/)).toBeVisible();
+  await expect(reporting.getByText("Autentificirani korisnici koji nisu deaktivirani mogu pregledati i preuzimati postojeće izvještaje. Bez eksplicitne aplikacijske role efektivni pristup je Guest.", { exact: true })).toBeVisible(); await expect(reporting.getByText(/Nije read-only radnja/)).toBeVisible();
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
 });
 test("dashboard/profile/guide remain readable at375px without page overflow", async ({ page }, info) => {

@@ -56,10 +56,11 @@ test("create preserves multiple application roles and persists the actual backen
   const afterDuplicate = await (await request.get("/__fixtures/users-state", { headers })).json();
   expect(afterDuplicate.users).toHaveLength(state.users.length); expect(afterDuplicate.audit).toHaveLength(1);
 });
-test("required names, corporate email and create roles block requests", async ({ page, request }) => {
+test("required names and corporate email block requests; Guest needs no checkbox", async ({ page, request }) => {
   await visit(page); await page.getByRole("button", { name: "Dodaj korisnika", exact: true }).click();
   let dialog = page.getByRole("dialog"); await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
-  await expect(dialog.getByText("Odaberite najmanje jedan funkcionalni pristup.", { exact: true }).first()).toBeVisible();
+  await expect(dialog.getByRole("checkbox", { name: "Gost", exact: true })).toHaveCount(0);
+  await expect(dialog.getByRole("alert").first()).toBeVisible();
   expect((await (await request.get("/__fixtures/counts", { headers })).json()).mutations).toBe(0);
   await dialog.getByRole("button", { name: "Odustani", exact: true }).click(); dialog = await createFields(page, "invalid@example.test");
   await access(dialog, "Fizička lica", true); await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
@@ -75,8 +76,11 @@ test("role replacement and non-final empty roles preserve the existing mapping-r
   await expect(dialog).toHaveCount(0); await expect(other).toContainText("KAPITAL_CREATE");
   await other.getByRole("button", { name: "Promijeni funkcionalne pristupe", exact: true }).click(); dialog = page.getByRole("dialog");
   await access(dialog, "Kapital", false);
-  await expect(dialog.getByText(/postojeći aplikacijski zapis se uklanja/)).toBeVisible();
-  await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).toHaveCount(0); await expect(other).toHaveCount(0);
+  await expect(dialog.getByText(/Zapis identiteta i status ostaju sačuvani/)).toBeVisible();
+  await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).toHaveCount(0);
+  await expect(other).toBeVisible(); await expect(other).toContainText("FL_VIEW"); await expect(other).not.toContainText("KAPITAL_CREATE");
+  const state = await (await request.get("/__fixtures/users-state", { headers })).json();
+  expect(state.users.find((user: { email: string }) => user.email === "other-FL@fixture.test").isActive).toBe(true);
 });
 test("own role editor is unavailable even when another active Admin exists", async ({ page, request }) => {
   await request.post("/__fixtures/users-reference", { headers }); await visit(page);

@@ -73,12 +73,13 @@
         <div class="registry-toolbar">
             <RbiButton OnClick="Cancel" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton>
             @if (_step == 2) { <RbiButton OnClick="Back" Variant="RbiButtonVariant.Secondary">@T["common.back"]</RbiButton> }
-            <RbiButton Type="RbiButtonType.Submit" Disabled="_checking">@T[_step == 1 ? "common.actions.continue" : "common.save"]</RbiButton>
+            <RbiButton Type="RbiButtonType.Submit" Disabled="@(_checking || MutationBlocked)">@T[_step == 1 ? "common.actions.continue" : "common.save"]</RbiButton>
         </div>
     </fieldset>
 </EditForm>
 
 @code {
+    [Parameter] public bool MutationBlocked { get; set; }
     [Parameter, EditorRequired] public PhysicalPersonDraft Model { get; set; } = null!;
     [Parameter] public Guid? Id { get; set; }
     [Parameter] public IReadOnlyList<RelatedPerson> People { get; set; } = [];
@@ -106,6 +107,7 @@
     private void BasisChanged() => Model.RelationDescription = Bases.FirstOrDefault(item => item.Kod == Model.RelationBasis)?.Opis;
     private async Task SubmitAsync()
     {
+        if (MutationBlocked) return;
         await _submission.SubmitAsync(async () =>
         {
             var parsed = _context.Validate();

@@ -181,14 +181,15 @@ test("modal keyboard focus returns to trigger and business step is accessible", 
 });
 
 test("actual period middleware rejects persistence with423 and safe inline recovery", async ({ page, request }) => {
-  expect((await request.post("/__fixtures/lock", { headers: { "X-Fixture-Control": "true" } })).status()).toBe(204);
   await openPhysical(page);
   const dialog = await beginNonresident(page, "Locked", "LOC12345", "777888");
   await dialog.getByRole("button", { name: "Nastavi", exact: true }).click();
   await fillBusiness(dialog);
+  expect((await request.post("/__fixtures/lock", { headers: { "X-Fixture-Control": "true" } })).status()).toBe(204);
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
   await expect(dialog.getByText("Period je zaključan. Izmjene nisu dozvoljene.").first()).toBeVisible();
   await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Sačuvaj", exact: true })).toBeDisabled();
   const counts = await (await request.get("/__fixtures/counts", { headers: { "X-Fixture-Control": "true" } })).json();
   expect(counts).toEqual({ persons: 0, audit: 0, mutations: 1 });
 });
