@@ -3,85 +3,102 @@
 Registar povezanih lica: fizička i pravna lica, porodične veze, import/export,
 limiti, kapital, izvještaji, periodi, obavijesti, korisnici, šifrarnici i audit.
 
-Native kandidat je `src/Web.Blazor`, generisan iz `rbbh-webapp` sa auth,
-authorization i localization opcijama. Koristi RBI NuGet pakete i postojeći
-backend; backend nije prepisan. Lokalna parity provjera nije produkcijski cutover.
-`src/Web` ostaje **MIGRATION_REFERENCE** dok se ne potvrde stvarni deployment
-potrošači, prihvat novog hosta i rollback.
+Native frontend je `src/Web.Blazor`, .NET10/RBI NuGet aplikacija s postojećim
+API/BL/DL backendom. `src/Web` ostaje netaknuta vizuelna referenca dok Claude
+ne završi parity commitove i dok se ne prihvati cutover. Lokalni testovi nisu
+odobrenje produkcijske isporuke.
 
-## Identitet i dozvole
+## Identitet, dozvole i period
 
-Keycloak je izvor identiteta. Aplikacijska baza je autoritet za role/dozvole;
-proizvoljne provider role ili permission claims ne daju aplikacijski pristup.
-Stari opis sa četiri direktne Keycloak role je zastario.
+Keycloak autentificira identitet; aplikacijska baza dodjeljuje pet eksplicitnih
+rola: FL, PL, limiti, kapital, admin. Provider role/permission claimovi ne daju
+aplikacijske dozvole. Svaki autentificirani identitet bez eksplicitnog mapiranja
+ima **virtualni Guest** read/download baseline, bez dodjeljivanja `gost` role.
+Deaktivirani aplikacijski korisnik ostaje bez pristupa. Pražnjenje rola zadržava
+zapis identiteta i status; aktivni korisnik postaje Guest. Self role-management,
+self deaktivacija/brisanje i gubitak posljednjeg aktivnog Admina su zabranjeni.
 
-| Trenutna DB rola | Namjena |
-|---|---|
-| `gost` | postojeći osnovni pregled/preuzimanje |
-| `FL` | mutacije fizičkih lica i povezanih porodičnih podataka |
-| `PL` | mutacije pravnih lica |
-| `limiti` | mutacije limita |
-| `kapital` | kapital, generisanje izvještaja i postojeće period API dozvole |
-| `admin` | privilegovana administracija i poslovne dozvole |
+Reporting READ/DOWNLOAD je dostupan autentificiranim identitetima koji nisu
+deaktivirani; GENERATE/PERSIST zahtijeva DB KAPITAL_CREATE (Kapital/Admin), jer
+kreira zapis. Backend ostaje autoritet. Sve period-osjetljive mutacije koriste
+**jedan globalni period**, bez username/department zaključavanja. Native kontrole
+su onemogućene kada je period zaključan ili nedostupan; backend423 štiti race.
+Korisnička dopuna odgovora ima10–490 znakova, bez trunciranja ili promjene polja500.
 
-Izvještaje smiju pregledati/preuzeti poznati aktivni aplikacijski korisnici s
-Guest baseline pristupom ili jačom DB rolom. Nepoznat/inaktivan autentificirani
-identitet nije Guest. Generisanje
-trajno kreira zapis: zahtijeva DB `KAPITAL_CREATE` (Kapital/Admin), nije read-only.
-Admin stranice imaju postojeći Admin guard; period API zadržava zaseban
-CapitalRead/Write ugovor. Detalji: [authorization matrix](docs/BLAZOR-MIGRATION-AUTHORIZATION.md).
+Ljudske mutacije koriste isključivo `ClaimTypes.Email`; nedostajući email daje
+siguran401 prije izmjene. Potvrđeni Keycloak subject je trajan identitetski ključ.
+Postojeći placeholder nije dokaz veze. Nova EF migracija dodaje metapodatke
+potvrde bez automatskog povezivanja produkcijskih korisnika. Prvo povezivanje je
+isključeno dok vlasnik ne odobri provjereni email/subject postupak.
+[Subject-link i global-period postupak](docs/IDENTITY-AND-PERIOD-HARDENING-2026-10-26.md).
 
-Backend odbija vlastitu deaktivaciju/brisanje i gubitak posljednjeg aktivnog
-Admin pristupa. Korisnička dopuna odgovora za otključavanje ima 10–490 znakova;
-nepromijenjeni prefiks i tekst staju u postojeće SQL polje od500, bez trunciranja.
-GCC nije dio trenutnog proizvoda. Porodično stablo je pregled; izmjena veza ide
-kroz postojeću formu fizičkog lica, ne kroz izmišljeni zasebni CRUD.
+## Struktura i lokalni razvoj
 
-## Struktura
+- `RelatedPartiesRegister` — backend i backend testovi.
+- `src/Web.Blazor` — native interaktivni frontend, app-owned BS/EN.
+- `tests/Web.Blazor.Tests` — frontend .NET testovi.
+- `tests/Web.Blazor.Browser*` — Playwright i izolovani testni host.
+- `RelatedPartiesRegister.Migration.slnx` — trenutno zajedničko rješenje.
+  Preimenovanje i uklanjanje starog backend .sln slijede nakon React retirementa.
 
-- `src/Web.Blazor` — native interaktivni .NET10 frontend, BS/EN RBI.Localization.
-- `RelatedPartiesRegister` — postojeći API/BL/DL i backend testovi.
-- `tests/Web.Blazor.Tests` — frontend/transport/configuration regresije.
-- `tests/Web.Blazor.Browser*` — Playwright i izolovani testni host; nisu deployment.
-- `src/Web` — zadržana React referenca, ne native quick start.
-- `RelatedPartiesRegister.Migration.slnx` — zajednička lokalna provjera migracije.
+Potreban je .NET SDK10 i odobren feed s RBI paketima. ApiCore/Authentication
+koriste `0.1.1-migration.1`; ostali RBI runtime paketi su0.1.0. Privatna objava
+paketa je preduvjet, ne rezultat lokalnog cache restorea. Ne unositi tajne u Git.
 
-## Lokalni native razvoj
-
-Potreban je .NET SDK10 i odobren NuGet feed/cache sa RBI paketima. Ne unositi
-tajne ili lične putanje u source. ApiCore/Authentication koriste odobrenu
-transport verziju `0.1.1-migration.1`; ostali runtime RBI paketi su `0.1.0`.
+Iz root direktorija, direktnim standardnim komandama:
 
 ```powershell
-dotnet restore RelatedPartiesRegister.Migration.slnx --configfile <approved-config> --packages artifacts/packages --artifacts-path artifacts/migration
-dotnet build RelatedPartiesRegister.Migration.slnx --artifacts-path artifacts/migration --no-restore
-dotnet test RelatedPartiesRegister.Migration.slnx --artifacts-path artifacts/migration --no-restore
-dotnet run --project src/Web.Blazor/RBBH.RelatedPartiesRegister.Web.csproj --artifacts-path artifacts/migration --no-launch-profile -- --environment Development
+dotnet restore RelatedPartiesRegister.Migration.slnx --configfile <approved-config> --artifacts-path artifacts/local
+dotnet build RelatedPartiesRegister.Migration.slnx --artifacts-path artifacts/local --no-restore -p:RunAnalyzers=true
+dotnet test RelatedPartiesRegister.Migration.slnx --artifacts-path artifacts/local --no-restore
+dotnet publish src/Web.Blazor/RBBH.RelatedPartiesRegister.Web.csproj -c Release --artifacts-path artifacts/local --no-restore -o artifacts/publish/web
+dotnet publish RelatedPartiesRegister/RelatedPartiesRegister.csproj -c Release --artifacts-path artifacts/local --no-restore -o artifacts/publish/api
 ```
 
-Bez auth konfiguracije native Development prikazuje istinit signed-out ekran:
-nema izmišljenog korisnika, login handlera ni anonimnog API proxyja. Za stvarno
-povezivanje slijediti [native README](src/Web.Blazor/README.md). Testni host ima
-sintetički identitet i jedinstvenu InMemory bazu, bez SQL/SSO/SMTP kontakta.
+Za SQL testove postaviti `RBBH_TEST_SQLSERVER` na odobren **disposable** SQL Server
+instance bez Initial Catalog; fixture kreira/briše samo svoju GUID bazu. Bez
+varijable SQL testovi su SKIPPED, nikada PASS. Ne koristiti produkcijsku bazu.
 
-Backend startup ne pokreće migracije ni seed. Konfigurisan SQL ili Keycloak ne
-smije se zamijeniti lažnim uspješnim odgovorom. Development fallback nije UAT ili
-produkcijska strategija. Povjerljivi OIDC client, HTTPS, stvarno mapiranje
-identiteta, odobren zajednički cache i DataProtection zahtijevaju prihvat okruženja.
+U dva terminala, nakon sigurne konfiguracije SQL/SSO/backend URL-a:
 
-## Isporuka i dokazi
+```powershell
+dotnet run --project RelatedPartiesRegister/RelatedPartiesRegister.csproj --artifacts-path artifacts/local --no-build --no-launch-profile -- --environment Development --urls http://127.0.0.1:5000
+dotnet run --project src/Web.Blazor/RBBH.RelatedPartiesRegister.Web.csproj --artifacts-path artifacts/local --no-build --no-launch-profile -- --environment Development --urls http://127.0.0.1:5080
+```
 
-Native frontend je server-hosted Blazor, **nije** stari statički IIS ZIP.
-Lokalni candidate/manifest/ZIP priprema `scripts/Publish-BlazorCandidate.ps1`;
-objavljeni DLL provjerava `scripts/testing/Test-BlazorPublished.ps1`.
-Ne aktivirati postojeće legacy IIS/pnpm skripte kao novi native deploy.
-Postojeći root OCP workflowi nisu automatski promijenjeni u frontend workflow.
+Backend učitava postojeću lokalnu .env konfiguraciju; nikada je ne kopirati u Git.
+Startup ne izvršava migracije/seed. Native Development bez auth/API konfiguracije
+prikazuje istinit signed-out ekran, bez lažnog korisnika ili anonimnog API proxyja.
+[Native konfiguracija](src/Web.Blazor/README.md).
 
-- [Aktuelni handoff i release blokade](docs/REACT-TO-BLAZOR-FINAL-HANDOFF.md)
-- [Module/flow parity](docs/BLAZOR-MIGRATION-PARITY.md)
-- [React retirement i deployment postupak](docs/BLAZOR-MIGRATION-RETIREMENT-AND-DEPLOYMENT.md)
-- [Završna sigurnosna provjera](docs/BLAZOR-MIGRATION-COMPLETION-SECURITY.md)
+Browser provjera (izolovani HTTP backend/controller pipeline, ne produkcijski SSO):
 
-Stvarna SSO/SQL/OCP provjera, shared-state/multi-pod ponašanje, certifikati,
-injekcija tajni i konačni cutover ostaju van lokalnog odobrenja. Ne mijenjati
-kanonski produkcijski frontend niti uklanjati rollback referencu prije prihvata.
+```powershell
+dotnet build tests/Web.Blazor.BrowserHost/Web.Blazor.BrowserHost.csproj --artifacts-path artifacts/local --no-restore
+cd tests/Web.Blazor.Browser
+npm ci
+npx playwright install chromium
+$env:BROWSER_ARTIFACTS_PATH = '../../artifacts/local'
+$env:BROWSER_FIXTURE_ROLE = 'admin'
+npm test -- --workers=1 --retries=0
+```
+
+Ponoviti za gost, kapital, PL, limiti i FL. Browser testovi uključuju Axe i375px;
+ne zamjenjuju pregled Claudeovih vizuelnih izmjena ili stvarni SSO/UAT prihvat.
+
+## Containeri i isporuka
+
+```powershell
+docker build -f src/Web.Blazor/Dockerfile -t rbbh-register-web:local src/Web.Blazor
+docker build -f RelatedPartiesRegister/Dockerfile -t rbbh-register-api:local .
+```
+
+Tačno tri root workflowa: `build-and-push-image.yml`, `codeql.yml`,
+`deploy-to-ocp.yml`. Nema nested workflowa ili IIS deploya. Build testira i gradi
+native web/API odvojeno; deploy je ručan, s punim commit tagom i digestom.
+[Pipeline konfiguracija i preduvjeti](docs/NATIVE-PIPELINE-2026-10-26.md).
+
+System.Security.Cryptography.Pkcs ostaje9.0.21. NU1900/NU1902/NU1903 se ne skrivaju.
+Stvarni SSO, odobren subject backfill, SQL/SMTP, shared cache/DataProtection,
+privatni feed i OCP/circuit/certifikati ostaju deployment gateovi.
+[Aktuelni handoff](docs/REACT-TO-BLAZOR-FINAL-HANDOFF.md).
