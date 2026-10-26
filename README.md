@@ -4,9 +4,9 @@ Registar povezanih lica: fizička i pravna lica, porodične veze, import/export,
 limiti, kapital, izvještaji, periodi, obavijesti, korisnici, šifrarnici i audit.
 
 Native frontend je `src/Web.Blazor`, .NET10/RBI NuGet aplikacija s postojećim
-API/BL/DL backendom. `src/Web` ostaje netaknuta vizuelna referenca dok Claude
-ne završi parity commitove i dok se ne prihvati cutover. Lokalni testovi nisu
-odobrenje produkcijske isporuke.
+API/BL/DL backendom. Claudeov vizuelni batch je integrisan i verifikovan;
+verzionirani React izvor i njegovi wrapperi su uklonjeni. Prethodna referenca
+ostaje dostupna u Git historiji. Lokalni testovi nisu odobrenje produkcijske isporuke.
 
 ## Identitet, dozvole i period
 
@@ -38,8 +38,8 @@ isključeno dok vlasnik ne odobri provjereni email/subject postupak.
 - `src/Web.Blazor` — native interaktivni frontend, app-owned BS/EN.
 - `tests/Web.Blazor.Tests` — frontend .NET testovi.
 - `tests/Web.Blazor.Browser*` — Playwright i izolovani testni host.
-- `RelatedPartiesRegister.Migration.slnx` — trenutno zajedničko rješenje.
-  Preimenovanje i uklanjanje starog backend .sln slijede nakon React retirementa.
+- `RelatedPartiesRegister.slnx` — jedino održavano zajedničko rješenje za backend,
+  native frontend i .NET testove. Stari backend-only .sln je uklonjen.
 
 Potreban je .NET SDK10 i odobren feed s RBI paketima. ApiCore/Authentication
 koriste `0.1.1-migration.1`; ostali RBI runtime paketi su0.1.0. Privatna objava
@@ -48,9 +48,9 @@ paketa je preduvjet, ne rezultat lokalnog cache restorea. Ne unositi tajne u Git
 Iz root direktorija, direktnim standardnim komandama:
 
 ```powershell
-dotnet restore RelatedPartiesRegister.Migration.slnx --configfile <approved-config> --artifacts-path artifacts/local
-dotnet build RelatedPartiesRegister.Migration.slnx --artifacts-path artifacts/local --no-restore -p:RunAnalyzers=true
-dotnet test RelatedPartiesRegister.Migration.slnx --artifacts-path artifacts/local --no-restore
+dotnet restore RelatedPartiesRegister.slnx --configfile <approved-config> --artifacts-path artifacts/local
+dotnet build RelatedPartiesRegister.slnx --artifacts-path artifacts/local --no-restore -p:RunAnalyzers=true
+dotnet test RelatedPartiesRegister.slnx --artifacts-path artifacts/local --no-restore
 dotnet publish src/Web.Blazor/RBBH.RelatedPartiesRegister.Web.csproj -c Release --artifacts-path artifacts/local --no-restore -o artifacts/publish/web
 dotnet publish RelatedPartiesRegister/RelatedPartiesRegister.csproj -c Release --artifacts-path artifacts/local --no-restore -o artifacts/publish/api
 ```

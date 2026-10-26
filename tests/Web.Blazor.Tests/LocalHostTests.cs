@@ -12,7 +12,7 @@ public sealed class LocalHostTests
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             var directory = new DirectoryInfo(AppContext.BaseDirectory);
-            while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "RelatedPartiesRegister.Migration.slnx")))
+            while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "RelatedPartiesRegister.slnx")))
                 directory = directory.Parent;
             if (directory is null) throw new InvalidOperationException("Migration solution not found.");
             builder.UseContentRoot(Path.Combine(directory.FullName, "src", "Web.Blazor"));

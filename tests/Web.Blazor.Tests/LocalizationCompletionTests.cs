@@ -12,7 +12,7 @@ public sealed class LocalizationCompletionTests
     private static string Root()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "RelatedPartiesRegister.Migration.slnx"))) directory = directory.Parent;
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "RelatedPartiesRegister.slnx"))) directory = directory.Parent;
         return Path.Combine(directory!.FullName, "src", "Web.Blazor");
     }
     [Fact]

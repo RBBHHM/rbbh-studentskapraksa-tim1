@@ -59,8 +59,9 @@ schema downgrade discards subject confirmation metadata and needs explicit revie
 Removed: old artifact/deploy .yaml workflows, nested template workflows, root
 Makefile, build/restore/test/dev-web .cmd wrappers, IIS deploy and candidate
 publish/startup helpers. README now uses direct dotnet/docker commands.
-Only scripts/dev-api.cmd and scripts/testing/Test-LocalApi.ps1 remain temporarily:
-the untouched React reference's package.json still calls them. Remove both with
-React retirement after Claude parity is integrated. No new wrapper was added.
-The temporary solution name and old backend-only .sln also await that final
-bounded retirement step; test root discovery currently uses the .Migration.slnx name.
+After final Claude integration, the remaining scripts/dev-api.cmd and
+scripts/testing/Test-LocalApi.ps1 were retired with their React package.json
+consumer. No tracked files remain under root scripts/. No new wrapper was added.
+The canonical solution is RelatedPartiesRegister.slnx; the temporary migration
+name and old backend-only .sln were retired. Workflow and test-root discovery
+references were updated together. Node/npm remains only for native Playwright.

@@ -33,9 +33,9 @@ jobs:
         env:
           SQL_PASSWORD: ${{ secrets.TEST_SQL_SA_PASSWORD }}
         run: test -n "$SQL_PASSWORD"
-      - run: dotnet restore RelatedPartiesRegister.Migration.slnx --configfile src/Web.Blazor/NuGet.config
-      - run: dotnet build RelatedPartiesRegister.Migration.slnx -c Release --no-restore -p:RunAnalyzers=true
-      - run: dotnet test RelatedPartiesRegister.Migration.slnx -c Release --no-build --no-restore --logger trx --results-directory artifacts/ci-tests
+      - run: dotnet restore RelatedPartiesRegister.slnx --configfile src/Web.Blazor/NuGet.config
+      - run: dotnet build RelatedPartiesRegister.slnx -c Release --no-restore -p:RunAnalyzers=true
+      - run: dotnet test RelatedPartiesRegister.slnx -c Release --no-build --no-restore --logger trx --results-directory artifacts/ci-tests
       - name: Reject skipped tests
         run: |
           python3 - <<'PY'

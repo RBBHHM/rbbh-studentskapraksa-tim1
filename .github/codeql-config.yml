@@ -1,6 +1,5 @@
 name: Maintained native application
 paths-ignore:
-  - src/Web
   - artifacts
   - "**/bin"
   - "**/obj"

@@ -156,7 +156,7 @@ internal static class BrowserHostProgram
     internal static string FindRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "RelatedPartiesRegister.Migration.slnx"))) directory = directory.Parent;
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "RelatedPartiesRegister.slnx"))) directory = directory.Parent;
         return directory?.FullName ?? throw new InvalidOperationException("Migration solution not found.");
     }
 

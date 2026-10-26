@@ -28,9 +28,9 @@ jobs:
           build-mode: ${{ matrix.language == 'csharp' && 'manual' || 'none' }}
           config-file: .github/codeql-config.yml
       - if: matrix.language == 'csharp'
-        run: dotnet restore RelatedPartiesRegister.Migration.slnx --configfile src/Web.Blazor/NuGet.config
+        run: dotnet restore RelatedPartiesRegister.slnx --configfile src/Web.Blazor/NuGet.config
       - if: matrix.language == 'csharp'
-        run: dotnet build RelatedPartiesRegister.Migration.slnx -c Release --no-restore
+        run: dotnet build RelatedPartiesRegister.slnx -c Release --no-restore
       - uses: github/codeql-action/analyze@v3
         with:
           category: "/language:${{ matrix.language }}"

@@ -1,4 +1,4 @@
-# Related Parties Register — native Blazor migration
+# Related Parties Register — native Blazor application
 
 Generated from the finalized local `RBI.Templates.0.1.0.nupkg` using
 `dotnet new rbbh-webapp -n RBBH.RelatedPartiesRegister.Web --auth --authorization --localization`.
@@ -13,9 +13,9 @@ commit `a38b94c` on `codex/api-file-transport`. Other RBI packages remain0.1.0.
 This is not a published corporate release. Restore both new packages from the
 approved isolated local feed; do not overwrite/reuse older0.1.0 binaries.
 
-This is a side-by-side migration, **not the canonical production frontend yet**.
-React implementation remains untouched while Claude validates visual parity; the old
-tree now has an explicit MIGRATION_REFERENCE marker. Consult
+This is the repository's maintained frontend. Claude's final visual batch was
+integrated and the tracked React implementation retired after the integration
+gates passed. This does not approve production cutover. Historical source contracts:
 `docs/BLAZOR-MIGRATION-{INVENTORY,AUTHORIZATION,PARITY}.md` at repository root.
 
 ## Restore, build, test
@@ -37,8 +37,8 @@ dotnet publish src/Web.Blazor/RBBH.RelatedPartiesRegister.Web.csproj --no-restor
 dotnet run --project src/Web.Blazor/RBBH.RelatedPartiesRegister.Web.csproj --no-launch-profile -- --environment Development
 ```
 
-`RelatedPartiesRegister.Migration.slnx` groups the existing backend/tests and the
-new frontend/tests without replacing the backend solution. Tests have separate
+`RelatedPartiesRegister.slnx` is the sole maintained solution for backend,
+native frontend and tests; the old backend-only .sln was retired. Tests have separate
 isolated identities/stores; production application code has no test user mode.
 
 ## Configuration / identity
@@ -79,7 +79,7 @@ Theme/sidebar/controls remain package-owned; only app layout composition is loca
 Nested workflows have been removed. The three canonical root workflows build/push
 native web/API, scan with CodeQL and deploy a digest-pinned OCP image. See
 ../../docs/NATIVE-PIPELINE-2026-10-26.md for required environment configuration.
-Do not cut over before Claude visual parity and integrated environment gates.
+Production cutover still requires the integrated environment gates.
 
 Historical evidence: the a24e239 checkpoint passed 520 .NET and 209 browser tests, plus Release
 publish and actual published signed-out startup. The final completion gate and
@@ -89,7 +89,8 @@ passes. It also lists the still-blocked SSO/shared cache/SQL/SMTP/OCP gates. Pkc
 are now locally patched; deployed runtime/security acceptance remains separate.
 Candidate wrapper scripts were retired. Use direct dotnet publish/run and docker
 build commands in the root README; current evidence is in the final handoff.
-Local green tests do not authorize React retirement or production cutover.
+React retirement followed the owner's explicit instruction after integration.
+Local green tests do not authorize production cutover.
 
 Security reconciliation: JWT Audience fails closed outside Development;
 self role-management is server-rejected and disabled on the own row; all physical/legal/family/import/limits/Capital mutations follow one global period,

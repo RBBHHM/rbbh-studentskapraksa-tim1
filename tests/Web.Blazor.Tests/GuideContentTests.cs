@@ -30,7 +30,7 @@ public sealed class GuideContentTests
     public void EveryGuideSectionAndPointHasOwnedResourcesInBothBusinessLanguages(string culture)
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "RelatedPartiesRegister.Migration.slnx"))) directory = directory.Parent;
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "RelatedPartiesRegister.slnx"))) directory = directory.Parent;
         Assert.NotNull(directory);
         using var document = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory.FullName, "src", "Web.Blazor", "Localization", culture + ".json")));
         var resource = document.RootElement.GetProperty("translations");
