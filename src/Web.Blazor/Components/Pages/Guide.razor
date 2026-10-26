@@ -5,15 +5,22 @@
 @inject IProfileApi Profile
 
 <PageTitle>@T["guide.title"]</PageTitle>
-<HeroBar Title="@T["guide.title"]" Description="@T["guide.subtitle"]" />
+<div class="guide-hero">
+    <span class="guide-hero__icon"><RbiIcon Name="RbiIconName.Info" /></span>
+    <div>
+        <RbiEyebrow Class="guide-hero__eyebrow">@T["guide.eyebrow"]</RbiEyebrow>
+        <RbiHeading Level="1" VisualLevel="4" Class="guide-hero__title">@T["guide.title"]</RbiHeading>
+        <RbiText Tone="RbiTextTone.Secondary" Class="guide-hero__lead">@T["guide.lead"]</RbiText>
+    </div>
+</div>
 @if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
 else if (!_authenticated) { <IdentityNotice /> }
 else if (_error) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T["profile.unavailable"]" /><RbiButton OnClick="LoadAsync">@T["state.retry"]</RbiButton> }
 else if (_profile is not null)
 {
     <section class="registry-guide" aria-label="@T["guide.title"]">
-        <RbiGrid Columns="RbiGridColumns.Two">@foreach (var state in States)
-        { <RbiCard Title="@T["guide.status." + state]" HeadingLevel="2"><ChildContent><RbiText>@T["guide.status." + state + ".description"]</RbiText></ChildContent></RbiCard> }</RbiGrid>
+        <div class="guide-legend">@foreach (var state in States)
+        { <div class="guide-legend__item"><Indicator Kind="@state" Label="@T["guide.status." + state]" /><div><h2 class="guide-legend__title">@T["guide.status." + state]</h2><p class="guide-legend__text">@T["guide.status." + state + ".description"]</p></div></div> }</div>
         @foreach (var section in GuideContent.Visible(_profile))
         {
             <details open="@(section.Id == GuideContent.Visible(_profile).First().Id)">

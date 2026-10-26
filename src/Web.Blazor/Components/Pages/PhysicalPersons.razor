@@ -10,7 +10,17 @@
 @inject FileDelivery Files
 
 <PageTitle>@T["person.title"]</PageTitle>
-<HeroBar Title="@T["person.title"]" Description="@T["person.subtitle"]" />
+<HeroBar Title="@T["person.title"]" Description="@T["person.subtitle"]" Eyebrow="@T["nav.area.work"]">
+    <Actions>
+        @if (_authenticated && _canRead && !_loading && _error is null)
+        {
+            <RbiButton Disabled="@(_busy || _openingEditor)" Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Ghost">@T["common.refresh"]</RbiButton>
+            @if (_canCreate) { <RbiButton Disabled="@(_busy || _openingEditor || _refreshing)" OnClick="() => _importOpen = true" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.FileUp" />@T["common.import"]</RbiButton> }
+            <RbiButton Disabled="@(_busy || _openingEditor || _refreshing)" OnClick="ExportAsync" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.Download" />@T["common.export"]</RbiButton>
+            @if (_canCreate) { <RbiButton Disabled="@(_busy || _refreshing)" Loading="_openingEditor" LoadingLabel="@T["state.loading"]" OnClick="() => Edit(null)"><RbiIcon Name="RbiIconName.Plus" />@T["common.new"]</RbiButton> }
+        }
+    </Actions>
+</HeroBar>
 @if (!_authenticated && !_loading) { <IdentityNotice /> }
 else if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
 else if (_error is not null)
@@ -23,40 +33,31 @@ else
 {
     @if ((_canCreate || _canEdit || _canDelete) && _periodLocked) { <RbiAlert Title="@T[_periodError ?? "errors.locked"]" /> }
     @if (_notice is not null) { <div role="status"><RbiAlert Title="@T[_notice]" /></div> }
-    <div class="registry-toolbar">
-        <RbiButton Disabled="@(_busy || _openingEditor)" Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Secondary">@T["common.refresh"]</RbiButton>
-        <RbiButton Disabled="@(_busy || _openingEditor || _refreshing)" OnClick="ExportAsync" Variant="RbiButtonVariant.Secondary">@T["common.export"]</RbiButton>
-        @if (_canCreate)
-        {
-            <RbiButton Disabled="@(_busy || _openingEditor || _refreshing || _periodLocked)" OnClick="() => _importOpen = true" Variant="RbiButtonVariant.Secondary">@T["common.import"]</RbiButton>
-            <RbiButton Disabled="@(_busy || _refreshing || _periodLocked)" Loading="_openingEditor" LoadingLabel="@T["state.loading"]" OnClick="() => Edit(null)">@T["common.new"]</RbiButton>
-        }
-    </div>
-    <label for="physical-search">@T["common.search"]</label>
-    <RbiInput Id="physical-search" @bind-Value="_search" UpdateMode="RbiInputUpdateMode.Input" />
-    @if (!Filtered.Any()) { <RbiText>@T["person.empty"]</RbiText> }
+    <div class="registry-controls"><RegistrySearch Id="physical-search" @bind-Value="_search" /></div>
+    <div class="registry-surface">
+    @if (!Filtered.Any()) { <RegistryEmpty Body="@T[string.IsNullOrWhiteSpace(_search) ? "state.empty-body" : "state.no-match"]" /> }
     else
     {
-        <RbiTable AccessibleLabel="@T["person.title"]" Class="registry-persons-table">
-            <caption>@T["person.title"]</caption>
-            <thead><tr><th scope="col">@T["person.type"]</th><th scope="col">@T["person.first-name"]</th><th scope="col">@T["person.last-name"]</th><th scope="col">@T["person.residency"]</th><th scope="col">@T["person.jmbg"]</th><th scope="col">@T["person.passport"]</th><th scope="col">@T["person.basis"]</th><th scope="col">@T["common.status"]</th>@if (_canEdit || _canDelete) { <th scope="col">@T["common.actions"]</th> }</tr></thead>
+        <RbiTable AccessibleLabel="@T["person.title"]" Class="registry-table registry-persons-table">
+            <thead><tr><th scope="col" class="registry-center">@T["person.type"]</th><th scope="col">@T["person.first-name"]</th><th scope="col">@T["person.last-name"]</th><th scope="col" class="registry-center">@T["person.residency"]</th><th scope="col">@T["person.jmbg"]</th><th scope="col">@T["person.passport"]</th><th scope="col">@T["person.basis"]</th><th scope="col" class="registry-center">@T["common.status"]</th>@if (_canEdit || _canDelete) { <th scope="col" class="registry-center registry-actions-cell">@T["common.actions"]</th> }</tr></thead>
             <tbody>
                 @foreach (var person in Filtered)
                 {
                     <tr @key="person.Id">
-                        <td>@T[person.RelatedToPersonId.HasValue ? "person.family" : person.IsIdentifiedStaff ? "person.employee" : "person.related"]</td>
-                        <td>@person.FirstName</td><td>@person.LastName</td><td>@T[person.Residency == 1 ? "person.resident" : "person.nonresident"]</td>
-                        <td>@person.Jmbg</td><td>@person.PassportNumber</td><td>@person.RelationBasis</td>
-                        <td><RbiBadge>@T[$"status.{person.StatusLabel.ToLowerInvariant()}"]</RbiBadge></td>
+                        <td class="registry-center"><Indicator Kind="@(person.RelatedToPersonId.HasValue ? "family" : person.IsIdentifiedStaff ? "employee" : "related")" Label="@T[person.RelatedToPersonId.HasValue ? "person.family" : person.IsIdentifiedStaff ? "person.employee" : "person.related"]" /></td>
+                        <td>@person.FirstName</td><td>@person.LastName</td>
+                        <td class="registry-center"><Indicator Kind="@(person.Residency == 1 ? "resident" : "nonresident")" Label="@T[person.Residency == 1 ? "person.resident" : "person.nonresident"]" /></td>
+                        <td>@Dash(person.Jmbg)</td><td>@Dash(person.PassportNumber)</td><td>@Dash(person.RelationBasis)</td>
+                        <td class="registry-center"><Indicator Kind="@person.StatusLabel.ToLowerInvariant()" Label="@T[$"status.{person.StatusLabel.ToLowerInvariant()}"]" /></td>
                         @if (_canEdit || _canDelete)
                         {
-                            <td><div class="registry-toolbar">
+                            <td class="registry-actions-cell"><div class="registry-row-actions">
                                 @if (_canEdit)
                                 {
-                                    <RbiButton Disabled="@(_busy || _refreshing || _periodLocked)" Loading="_openingEditor" LoadingLabel="@T["state.loading"]" OnClick="() => Edit(person)" Variant="RbiButtonVariant.Ghost">@T["common.edit"]</RbiButton>
-                                    @if (person.Status != 3) { <RbiButton Disabled="@(_busy || _openingEditor || _refreshing || _periodLocked)" OnClick="() => Confirm(person, false)" Variant="RbiButtonVariant.Ghost">@T["common.verify"]</RbiButton> }
+                                    @if (person.Status != 3) { <RbiButton Disabled="@(_busy || _openingEditor || _refreshing || _periodLocked)" OnClick="() => Confirm(person, false)" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["common.verify"]" title="@T["common.verify"]"><RbiIcon Name="RbiIconName.CheckCircle2" /></RbiButton> }
+                                    <RbiButton Disabled="@(_busy || _refreshing)" Loading="_openingEditor" LoadingLabel="@T["state.loading"]" OnClick="() => Edit(person)" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["common.edit"]" title="@T["common.edit"]"><RbiIcon Name="RbiIconName.Pencil" /></RbiButton>
                                 }
-                                @if (_canDelete) { <RbiButton Disabled="@(_busy || _openingEditor || _refreshing || _periodLocked)" OnClick="() => Confirm(person, true)" Variant="RbiButtonVariant.Destructive">@T["common.deactivate"]</RbiButton> }
+                                @if (_canDelete) { <RbiButton Disabled="@(_busy || _openingEditor || _refreshing)" OnClick="() => Confirm(person, true)" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["common.deactivate"]" title="@T["common.deactivate"]" Class="registry-danger-icon"><RbiIcon Name="RbiIconName.Trash2" /></RbiButton> }
                             </div></td>
                         }
                     </tr>
@@ -64,21 +65,30 @@ else
             </tbody>
         </RbiTable>
     }
+    </div>
     <section class="registry-family" aria-labelledby="family-heading">
-        <h2 id="family-heading">@T["family.title"]</h2>
-        <label for="family-person">@T["family.select"]</label>
-        <RbiSelect TValue="Guid?" Id="family-person" @bind-Value="_treePerson" @bind-Value:after="LoadTreeAsync" Placeholder="@T["common.select"]">
+        <div class="registry-family__intro">
+            <RbiIcon Name="RbiIconName.Network" Class="registry-family__icon" />
+            <div>
+                <RbiHeading Level="2" VisualLevel="3" id="family-heading" Class="registry-family__title">@T["family.title"]</RbiHeading>
+                <RbiText Tone="RbiTextTone.Secondary" Class="registry-family__description">@T["family.description"]</RbiText>
+            </div>
+        </div>
+        <label for="family-person" class="registry-family__label">@T["family.person"]</label>
+        <div class="registry-family__select"><RbiSelect TValue="Guid?" Id="family-person" @bind-Value="_treePerson" @bind-Value:after="LoadTreeAsync" Placeholder="@T["family.placeholder"]">
             @foreach (var person in _people) { <option value="@person.Id">@person.FirstName @person.LastName</option> }
-        </RbiSelect>
-        @if (_treePerson is null) { <RbiText>@T["family.select"]</RbiText> }
+        </RbiSelect></div>
+        <div class="registry-family__panel">
+        @if (_treePerson is null) { <RbiText Tone="RbiTextTone.Secondary">@T["family.prompt"]</RbiText> }
         else if (_treeLoading) { <div role="status">@T["state.loading"]</div> }
         else if (_treeError)
         {
             <RbiAlert Tone="RbiAlertTone.Danger" Title="@T["family.unavailable"]" />
             <RbiButton OnClick="LoadTreeAsync">@T["state.retry"]</RbiButton>
         }
-        else if (_tree.Count == 0) { <RbiText>@T["family.empty"]</RbiText> }
+        else if (_tree.Count == 0) { <RbiText Tone="RbiTextTone.Secondary">@T["family.empty"]</RbiText> }
         else { <PersonTree Nodes="_tree" /> }
+        </div>
     </section>
 }
 
@@ -133,6 +143,7 @@ else
     private bool _periodLocked = true;
     private bool _authenticated, _loading = true, _busy, _canRead, _canCreate, _canEdit, _canDelete, _treeLoading, _treeError, _delete, _importOpen, _fallback;
     private bool _loaded, _refreshing, _openingEditor;
+    private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
     private IEnumerable<RelatedPerson> Filtered => _people.Where(person => person.Matches(_search));
     protected override Task OnInitializedAsync() => LoadAsync();
     private async Task LoadAsync()

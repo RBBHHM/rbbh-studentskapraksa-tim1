@@ -6,19 +6,20 @@
 
 <form action="@Action" method="post" data-enhance="false" class="app-language">
     <AntiforgeryToken />
-    <RbiStack Gap="RbiStackGap.Small">
-        <label for="app-culture">@T["common.language"]</label>
-        <RbiSelect TValue="string" id="app-culture" @bind-Value="_culture">
-            @foreach (var culture in Cultures.SupportedCultures)
-            {
-                <option value="@culture">@CultureInfo.GetCultureInfo(culture).NativeName</option>
-            }
-        </RbiSelect>
-        <RbiButton Type="RbiButtonType.Submit" Variant="RbiButtonVariant.Secondary">@T["common.apply"]</RbiButton>
-    </RbiStack>
+    <RbiIcon Name="RbiIconName.Languages" Class="app-language__icon" />
+    <label for="@Id" class="app-visually-hidden">@T["common.language"]</label>
+    <RbiSelect TValue="string" id="@Id" @bind-Value="_culture">
+        @foreach (var culture in Cultures.SupportedCultures)
+        {
+            <option value="@culture">@LanguageName(culture)</option>
+        }
+    </RbiSelect>
+    <RbiButton Type="RbiButtonType.Submit" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Small" Class="app-language__apply">@T["common.apply"]</RbiButton>
 </form>
 
 @code {
+    [Parameter] public string Id { get; set; } = "app-culture";
+    private static string LanguageName(string culture) { var info = CultureInfo.GetCultureInfo(culture); return info.TextInfo.ToTitleCase(info.NativeName); }
     private string _culture = CultureInfo.CurrentUICulture.Name;
     private string Action => $"/rbi-localization/culture/{Uri.EscapeDataString(_culture)}?returnUrl={Uri.EscapeDataString("/" + Navigation.ToBaseRelativePath(Navigation.Uri))}";
 }

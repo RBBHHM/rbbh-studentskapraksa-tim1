@@ -10,7 +10,9 @@
 @inject FileDelivery Files
 
 <PageTitle>@T["reports.title"]</PageTitle>
-<HeroBar Title="@T["reports.title"]" Description="@T["reports.subtitle"]" />
+<HeroBar Title="@T["reports.title"]" Description="@T["reports.subtitle"]">
+    <Actions>@if (_authenticated && (_canRead || _refreshing)) { <RbiButton Disabled="_busy" Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Ghost">@T["common.refresh"]</RbiButton> }</Actions>
+</HeroBar>
 @if (!_authenticated && !_refreshing) { <IdentityNotice /> }
 else if (_authenticated && !_canRead && !_refreshing)
 {
@@ -21,46 +23,44 @@ else if (_authenticated)
 {
     @if (_notice is not null) { <div role="status"><RbiAlert Title="@T[_notice]" /></div> }
     @if (_actionError is not null) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_actionError]" Announcement="RbiAlertAnnouncement.Assertive" /> }
-    <div class="registry-toolbar">
-        <RbiButton Disabled="_busy" Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Secondary">@T["common.refresh"]</RbiButton>
-        <RbiButton Disabled="@(_busy || _refreshing)" OnClick="ExportAllAsync" Variant="RbiButtonVariant.Secondary">@T["reports.all-clients"]</RbiButton>
+    <div class="registry-panel">
+        @if (_canGenerate) { <RbiButton Disabled="@(_busy || _refreshing)" OnClick="() => GenerateAsync(false)"><RbiIcon Name="RbiIconName.FileText" />@T["reports.generate-daily"]</RbiButton> }
         @if (_canGenerate)
         {
-            <RbiButton Disabled="@(_busy || _refreshing)" OnClick="() => GenerateAsync(false)">@T["reports.generate-daily"]</RbiButton>
-            <label for="report-year">@T["reports.year"]</label>
+            <div class="registry-field"><label for="report-year">@T["reports.year"]</label>
             <RbiSelect TValue="int" Id="report-year" @bind-Value="_year" Disabled="@(_busy || _refreshing)">
                 @foreach (var year in Enumerable.Range(2000, DateTime.UtcNow.Year - 1999)) { <option value="@year">@year</option> }
-            </RbiSelect>
-            <label for="report-month">@T["reports.month"]</label>
+            </RbiSelect></div>
+            <div class="registry-field"><label for="report-month">@T["reports.month"]</label>
             <RbiSelect TValue="int" Id="report-month" @bind-Value="_month" Disabled="@(_busy || _refreshing)">
                 @for (var month = 1; month <= 12; month++) { <option value="@month">@System.Globalization.CultureInfo.CurrentUICulture.DateTimeFormat.GetMonthName(month)</option> }
-            </RbiSelect>
-            <RbiButton Disabled="@(_busy || _refreshing || !ValidPeriod)" OnClick="() => GenerateAsync(true)">@T["reports.generate-monthly"]</RbiButton>
+            </RbiSelect></div>
+            <RbiButton Disabled="@(_busy || _refreshing || !ValidPeriod)" OnClick="() => GenerateAsync(true)"><RbiIcon Name="RbiIconName.FileText" />@T["reports.generate-monthly"]</RbiButton>
         }
+        <RbiButton Disabled="@(_busy || _refreshing)" OnClick="ExportAllAsync" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.Download" />@T["reports.all-clients"]</RbiButton>
+        <div class="registry-field registry-field--grow"><label for="report-identifier">@T["reports.identifier"]</label>
+        <RbiInput Id="report-identifier" @bind-Value="_identifier" UpdateMode="RbiInputUpdateMode.Input" maxlength="13" inputmode="numeric"
+                  aria-invalid="@(!string.IsNullOrEmpty(_identifier) && !ValidIdentifier ? "true" : null)" aria-describedby="report-identifier-help" /></div>
+        <RbiButton Disabled="@(_busy || _refreshing || !ValidIdentifier)" OnClick="ExportClientAsync" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.Download" />@T["reports.client-download"]</RbiButton>
     </div>
-    @if (_canGenerate) { <p>@T["reports.persist-help"]</p> }
-    <label for="report-identifier">@T["reports.identifier"]</label>
-    <RbiInput Id="report-identifier" @bind-Value="_identifier" UpdateMode="RbiInputUpdateMode.Input" maxlength="13" inputmode="numeric"
-              aria-invalid="@(!string.IsNullOrEmpty(_identifier) && !ValidIdentifier ? "true" : null)" aria-describedby="report-identifier-help" />
-    <p id="report-identifier-help">@T["reports.identifier-help"]</p>
-    <div class="registry-toolbar"><RbiButton Disabled="@(_busy || _refreshing || !ValidIdentifier)" OnClick="ExportClientAsync" Variant="RbiButtonVariant.Secondary">@T["reports.client-download"]</RbiButton></div>
+    @if (_canGenerate) { <p class="registry-help">@T["reports.persist-help"]</p> }
+    <p id="report-identifier-help" class="registry-help">@T["reports.identifier-help"]</p>
     @if (_refreshing) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
     else if (_loadError is not null)
     {
         <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_loadError]" />
         <RbiButton OnClick="LoadAsync">@T["state.retry"]</RbiButton>
     }
-    else if (!Records.Any()) { <RbiText>@T["reports.empty"]</RbiText> }
+    else if (!Records.Any()) { <div class="registry-surface"><RegistryEmpty Body="@T["reports.empty"]" Title="@string.Empty" /></div> }
     else
     {
-        <RbiTable AccessibleLabel="@T["reports.title"]" Class="registry-reports-table">
-            <caption>@T["reports.title"]</caption>
+        <div class="registry-surface"><RbiTable AccessibleLabel="@T["reports.title"]" Class="registry-table registry-reports-table">
             <thead><tr><th scope="col">@T["reports.type"]</th><th scope="col">@T["reports.date"]</th><th scope="col">@T["reports.clients"]</th><th scope="col">@T["reports.breached"]</th><th scope="col">@T["reports.exposure"]</th><th scope="col">@T["reports.author"]</th><th scope="col">@T["common.actions"]</th></tr></thead>
             <tbody>@foreach (var report in Records)
             {
                 <tr @key="report.Id"><td>@TypeLabel(report.ReportType)</td><td>@report.ReportDate.ToString("d")</td><td>@report.TotalClients</td><td>@report.ClientsWithBreachedLimit</td><td>@report.TotalExposure.ToString("N2")</td><td>@report.CreatedBy</td><td><RbiButton Disabled="_busy" OnClick="() => DownloadSnapshotAsync(report.Id)" Variant="RbiButtonVariant.Secondary">@T["reports.download"]</RbiButton></td></tr>
             }</tbody>
-        </RbiTable>
+        </RbiTable></div>
         @if (DailyPages > 1)
         {
             <h2>@T["reports.daily-pages"]</h2>

@@ -1,44 +1,69 @@
 @inherits LayoutComponentBase
 @implements IDisposable
 @inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationState
+@inject IProfileApi Profile
 
 <a class="app-skip" href="#app-main">@T["nav.skip"]</a>
-<RbiSidebar @key="_route" AccessibleLabel="@T["nav.title"]" ToggleLabel="@T["nav.toggle"]"
-            Collapse="RbiSidebarCollapse.Icon" @bind-Open="_open" StateCookieName="rbbh_sidebar">
-    <ChildContent>
-        <RbiSidebarPart Kind="RbiSidebarPartKind.Header"><RbiText>@T["app.title"]</RbiText></RbiSidebarPart>
-        <RbiSidebarPart Kind="RbiSidebarPartKind.Content">
+<div class="app-shell" data-interactive="@(_interactive ? "true" : null)">
+    <header class="app-header">
+        <div class="app-header__bar">
+            <a class="app-brand" href="/app" aria-label="@T["shell.home"]">
+                <RbiLogo Class="app-brand__logo" Decorative="true" />
+                <span class="app-brand__product">@T["shell.product"]</span>
+            </a>
+            <div class="app-header__actions">
+                <RBI.DesignSystem.Components.Theme.RbiThemePicker Label="@T["theme.toggle"]" LightLabel="@T["theme.light"]" DarkLabel="@T["theme.dark"]" SystemLabel="@T["theme.system"]" />
+                <div class="app-header__language"><LanguageSwitcher /></div>
+                <AuthorizeView><Authorized>
+                    <a class="app-user" href="/app/profile" title="@T["nav.profile"]" aria-label="@T["nav.profile"]">
+                        <RbiIcon Name="RbiIconName.UserRound" />
+                        <span class="app-user__name">@_displayName</span>
+                    </a>
+                    <form method="post" action="/authentication/logout?returnUrl=%2Fapp" data-enhance="false" class="app-signout">
+                        <AntiforgeryToken />
+                        <RbiButton Type="RbiButtonType.Submit" Variant="RbiButtonVariant.Ghost" IconOnly AccessibleLabel="@T["auth.signout"]" Class="app-signout__button" title="@T["auth.signout"]"><RbiIcon Name="RbiIconName.LogOut" /></RbiButton>
+                    </form>
+                </Authorized></AuthorizeView>
+                <RbiButton Variant="RbiButtonVariant.Ghost" IconOnly AccessibleLabel="@T["nav.toggle"]" Class="app-menu-toggle" OnClick="ToggleMenu" aria-expanded="@(_menuOpen ? "true" : "false")" aria-controls="app-aside">
+                    <RbiIcon Name="@(_menuOpen ? RbiIconName.X : RbiIconName.Menu)" />
+                </RbiButton>
+            </div>
+        </div>
+    </header>
+    <div class="app-body">
+        <aside id="app-aside" class="app-aside" data-open="@(_menuOpen ? "true" : "false")" role="@(_menuOpen ? "dialog" : null)" aria-label="@(_menuOpen ? T["nav.title"] : null)">
             <NavMenu />
-            <LanguageSwitcher />
-        </RbiSidebarPart>
-    </ChildContent>
-    <MainContent>
-        <header class="app-toolbar">
-            <RbiSidebarToggle /><RbiText>@T["app.title"]</RbiText>
-            <RBI.DesignSystem.Components.Theme.RbiThemePicker Label="@T["theme.toggle"]" LightLabel="@T["theme.light"]" DarkLabel="@T["theme.dark"]" SystemLabel="@T["theme.system"]" />
-            <AuthorizeView><Authorized>
-                <form method="post" action="/authentication/logout?returnUrl=%2Fapp" data-enhance="false">
-                    <AntiforgeryToken /><RbiButton Type="RbiButtonType.Submit" Variant="RbiButtonVariant.Ghost">@T["auth.signout"]</RbiButton>
-                </form>
-            </Authorized></AuthorizeView>
-        </header>
-        <main id="app-main" tabindex="-1" class="app-main"><RbiContainer Class="app-content">@Body</RbiContainer></main>
-    </MainContent>
-</RbiSidebar>
+            @if (_menuOpen) { <div class="app-aside__language"><LanguageSwitcher Id="app-culture-menu" /></div> }
+        </aside>
+        <main id="app-main" tabindex="-1" class="app-main">@Body</main>
+    </div>
+</div>
 
 @code {
-    private bool _open = true;
-    private string _route = string.Empty;
-    protected override void OnInitialized()
+    private bool _menuOpen, _interactive;
+    private string _displayName = string.Empty;
+
+    protected override async Task OnInitializedAsync()
     {
-        _route = Navigation.Uri;
         Navigation.LocationChanged += RouteChanged;
+        if ((await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated != true) return;
+        try
+        {
+            var profile = await Profile.GetAsync();
+            _displayName = !string.IsNullOrWhiteSpace(profile.FullName) ? profile.FullName! : profile.Username ?? string.Empty;
+        }
+        catch (RegistryApiException) { _displayName = string.Empty; }
     }
+    protected override void OnAfterRender(bool firstRender)
+    {
+        // Only runs once the interactive circuit is connected; browser tests wait for this marker.
+        if (firstRender) { _interactive = true; StateHasChanged(); }
+    }
+    private void ToggleMenu() => _menuOpen = !_menuOpen;
     private void RouteChanged(object? sender, LocationChangedEventArgs args)
     {
-        // Close the app's mobile sheet on route changes without duplicating
-        // package JS or losing the layout's controlled desktop preference.
-        _route = args.Location;
+        _menuOpen = false;
         _ = InvokeAsync(StateHasChanged);
     }
     public void Dispose() => Navigation.LocationChanged -= RouteChanged;

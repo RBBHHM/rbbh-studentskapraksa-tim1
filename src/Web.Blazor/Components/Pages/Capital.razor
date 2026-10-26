@@ -9,7 +9,16 @@
 @inject FileDelivery Files
 
 <PageTitle>@T["capital.title"]</PageTitle>
-<HeroBar Title="@T["capital.title"]" Description="@T["capital.subtitle"]" />
+<HeroBar Title="@T["capital.title"]" Description="@T["capital.subtitle"]" Icon="RbiIconName.Wallet">
+    <Actions>
+        @if (_authenticated && _canRead && !_loading && _error is null)
+        {
+            <RbiButton Disabled="_busy" Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Ghost">@T["common.refresh"]</RbiButton>
+            <RbiButton Disabled="@(_busy || _refreshing)" OnClick="ExportAsync" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.Download" />@T["common.export"]</RbiButton>
+            @if (_canEdit) { <RbiButton Disabled="@(_busy || _refreshing || _periodLocked)" OnClick="Edit"><RbiIcon Name="RbiIconName.Pencil" />@T["capital.edit"]</RbiButton> }
+        }
+    </Actions>
+</HeroBar>
 @if (!_authenticated && !_loading) { <IdentityNotice /> }
 else if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
 else if (_error is not null)
@@ -22,20 +31,14 @@ else
 {
     @if (_canEdit && _periodLocked) { <RbiAlert Title="@T[_periodError ?? "errors.locked"]" /> }
     @if (_notice) { <div role="status"><RbiAlert Title="@T["common.saved"]" /></div> }
-    <div class="registry-toolbar">
-        <RbiButton Disabled="_busy" Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Secondary">@T["common.refresh"]</RbiButton>
-        <RbiButton Disabled="@(_busy || _refreshing)" OnClick="ExportAsync" Variant="RbiButtonVariant.Secondary">@T["common.export"]</RbiButton>
-        @if (_canEdit) { <RbiButton Disabled="@(_busy || _refreshing || _periodLocked)" OnClick="Edit">@T["capital.edit"]</RbiButton> }
-    </div>
     @if (_record is { } record)
     {
-        <RbiTable AccessibleLabel="@T["capital.title"]" Class="registry-capital-table">
-            <caption>@T["capital.title"]</caption>
+        <RbiTable AccessibleLabel="@T["capital.title"]" Class="registry-table registry-capital-table">
             <thead><tr><th scope="col">@T["limit.core"]</th><th scope="col">@T["limit.regulatory"]</th><th scope="col">@T["capital.supplementary"]</th><th scope="col">@T["capital.date"]</th></tr></thead>
             <tbody><tr><td>@Money(record.CoreCapital)</td><td>@Money(record.RegulatoryCapital)</td><td>@Money(record.SupplementaryCapital)</td><td>@record.CapitalDate.ToString("d")</td></tr></tbody>
         </RbiTable>
     }
-    else { <RbiText>@T["capital.empty"]</RbiText> }
+    else { <div class="registry-surface"><RegistryEmpty Body="@T["capital.empty"]" /></div> }
 }
 @if (_draft is { } draft)
 {

@@ -26,7 +26,7 @@ async function create(page: Page, name: string, fba = "123456") {
 test("empty legal route and real native form have accessible labels", async ({ page }) => {
   await open(page);
   await expect(page.getByRole("heading", { name: "Pravna lica", exact: true })).toBeVisible();
-  await expect(page.getByText("Nema zapisa za prikaz", { exact: false })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Nema zapisa", exact: true })).toBeVisible();
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
   await page.getByRole("button", { name: "Novi zapis", exact: true }).click();
   const dialog = page.getByRole("dialog"); await fill(dialog, "Accessible Company");
@@ -110,16 +110,16 @@ test("paged data remains reachable and metadata search stays scoped to displayed
 });
 test("real backend XLSX download and import retain counts and safe schema guidance", async ({ page }, info) => {
   await open(page); await create(page, "Export Company");
-  const pending = page.waitForEvent("download"); await page.getByRole("button", { name: "Preuzmi Excel", exact: true }).click();
+  const pending = page.waitForEvent("download"); await page.getByRole("button", { name: "Izvezi Excel", exact: true }).click();
   const download = await pending; expect(download.suggestedFilename()).toMatch(/^pravna-lica-.*\.xlsx$/);
   const target = info.outputPath("legal.xlsx"); await download.saveAs(target);
   expect((await readFile(target)).subarray(0, 2)).toEqual(Buffer.from([0x50, 0x4b]));
-  await page.getByRole("button", { name: "Uvoz", exact: true }).click(); const dialog = page.getByRole("dialog");
+  await page.getByRole("button", { name: "Uvezi Excel", exact: true }).click(); const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Excel datoteka").setInputFiles(path.resolve("../../artifacts/migration-browser-fixtures/invalid-physical.xlsx"));
-  await dialog.getByRole("button", { name: "Uvoz", exact: true }).click();
+  await dialog.getByRole("button", { name: "Uvezi Excel", exact: true }).click();
   await expect(dialog.getByText("Predložak mora imati 10 kolona", { exact: false })).toBeVisible();
   await dialog.getByLabel("Excel datoteka").setInputFiles(path.resolve("../../artifacts/migration-browser-fixtures/valid-legal.xlsx"));
-  await dialog.getByRole("button", { name: "Uvoz", exact: true }).click();
+  await dialog.getByRole("button", { name: "Uvezi Excel", exact: true }).click();
   await expect(dialog.getByText("Uvezeno: 1", { exact: false })).toBeVisible();
   await dialog.getByRole("button", { name: "Zatvori", exact: true }).click();
   await expect(page.getByRole("row", { name: /Imported Company/ })).toBeVisible();

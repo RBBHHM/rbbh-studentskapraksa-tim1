@@ -39,7 +39,7 @@ test("375px audit view and BS/EN backend display copy remain usable", async ({ p
   const navigation = page.getByRole("dialog"); await expect(navigation).toBeVisible();
   await navigation.getByLabel("Jezik", { exact: true }).selectOption("en"); await expect(navigation.locator("form.app-language")).toHaveAttribute("action", /\/en\?/);
   await navigation.getByRole("button", { name: "Primijeni", exact: true }).click(); await interactive(page);
-  await expect(page.getByRole("heading", { name: "Audit trail", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Audit log", exact: true })).toBeVisible();
   const row = page.getByRole("row", { name: /fixture-auditor/ }); await expect(row.getByRole("cell", { name: "Create", exact: true })).toBeVisible();
   await expect(row.getByRole("cell", { name: "Individuals", exact: true })).toBeVisible();
 });

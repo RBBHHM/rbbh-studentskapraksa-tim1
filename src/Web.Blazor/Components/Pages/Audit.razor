@@ -6,7 +6,9 @@
 @inject IAuditApi Api
 
 <PageTitle>@T["audit.title"]</PageTitle>
-<HeroBar Title="@T["audit.title"]" Description="@T["audit.subtitle"]" />
+<HeroBar Title="@T["audit.title"]" Description="@T["audit.subtitle"]" Eyebrow="@T["nav.area.administration"]">
+    <Actions>@if (_authenticated && _admin && !_loading && _error is null) { <RbiButton Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Ghost">@T["common.refresh"]</RbiButton> }</Actions>
+</HeroBar>
 @if (!_authenticated && !_loading) { <IdentityNotice /> }
 else if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
 else if (_error is not null)
@@ -17,14 +19,11 @@ else if (_error is not null)
 else if (!_admin) { <RbiAlert Title="@T["errors.forbidden"]" /> }
 else
 {
-    <div class="registry-toolbar"><RbiButton Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Secondary">@T["common.refresh"]</RbiButton></div>
-    <label for="audit-search">@T["audit.search"]</label>
-    <RbiInput Id="audit-search" @bind-Value="_search" UpdateMode="RbiInputUpdateMode.Input" />
-    @if (!Filtered.Any()) { <RbiText>@T["audit.empty"]</RbiText> }
+    <div class="registry-controls"><RegistrySearch Id="audit-search" Label="@T["audit.search"]" @bind-Value="_search" /></div>
+    @if (!Filtered.Any()) { <div class="registry-surface"><RegistryEmpty Body="@T["audit.empty"]" /></div> }
     else
     {
-        <RbiTable AccessibleLabel="@T["audit.title"]" Class="registry-audit-table">
-            <caption>@T["audit.title"]</caption>
+        <RbiTable AccessibleLabel="@T["audit.title"]" Class="registry-table registry-audit-table">
             <thead><tr><th scope="col">@T["audit.time"]</th><th scope="col">@T["audit.action"]</th><th scope="col">@T["audit.area"]</th><th scope="col">@T["audit.change"]</th><th scope="col">@T["audit.user"]</th><th scope="col">@T["audit.ip"]</th></tr></thead>
             <tbody>@foreach (var entry in Filtered)
             {

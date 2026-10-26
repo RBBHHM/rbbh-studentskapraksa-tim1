@@ -18,7 +18,7 @@ async function begin(page: Page) {
   await selectEntity(dialog); await dialog.getByLabel("Tip limita", { exact: false }).selectOption("REG"); return dialog;
 }
 test("empty state and native entity picker use accessible labels", async ({ page }) => {
-  await open(page); await expect(page.getByText("Nema zapisa za prikaz", { exact: false })).toBeVisible();
+  await open(page); await expect(page.getByRole("heading", { name: "Nema zapisa", exact: true })).toBeVisible();
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
   const dialog = await begin(page);
   await expect(dialog.getByText("SERVER-ONLY-789", { exact: true })).toBeVisible();
@@ -75,7 +75,7 @@ test("filter and metadata search preserve scope and real XLSX download", async (
   const row = page.getByRole("row", { name: /Existing Company 00/ }); await expect(row).toBeVisible();
   const id = await page.locator("#limit-filter option").filter({ hasText: "Existing Company 00" }).getAttribute("value");
   await page.locator("#limit-filter").selectOption(id!); await expect(row).toBeVisible();
-  const pending = page.waitForEvent("download"); await page.getByRole("button", { name: "Preuzmi Excel", exact: true }).click();
+  const pending = page.waitForEvent("download"); await page.getByRole("button", { name: "Izvezi Excel", exact: true }).click();
   const download = await pending; expect(download.suggestedFilename()).toMatch(/^limiti-.*\.xlsx$/);
   const target = info.outputPath("limits.xlsx"); await download.saveAs(target); expect((await readFile(target)).subarray(0, 2)).toEqual(Buffer.from([0x50, 0x4b]));
   await page.locator("#limit-filter").selectOption(""); await expect(row).toBeVisible();

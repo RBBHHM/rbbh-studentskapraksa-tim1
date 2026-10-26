@@ -1,0 +1,16 @@
+@using RBI.DesignSystem.Components.Forms
+<label class="registry-search" for="@Id">
+    <RbiIcon Name="RbiIconName.Search" Class="registry-search__icon" />
+    <span class="app-visually-hidden">@(Label ?? T["common.search"])</span>
+    <RbiInput Id="@Id" Value="@_value" ValueChanged="@Changed" ValueExpression="@(() => _value)" UpdateMode="RbiInputUpdateMode.Input" Placeholder="@T["common.search-placeholder"]" />
+</label>
+
+@code {
+    [Parameter, EditorRequired] public string Id { get; set; } = string.Empty;
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+    private string? _value;
+    protected override void OnParametersSet() => _value = Value;
+    private Task Changed(string? value) { _value = value; return ValueChanged.InvokeAsync(value); }
+}

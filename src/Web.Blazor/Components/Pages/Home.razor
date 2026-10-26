@@ -4,64 +4,35 @@
 @inject IProfileApi Profile
 @inject AuthenticationStateProvider AuthenticationState
 <PageTitle>@T["app.title"]</PageTitle>
-<HeroBar Title="@T["app.title"]" Description="@T["app.welcome"]" />
 <AuthorizeView>
     <Authorized>
-        <RbiGrid Columns="RbiGridColumns.Two">
-            @if (_physical)
-            {
-                <RbiCard Title="@T["person.title"]">
-                    <ChildContent><RbiText>@T["person.subtitle"]</RbiText></ChildContent>
-                    <Footer><RbiButton Href="/app/physical-persons">@T["person.title"]</RbiButton></Footer>
-                </RbiCard>
-            }
-            @if (_reports)
-            {
-                <RbiCard Title="@T["reports.title"]">
-                    <ChildContent><RbiText>@T["reports.subtitle"]</RbiText></ChildContent>
-                    <Footer><RbiButton Href="/app/reports">@T["reports.title"]</RbiButton></Footer>
-                </RbiCard>
-            }
-            @if (_capital)
-            {
-                <RbiCard Title="@T["notifications.title"]">
-                    <ChildContent><RbiText>@T["notifications.subtitle"]</RbiText></ChildContent>
-                    <Footer><RbiButton Href="/app/notifications">@T["notifications.title"]</RbiButton></Footer>
-                </RbiCard>
-                <RbiCard Title="@T["capital.title"]">
-                    <ChildContent><RbiText>@T["capital.subtitle"]</RbiText></ChildContent>
-                    <Footer><RbiButton Href="/app/capital">@T["capital.title"]</RbiButton></Footer>
-                </RbiCard>
-            }
-            @if (_limits)
-            {
-                <RbiCard Title="@T["limit.title"]">
-                    <ChildContent><RbiText>@T["limit.subtitle"]</RbiText></ChildContent>
-                    <Footer><RbiButton Href="/app/limits">@T["limit.title"]</RbiButton></Footer>
-                </RbiCard>
-            }
-            @if (_legal)
-            {
-                <RbiCard Title="@T["legal.title"]">
-                    <ChildContent><RbiText>@T["legal.subtitle"]</RbiText></ChildContent>
-                    <Footer><RbiButton Href="/app/legal-persons">@T["legal.title"]</RbiButton></Footer>
-                </RbiCard>
-            }
-            @if (_admin)
-            {
-                <RbiCard Title="@T["codes.title"]"><ChildContent><RbiText>@T["codes.subtitle"]</RbiText></ChildContent><Footer><RbiButton Href="/app/admin/code-lists">@T["codes.title"]</RbiButton></Footer></RbiCard>
-                <RbiCard Title="@T["period.title"]"><ChildContent><RbiText>@T["period.subtitle"]</RbiText></ChildContent><Footer><RbiButton Href="/app/admin/period">@T["period.title"]</RbiButton></Footer></RbiCard>
-                <RbiCard Title="@T["users.title"]"><ChildContent><RbiText>@T["users.subtitle"]</RbiText></ChildContent><Footer><RbiButton Href="/app/admin/users">@T["users.title"]</RbiButton></Footer></RbiCard>
-                <RbiCard Title="@T["audit.title"]"><ChildContent><RbiText>@T["audit.subtitle"]</RbiText></ChildContent><Footer><RbiButton Href="/app/admin/audit">@T["audit.title"]</RbiButton></Footer></RbiCard>
-            }
-            <RbiCard Title="@T["nav.profile"]">
-                <ChildContent><RbiText>@T["profile.description"]</RbiText></ChildContent>
-                <Footer><RbiButton Href="/app/profile">@T["nav.profile"]</RbiButton></Footer>
-            </RbiCard>
-            <RbiCard Title="@T["guide.title"]"><ChildContent><RbiText>@T["guide.subtitle"]</RbiText></ChildContent><Footer><RbiButton Href="/app/guide">@T["guide.title"]</RbiButton></Footer></RbiCard>
-        </RbiGrid>
+        <section class="app-hero" data-surface="brand" aria-labelledby="app-hero-title">
+            <div class="app-hero__hatch" aria-hidden="true"></div>
+            <div class="app-hero__content">
+                <RbiEyebrow>@T["dashboard.eyebrow"]</RbiEyebrow>
+                <RbiDisplay Element="RbiDisplayElement.Heading1" Size="RbiDisplaySize.XLarge" Class="app-hero__title" id="app-hero-title">@T["dashboard.title"]</RbiDisplay>
+                <RbiText Size="RbiTextSize.XLarge" Class="app-hero__lead">@T["dashboard.description"]</RbiText>
+                <div class="app-hero__proof">
+                    <span class="app-hero__proof-item"><RbiIcon Name="RbiIconName.CheckCircle2" />@T["dashboard.proof.access"]</span>
+                    <span>@T["dashboard.proof.tracking"]</span>
+                    <span>@T["dashboard.proof.period"]</span>
+                </div>
+            </div>
+        </section>
+        <div class="app-areas-heading">
+            <RbiEyebrow Class="app-areas-heading__eyebrow">@T["dashboard.areas.eyebrow"]</RbiEyebrow>
+            <RbiHeading Level="2" VisualLevel="3" Class="app-areas-heading__title">@T["dashboard.areas.title"]</RbiHeading>
+        </div>
+        <RbiBentoGrid Class="app-areas" Density="RbiBentoDensity.Tall" Gap="RbiGridGap.Loose">
+            @if (_legal) { <HomeCard Title="@T["legal.title"]" Description="@T["legal.subtitle"]" Href="/app/legal-persons" Icon="RbiIconName.Building2" /> }
+            @if (_physical) { <HomeCard Title="@T["person.title"]" Description="@T["person.subtitle"]" Href="/app/physical-persons" Icon="RbiIconName.UserRound" /> }
+            @if (_limits) { <HomeCard Title="@T["limit.title"]" Description="@T["limit.subtitle"]" Href="/app/limits" Icon="RbiIconName.TrendingUp" /> }
+            @if (_capital) { <HomeCard Title="@T["capital.title"]" Description="@T["capital.subtitle"]" Href="/app/capital" Icon="RbiIconName.Wallet" /> }
+            @if (_reports) { <HomeCard Title="@T["reports.title"]" Description="@T["reports.subtitle"]" Href="/app/reports" Icon="RbiIconName.FileText" /> }
+            @if (_capital) { <HomeCard Title="@T["notifications.title"]" Description="@T["notifications.subtitle"]" Href="/app/notifications" Icon="RbiIconName.Bell" /> }
+        </RbiBentoGrid>
     </Authorized>
-    <NotAuthorized><IdentityNotice /></NotAuthorized>
+    <NotAuthorized><HeroBar Title="@T["app.title"]" Description="@T["app.welcome"]" /><IdentityNotice /></NotAuthorized>
 </AuthorizeView>
 @code {
     private bool _physical, _legal, _limits, _capital, _admin, _reports;
@@ -72,3 +43,4 @@
         catch (RegistryApiException) { _physical = _legal = _limits = _capital = _admin = _reports = false; }
     }
 }
+

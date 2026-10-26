@@ -11,7 +11,16 @@
 @inject FileDelivery Files
 
 <PageTitle>@T["limit.title"]</PageTitle>
-<HeroBar Title="@T["limit.title"]" Description="@T["limit.subtitle"]" />
+<HeroBar Title="@T["limit.title"]" Description="@T["limit.subtitle"]" Eyebrow="@T["nav.area.work"]">
+    <Actions>
+        @if (_authenticated && _canRead && !_loading && _error is null)
+        {
+            <RbiButton Disabled="@(_busy || _openingEditor)" Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Ghost">@T["common.refresh"]</RbiButton>
+            <RbiButton Disabled="@(_busy || _openingEditor || _refreshing)" OnClick="ExportAsync" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.Download" />@T["common.export"]</RbiButton>
+            @if (_canCreate) { <RbiButton Disabled="@(_busy || _refreshing)" Loading="_openingEditor" LoadingLabel="@T["state.loading"]" OnClick="() => Edit(null)"><RbiIcon Name="RbiIconName.Plus" />@T["common.new"]</RbiButton> }
+        }
+    </Actions>
+</HeroBar>
 @if (!_authenticated && !_loading) { <IdentityNotice /> }
 else if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
 else if (_error is not null)
@@ -24,29 +33,26 @@ else
 {
     @if ((_canCreate || _canEdit || _canDelete) && _periodLocked) { <RbiAlert Title="@T[_periodError ?? "errors.locked"]" /> }
     @if (_notice is not null) { <div role="status"><RbiAlert Title="@T[_notice]" /></div> }
-    <div class="registry-toolbar">
-        <RbiButton Disabled="@(_busy || _openingEditor)" Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Secondary">@T["common.refresh"]</RbiButton>
-        <RbiButton Disabled="@(_busy || _openingEditor || _refreshing)" OnClick="ExportAsync" Variant="RbiButtonVariant.Secondary">@T["common.export"]</RbiButton>
-        @if (_canCreate) { <RbiButton Disabled="@(_busy || _refreshing || _periodLocked)" Loading="_openingEditor" LoadingLabel="@T["state.loading"]" OnClick="() => Edit(null)">@T["common.new"]</RbiButton> }
+    <div class="registry-controls">
+        <RegistrySearch Id="limit-search" @bind-Value="_search" />
+        <div class="registry-filter">
+            <label for="limit-filter" class="registry-filter__label">@T["limit.filter"]</label>
+            <LimitEntityPicker Id="limit-filter" Value="_filter" ValueChanged="FilterAsync" RequireData="false" Disabled="@(_busy || _refreshing || _openingEditor)" />
+        </div>
     </div>
-    <label for="limit-filter">@T["limit.filter"]</label>
-    <LimitEntityPicker Id="limit-filter" Value="_filter" ValueChanged="FilterAsync" RequireData="false" Disabled="@(_busy || _refreshing || _openingEditor)" />
-    <label for="limit-search">@T["common.search"]</label>
-    <RbiInput Id="limit-search" @bind-Value="_search" UpdateMode="RbiInputUpdateMode.Input" />
-    @if (!Filtered.Any()) { <RbiText>@T["person.empty"]</RbiText> }
+    @if (!Filtered.Any()) { <div class="registry-surface"><RegistryEmpty Body="@T[string.IsNullOrWhiteSpace(_search) && _filter is null ? "state.empty-body" : "state.no-match"]" /></div> }
     else
     {
-        <RbiTable AccessibleLabel="@T["limit.title"]" Class="registry-persons-table">
-            <caption>@T["limit.title"]</caption>
-            <thead><tr><th scope="col">@T["legal.name"]</th><th scope="col">@T["limit.type"]</th><th scope="col">@T["limit.approved"]</th><th scope="col">@T["limit.expected"]</th><th scope="col">@T["limit.deadline"]</th><th scope="col">@T["limit.regulatory"]</th><th scope="col">@T["limit.core"]</th>@if (_canEdit || _canDelete) { <th scope="col">@T["common.actions"]</th> }</tr></thead>
+        <RbiTable AccessibleLabel="@T["limit.title"]" Class="registry-table registry-persons-table">
+            <thead><tr><th scope="col">@T["legal.name"]</th><th scope="col">@T["limit.type"]</th><th scope="col">@T["limit.approved"]</th><th scope="col">@T["limit.expected"]</th><th scope="col">@T["limit.deadline"]</th><th scope="col">@T["limit.regulatory"]</th><th scope="col">@T["limit.core"]</th>@if (_canEdit || _canDelete) { <th scope="col" class="registry-center registry-actions-cell">@T["common.actions"]</th> }</tr></thead>
             <tbody>@foreach (var record in Filtered)
             {
                 <tr @key="record.Id"><td>@record.Naziv</td><td>@record.TipLimita</td><td>@record.OdobreniLimit?.ToString("N2")</td><td>@record.MaksimalnaOcekivanaUtilizacija?.ToString("N2")</td><td>@record.RokOcekivaneUtilizacije?.ToString("d")</td><td>@record.RegulatorniKapital?.ToString("N2")</td><td>@record.OsnovniKapital?.ToString("N2")</td>
                     @if (_canEdit || _canDelete)
                     {
-                        <td><div class="registry-toolbar">
-                            @if (_canEdit) { <RbiButton Disabled="@(_busy || _refreshing || _periodLocked)" Loading="_openingEditor" LoadingLabel="@T["state.loading"]" OnClick="() => Edit(record)" Variant="RbiButtonVariant.Ghost">@T["common.edit"]</RbiButton> }
-                            @if (_canDelete) { <RbiButton Disabled="@(_busy || _openingEditor || _refreshing || _periodLocked)" OnClick="() => Confirm(record)" Variant="RbiButtonVariant.Destructive">@T["limit.delete"]</RbiButton> }
+                        <td class="registry-actions-cell"><div class="registry-row-actions">
+                            @if (_canEdit) { <RbiButton Disabled="@(_busy || _refreshing)" Loading="_openingEditor" LoadingLabel="@T["state.loading"]" OnClick="() => Edit(record)" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["common.edit"]" title="@T["common.edit"]"><RbiIcon Name="RbiIconName.Pencil" /></RbiButton> }
+                            @if (_canDelete) { <RbiButton Disabled="@(_busy || _openingEditor || _refreshing)" OnClick="() => Confirm(record)" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["limit.delete"]" title="@T["limit.delete"]" Class="registry-danger-icon"><RbiIcon Name="RbiIconName.Trash2" /></RbiButton> }
                         </div></td>
                     }
                 </tr>

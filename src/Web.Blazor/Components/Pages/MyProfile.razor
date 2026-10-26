@@ -7,34 +7,45 @@
 @implements IDisposable
 
 <PageTitle>@T["profile.title"]</PageTitle>
-<HeroBar Title="@T["profile.title"]" Description="@T["profile.description"]" />
-<RbiCard Class="registry-profile">
-    <ChildContent>
-        <RbiStack Gap="RbiStackGap.Medium">
-            <RbiAvatar Fallback="@Initials" AccessibleLabel="@T["profile.visual"]" />
-            @if (_loading)
+@if (_loading)
+{
+    <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div>
+}
+else if (_user?.Identity?.IsAuthenticated == true)
+{
+    <section class="registry-profile">
+        <div class="profile-hero">
+            <span class="profile-hero__avatar" role="img" aria-label="@T["profile.visual"]"><RbiIcon Name="RbiIconName.UserRound" /></span>
+            <div class="profile-hero__text">
+                <RbiText Tone="RbiTextTone.Secondary">@T["profile.current"]</RbiText>
+                <RbiHeading Level="1" VisualLevel="4" Class="profile-hero__name">@((_profile?.FullName ?? DisplayName) ?? "—")</RbiHeading>
+                <p class="profile-hero__line"><RbiIcon Name="RbiIconName.UserRound" />@(Username ?? "—")</p>
+                <p class="profile-hero__line"><RbiIcon Name="RbiIconName.Info" />@(Claim(ClaimTypes.Email) ?? Claim("email") ?? "—")</p>
+            </div>
+        </div>
+        <dl class="profile-grid">
+            @if (_profile is { } profile)
             {
-                <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div>
+                <div class="profile-card">
+                    <dt class="profile-card__title">@T["profile.roles"]</dt>
+                    <dd class="profile-roles">@if (AccessRoles(profile).Any()) { @foreach (var role in AccessRoles(profile)) { <span class="profile-role">@RoleLabel(role)</span> } } else { <RbiText Tone="RbiTextTone.Secondary">@T["profile.no-access"]</RbiText> }</dd>
+                </div>
+                <div class="profile-card">
+                    <dt class="profile-card__title">@T["profile.permissions"]</dt>
+                    <dd><ul class="profile-permissions">@foreach (var permission in profile.Permissions) { <li><RbiIcon Name="RbiIconName.CheckCircle2" />@permission</li> }</ul></dd>
+                </div>
             }
-            else if (_user?.Identity?.IsAuthenticated == true)
-            {
-                <dl>
-                    @if (DisplayName is { } displayName) { <dt>@T["profile.name"]</dt><dd>@displayName</dd> }
-                    @if ((Claim(ClaimTypes.Upn) ?? Claim("preferred_username") ?? _profile?.Username) is { } username) { <dt>@T["profile.username"]</dt><dd>@username</dd> }
-                    @if ((Claim(ClaimTypes.Email) ?? Claim("email")) is { } email) { <dt>@T["profile.email"]</dt><dd>@email</dd> }
-                    @if ((Claim(ClaimTypes.NameIdentifier) ?? Claim("sub")) is { } subject) { <dt>@T["profile.subject"]</dt><dd>@subject</dd> }
-                    @if (_profile is { } profile)
-                    {
-                        <dt>@T["profile.roles"]</dt><dd>@string.Join(", ", profile.Roles)</dd>
-                        <dt>@T["profile.permissions"]</dt><dd>@string.Join(", ", profile.Permissions)</dd>
-                    }
-                </dl>
-                @if (_error) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T["profile.unavailable"]" /><RbiButton OnClick="LoadAsync">@T["state.retry"]</RbiButton> }
-            }
-            else { <IdentityNotice /> }
-        </RbiStack>
-    </ChildContent>
-</RbiCard>
+            <div class="profile-card profile-card--details">
+                @if (DisplayName is { } displayName) { <dt>@T["profile.name"]</dt><dd>@displayName</dd> }
+                @if (Username is { } username) { <dt>@T["profile.username"]</dt><dd>@username</dd> }
+                @if ((Claim(ClaimTypes.Email) ?? Claim("email")) is { } email) { <dt>@T["profile.email"]</dt><dd>@email</dd> }
+                @if ((Claim(ClaimTypes.NameIdentifier) ?? Claim("sub")) is { } subject) { <dt>@T["profile.subject"]</dt><dd>@subject</dd> }
+            </div>
+        </dl>
+        @if (_error) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T["profile.unavailable"]" /><RbiButton OnClick="LoadAsync">@T["state.retry"]</RbiButton> }
+    </section>
+}
+else { <HeroBar Title="@T["profile.title"]" Description="@T["profile.description"]" /><IdentityNotice /> }
 
 @code {
     private ClaimsPrincipal? _user = null;
@@ -59,6 +70,10 @@
     }
     private string? Claim(string type) => _user?.FindFirst(type)?.Value;
     private string? DisplayName => Claim(ClaimTypes.Name) ?? Claim("name") ?? _user?.Identity?.Name;
+    private string? Username => Claim(ClaimTypes.Upn) ?? Claim("preferred_username") ?? _profile?.Username;
+    private static readonly string[] AccessKeys = ["fl", "pl", "limiti", "kapital", "admin"];
+    private static IEnumerable<string> AccessRoles(ApplicationProfile profile) => profile.Roles.Where(role => AccessKeys.Contains(role.ToLowerInvariant()));
+    private string RoleLabel(string role) => role.ToLowerInvariant() switch { "fl" => T["person.title"], "pl" => T["legal.title"], "limiti" => T["limit.title"], "kapital" => T["capital.title"], "admin" => T["profile.admin"], _ => role };
     private string Initials => string.IsNullOrWhiteSpace(DisplayName) ? "?" : DisplayName[..1].ToUpperInvariant();
     public void Dispose() { _lifetime.Cancel(); _lifetime.Dispose(); }
 }

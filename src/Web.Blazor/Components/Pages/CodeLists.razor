@@ -7,7 +7,20 @@
 @inject ICodeListsApi Api
 
 <PageTitle>@T["codes.title"]</PageTitle>
-<HeroBar Title="@T["codes.title"]" Description="@T["codes.subtitle"]" />
+<HeroBar Title="@T["codes.title"]" Description="@T["codes.subtitle"]">
+    <Actions>
+        @if (_authenticated && _canRead && !_loading)
+        {
+            <RbiButton Disabled="@(_busy || _refreshing)" OnClick="LoadAsync" Variant="RbiButtonVariant.Ghost">@T["common.refresh"]</RbiButton>
+            @if (_canWrite)
+            {
+                <RbiButton Disabled="@(_busy || _refreshing)" OnClick="NewDefinition" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.Plus" />@T["codes.definition-create"]</RbiButton>
+                @if (_category.Length > 0) { <label class="registry-file-button"><RbiIcon Name="RbiIconName.FileUp" /><span>@T["codes.import"]</span><InputFile @key="_fileKey" id="code-file" accept=".xlsx" OnChange="PreviewAsync" disabled="@(_busy || _refreshing)" /></label> }
+                <RbiButton Disabled="@(_busy || _refreshing || _category.Length == 0)" OnClick="NewValue"><RbiIcon Name="RbiIconName.Plus" />@T["codes.create"]</RbiButton>
+            }
+        }
+    </Actions>
+</HeroBar>
 @if (!_authenticated && !_loading) { <IdentityNotice /> }
 else if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
 else if (!_canRead && _error is null) { <RbiAlert Title="@T["errors.forbidden"]" /> }
@@ -17,33 +30,29 @@ else
     @if (_canRead)
     {
         @if (_notice is not null) { <p role="status">@_notice</p> }
-        <fieldset disabled="@(_busy || _refreshing)"><legend>@T["codes.category"]</legend>
-            <div class="registry-toolbar">
-                <RbiButton OnClick="LoadAsync" Variant="RbiButtonVariant.Secondary">@T["common.refresh"]</RbiButton>
-                @if (_canWrite) { <RbiButton OnClick="NewDefinition">@T["codes.definition-create"]</RbiButton><RbiButton OnClick="NewValue" Disabled="@(_category.Length == 0)">@T["codes.create"]</RbiButton> }
-            </div>
-            <label for="code-category">@T["codes.category"]</label>
+        <fieldset disabled="@(_busy || _refreshing)" class="registry-category"><legend class="app-visually-hidden">@T["codes.category"]</legend>
+            <div class="registry-field registry-field--category"><label for="code-category">@T["codes.category"]</label>
             <RbiSelect TValue="string" Id="code-category" @bind-Value="_category" @bind-Value:after="CategoryChangedAsync" Disabled="@(_categories.Count == 0)">
                 @foreach (var category in _categories) { <option value="@category">@category</option> }
-            </RbiSelect>
+            </RbiSelect></div>
             @if (_canWrite && _category.Length > 0)
             {
-                <div class="registry-toolbar"><RbiButton OnClick="() => _deleteCategory = _category" Variant="RbiButtonVariant.Secondary">@T["codes.delete-category"]</RbiButton>
-                    <label for="code-file">@T["codes.import"]</label><InputFile @key="_fileKey" id="code-file" accept=".xlsx" OnChange="PreviewAsync" />
-                </div><p>@T["codes.import-help"]</p>
+                <RbiButton OnClick="() => _deleteCategory = _category" Variant="RbiButtonVariant.Destructive"><RbiIcon Name="RbiIconName.Trash2" />@T["codes.delete-category"]</RbiButton>
             }
         </fieldset>
-        @if (_category.Length == 0) { <RbiText>@T["codes.no-categories"]</RbiText> }
-        else if (_values.Count == 0 && _error is null) { <RbiText>@T["codes.empty"]</RbiText> }
+        @if (_canWrite && _category.Length > 0) { <p class="registry-help">@T["codes.import-help"]</p> }
+        @if (_refreshing) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
+        else if (_category.Length == 0) { <div class="registry-surface"><RegistryEmpty Body="@T["codes.no-categories"]" /></div> }
+        else if (_values.Count == 0 && _error is null) { <div class="registry-surface"><RegistryEmpty Body="@T["codes.empty"]" /></div> }
         else if (_error is null)
         {
-            <p>@T["codes.history"]</p>
-            <RbiTable AccessibleLabel="@T["codes.title"]" Class="registry-codes-table"><caption>@_category</caption>
-                <thead><tr><th scope="col">@T["codes.code"]</th><th scope="col">@T["codes.name"]</th><th scope="col">@T["codes.description"]</th><th scope="col">@T["codes.order"]</th><th scope="col">@T["codes.active"]</th><th scope="col">@T["codes.modified"]</th>@if (_canWrite) { <th scope="col">@T["users.actions"]</th> }</tr></thead>
+            <p class="registry-help">@T["codes.history"]</p>
+            <RbiTable AccessibleLabel="@T["codes.title"]" Class="registry-table registry-codes-table"><caption>@_category</caption>
+                <thead><tr><th scope="col">@T["codes.code"]</th><th scope="col">@T["codes.name"]</th><th scope="col">@T["codes.description"]</th><th scope="col">@T["codes.order"]</th><th scope="col" class="registry-center">@T["codes.active"]</th><th scope="col">@T["codes.modified"]</th>@if (_canWrite) { <th scope="col" class="registry-center registry-actions-cell">@T["users.actions"]</th> }</tr></thead>
                 <tbody>@foreach (var value in _values)
                 {
-                    <tr @key="value.Id"><td>@value.Code</td><td>@value.Value</td><td>@value.Description</td><td>@value.DisplayOrder</td><td>@T[value.IsActive ? "codes.active" : "codes.inactive"]</td><td>@value.ModifiedBy @value.ModifiedAt?.ToString("g")</td>
-                        @if (_canWrite) { <td><div class="registry-toolbar"><RbiButton Disabled="@(_busy || _refreshing)" OnClick="() => Edit(value)">@T["codes.edit"]</RbiButton><RbiButton Disabled="@(_busy || _refreshing)" OnClick="() => _deleteValue = value" Variant="RbiButtonVariant.Secondary">@T["codes.delete-value"]</RbiButton></div></td> }
+                    <tr @key="value.Id"><td>@value.Code</td><td>@value.Value</td><td>@value.Description</td><td>@value.DisplayOrder</td><td class="registry-center"><Indicator Kind="@(value.IsActive ? "active" : "inactive")" Label="@T[value.IsActive ? "codes.active" : "codes.inactive"]" /></td><td>@value.ModifiedBy @value.ModifiedAt?.ToString("g")</td>
+                        @if (_canWrite) { <td class="registry-actions-cell"><div class="registry-row-actions"><RbiButton Disabled="@(_busy || _refreshing)" OnClick="() => Edit(value)" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["codes.edit"]" title="@T["codes.edit"]"><RbiIcon Name="RbiIconName.Pencil" /></RbiButton><RbiButton Disabled="@(_busy || _refreshing)" OnClick="() => _deleteValue = value" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["codes.delete-value"]" title="@T["codes.delete-value"]" Class="registry-danger-icon"><RbiIcon Name="RbiIconName.Trash2" /></RbiButton></div></td> }
                     </tr>
                 }</tbody>
             </RbiTable>

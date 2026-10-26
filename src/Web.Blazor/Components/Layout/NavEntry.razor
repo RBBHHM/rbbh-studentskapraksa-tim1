@@ -1,0 +1,11 @@
+<a class="app-nav__link" href="@Href" aria-current="@(Active ? "page" : null)" data-active="@(Active ? "true" : "false")">
+    <RbiIcon Name="Icon" Class="app-nav__icon" />
+    <span>@Label</span>
+</a>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Href { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public RbiIconName Icon { get; set; }
+    [Parameter] public bool Active { get; set; }
+}

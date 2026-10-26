@@ -1,0 +1,16 @@
+<RbiBentoCard Span="RbiBentoSpan.Six" Tone="RbiBentoTone.Subtle" Accent Element="RbiBentoElement.Article" Class="app-area-card">
+    <a class="app-area-card__link" href="@Href" aria-label="@($"{T["common.open"]} {Title}")"></a>
+    <div class="app-area-card__top">
+        <span class="app-area-card__icon"><RbiIcon Name="Icon" /></span>
+        <RbiIcon Name="RbiIconName.ArrowRight" Class="app-area-card__arrow" />
+    </div>
+    <h2 class="app-area-card__title">@Title</h2>
+    <p class="app-area-card__description">@Description</p>
+</RbiBentoCard>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Description { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Href { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public RbiIconName Icon { get; set; }
+}

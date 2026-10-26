@@ -7,7 +7,9 @@
 @inject IPeriodApi Api
 
 <PageTitle>@T["period.title"]</PageTitle>
-<HeroBar Title="@T["period.title"]" Description="@T["period.subtitle"]" />
+<HeroBar Title="@T["period.title"]" Description="@T["period.subtitle"]">
+    <Actions>@if (_authenticated && _canRead && _current is not null) { <RbiButton Disabled="_busy" Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Ghost">@T["common.refresh"]</RbiButton> }</Actions>
+</HeroBar>
 @if (!_authenticated && !_loading) { <IdentityNotice /> }
 else if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
 else if (_error is not null) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_error]" /><RbiButton OnClick="LoadAsync">@T["state.retry"]</RbiButton> }
@@ -15,25 +17,30 @@ else if (!_canRead) { <RbiAlert Title="@T["errors.forbidden"]" /> }
 else if (_current is { } current)
 {
     @if (_notice) { <div role="status"><RbiAlert Title="@T["common.saved"]" /></div> }
-    <RbiCard Title="@T[current.IsLocked ? "period.locked" : "period.open"]">
-        <ChildContent><p>@current.Year / @current.Month</p><p>@current.LockedBy @current.LockedAt?.ToString("g")</p></ChildContent>
-        <Footer><div class="registry-toolbar"><RbiButton Disabled="_busy" Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Secondary">@T["common.refresh"]</RbiButton>
-            @if (_canWrite) { <RbiButton Disabled="@(_busy || _refreshing)" OnClick="ToggleAsync">@T[current.IsLocked ? "period.unlock" : "period.lock"]</RbiButton> }
-        </div></Footer>
-    </RbiCard>
+    <section class="registry-status-card" aria-labelledby="period-state">
+        <div>
+            <p class="registry-status-card__label">@T["period.status-label"]</p>
+            <h2 id="period-state" class="registry-status-card__title">@T[current.IsLocked ? "period.locked" : "period.open"]</h2>
+            <p class="registry-status-card__meta">@current.Year / @current.Month</p>
+            @if (current.LockedBy is not null || current.LockedAt is not null) { <p class="registry-status-card__meta">@current.LockedBy @current.LockedAt?.ToString("g")</p> }
+        </div>
+        @if (_canWrite) { <RbiButton Disabled="@(_busy || _refreshing)" OnClick="ToggleAsync"><RbiIcon Name="RbiIconName.Lock" />@T[current.IsLocked ? "period.unlock" : "period.lock"]</RbiButton> }
+    </section>
     @if (_canWrite && current.IsLocked)
     {
         <PeriodNoteForm @key="_requestDraft" Model="_requestDraft" LabelKey="period.reason" SubmitKey="period.send" ShowCancel="false" Save="RequestAsync" />
     }
-    <h2>@T["period.requests"]</h2>
-    <label for="period-status">@T["users.status"]</label>
-    <RbiSelect TValue="string" Id="period-status" @bind-Value="_status" @bind-Value:after="StatusChangedAsync" Disabled="@(_busy || _refreshing)">
-        <option value="">@T["period.all"]</option>@foreach (var status in Statuses) { <option value="@status">@StatusLabel(status)</option> }
-    </RbiSelect>
-    @if (_requests.Requests.Count == 0) { <RbiText>@T["period.empty"]</RbiText> }
+    <div class="registry-section-head">
+        <RbiHeading Level="2" VisualLevel="3">@T["period.requests"]</RbiHeading>
+        <div class="registry-field registry-field--status"><label for="period-status">@T["users.status"]</label>
+        <RbiSelect TValue="string" Id="period-status" @bind-Value="_status" @bind-Value:after="StatusChangedAsync" Disabled="@(_busy || _refreshing)">
+            <option value="">@T["period.all"]</option>@foreach (var status in Statuses) { <option value="@status">@StatusLabel(status)</option> }
+        </RbiSelect></div>
+    </div>
+    @if (_requests.Requests.Count == 0) { <div class="registry-surface"><RegistryEmpty Body="@T["period.empty"]" /></div> }
     else
     {
-        <RbiTable AccessibleLabel="@T["period.requests"]" Class="registry-period-table"><caption>@T["period.requests"]</caption>
+        <RbiTable AccessibleLabel="@T["period.requests"]" Class="registry-table registry-period-table">
             <thead><tr><th scope="col">@T["period.requester"]</th><th scope="col">@T["period.period"]</th><th scope="col">@T["period.reason"]</th><th scope="col">@T["users.status"]</th><th scope="col">@T["period.note"]</th>@if (_canWrite) { <th scope="col">@T["users.actions"]</th> }</tr></thead>
             <tbody>@foreach (var item in _requests.Requests)
             {

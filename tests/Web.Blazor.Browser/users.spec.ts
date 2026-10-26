@@ -132,6 +132,6 @@ test("375px user table/form and BS/EN owned copy remain usable", async ({ page }
   await page.getByRole("dialog").getByRole("button", { name: "Odustani", exact: true }).click();
   await page.getByRole("button", { name: "Prikaži ili sakrij navigaciju", exact: true }).click();
   const nav = page.getByRole("dialog"); await nav.getByLabel("Jezik", { exact: true }).selectOption("en"); await nav.getByRole("button", { name: "Primijeni", exact: true }).click(); await interactive(page);
-  await expect(page.getByRole("heading", { name: "User management", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Users", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Add user", exact: true }).click(); await expect(page.getByRole("dialog").getByText("Functional accesses", { exact: true })).toBeVisible();
 });

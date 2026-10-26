@@ -11,7 +11,7 @@ test.beforeEach(async ({ request }) => {
 test("actual backend empty state, labels and accessibility", async ({ page }) => {
   await openPhysical(page);
   await expect(page.getByRole("heading", { name: "Fizička lica", exact: true })).toBeVisible();
-  await expect(page.getByText("Nema zapisa za prikaz", { exact: false })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Nema zapisa", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Novi zapis", exact: true })).toBeVisible();
   const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
   expect(results.violations).toEqual([]);
@@ -125,10 +125,10 @@ test("unified family form locks required flags and backend relationship tree sur
   await dialog.getByLabel("Datum do", { exact: false }).fill("2026-12-31");
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
   await expect(dialog).not.toBeVisible();
-  await page.getByLabel("Odaberite fizičko lice za prikaz stabla.").selectOption({ label: "Parent Fixture" });
+  await page.getByLabel("Fizičko lice", { exact: true }).selectOption({ label: "Parent Fixture" });
   await expect(page.locator(".registry-tree strong").filter({ hasText: "Family Fixture" })).toBeVisible();
   await page.reload(); await interactive(page);
-  await page.getByLabel("Odaberite fizičko lice za prikaz stabla.").selectOption({ label: "Parent Fixture" });
+  await page.getByLabel("Fizičko lice", { exact: true }).selectOption({ label: "Parent Fixture" });
   await expect(page.locator(".registry-tree strong").filter({ hasText: "Family Fixture" })).toBeVisible();
   await page.getByRole("row", { name: /Family Fixture/ }).getByRole("button", { name: "Uredi", exact: true }).click();
   await dialog.getByLabel(/^Ime/).fill("FamilyUpdated");
@@ -146,7 +146,7 @@ test("backend XLSX export delivers the attachment bytes and filename", async ({ 
   await openPhysical(page);
   await createNonresident(page, "Export", "EXP12345", "333444");
   const pending = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Preuzmi Excel", exact: true }).click();
+  await page.getByRole("button", { name: "Izvezi Excel", exact: true }).click();
   const download = await pending;
   expect(download.suggestedFilename()).toMatch(/\.xlsx$/i);
   const target = info.outputPath("physical.xlsx");
@@ -156,14 +156,14 @@ test("backend XLSX export delivers the attachment bytes and filename", async ({ 
 
 test("valid backend workbook import refreshes list; invalid schema does not create records", async ({ page }) => {
   await openPhysical(page);
-  await page.getByRole("button", { name: "Uvoz", exact: true }).click();
+  await page.getByRole("button", { name: "Uvezi Excel", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Excel datoteka").setInputFiles(path.resolve("../../artifacts/migration-browser-fixtures/invalid-physical.xlsx"));
-  await dialog.getByRole("button", { name: "Uvoz", exact: true }).click();
+  await dialog.getByRole("button", { name: "Uvezi Excel", exact: true }).click();
   await expect(dialog.getByText("Uvezeno: 0.", { exact: false })).toBeVisible();
   await expect(dialog.getByText("Predložak mora imati 15 kolona; pronađeno: 1.", { exact: true })).toBeVisible();
   await dialog.getByLabel("Excel datoteka").setInputFiles(path.resolve("../../artifacts/migration-browser-fixtures/valid-physical.xlsx"));
-  await dialog.getByRole("button", { name: "Uvoz", exact: true }).click();
+  await dialog.getByRole("button", { name: "Uvezi Excel", exact: true }).click();
   await expect(dialog.getByText("Uvezeno: 1. Neuspješno: 0.")).toBeVisible();
   await dialog.getByRole("button", { name: "Zatvori", exact: true }).click();
   await expect(page.getByRole("row", { name: /Import Fixture/ })).toBeVisible();
@@ -220,10 +220,10 @@ test("BS/EN cookie selection persists and reaches the actual backend", async ({ 
   await expect(page.locator("form.app-language")).toHaveAttribute("action", /\/en\?/);
   await page.getByRole("button", { name: "Primijeni", exact: true }).click();
   await interactive(page);
-  await expect(page.getByRole("heading", { name: "Physical persons", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Individuals", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "New record", exact: true })).toBeVisible();
   await page.reload(); await interactive(page);
-  await expect(page.getByRole("heading", { name: "Physical persons", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Individuals", exact: true })).toBeVisible();
   const culture = await (await request.get("/__fixtures/culture", { headers: { "X-Fixture-Control": "true" } })).json();
   expect(culture.language).toBe("en");
   await expect(page.getByRole("option", { name: "Deutsch", exact: true })).toHaveCount(0);
@@ -235,7 +235,7 @@ test("search covers identity and existing backend audit values, with no-result r
   const search = page.getByLabel("Pretraži zapise", { exact: true });
   await search.fill("does-not-exist");
   await expect(page.getByRole("row", { name: /Search Fixture/ })).toHaveCount(0);
-  await expect(page.getByText("Nema zapisa za prikaz", { exact: false })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Nema zapisa", exact: true })).toBeVisible();
   await search.fill("SEA12345");
   await expect(page.getByRole("row", { name: /Search Fixture/ })).toBeVisible();
   await search.fill("FL@fixture.test");

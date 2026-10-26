@@ -3,40 +3,39 @@
 @inject IProfileApi Profile
 @inject AuthenticationStateProvider AuthenticationState
 
-<nav aria-label="@T["nav.title"]">
-    <RbiSidebarPart Kind="RbiSidebarPartKind.Menu">
-        <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["nav.home"]" Href="/app" Icon="RbiIconName.Gauge" Active="@(IsActive("app") || IsActive(""))" /></RbiSidebarPart>
-        @if (_physical)
+<div class="app-nav">
+    <div class="app-nav__areas">
+        <div class="app-nav__area">
+            <p class="app-nav__eyebrow">@T["nav.area.work"]</p>
+            <nav class="app-nav__list" aria-label="@T["nav.area.work"]">
+                <NavEntry Label="@T["nav.home"]" Href="/app" Icon="RbiIconName.Gauge" Active="@(IsActive("app") || IsActive(""))" />
+                @if (_legal) { <NavEntry Label="@T["legal.title"]" Href="/app/legal-persons" Icon="RbiIconName.Building2" Active="@IsActive("app/legal-persons")" /> }
+                @if (_physical) { <NavEntry Label="@T["person.title"]" Href="/app/physical-persons" Icon="RbiIconName.UserRound" Active="@IsActive("app/physical-persons")" /> }
+                @if (_limits) { <NavEntry Label="@T["limit.title"]" Href="/app/limits" Icon="RbiIconName.TrendingUp" Active="@IsActive("app/limits")" /> }
+                @if (_capital) { <NavEntry Label="@T["capital.title"]" Href="/app/capital" Icon="RbiIconName.Wallet" Active="@IsActive("app/capital")" /> }
+                @if (_reports) { <NavEntry Label="@T["reports.title"]" Href="/app/reports" Icon="RbiIconName.FileText" Active="@IsActive("app/reports")" /> }
+                @if (_capital) { <NavEntry Label="@T["notifications.title"]" Href="/app/notifications" Icon="RbiIconName.Bell" Active="@IsActive("app/notifications")" /> }
+            </nav>
+        </div>
+        @if (_admin)
         {
-            <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["person.title"]" Href="/app/physical-persons" Icon="RbiIconName.UserRound" Active="@IsActive("app/physical-persons")" /></RbiSidebarPart>
+            <div class="app-nav__area">
+                <p class="app-nav__eyebrow">@T["nav.area.administration"]</p>
+                <nav class="app-nav__list" aria-label="@T["nav.area.administration"]">
+                    <NavEntry Label="@T["users.title"]" Href="/app/admin/users" Icon="RbiIconName.Users" Active="@IsActive("app/admin/users")" />
+                    <NavEntry Label="@T["period.title"]" Href="/app/admin/period" Icon="RbiIconName.Lock" Active="@IsActive("app/admin/period")" />
+                    <NavEntry Label="@T["codes.title"]" Href="/app/admin/code-lists" Icon="RbiIconName.Folder" Active="@IsActive("app/admin/code-lists")" />
+                    <NavEntry Label="@T["audit.title"]" Href="/app/admin/audit" Icon="RbiIconName.ShieldCheck" Active="@IsActive("app/admin/audit")" />
+                </nav>
+            </div>
         }
-        @if (_reports)
-        {
-            <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["reports.title"]" Href="/app/reports" Icon="RbiIconName.Gauge" Active="@IsActive("app/reports")" /></RbiSidebarPart>
-        }
-        @if (_capital)
-        {
-            <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["notifications.title"]" Href="/app/notifications" Icon="RbiIconName.Gauge" Active="@IsActive("app/notifications")" /></RbiSidebarPart>
-            <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["capital.title"]" Href="/app/capital" Icon="RbiIconName.Gauge" Active="@IsActive("app/capital")" /></RbiSidebarPart>
-        }
-        @if (_limits)
-        {
-            <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["limit.title"]" Href="/app/limits" Icon="RbiIconName.Gauge" Active="@IsActive("app/limits")" /></RbiSidebarPart>
-        }
-        @if (_legal)
-        {
-            <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["legal.title"]" Href="/app/legal-persons" Icon="RbiIconName.UserRound" Active="@IsActive("app/legal-persons")" /></RbiSidebarPart>
-        }
-        @if (_admin) {
-            <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["codes.title"]" Href="/app/admin/code-lists" Icon="RbiIconName.Gauge" Active="@IsActive("app/admin/code-lists")" /></RbiSidebarPart>
-            <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["period.title"]" Href="/app/admin/period" Icon="RbiIconName.Gauge" Active="@IsActive("app/admin/period")" /></RbiSidebarPart>
-            <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["users.title"]" Href="/app/admin/users" Icon="RbiIconName.UserRound" Active="@IsActive("app/admin/users")" /></RbiSidebarPart>
-            <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["audit.title"]" Href="/app/admin/audit" Icon="RbiIconName.Gauge" Active="@IsActive("app/admin/audit")" /></RbiSidebarPart>
-        }
-        <RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["nav.profile"]" Href="/app/profile" Icon="RbiIconName.UserRound" Active="@IsActive("app/profile")" /></RbiSidebarPart>
-        <AuthorizeView><Authorized><RbiSidebarPart Kind="RbiSidebarPartKind.MenuItem"><RbiSidebarItem Label="@T["guide.title"]" Href="/app/guide" Icon="RbiIconName.Gauge" Active="@IsActive("app/guide")" /></RbiSidebarPart></Authorized></AuthorizeView>
-    </RbiSidebarPart>
-</nav>
+    </div>
+    <AuthorizeView><Authorized>
+        <nav class="app-nav__footer" aria-label="@T["guide.title"]">
+            <NavEntry Label="@T["guide.title"]" Href="/app/guide" Icon="RbiIconName.Info" Active="@IsActive("app/guide")" />
+        </nav>
+    </Authorized></AuthorizeView>
+</div>
 
 @code {
     private bool _physical, _legal, _limits, _capital, _admin, _reports;

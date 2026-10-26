@@ -5,7 +5,7 @@ const headers = { "X-Fixture-Control": "true" };
 test.beforeEach(async ({ request }) => { expect((await request.post("/__fixtures/reset", { headers })).status()).toBe(204); });
 test("empty notification log is accessible and has no business mutations", async ({ page }) => {
   await page.goto("/app/notifications"); await interactive(page);
-  await expect(page.getByRole("heading", { name: "Obavijesti", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Notifikacije", exact: true })).toBeVisible();
   await expect(page.getByText("Nema evidentiranih obavijesti za prikaz.", { exact: true })).toBeVisible();
   for (const name of ["Novi zapis", "Uredi", "Obriši", "Pošalji"]) await expect(page.getByRole("button", { name, exact: true })).toHaveCount(0);
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);

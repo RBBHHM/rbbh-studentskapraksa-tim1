@@ -17,7 +17,7 @@ test("locked period disables capital editing without a mutation and export stays
   expect((await request.post("/__fixtures/lock", { headers })).status()).toBe(204); await open(page);
   await expect(page.getByRole("button", { name: "Uredi kapital", exact: true })).toBeDisabled();
   await expect(page.getByText("Period je zaključan. Izmjene nisu dozvoljene.", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Preuzmi Excel", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Izvezi Excel", exact: true })).toBeEnabled();
   expect(await (await request.get("/__fixtures/capital", { headers })).json()).toEqual([]);
   expect((await (await request.get("/__fixtures/counts", { headers })).json()).audit).toBe(0);
 });
@@ -62,11 +62,11 @@ test("required amounts/date and negative values cannot persist", async ({ page, 
 });
 test("empty and populated capital export use real backend XLSX", async ({ page, request }, info) => {
   await open(page);
-  let pending = page.waitForEvent("download"); await page.getByRole("button", { name: "Preuzmi Excel", exact: true }).click();
+  let pending = page.waitForEvent("download"); await page.getByRole("button", { name: "Izvezi Excel", exact: true }).click();
   let download = await pending; expect(download.suggestedFilename()).toMatch(/^kapital-.*\.xlsx$/);
   await request.post("/__fixtures/limit-reference", { headers }); await page.getByRole("button", { name: "Osvježi", exact: true }).click();
   await expect(page.getByRole("cell", { name: "1.234.567,89 KM", exact: true })).toBeVisible();
-  pending = page.waitForEvent("download"); await page.getByRole("button", { name: "Preuzmi Excel", exact: true }).click(); download = await pending;
+  pending = page.waitForEvent("download"); await page.getByRole("button", { name: "Izvezi Excel", exact: true }).click(); download = await pending;
   const target = info.outputPath("capital.xlsx"); await download.saveAs(target); expect((await readFile(target)).subarray(0, 2)).toEqual(Buffer.from([0x50, 0x4b]));
 });
 test("outage stays distinct from empty and retry recovers", async ({ page, request }) => {

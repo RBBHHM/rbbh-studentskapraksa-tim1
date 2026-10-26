@@ -1,0 +1,26 @@
+<span class="app-indicator app-indicator--@Tone" title="@Label"><RbiIcon Name="Icon" Class="app-indicator__icon" /><span class="app-visually-hidden">@Label</span></span>
+
+@code {
+    [Parameter, EditorRequired] public string Kind { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+
+    private (RbiIconName Icon, string Tone) Definition => Kind switch
+    {
+        "active" or "yes" => (RbiIconName.Check, "success"),
+        "inactive" => (RbiIconName.Minus, "warning"),
+        "no" => (RbiIconName.X, "neutral"),
+        "verified" => (RbiIconName.ShieldCheck, "success"),
+        "draft" => (RbiIconName.MoreHorizontal, "info"),
+        "rejected" => (RbiIconName.X, "danger"),
+        "employee" => (RbiIconName.UserRound, "info"),
+        "family" => (RbiIconName.Users, "brand"),
+        "related" => (RbiIconName.Network, "neutral"),
+        "resident" => (RbiIconName.Check, "success"),
+        "nonresident" => (RbiIconName.Globe, "info"),
+        "daily" => (RbiIconName.RotateCw, "info"),
+        "monthly" => (RbiIconName.Layers, "brand"),
+        _ => (RbiIconName.Circle, "neutral")
+    };
+    private RbiIconName Icon => Definition.Icon;
+    private string Tone => Definition.Tone;
+}

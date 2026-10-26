@@ -6,7 +6,9 @@
 @inject INotificationsApi Api
 
 <PageTitle>@T["notifications.title"]</PageTitle>
-<HeroBar Title="@T["notifications.title"]" Description="@T["notifications.subtitle"]" />
+<HeroBar Title="@T["notifications.title"]" Description="@T["notifications.subtitle"]" Eyebrow="@T["nav.area.work"]">
+    <Actions>@if (_authenticated && _canRead && !_loading && _error is null) { <RbiButton Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Ghost">@T["common.refresh"]</RbiButton> }</Actions>
+</HeroBar>
 @if (!_authenticated && !_loading) { <IdentityNotice /> }
 else if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
 else if (_error is not null)
@@ -17,15 +19,12 @@ else if (_error is not null)
 else if (!_canRead) { <RbiAlert Title="@T["errors.forbidden"]" /> }
 else
 {
-    <RbiButton Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Secondary">@T["common.refresh"]</RbiButton>
     @if (_log.Provider.Equals("smtp", StringComparison.OrdinalIgnoreCase)) { <RbiAlert Title="@T["notifications.smtp"]" /> }
-    <label for="notification-search">@T["common.search"]</label>
-    <RbiInput Id="notification-search" @bind-Value="_search" UpdateMode="RbiInputUpdateMode.Input" />
-    @if (!Filtered.Any()) { <RbiText>@T["notifications.empty"]</RbiText> }
+    <div class="registry-controls"><RegistrySearch Id="notification-search" @bind-Value="_search" /></div>
+    @if (!Filtered.Any()) { <div class="registry-surface"><RegistryEmpty Body="@T["notifications.empty"]" /></div> }
     else
     {
-        <RbiTable AccessibleLabel="@T["notifications.title"]" Class="registry-notifications-table">
-            <caption>@T["notifications.title"]</caption>
+        <RbiTable AccessibleLabel="@T["notifications.title"]" Class="registry-table registry-notifications-table">
             <thead><tr><th scope="col">@T["notifications.purpose"]</th><th scope="col">@T["notifications.to"]</th><th scope="col">@T["notifications.subject"]</th><th scope="col">@T["notifications.status"]</th><th scope="col">@T["notifications.time"]</th></tr></thead>
             <tbody>@foreach (var entry in Filtered)
             {

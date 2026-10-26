@@ -35,8 +35,10 @@ test("unmapped authenticated identity gets virtual Guest reads but no forged Adm
 test("dashboard and navigation reflect actual DB baseline reads and privileged Admin modules", async ({ page, request }) => {
   await request.post("/__fixtures/forge-provider-admin", { headers }); await visit(page, "/app");
   const main = page.getByRole("main");
-  for (const path of ["physical-persons", "legal-persons", "limits", "capital", "reports", "notifications", "profile", "guide"]) await expect(main.locator(`a[href='/app/${path}']`)).toBeVisible();
-  for (const path of ["users", "period", "code-lists", "audit"]) await expect(main.locator(`a[href='/app/admin/${path}']`)).toHaveCount(admin ? 1 : 0);
+  for (const path of ["physical-persons", "legal-persons", "limits", "capital", "reports", "notifications"]) await expect(main.locator(`a[href='/app/${path}']`)).toBeVisible();
+  // Profile, guide and administration are shell navigation (as in the reference product), not dashboard cards.
+  for (const path of ["profile", "guide"]) await expect(page.locator(`a[href='/app/${path}']`).first()).toBeVisible();
+  for (const path of ["users", "period", "code-lists", "audit"]) await expect(page.locator(`aside a[href='/app/admin/${path}']`)).toHaveCount(admin ? 1 : 0);
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
 });
 test("template profile displays authenticated identity and current backend-owned grants, not forged provider roles", async ({ page, request }) => {
@@ -75,5 +77,5 @@ test("BS/EN resources, culture cookie and backend language remain consistent acr
   await expect(page.getByRole("option", { name: /Deutsch|German/ })).toHaveCount(0); await page.reload(); await interactive(page); await expect(page.getByRole("heading", { name: "User guide", exact: true })).toBeVisible();
   await page.getByRole("link", { name: "My profile", exact: true }).click(); await expect(page.getByRole("main").getByText("Application permissions", { exact: true })).toBeVisible();
   expect((await (await request.get("/__fixtures/culture", { headers })).json()).language).toBe("en");
-  await page.getByRole("link", { name: "Home", exact: true }).click(); await expect(page.getByRole("main").locator("a[href='/app/guide']")).toHaveText("User guide");
+  await page.getByRole("link", { name: "Overview", exact: true }).click(); await expect(page.getByRole("main").getByRole("link", { name: "Open Individuals", exact: true })).toBeVisible();
 });
