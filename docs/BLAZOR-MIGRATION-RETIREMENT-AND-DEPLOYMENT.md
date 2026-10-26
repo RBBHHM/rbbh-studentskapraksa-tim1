@@ -1,5 +1,13 @@
 # React retirement and native deployment candidate — 2026-10-23
 
+**Historical2026-10-23 checkpoint below.** On2026-10-26 the root workflows were
+consolidated and the wrapper/candidate/IIS scripts described below were removed.
+Do not run the historical script commands. Use the direct dotnet/docker commands
+in [README](../README.md) and the current [native pipeline](NATIVE-PIPELINE-2026-10-26.md).
+React remains untouched until Claude's visual commits are integrated and gates
+repeated. The two remaining React package.json script consumers and canonical
+solution rename are part of that final retirement, not this checkpoint.
+
 **Local module parity; production cutover NOT APPROVED.** `src/Web` is explicitly
 MIGRATION_REFERENCE. No React implementation or existing deployment was removed.
 

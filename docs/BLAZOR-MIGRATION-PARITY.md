@@ -1,5 +1,11 @@
 # Native Blazor migration parity tracker
 
+Current behavioral contract2026-10-26 supersedes the earlier membership boundary:
+unknown authenticated identities get virtual Guest, disabled identities do not.
+The global-period/durable-subject changes and fresh gates are in
+REACT-TO-BLAZOR-FINAL-HANDOFF.md. Visual parity integration is separately pending;
+PARITY below records local module behavior, not a pixel/cutover certificate.
+
 Inventory baseline2026-10-22; local closure updated2026-10-23.
 Status is evidence-based, not inferred from generated markup.
 Allowed states: NOT_STARTED, IN_PROGRESS, PARITY, INTENTIONAL_CHANGE, BLOCKED.
@@ -18,7 +24,7 @@ BLAZOR-MIGRATION-AUTHORIZATION.md for identity/application permission separation
 | `/app/legal-persons` | resident/nonresident CRUD/verify/import/export → native module | legal-entities, verification | PL_* | legal closure:17 new frontend tests,12 PL+2 Guest browser cases; preserves Matbroj/status | PARITY |
 | `/app/limits` | legal lookup/server-derived capital/CRUD/export → native module | limiti, legal-entities/*/limit-form-data | LIMITI_* | limits closure:13 added frontend tests,10 limiti+1 Guest browser cases, current-module regressions | PARITY |
 | `/app/capital` | optional singleton read/upsert/export → native module | capital | KAPITAL_VIEW / EDIT | capital closure:12 added frontend tests,7 Kapital+7 Admin browser cases,1 Guest case | PARITY |
-| `/app/reports` | archive/generate/download → native reporting module | reports | known active AppUser read; DB KAPITAL_CREATE generate/persist | original closure plus reconciled unknown/inactive/profile-outage membership denial; actual archive/download/persistence preserved | PARITY |
+| `/app/reports` | archive/generate/download → native reporting module | reports | virtual Guest read for authenticated identities not disabled; DB KAPITAL_CREATE generate/persist | unmapped Guest reads, disabled denial, no forged-provider grants; actual archive/download/persistence preserved | PARITY |
 | `/app/notifications` | email log → native recorded-notification list | email-log | DB KAPITAL_VIEW | notifications closure:6 browser cases × 6 current DB roles, no SMTP delivery claim or HTML rendering | PARITY |
 | `/app/admin/period` | lock/request/process/respond → native period workflow | period-lock | existing DB Admin UI route + unchanged CapitalRead/Write API | period closure:12 Admin browser cases +5-role denial,21 focused period tests; approved10..490 response limit | PARITY |
 | `/app/admin/users` | functional role/user administration → native module | users, roles | existing DB Admin route + ADMINISTRATION_* | users closure:9 Admin browser cases +5-role forged denial, create/multi-role/state/delete and28 HTTP safety regressions | PARITY |
@@ -84,7 +90,7 @@ may be weakened to manufacture completion.
 | 12 | legal export | legal-persons | PARITY: backend XLSX filename/ZIP bytes, real import/schema errors, Guest download |
 | 13 | create/edit/delete limit | limits | PARITY: real integer-ID CRUD, search/form-data, zero/null/negative amounts, filtered XLSX and permanent-delete confirmation |
 | 14 | capital view/upsert authorization | capital | PARITY: unset/null contract, real stable singleton upsert, Kapital/Admin write and Guest read/export |
-| 15 | reports read/download vs authorized generation | reports | PARITY: known active Guest archive/files; unknown/inactive denied including forged provider claims; profile failure invents no membership; Kapital/Admin persisted daily/monthly, no automatic POST retry, failed-download/uncertain-save recovery |
+| 15 | reports read/download vs authorized generation | reports | PARITY: virtual Guest archive/files for unmapped authenticated identities; disabled denied including forged provider claims; profile failure invents no grants; Kapital/Admin persisted daily/monthly, no automatic POST retry, failed-download/uncertain-save recovery |
 | 16 | lock period | admin/period | PARITY:real current lock/unlock and audit, no fabricated open fallback |
 | 17 | request unlock | admin/period | PARITY:real PENDING record and current backend period values |
 | 18 | process/respond to unlock request | admin/period | PARITY:reject/info/respond/new PENDING/approve and audit; approved10..490 boundaries with unchanged prefix/schema |
@@ -126,13 +132,14 @@ intact until cutover is accepted; never deploy two canonical frontends.
 Pkcs NU1902/NU1903 are locally remediated with9.0.21; JWT/OIDC HTTP metadata is
 restricted to Development loopback. See BLAZOR-MIGRATION-COMPLETION-SECURITY.md.
 React has only the new MIGRATION_REFERENCE marker; no implementation was removed.
-The tested native publish/manifest/ZIP and operator retirement gates are documented
-in BLAZOR-MIGRATION-RETIREMENT-AND-DEPLOYMENT.md.
+Direct native publish/container commands and operator retirement gates are in
+README.md and NATIVE-PIPELINE-2026-10-26.md; the earlier candidate wrappers are retired.
 
-SQL qualification: five disposable SQL Server LocalDB last-Admin tests now pass
-the real transaction-owned application-lock path; production multi-replica SQL
-acceptance is still external. F3 remains PARTIAL: subject-first/verified unique
-normalized-email lookup does not persist fallback sub. Real email_verified,
-approved subject-link backfill and Keycloak export/data reconciliation remain
-mandatory before production SSO cutover. PKCS9.0.21 is locally retained; fresh
-production vulnerability-feed confirmation is external, without warning suppression.
+SQL qualification: seven disposable SQL Server tests pass the actual last-Admin
+lock/concurrency path, unconfirmed-placeholder continuity and schema-upgrade/
+durable-subject audit proof. Production multi-replica SQL acceptance is external.
+F3 remains PARTIAL for production data: confirmed-sub lookup and controlled,
+verified unique-email first-link now persist the actual subject/time/audit.
+The first-link window is off by default. Real email_verified, approved backfill
+and actual Keycloak export/data reconciliation remain mandatory. PKCS9.0.21 is
+retained; public audit is green, corporate feed confirmation remains external.

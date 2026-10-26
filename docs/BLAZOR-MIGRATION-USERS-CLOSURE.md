@@ -1,5 +1,10 @@
 # Native user administration checkpoint
 
+Historical module checkpoint. Current2026-10-26: empty roles retain AppUser,
+status and subject metadata; active zero-role users have virtual Guest access.
+Guest is not assignable, disabled users stay denied, and final-Admin continuity
+counts only active confirmed subjects. See the current final handoff/runbook.
+
 2026-10-23. Local module closure only; no deployment cutover or real SSO/SQL claim.
 The approved backend safety change is separately committed as
 `de31a7ca5ca5841e93e550463f7abc5ac89c7b6b`.

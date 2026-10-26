@@ -3,6 +3,7 @@
 Baseline: `68d3e7f5c580e8da307a87ef017cb8a0099f5ec8`, branch
 `release-v1.0.6`. Business reporting decision approved by the owner on 2026-10-22.
 The checked-out source, not the older four-Keycloak-role description, is authoritative.
+Owner decisions2026-10-26 supersede the earlier unknown-not-Guest boundary: virtual Guest is the default; disabled identities remain denied.
 
 ## Identity versus application authority
 
@@ -10,15 +11,16 @@ The checked-out source, not the older four-Keycloak-role description, is authori
 |---|---|---|
 | Authenticated identity, subject, email | Keycloak in integrated environments | Blazor uses RBI.Authentication and ClaimsPrincipal, not keycloak-js or browser protocol code |
 | Application roles/permissions | Application DB: AppUsers, UserRoles, Roles, RolePermissions, Permissions | Backend checks protected operations; Blazor consumes the backend's effective permissions, never reads the DB |
-| Effective identity/permissions wire contract | Authenticated `GET /api/auth/profile` | Keep existing `{ userId, fullName, username, email, roles, permissions }`; do not replace with realm roles |
-| Known ACTIVE AppUser without assigned functional role | DB `gost` baseline | Read access only; authentication alone is not application membership |
-| Unknown or inactive authenticated identity | No application role/permission | Not Guest; no reporting access; never infer membership from provider roles |
+| Effective identity/permissions wire contract | Authenticated `GET /api/auth/profile` | Keep existing `{ userId, fullName, username, email, roles, permissions, applicationUserId }`; do not replace with realm roles |
+| Authenticated identity without explicit DB roles, including no AppUser row | Central virtual Guest baseline | Read/download; no stored gost assignment is required |
+| Inactive/explicitly disabled AppUser matched by subject/email | No effective application access | Never regain Guest through fallback |
 | Unconfigured local Blazor | Explicit signed-out/unconfigured state | No fabricated production identity; authenticated fixtures belong only in tests |
 
-The backend already stores `FL`, `PL`, `kapital`, `limiti`, `admin`, `gost`.
-These wire/database names remain unchanged; display names may use FL, PL,
-Kapital, Limiti, Admin and Guest. No DB migration, rename, reseed or Keycloak
-role reassignment is part of this bounded authorization change.
+Assignable DB roles are `FL`, `PL`, `kapital`, `limiti`, `admin`. Historical `gost`
+rows are tolerated but not exposed for assignment or required by runtime. Clearing
+roles retains AppUser/lifecycle/subject; active zero-role users become Guest.
+No realm role reassignment/reseed occurs. The separate additive subject-confirmation
+migration and approved production backfill are described in the identity runbook.
 
 The native RBI permission interface requires semantic dot names. An app-owned
 name adapter maps e.g. `fl.update`→`FL_EDIT`, `reports.generate`→`KAPITAL_CREATE`
@@ -34,10 +36,10 @@ platform's general "reporting is read-only for all" rule.
 
 | Screen/action | HTTP contract | Required backend policy | Allowed users |
 |---|---|---|---|
-| List daily reports | GET `/api/reports/daily?page&pageSize` | `reports.read`: authenticated + effective DB Guest baseline | Known active application users |
-| List monthly reports | GET `/api/reports/monthly?page&pageSize` | `reports.read` | Known active application users |
-| Download existing snapshot | GET `/api/reports/export/generated/{reportId}` | `reports.read` | Known active application users |
-| Download client/all clients | GET `/api/reports/export/client/{identifier}`, `/export/all-clients` | `reports.read` | Known active application users |
+| List daily reports | GET `/api/reports/daily?page&pageSize` | `reports.read`: authenticated + effective virtual Guest baseline | Authenticated, not explicitly disabled |
+| List monthly reports | GET `/api/reports/monthly?page&pageSize` | `reports.read` | Authenticated, not explicitly disabled |
+| Download existing snapshot | GET `/api/reports/export/generated/{reportId}` | `reports.read` | Authenticated, not explicitly disabled |
+| Download client/all clients | GET `/api/reports/export/client/{identifier}`, `/export/all-clients` | `reports.read` | Authenticated, not explicitly disabled |
 | GENERATE/PERSIST daily | POST `/api/reports/daily` | `reports.generate`: existing DB `KAPITAL_CREATE` permission | Kapital and Admin |
 | GENERATE/PERSIST monthly | POST `/api/reports/monthly/{year}/{month}` | `reports.generate`: existing DB `KAPITAL_CREATE` permission | Kapital and Admin |
 
@@ -107,7 +109,7 @@ Full post-change backend regression: 210 unit + 64 integration = **274 PASS**,
 zero failures/skips. Receipts: `artifacts/migration-auth/full-trx/` and
 `artifacts/migration-baseline/backend-after-authorization.log`.
 
-## Subsequent native reporting checkpoint
+## Historical native reporting checkpoint
 
 The native route/navigation/dashboard entry now implements the approved split,
 without a kapital.read gate on authenticated reporting read access. Backend
@@ -119,7 +121,7 @@ generation, safe uncertain outcomes and no automatic generation retry. Existing
 download/export audit entries remain; read/download does not create another
 business report snapshot. Earlier totals above describe their historical checkpoint.
 
-## Approved user-administration safety correction
+## User-administration safety correction (still enforced)
 
 The later users safety checkpoint preserves Keycloak identity and DB-owned
 permissions unchanged. It rejects self-deactivation/deletion (400) after resolving
@@ -157,7 +159,7 @@ Receipts: completion-matrix-{admin,gost,kapital,PL,limiti,FL}.log, 6/6 PASS.
 Earlier test totals and dependency warnings above are historical; current security
 remediation is in BLAZOR-MIGRATION-COMPLETION-SECURITY.md.
 
-## Security reconciliation — 2026-10-26
+## Historical security reconciliation at18702db — superseded by owner decision below
 
 JWT Audience is required outside Development, with token audience validation;
 unknown/inactive identities are not Guest. Effective reporting membership now
@@ -177,3 +179,25 @@ requires real email_verified verification, approved one-time subject-link
 backfill and Keycloak export/application-data reconciliation. No data migration
 was executed. See the current final handoff for integrated commits, exact fresh
 test totals and local SQL Server concurrency proof versus production limits.
+
+## Current owner-approved contract — 2026-10-26
+
+Unknown authenticated != disabled. Unknown/no explicit role means virtual Guest;
+confirmed or historical disabled identity means no access. Explicit grants come
+only from active DB mappings on the resolved confirmed identity. Guest read grants
+are central backend constants, not copies in Blazor. Forged provider roles and
+local-ID claims are stripped. Native navigation/dashboard/Reports/guide consume
+the backend effective profile, including applicationUserId for own-row protection.
+
+JWT Audience still fails closed outside Development. Human actions require
+ClaimTypes.Email before persistence/audit. Subject-first confirmed lookup never
+permits an email override; verified unique email first-link is controlled, durable,
+transactionally audited and off by default. Production export/backfill is not run.
+See IDENTITY-AND-PERIOD-HARDENING-2026-10-26.md and the final handoff.
+
+Period lock is GLOBAL for all mutation routes, independent of username/department.
+All corresponding native create/edit/delete/import/family/verify controls disable
+on lock or lookup failure. An open stale editor gets authoritative423, remains safe
+and cannot auto-retry. Reads/search/export remain. Reports generation remains the
+approved KAPITAL_CREATE side-effect exception; period administration retains its
+existing separate API permission and narrower Admin page guard.

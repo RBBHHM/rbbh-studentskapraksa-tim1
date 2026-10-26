@@ -1,5 +1,11 @@
 # Related Parties Register: React → native Blazor source inventory
 
+This preserves the inspected historical source contract. Current2026-10-26
+hardening removes department semantics from active period APIs/DTOs and makes
+Guest virtual; it adds explicit durable-subject confirmation metadata. See the
+[current authorization matrix](BLAZOR-MIGRATION-AUTHORIZATION.md) and
+[identity/period runbook](IDENTITY-AND-PERIOD-HARDENING-2026-10-26.md).
+
 Inspected baseline: `68d3e7f5c580e8da307a87ef017cb8a0099f5ec8`
 (`release-v1.0.6`), 2026-10-22. React remains the reference under `src/Web`;
 the existing API/BL/DL backend remains authoritative. This inventory is not a

@@ -1,5 +1,12 @@
 # Final local migration security pass — 2026-10-23
 
+Historical checkpoint, including the earlier reconciliation below. The owner
+decision2026-10-26 now gives unmapped authenticated identities virtual Guest;
+disabled identities remain denied. Durable controlled subject linking and its
+additive EF schema are implemented, with production data reconciliation still
+outstanding. Global period/actor/Admin-continuity and fresh validation evidence:
+[current handoff](REACT-TO-BLAZOR-FINAL-HANDOFF.md).
+
 Local remediation/regression evidence only. This is not production security,
 SSO, SQL or OCP approval. Historical closure receipts retain their original totals.
 

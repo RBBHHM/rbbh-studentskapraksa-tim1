@@ -14,7 +14,7 @@ This is not a published corporate release. Restore both new packages from the
 approved isolated local feed; do not overwrite/reuse older0.1.0 binaries.
 
 This is a side-by-side migration, **not the canonical production frontend yet**.
-React implementation and existing backend deployment remain unchanged; the old
+React implementation remains untouched while Claude validates visual parity; the old
 tree now has an explicit MIGRATION_REFERENCE marker. Consult
 `docs/BLAZOR-MIGRATION-{INVENTORY,AUTHORIZATION,PARITY}.md` at repository root.
 
@@ -64,8 +64,9 @@ is Development-only. Real environment provisioning is not proven by local tests.
 Keycloak authenticates identity/email. `GET /api/auth/profile` supplies the
 application's current DB-owned role/permission codes. The frontend never accesses
 the DB, assigns realm roles or infers application grants from provider claims.
-Reporting read requires a known active application user with DB Guest baseline
-or stronger; unknown/inactive authenticated identities receive no access.
+Reporting read uses the centrally defined virtual Guest baseline for authenticated
+identities without explicit roles, including no AppUser row. Explicitly disabled
+identities receive no access; Guest is not an assignable checkbox or stored-role requirement.
 Persisted generation requires the backend's
 `KAPITAL_CREATE` permission (Kapital/Admin). API enforcement remains authoritative.
 The app adapts RBI semantic permission names (for example `reports.generate`)
@@ -75,24 +76,24 @@ RBI.Localization discovers only app-owned BS/EN catalogs, with BS default. The
 removed inherited DE starter catalog is not an advertised business language.
 Theme/sidebar/controls remain package-owned; only app layout composition is local.
 
-The nested generated workflow examples are not active root deployment workflows.
-Do not activate/cut over deployment until publish/startup, full module parity,
-responsive/accessibility and integrated environment gates are accepted.
+Nested workflows have been removed. The three canonical root workflows build/push
+native web/API, scan with CodeQL and deploy a digest-pinned OCP image. See
+../../docs/NATIVE-PIPELINE-2026-10-26.md for required environment configuration.
+Do not cut over before Claude visual parity and integrated environment gates.
 
-The earlier a24e239 checkpoint passed 520 .NET and 209 browser tests, plus Release
+Historical evidence: the a24e239 checkpoint passed 520 .NET and 209 browser tests, plus Release
 publish and actual published signed-out startup. The final completion gate and
 additional localization/HTTP authorization evidence are recorded in
 `docs/REACT-TO-BLAZOR-FINAL-HANDOFF.md` at repository root:594 .NET and237 browser
 passes. It also lists the still-blocked SSO/shared cache/SQL/SMTP/OCP gates. Pkcs advisories
 are now locally patched; deployed runtime/security acceptance remains separate.
-Use repository scripts/Publish-BlazorCandidate.ps1 and
-scripts/testing/Test-BlazorPublished.ps1 for the explicit native artifact/probe;
-see docs/BLAZOR-MIGRATION-RETIREMENT-AND-DEPLOYMENT.md for the full gated procedure.
+Candidate wrapper scripts were retired. Use direct dotnet publish/run and docker
+build commands in the root README; current evidence is in the final handoff.
 Local green tests do not authorize React retirement or production cutover.
 
 Security reconciliation: JWT Audience fails closed outside Development;
-self role-management is server-rejected and disabled on the own row; Capital
-and physical/legal verification follow period-lock enforcement. F3 remains
-PARTIAL: subject-first and verified unique normalized-email lookup work, but
-fallback does not persist sub. Real email_verified, approved one-time subject-link
-backfill and Keycloak export/data reconciliation remain production cutover gates.
+self role-management is server-rejected and disabled on the own row; all physical/legal/family/import/limits/Capital mutations follow one global period,
+with locked/unavailable controls disabled and backend423 for stale forms.
+F3 code/schema now support durable controlled subject first-link, disabled by default.
+Real email_verified, approved one-time subject-link backfill and Keycloak export/data
+reconciliation remain production cutover gates. See the identity/period runbook.

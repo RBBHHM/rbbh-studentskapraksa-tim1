@@ -1,5 +1,143 @@
 # Related Parties Register — native Blazor handoff
 
+## Current hardening result — 2026-10-26, after18702db
+
+**LOCAL BEHAVIOR/SECURITY VERIFIED; VISUAL RECONCILIATION AND PRODUCTION CUTOVER
+OUTSTANDING.** Owner decisions supersede the earlier unknown-not-Guest rule.
+No push, live data migration, realm lookup or OCP deployment was performed.
+
+Implementation commits:341e869 (backend hardening),4c95e44 (native behavior),
+c274356 (canonical pipeline),e9d0be2 (confirmed-Admin continuity). The following
+documentation commit records this evidence; its final HEAD is reported separately.
+
+- Human actors use ClaimTypes.Email before action execution; missing email401
+  cannot persist/audit/send. Eleven original fallback occurrences were removed
+  from nine controllers, including the fabricated PeriodLock email. Explicit
+  recipients/senders come from configuration; missing required unlock recipient503
+  precedes persistence. Real delivery providers validate startup configuration.
+  The scheduler's explicit non-human system actor is not a human fallback.
+- Identity source: Keycloak. Explicit roles/permissions: active application DB.
+  Only FL, PL, limiti, kapital, admin are assignable. Guest is a central virtual
+  effective baseline for authenticated identities without explicit mapping,
+  including no AppUser row. Disabled subject/email matches remain denied.
+  Clearing roles retains AppUser/lifecycle/link; no Gost checkbox or stored mapping
+  is required. Confirmed subject grants survive email changes; provider grants
+  and forged local-ID claims never establish application access.
+  Final-Admin continuity counts confirmed active subjects only: an unconfirmed
+  Admin placeholder cannot stand in for the last usable Admin.
+- Reporting READ/DOWNLOAD follows virtual Guest, while GENERATE/PERSIST still
+  requires KAPITAL_CREATE (Kapital/Admin). Self role-management/self deletion/
+  deactivation and final-active-Admin protections remain server-side. The native
+  own-row action uses recomputed applicationUserId where available.
+- Period locking is GLOBAL. No username-prefix inference or department API/DTO
+  remains. Historical Department storage is retained; noncanonical rows fail closed
+  pending operator reconciliation. All physical/legal/family/import/verify,
+  limits and capital mutations disable on locked/unavailable state. Stale editors
+  receive423, keep drafts and disable Save without automatic retry.
+- **F3 PARTIAL: code/schema ready; production identity reconciliation outstanding.**
+  EF20261026115804 adds confirmation/time metadata, leaves placeholders untrusted
+  and does not backfill users. Confirmed sub lookup is first. Verified unique
+  normalized email may link exactly once only with explicit first-link approval,
+  disabled by default. Link/time/audit persist transactionally; confirmed subject
+  is never overridden by email. Actual realm email_verified, approved manifest,
+  subject backfill and real export/data reconciliation remain external.
+  Exact schema/backfill and historical-period procedures:
+  [identity/period runbook](IDENTITY-AND-PERIOD-HARDENING-2026-10-26.md).
+  [Per-occurrence identity inventory](IDENTITY-OCCURRENCE-INVENTORY-2026-10-26.csv)
+  classifies test/development/configuration and removed production bugs.
+
+### Fresh validation
+
+| Gate | Result |
+|---|---|
+| Full .NET Release suite | **624 PASS**, zero failed/skipped: backend unit265 + integration149 + frontend210 |
+| Backend total | **414 PASS**, included above |
+| SQL Server/LocalDB | **7/7 PASS**: five existing last-Admin HTTP/concurrency cases + unconfirmed-placeholder continuity + actual previous-schema upgrade/durable subject-link/audit |
+| Native browser | **247/247 PASS**: Admin77, gost27, Kapital40, PL35, Limiti31, FL37; workers1/retries0, zero flaky/skipped |
+| Axe | **37 passing cases /45 scans**, no violations; subset of247 |
+| 375px | **23 passing cases**, subset of247 |
+| Release/analyzers | PASS, zero warnings/errors |
+| Changed C# format verification | PASS, existing workspace-load diagnostic warning only; no Legacy formatting |
+| Release publish | Native web and backend PASS |
+| Published native startup |14 routes200 signed-out, RBI CSS200, unconfigured login404 |
+| Published API startup | live/ready200; explicit isolated Development/InMemory identity gets virtual Guest, no Admin/AppUser ID |
+| Workflows | actionlint PASS;18 Bash blocks parse;2 rendered digest-pinned manifests validate; no remote execution |
+| Docker | BLOCKED: daemon pipe unavailable; no image success claimed |
+| Pkcs9.0.21 audit | Reachable public NuGet audit: no vulnerable packages; corporate feed DNS failure, corporate confirmation still external |
+| Diff check | git diff --check PASS |
+
+Full Release TRX and per-role browser JSON verify actual totals and zero skips.
+Receipts: artifacts/migration-template/hardening-{dotnet-release,build-release,
+format-verify,publish-web,publish-api,startup-web,startup-api,actionlint,
+workflow-smoke,audit-public,audit-corporate,browser-<role>}.log;
+TRX: artifacts/hardening-final-test-results; browser: artifacts/migration-browser/<role>.
+Focused stale-editor PL/Limiti/FL cases passed before the final full browser run.
+Their original red logs/traces remain in hardening-stale-editor-red: they proved
+the parent-render-after423 defect, which was fixed without weakening assertions.
+Final-Admin follow-up: four new real HTTP red tests proved that an unconfirmed
+placeholder was incorrectly counted; all four now reject role removal, clearing,
+deactivation and deletion. A dedicated SQL test repeats the four operations.
+Focused users/SQL rerun:51/51 PASS, zero skips (hardening-admin-final-focused.log);
+original red proof:hardening-unconfirmed-admin-red.log. These are subsets, not
+additional tests added to624.
+A subsequent Admin run lost its fixture host after16 passing cases; the remaining
+61 failed on connection refusal, not product assertions. Cause of the process
+exit was not established. Its log/JSON are preserved as
+hardening-admin-host-loss-red.{log,json}. An isolated diagnostic run with no
+parallel builds then passed77/77, workers1/retries0; the other five roles passed
+on the final backend. Final per-role JSON totals are247, zero unexpected/flaky/
+skipped. This documents the interrupted run rather than counting it as success.
+NU1900/NU1902/NU1903 were not suppressed.
+
+Startup probes remain on loopback5291 (published signed-out web),5293 (final
+published isolated Development API) and5292 (earlier isolated API probe), because
+automatic execution review rejected
+the original combined start/check/stop command. That rejected command started or
+stopped nothing; the safer checks did not stop any process. Existing5000/5080 and
+the occupied5273 host were untouched. The API smoke uses an empty synthetic local
+.env and explicit SQL/Keycloak overrides; no real credentials/environment were read.
+This is not production SSO or SQL readiness certification.
+
+### Repository and remaining work
+
+Exactly three repository workflows remain at root: build-and-push-image.yml,
+codeql.yml, deploy-to-ocp.yml. Native web/API build separately after gates; commit
+tags are not overwritten, deploy requires a full commit tag and pins its digest.
+TLS is verified, UAT is not Development, configuration/Secrets are mandatory.
+CodeQL scans the maintained solution/native JS/TS. No workflow was run remotely.
+[Pipeline setup](NATIVE-PIPELINE-2026-10-26.md) lists environment/runner/feed gates.
+
+Removed: duplicate old .yaml workflows, both nested workflows, Makefile,
+build/restore/test/dev-web .cmd wrappers, IIS deployment and candidate publish/probe
+scripts. Only scripts/dev-api.cmd and scripts/testing/Test-LocalApi.ps1 remain
+temporarily because the untouched React reference package.json calls them.
+README uses direct dotnet/docker commands; no replacement wrapper was introduced.
+
+src/Web remains **untouched**. Claude's visual commit ff2d173 now exists and its
+report was reviewed: Admin74/75 before an unrerun correction, five roles not run,
+and incomplete dark/mobile visual evidence. Final-batch readiness is unconfirmed;
+it has not been cherry-picked. Review/reconcile the confirmed final visual
+commits, rerun all gates, then retire React/runtime/tooling in a bounded
+change. At that point remove the two remaining React consumers and review the
+canonical solution rename, updating test-root discovery and workflows together.
+The migration .slnx is currently the obvious full backend/native/test solution;
+the old backend-only .sln is not the native release gate.
+
+External blockers: actual realm verified-email/sub/export/backfill acceptance;
+production SQL migration/reconciliation and deployed concurrency permissions;
+SMTP/HTTP mail recipients/delivery; approved RBI package publication/private feed;
+shared cache/DataProtection/multi-pod/proxy/circuit/TLS; protected Actions/OCP
+runner/registry access and accepted immutable artifacts; corporate advisory-feed
+and runtime servicing confirmation. Local green tests do not authorize cutover.
+User-owned tests/Web.Blazor.BrowserHost/Properties/launchSettings.json is untouched
+(SHA25607DAA11FF2D5D953B78D8FE4C7209AF625C3D76F2FBEC747986EB6F8DF39EC93).
+
+## Historical reconciliation at18702db — retained checkpoint
+
+Everything below describes the earlier checkpoint, including its old Guest/F3,
+workflow/schema/script statements and594/237 totals. It is not the current
+contract; the current section above and owner decisions explicitly supersede it.
+
 Reconciliation updated2026-10-26. **LOCAL PARITY VERIFIED; production cutover BLOCKED.**
 This is an honest handoff of a side-by-side native implementation, not a claim
 that live SQL/SSO/OCP acceptance has passed. Never deploy two canonical frontends.
