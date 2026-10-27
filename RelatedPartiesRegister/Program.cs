@@ -90,12 +90,11 @@ app.MapGet("/authentication/logout", () =>
         [Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme, "KeycloakOidc"]));
 app.MapGet("/api/auth/profile", (HttpContext context) => Results.Ok(new
 {
-    userId = context.User.FindFirst("sub")?.Value
-        ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value,
+    userId = RBBH.ConnectedParties.Helpers.AuthenticatedActor.Subject(context.User),
     fullName = context.User.FindFirst("name")?.Value ?? context.User.Identity?.Name,
     username = context.User.FindFirst("preferred_username")?.Value,
     email = context.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value,
-    applicationUserId = context.User.FindFirst("rbbh.app_user_id")?.Value,
+    applicationUserId = context.User.FindFirst(RBBH.ConnectedParties.Helpers.AuthenticatedActor.ApplicationUserIdClaim)?.Value,
     roles = context.User.FindAll(System.Security.Claims.ClaimTypes.Role).Select(claim => claim.Value).Distinct(),
     permissions = context.User.FindAll("permission").Select(claim => claim.Value).Distinct()
 })).RequireAuthorization();

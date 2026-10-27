@@ -5,6 +5,25 @@ namespace UnitTests.Authentication;
 
 public sealed class AuthenticatedActorTests
 {
+    [Fact]
+    public void SnapshotPreservesRawSubjectPrecedenceAndTrustedLocalId()
+    {
+        var id = Guid.NewGuid();
+        var principal = new ClaimsPrincipal(new ClaimsIdentity([
+            new("sub", " raw-subject "), new(ClaimTypes.NameIdentifier, "mapped-subject"),
+            new(ClaimTypes.Email, " actor@example.test "), new(AuthenticatedActor.ApplicationUserIdClaim, id.ToString())], "Fixture"));
+        Assert.Equal(new ActorIdentity(" raw-subject ", "actor@example.test", id), AuthenticatedActor.Capture(principal));
+    }
+
+    [Fact]
+    public void SnapshotFallsBackToMappedSubjectWithoutInventingLocalId()
+    {
+        var principal = new ClaimsPrincipal(new ClaimsIdentity([
+            new(ClaimTypes.NameIdentifier, "mapped-subject"), new(ClaimTypes.Email, "actor@example.test"),
+            new(AuthenticatedActor.ApplicationUserIdClaim, "invalid")], "Fixture"));
+        Assert.Equal(new ActorIdentity("mapped-subject", "actor@example.test", null), AuthenticatedActor.Capture(principal));
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]

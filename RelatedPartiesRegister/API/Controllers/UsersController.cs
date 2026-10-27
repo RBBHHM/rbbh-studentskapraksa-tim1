@@ -1,13 +1,9 @@
 using RBBH.ConnectedParties.API.Controllers.BaseController;
 using RBBH.ConnectedParties.BL.ServiceInterfaces;
-using RBBH.ConnectedParties.BL.Services;
 using RBBH.ConnectedParties.DL.DTO.Roles;
 using RBBH.ConnectedParties.DL.DTO.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using RBBH.ConnectedParties.DL.Persistence;
-using RBBH.ConnectedParties.DL.Entities.Users;
 using RBBH.ConnectedParties.Helpers.Constants;
 
 namespace RBBH.ConnectedParties.API.Controllers;
@@ -19,17 +15,10 @@ namespace RBBH.ConnectedParties.API.Controllers;
 [ApiController]
 [Route("api/users")]
 [Authorize(Policy = ApplicationPolicies.AdministrationRead)]
-public class UsersController(IAppUserService appUserService, KeycloakAdminService keycloakAdmin, IAuditService audit, ConnectedPartiesDbContext db)
+public class UsersController(IAppUserService appUserService)
     : BaseResuItController
 {
     private readonly IAppUserService _appUserService = appUserService;
-    private readonly KeycloakAdminService _keycloakAdmin = keycloakAdmin;
-    private readonly IAuditService _audit = audit;
-    private readonly ConnectedPartiesDbContext _db = db;
-
-    private string CurrentUsername() =>
-        RBBH.ConnectedParties.Helpers.AuthenticatedActor.Email(User);
-
     /// <summary>
     /// Returns a paged list of all users.
     /// </summary>
@@ -72,111 +61,10 @@ public class UsersController(IAppUserService appUserService, KeycloakAdminServic
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<object>> AssignOrUpdateUserRole(
-        [FromRoute] string userId,
-        [FromBody] AssignRoleRequestDTO request)
-        => await WithMutationBoundary(async () =>
-    {
-        var roleIds = request.EffectiveRoleIds;
-        var localRoles = await _db.Roles
-            .Where(role => roleIds.Contains(role.Id) && role.IsActive)
-            .ToListAsync();
-        if (localRoles.Count != roleIds.Count || localRoles.Any(role => !ApplicationAccessRoles.Assignable.Contains(role.Name)))
-            return BadRequest(new ProblemDetails { Title = "Neispravna rola", Detail = "Jedna ili više odabranih aplikacijskih rola nije ispravna." });
-
-        AppUser? localUser = null;
-        if (Guid.TryParse(userId, out var localUserId))
-            localUser = await _db.AppUsers.FindAsync(localUserId);
-        localUser ??= await _db.AppUsers.FirstOrDefaultAsync(user => user.KeycloakId == userId);
-        if (localUser is null)
-            return NotFound(new ProblemDetails { Title = "Korisnik nije pronađen" });
-
-        if (!localRoles.Any(role => role.Name == ApplicationAccessRoles.Administrator)
-            && await IsFinalActiveAdmin(localUser))
-            return FinalAdminConflict();
-
-        // Role assignment is an administrative action on another user. This covers
-        // adding, replacing and clearing. Clearing retains identity/lifecycle state.
-        if (IsSelf(localUser))
-            return BadRequest(new ProblemDetails { Title = "Promjena nije dozvoljena", Detail = "Ne možete mijenjati vlastite aplikacijske role." });
-
-        var isRemoval = roleIds.Count == 0;
-        if (isRemoval)
-        {
-            var assignments = await _db.UserRoles.Where(item => item.UserId == localUser.Id).ToListAsync();
-            _db.UserRoles.RemoveRange(assignments);
-        }
-        else
-            await ReplaceLocalRoles(localUser.Id, roleIds);
-        await _db.SaveChangesAsync();
-
-        await _audit.LogAsync(new AuditEntry
-        {
-            TableName = "AppUser",
-            RecordId = userId,
-            Action = isRemoval ? "ROLE_REMOVE" : "ROLE_ASSIGN",
-            NewValues = System.Text.Json.JsonSerializer.Serialize(new { Roles = localRoles.Select(role => role.Name) }),
-            UserId = CurrentUsername(),
-            Username = CurrentUsername(),
-            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-        });
-
-        return Ok(new { message = "Role korisnika su uspješno ažurirane.", roles = localRoles.Select(role => role.Name) });
-    });
-
-    private Task<ActionResult<object>> WithMutationBoundary(Func<Task<ActionResult<object>>> mutation) =>
-        UsersMutationBoundary.ExecuteAsync(_db, mutation,
-            () => (ActionResult<object>)Conflict(new ProblemDetails
-            {
-                Title = "Promjena trenutno nije moguća",
-                Detail = "Upravljanje korisnicima je zauzeto. Osvježite podatke i pokušajte ponovo."
-            }), HttpContext.RequestAborted);
-
-    private async Task<AppUser?> ResolveUser(string id)
-    {
-        var local = Guid.TryParse(id, out var localId) ? await _db.AppUsers.FindAsync(localId) : null;
-        return local ?? await _db.AppUsers.SingleOrDefaultAsync(user => user.KeycloakId == id);
-    }
-
-    private bool IsSelf(AppUser target)
-    {
-        var subject = User.FindFirst("sub")?.Value
-            ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        var email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
-        // Local ID is stripped and recomputed by RoleClaimsTransformation, never request supplied.
-        return (Guid.TryParse(User.FindFirst("rbbh.app_user_id")?.Value, out var localId) && target.Id == localId)
-            || (target.KeycloakSubjectConfirmed && !string.IsNullOrWhiteSpace(subject) && string.Equals(target.KeycloakId, subject, StringComparison.Ordinal))
-            || (!string.IsNullOrWhiteSpace(email) && string.Equals(target.Email.Trim(), email.Trim(), StringComparison.OrdinalIgnoreCase));
-    }
-
-    private async Task<bool> IsFinalActiveAdmin(AppUser target)
-    {
-        // An unconfirmed placeholder cannot authenticate into its assigned Admin
-        // grant, so it cannot guarantee continuity of actual Admin access.
-        var activeAdmins = await _db.AppUsers.Where(user => user.IsActive && user.KeycloakSubjectConfirmed)
-            .Join(_db.UserRoles.Where(assignment => assignment.IsActive), user => user.Id, assignment => assignment.UserId,
-                (user, assignment) => new { user.Id, assignment.RoleId })
-            .Join(_db.Roles.Where(role => role.IsActive && role.Name == ApplicationAccessRoles.Administrator),
-                assignment => assignment.RoleId, role => role.Id, (assignment, role) => assignment.Id)
-            .Distinct().ToListAsync();
-        return activeAdmins.Contains(target.Id) && activeAdmins.Count == 1;
-    }
-
-    private ConflictObjectResult FinalAdminConflict() => Conflict(new ProblemDetails
-    {
-        Title = "Promjena nije dozvoljena",
-        Detail = "U sistemu mora ostati najmanje jedan aktivni Admin korisnik."
-    });
-
-    private async Task ReplaceLocalRoles(Guid userId, IReadOnlyCollection<Guid> roleIds)
-    {
-        var existing = await _db.UserRoles.Where(item => item.UserId == userId).ToListAsync();
-        foreach (var item in existing)
-            item.IsActive = roleIds.Contains(item.RoleId);
-
-        var existingRoleIds = existing.Select(item => item.RoleId).ToHashSet();
-        foreach (var roleId in roleIds.Where(roleId => !existingRoleIds.Contains(roleId)))
-            _db.UserRoles.Add(new DL.Entities.Role.UserRole { UserId = userId, RoleId = roleId, CreatedBy = CurrentUsername() });
-    }
+        [FromRoute] string userId, [FromBody] AssignRoleRequestDTO request) =>
+        MutationResponse(await _appUserService.ReplaceRolesAsync(userId, request.EffectiveRoleIds,
+            RBBH.ConnectedParties.Helpers.AuthenticatedActor.Capture(User), RemoteIp, HttpContext.RequestAborted),
+            "Role korisnika su uspješno ažurirane.");
 
     /// <summary>Soft-deactivates the application privilege mapping.</summary>
     [HttpDelete("{userId}")]
@@ -184,84 +72,63 @@ public class UsersController(IAppUserService appUserService, KeycloakAdminServic
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<object>> DeactivateUser(
-        [FromRoute] string userId)
-        => await WithMutationBoundary(async () =>
-    {
-        var localUser = await ResolveUser(userId);
-        if (localUser is null) return NotFound(new ProblemDetails { Title = "Korisnik nije pronađen" });
-        if (IsSelf(localUser))
-            return BadRequest(new { errors = new[] { new { field = (string?)null, message = "Ne možete deaktivirati vlastiti nalog." } } });
-        if (await IsFinalActiveAdmin(localUser)) return FinalAdminConflict();
-        localUser.IsActive = false;
-        localUser.ModifiedAt = DateTime.UtcNow;
-        localUser.ModifiedBy = CurrentUsername();
-        await _db.SaveChangesAsync();
-
-        await _audit.LogAsync(new AuditEntry
-        {
-            TableName = "AppUser",
-            RecordId = userId,
-            Action = "DEACTIVATE",
-            OldValues = System.Text.Json.JsonSerializer.Serialize(new { IsActive = true }),
-            NewValues = System.Text.Json.JsonSerializer.Serialize(new { IsActive = false }),
-            UserId = CurrentUsername(),
-            Username = CurrentUsername(),
-            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-        });
-        return Ok(new { message = "Korisnik uspješno deaktiviran." });
-    });
+    public async Task<ActionResult<object>> DeactivateUser([FromRoute] string userId) =>
+        MutationResponse(await _appUserService.DeactivateAsync(userId,
+            RBBH.ConnectedParties.Helpers.AuthenticatedActor.Capture(User), RemoteIp, HttpContext.RequestAborted),
+            "Korisnik uspješno deaktiviran.");
 
     /// <summary>Reactivates a previously deactivated user.</summary>
     [HttpPost("{userId}/reactivate")]
     [Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
-    public async Task<ActionResult<object>> ReactivateUser([FromRoute] string userId)
-    {
-        AppUser? localUser = Guid.TryParse(userId, out var localId)
-            ? await _db.AppUsers.IgnoreQueryFilters().FirstOrDefaultAsync(user => user.Id == localId)
-            : await _db.AppUsers.IgnoreQueryFilters().FirstOrDefaultAsync(user => user.KeycloakId == userId);
-        if (localUser is null) return NotFound(new ProblemDetails { Title = "Korisnik nije pronađen" });
-        localUser.IsActive = true;
-        localUser.ModifiedAt = DateTime.UtcNow;
-        localUser.ModifiedBy = CurrentUsername();
-        await _db.SaveChangesAsync();
-
-        await _audit.LogAsync(new AuditEntry
-        {
-            TableName = "AppUser",
-            RecordId = userId,
-            Action = "REACTIVATE",
-            OldValues = System.Text.Json.JsonSerializer.Serialize(new { IsActive = false }),
-            NewValues = System.Text.Json.JsonSerializer.Serialize(new { IsActive = true }),
-            UserId = CurrentUsername(),
-            Username = CurrentUsername(),
-            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-        });
-        return Ok(new { message = "Korisnik uspješno reaktiviran." });
-    }
+    public async Task<ActionResult<object>> ReactivateUser([FromRoute] string userId) =>
+        MutationResponse(await _appUserService.ReactivateAsync(userId,
+            RBBH.ConnectedParties.Helpers.AuthenticatedActor.Capture(User), RemoteIp, HttpContext.RequestAborted),
+            "Korisnik uspješno reaktiviran.");
 
     /// <summary>Permanently removes a user after explicit confirmation in the UI.</summary>
     [HttpDelete("{userId}/permanent")]
     [Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
-    public async Task<ActionResult<object>> DeleteUser([FromRoute] string userId)
-        => await WithMutationBoundary(async () =>
-    {
-        var localUser = await ResolveUser(userId);
-        if (localUser is null)
-            return NotFound(new ProblemDetails { Title = "Korisnik nije pronađen" });
-        if (IsSelf(localUser))
-            return BadRequest(new ProblemDetails { Title = "Brisanje nije dozvoljeno", Detail = "Ne možete obrisati vlastiti nalog." });
-        if (await IsFinalActiveAdmin(localUser)) return FinalAdminConflict();
+    public async Task<ActionResult<object>> DeleteUser([FromRoute] string userId) =>
+        MutationResponse(await _appUserService.DeleteAsync(userId,
+            RBBH.ConnectedParties.Helpers.AuthenticatedActor.Capture(User), RemoteIp, HttpContext.RequestAborted),
+            "Korisnik je obrisan.");
 
-        if (localUser is not null)
+    private string? RemoteIp => HttpContext.Connection.RemoteIpAddress?.ToString();
+
+    private ActionResult<object> MutationResponse(UserMutationResult result, string message) => result.Status switch
+    {
+        UserMutationStatus.Success => result.Roles is { } roles ? Ok(new { message, roles }) : Ok(new { message }),
+        UserMutationStatus.NotFound => NotFound(new ProblemDetails { Title = "Korisnik nije pronađen" }),
+        UserMutationStatus.InvalidRoles => BadRequest(new ProblemDetails
         {
-            var assignments = await _db.UserRoles.Where(role => role.UserId == localUser.Id).ToListAsync();
-            _db.UserRoles.RemoveRange(assignments);
-            _db.AppUsers.Remove(localUser);
-            await _db.SaveChangesAsync();
-        }
-        await _audit.LogAsync(new AuditEntry { TableName = "AppUser", RecordId = userId, Action = "DELETE", UserId = CurrentUsername(), Username = CurrentUsername(), IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() });
-        return Ok(new { message = "Korisnik je obrisan." });
-    });
+            Title = "Neispravna rola",
+            Detail = "Jedna ili više odabranih aplikacijskih rola nije ispravna."
+        }),
+        UserMutationStatus.FinalAdmin => Conflict(new ProblemDetails
+        {
+            Title = "Promjena nije dozvoljena",
+            Detail = "U sistemu mora ostati najmanje jedan aktivni Admin korisnik."
+        }),
+        UserMutationStatus.SelfRoles => BadRequest(new ProblemDetails
+        {
+            Title = "Promjena nije dozvoljena",
+            Detail = "Ne možete mijenjati vlastite aplikacijske role."
+        }),
+        UserMutationStatus.SelfDeactivate => BadRequest(new
+        {
+            errors = new[] { new { field = (string?)null, message = "Ne možete deaktivirati vlastiti nalog." } }
+        }),
+        UserMutationStatus.SelfDelete => BadRequest(new ProblemDetails
+        {
+            Title = "Brisanje nije dozvoljeno",
+            Detail = "Ne možete obrisati vlastiti nalog."
+        }),
+        UserMutationStatus.Busy => Conflict(new ProblemDetails
+        {
+            Title = "Promjena trenutno nije moguća",
+            Detail = "Upravljanje korisnicima je zauzeto. Osvježite podatke i pokušajte ponovo."
+        }),
+        _ => throw new InvalidOperationException("Unknown user mutation outcome.")
+    };
 }

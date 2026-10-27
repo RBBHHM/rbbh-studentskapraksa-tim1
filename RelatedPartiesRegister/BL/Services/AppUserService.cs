@@ -3,13 +3,12 @@ using RBBH.ConnectedParties.DL.DTO.Users;
 using RBBH.ConnectedParties.DL.Persistence;
 using RBBH.ConnectedParties.DL.Entities.Users;
 using RBBH.ConnectedParties.Exceptions.Validations;
-using Mapster;
 using Microsoft.EntityFrameworkCore;
 using RBBH.ConnectedParties.Helpers.Constants;
 
 namespace RBBH.ConnectedParties.BL.Services;
 
-public class AppUserService(ConnectedPartiesDbContext dbContext, KeycloakAdminService keycloakAdmin, IAuditService audit) : IAppUserService
+public partial class AppUserService(ConnectedPartiesDbContext dbContext, KeycloakAdminService keycloakAdmin, IAuditService audit) : IAppUserService
 {
     private readonly ConnectedPartiesDbContext _db = dbContext;
     private readonly KeycloakAdminService _keycloakAdmin = keycloakAdmin;
@@ -20,26 +19,6 @@ public class AppUserService(ConnectedPartiesDbContext dbContext, KeycloakAdminSe
     {
         page = Math.Max(page, 1);
         pageSize = Math.Clamp(pageSize, 1, 200);
-        var users = await GetUsersFromDbAsync(search, role);
-
-        var total = users.Count;
-        var paged = users
-            .OrderBy(u => u.LastName).ThenBy(u => u.FirstName)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToList();
-
-        return Result<GetUsersResponseDTO>.Success(new GetUsersResponseDTO
-        {
-            Users = paged,
-            Total = total,
-            Page = page,
-            PageSize = pageSize
-        });
-    }
-
-    private async Task<List<UserDTO>> GetUsersFromDbAsync(string? search, string? role)
-    {
         var query = _db.AppUsers.AsNoTracking().AsQueryable();
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -65,7 +44,16 @@ public class AppUserService(ConnectedPartiesDbContext dbContext, KeycloakAdminSe
         var grants = await _db.RolePermissions.Where(mapping => mapping.Role.IsActive && mapping.Permission.IsActive)
             .Select(mapping => new { Role = mapping.Role.Name, Permission = mapping.Permission.Code }).ToListAsync();
 
-        var result = users.Select(u => new UserDTO
+        // Preserve culture-sensitive in-memory ordering and role comparison. Only
+        // materialize permission lists/DTOs for the requested page (at most 200).
+        var matching = users.AsEnumerable();
+        if (!string.IsNullOrWhiteSpace(role))
+            matching = matching.Where(user => rolesByUser.TryGetValue(user.Id, out var assigned)
+                && assigned.Contains(role, StringComparer.OrdinalIgnoreCase));
+        var filtered = matching.ToList();
+        var pageUsers = filtered.OrderBy(user => user.LastName).ThenBy(user => user.FirstName)
+            .Skip((page - 1) * pageSize).Take(pageSize);
+        var result = pageUsers.Select(u => new UserDTO
         {
             Id = u.Id,
             Username = u.Username,
@@ -79,9 +67,13 @@ public class AppUserService(ConnectedPartiesDbContext dbContext, KeycloakAdminSe
                 .Select(grant => grant.Permission).Concat(RolePermissionMatrix.PermissionsByRole[ApplicationAccessRoles.Guest])
                 .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList() : []
         }).ToList();
-        if (!string.IsNullOrWhiteSpace(role))
-            result = result.Where(user => user.Roles.Contains(role, StringComparer.OrdinalIgnoreCase)).ToList();
-        return result;
+        return Result<GetUsersResponseDTO>.Success(new GetUsersResponseDTO
+        {
+            Users = result,
+            Total = filtered.Count,
+            Page = page,
+            PageSize = pageSize
+        });
     }
 
     public async Task<Result<UserDTO>> CreateUserAsync(CreateUserDTO dto, string createdBy, string? ipAddress = null)

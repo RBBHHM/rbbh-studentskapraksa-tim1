@@ -13,7 +13,7 @@ public sealed class ApplicationIdentityResolver(ConnectedPartiesDbContext db, IC
     public async Task<ApplicationIdentity> ResolveAsync(ClaimsPrincipal principal)
     {
         if (principal.Identity?.IsAuthenticated != true) return new(null, true);
-        var subject = (principal.FindFirst("sub")?.Value ?? principal.FindFirst(ClaimTypes.NameIdentifier)?.Value)?.Trim();
+        var subject = RBBH.ConnectedParties.Helpers.AuthenticatedActor.Subject(principal)?.Trim();
         if (!string.IsNullOrEmpty(subject))
         {
             var confirmed = await db.AppUsers.IgnoreQueryFilters().SingleOrDefaultAsync(user =>

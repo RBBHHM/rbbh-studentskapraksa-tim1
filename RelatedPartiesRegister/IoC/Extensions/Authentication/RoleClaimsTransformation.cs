@@ -23,7 +23,7 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
             foreach (var source in principal.Identities)
             {
                 foreach (var claim in source.Claims.Where(claim =>
-                             claim.Type == "permission" || claim.Type == "rct_done" || claim.Type == "rbbh.app_user_id" ||
+                             claim.Type == "permission" || claim.Type == "rct_done" || claim.Type == RBBH.ConnectedParties.Helpers.AuthenticatedActor.ApplicationUserIdClaim ||
                              claim.Type == source.RoleClaimType || claim.Type == ClaimTypes.Role ||
                              claim.Type == "role" || claim.Type == "roles").ToArray())
                     source.RemoveClaim(claim);
@@ -40,7 +40,7 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
             }
 
             identity.AddClaim(new Claim(ClaimTypes.Role, ApplicationAccessRoles.Guest));
-            if (user is not null) identity.AddClaim(new Claim("rbbh.app_user_id", user.Id.ToString()));
+            if (user is not null) identity.AddClaim(new Claim(RBBH.ConnectedParties.Helpers.AuthenticatedActor.ApplicationUserIdClaim, user.Id.ToString()));
             var roles = user is null ? new List<string>() : await db.UserRoles.Where(userRole => userRole.IsActive && userRole.UserId == user.Id)
                 .Join(db.Roles.Where(role => role.IsActive), userRole => userRole.RoleId, role => role.Id, (userRole, role) => role.Name)
                 .Where(role => ApplicationAccessRoles.Assignable.Contains(role))
