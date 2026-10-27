@@ -9,7 +9,7 @@ test.beforeEach(async ({ request }) => {
 test("Guest can read and download legal entities but has no mutation actions", async ({ page }) => {
   await page.goto("/app/legal-persons"); await interactive(page);
   await expect(page.getByRole("row", { name: /Existing Company 00/ })).toBeVisible();
-  for (const name of ["Novi zapis", "Uvezi Excel", "Uredi", "Verificiraj", "Deaktiviraj"]) await expect(page.getByRole("button", { name, exact: true })).toHaveCount(0);
+  for (const name of ["Novi zapis", "Uvezi Excel", "Uredi", "Verificiraj", "Obriši"]) await expect(page.getByRole("button", { name, exact: true })).toHaveCount(0);
   const pending = page.waitForEvent("download"); await page.getByRole("button", { name: "Izvezi Excel", exact: true }).click();
   expect((await pending).suggestedFilename()).toMatch(/^pravna-lica-.*\.xlsx$/);
 });

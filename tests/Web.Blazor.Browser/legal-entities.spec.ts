@@ -81,7 +81,6 @@ test("edit retains hidden Matbroj, verifies and soft deactivates through real ba
   expect(record.matbroj).toBe("SERVER-ONLY-789"); expect(record.maticniBroj).toBe("98765");
   row = page.getByRole("row", { name: /Updated Company/ });
   await row.getByRole("button", { name: "Verificiraj", exact: true }).click();
-  await page.getByRole("alertdialog").getByRole("button", { name: "Potvrdi", exact: true }).click();
   await expect(page.getByRole("alertdialog")).not.toBeVisible();
   await expect(row.getByRole("button", { name: "Verificiraj", exact: true })).toHaveCount(0);
   record = (await (await request.get("/__fixtures/legal-record", { headers })).json())[0];
@@ -90,8 +89,8 @@ test("edit retains hidden Matbroj, verifies and soft deactivates through real ba
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).not.toBeVisible();
   record = (await (await request.get("/__fixtures/legal-record", { headers })).json())[0];
   expect(record.status).toBe("Verified"); expect(record.matbroj).toBe("SERVER-ONLY-789");
-  await row.getByRole("button", { name: "Deaktiviraj", exact: true }).click();
-  await page.getByRole("alertdialog").getByRole("button", { name: "Potvrdi", exact: true }).click();
+  await row.getByRole("button", { name: "Obriši", exact: true }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Obriši", exact: true }).click();
   await expect(row).toHaveCount(0);
   record = (await (await request.get("/__fixtures/legal-record", { headers })).json())[0]; expect(record.isActive).toBe(false);
 });
@@ -117,17 +116,17 @@ test("real backend XLSX download and import retain counts and safe schema guidan
   const dialog = page.getByRole("dialog");
   await page.getByLabel("Uvezi Excel", { exact: true }).setInputFiles(path.resolve("../../artifacts/migration-browser-fixtures/invalid-physical.xlsx"));
   await expect(dialog.getByText("Predložak mora imati 10 kolona", { exact: false })).toBeVisible();
-  await dialog.getByRole("button", { name: "Zatvori", exact: true }).first().click();
+  await dialog.getByRole("button", { name: "Zatvori", exact: true }).first().click(); await expect(dialog).not.toBeVisible();
   await page.getByLabel("Uvezi Excel", { exact: true }).setInputFiles(path.resolve("../../artifacts/migration-browser-fixtures/valid-legal.xlsx"));
   await expect(dialog.getByText("Uvezeno: 1", { exact: false })).toBeVisible();
-  await dialog.getByRole("button", { name: "Zatvori", exact: true }).first().click();
+  await dialog.getByRole("button", { name: "Zatvori", exact: true }).first().click(); await expect(dialog).not.toBeVisible();
   await expect(page.getByRole("row", { name: /Imported Company/ })).toBeVisible();
 });
 test("locked period disables legal verification and preserves draft state and audit", async ({ page, request }) => {
   await request.post("/__fixtures/legal-existing", { headers }); await request.post("/__fixtures/lock", { headers }); await open(page);
   await expect(page.getByRole("button", { name: "Verificiraj", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Uredi", exact: true })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Deaktiviraj", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Obriši", exact: true })).toBeDisabled();
   await expect(page.getByText("Period je zaključan. Izmjene nisu dozvoljene.", { exact: true })).toBeVisible();
   expect((await (await request.get("/__fixtures/legal-record", { headers })).json())[0].status).toBe("Draft");
   expect((await (await request.get("/__fixtures/counts", { headers })).json()).audit).toBe(0);
@@ -136,7 +135,7 @@ test("unavailable period disables legal verification until an explicit refresh",
   await request.post("/__fixtures/legal-existing", { headers }); await request.post("/__fixtures/period-unavailable", { headers }); await open(page);
   await expect(page.getByRole("button", { name: "Verificiraj", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Uredi", exact: true })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Deaktiviraj", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Obriši", exact: true })).toBeDisabled();
   await expect(page.getByText(/Stanje perioda trenutno nije dostupno/)).toBeVisible();
   await request.post("/__fixtures/period-available", { headers }); await page.reload(); await interactive(page);
   await expect(page.getByRole("button", { name: "Verificiraj", exact: true })).toBeEnabled();

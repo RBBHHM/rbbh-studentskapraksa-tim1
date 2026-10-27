@@ -20,7 +20,7 @@
                 <RbiCheckbox @key="choice.Id" @bind-Value="choice.Selected">@T["users.role." + choice.Name.ToLowerInvariant()]</RbiCheckbox>
             }</div>
             <ValidationMessage For="@(() => Model.Roles)" />
-            <p class="registry-help">@T["users.empty-roles"]</p>
+            @if (Model.SelectedRoles.Length == 0) { <p class="registry-help">@T["users.empty-roles"]</p> }
             @if (Model.SelectedRoles.Length == 0) { <p>@T["users.empty-roles-detail"]</p> }
         </fieldset>
     <div role="alert" tabindex="-1" @ref="_summary"><ValidationSummary /></div>

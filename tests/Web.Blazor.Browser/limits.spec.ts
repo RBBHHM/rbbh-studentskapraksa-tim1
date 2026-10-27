@@ -43,10 +43,10 @@ test("create keeps zero/null and backend-derived capital, edit and confirmed del
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).not.toBeVisible();
   records = await (await request.get("/__fixtures/limits", { headers })).json(); expect(records[0].odobreniLimit).toBe(123.45); expect(records[0].maksimalnaOcekivanaUtilizacija).toBe(67.89);
   await row.getByRole("button", { name: "Obriši", exact: true }).click();
-  await expect(page.getByRole("alertdialog").getByText("Postojeći backend trajno briše", { exact: false })).toBeVisible();
+  await expect(page.getByRole("alertdialog").getByText("Ova radnja može uticati na povezane podatke", { exact: false })).toBeVisible();
   await page.getByRole("alertdialog").getByRole("button", { name: "Odustani", exact: true }).click(); await expect(row).toBeVisible();
   await row.getByRole("button", { name: "Obriši", exact: true }).click();
-  await page.getByRole("alertdialog").getByRole("button", { name: "Potvrdi", exact: true }).click(); await expect(row).toHaveCount(0);
+  await page.getByRole("alertdialog").getByRole("button", { name: "Obriši", exact: true }).click(); await expect(row).toHaveCount(0);
   expect(await (await request.get("/__fixtures/limits", { headers })).json()).toEqual([]);
 });
 test("negative amounts remain field errors without persistence", async ({ page, request }) => {

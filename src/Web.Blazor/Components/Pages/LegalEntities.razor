@@ -33,7 +33,8 @@ else if (!_canRead) { <RbiAlert Title="@T["errors.forbidden"]" /> }
 else
 {
     @if ((_canCreate || _canEdit || _canDelete) && _periodLocked) { <RbiAlert Title="@T[_periodError ?? "errors.locked"]" /> }
-    @if (_notice is not null) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@T[_notice]" /></div> }
+    @if (!_delete && _action is null && _actionError is not null) { <div role="alert" class="app-toast app-toast--danger"><RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_actionError]" /></div> }
+    @if (_notice is not null) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@T.Format(_notice, _noticeCount)" /></div> }
     <div class="registry-controls"><RegistrySearch Id="legal-search" Label="@T["legal.search"]" @bind-Value="_search" /></div>
     @if (!Filtered.Any()) { <div class="registry-surface"><RegistryEmpty Body="@T[string.IsNullOrWhiteSpace(_search) ? "state.empty-body" : "state.no-match"]" /></div> }
     else
@@ -74,8 +75,8 @@ else
         </DialogBody>
     </RbiDialog>
 }
-<RbiAlertDialog Open="@(_action is not null)" OpenChanged="CloseAction" Title="@T[_delete ? "legal.delete-title" : "legal.verify-title"]"
-                Description="@T[_delete ? "legal.delete-description" : "legal.verify-description"]" CancelLabel="@T["common.cancel"]" ConfirmLabel="@T["common.confirm"]"
+<RbiAlertDialog Open="@(_action is not null && _delete)" OpenChanged="CloseAction" Title="@T[_delete ? "legal.delete-title" : "legal.verify-title"]"
+                Description="@T[_delete ? "legal.delete-description" : "legal.verify-description"]" CancelLabel="@T["common.cancel"]" ConfirmLabel="@T["common.delete"]"
                 ConfirmLoadingLabel="@T["common.saving"]" Confirming="_busy" OnConfirm="RunActionAsync">
     @if (_actionError is not null) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_actionError]" /> }
 </RbiAlertDialog>
@@ -106,6 +107,7 @@ else
     private IBrowserFile? _importFile;
     private Guid _fileKey = Guid.NewGuid();
     private ImportResult? _importResult;
+    private int _noticeCount;
     private string? _search, _error, _notice, _actionError, _importError;
     private string? _periodError;
     private bool _periodLocked = true;
@@ -173,20 +175,20 @@ else
         if (!_authenticated || (_editingId.HasValue ? !_canEdit : !_canCreate)) throw new RegistryApiException(System.Net.HttpStatusCode.Forbidden);
         if (_periodLocked) throw new RegistryApiException((System.Net.HttpStatusCode)423);
         if (_busy) return; _busy = true;
-        try { await Api.SaveAsync(_editingId, request, _token); _notice = "common.saved"; await LoadAsync(); }
+        try { await Api.SaveAsync(_editingId, request, _token); _notice = "toast.saved"; await LoadAsync(); }
         catch (RegistryApiException exception) when ((int?)exception.StatusCode == 423) { _periodLocked = true; await InvokeAsync(StateHasChanged); throw; }
         finally { _busy = false; }
         _draft = null;
     }
-    private void Confirm(LegalEntity entity, bool delete) { if (!_authenticated || _periodLocked || (delete ? !_canDelete : !_canEdit) || _openingEditor || _refreshing || _busy) return; _action = entity; _delete = delete; _actionError = null; }
+    private async Task Confirm(LegalEntity entity, bool delete) { if (!_authenticated || _periodLocked || (delete ? !_canDelete : !_canEdit) || _openingEditor || _refreshing || _busy) return; _action = entity; _delete = delete; _actionError = null; if (!delete) await RunActionAsync(); }
     private void CloseAction(bool open) { if (!open && !_busy) _action = null; }
     private async Task RunActionAsync()
     {
         if (!_authenticated || (_delete ? !_canDelete : !_canEdit) || _busy || _action is null) return;
         if (_periodLocked) { _actionError = "errors.locked"; return; }
         _busy = true;
-        try { if (_delete) await Api.DeleteAsync(_action.Id, _token); else await Api.VerifyAsync(_action.Id, _token); _action = null; _notice = "common.saved"; await LoadAsync(); }
-        catch (RegistryApiException exception) { if ((int?)exception.StatusCode == 423) _periodLocked = true; _actionError = exception.MessageKey; }
+        try { if (_delete) await Api.DeleteAsync(_action.Id, _token); else await Api.VerifyAsync(_action.Id, _token); _notice = _delete ? "toast.deleted" : "toast.verified"; _action = null; await LoadAsync(); }
+        catch (RegistryApiException exception) { if ((int?)exception.StatusCode == 423) _periodLocked = true; _actionError = exception.MessageKey; if (!_delete) _action = null; }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         finally { _busy = false; }
     }
@@ -217,7 +219,7 @@ else
         try
         {
             await using var stream = _importFile.OpenReadStream(10485760, _token);
-            _importResult = await Api.ImportAsync(stream, _importFile.Name, _token); _importFile = null; await LoadAsync();
+            _importResult = await Api.ImportAsync(stream, _importFile.Name, _token); if (_importResult.Failed == 0) { _notice = "toast.import"; _noticeCount = _importResult.Imported; } _importFile = null; await LoadAsync();
         }
         catch (RegistryApiException exception) { _importError = exception.StatusCode == System.Net.HttpStatusCode.BadRequest ? "import.invalid-workbook" : exception.MessageKey; }
         catch (IOException) { _importError = "import.invalid-file"; }

@@ -71,7 +71,7 @@ test("referenced value and entire category deletion are rejected with no data/au
 });
 test("category soft-delete keeps inactive administrative history instead of pretending physical removal", async ({ page, request }) => {
   await request.post("/__fixtures/codes-reference", { headers }); await visit(page, "MigrationCodes");
-  await page.getByRole("button", { name: "Obriši šifrarnik", exact: true }).click(); await page.getByRole("alertdialog").getByRole("button", { name: "Obriši", exact: true }).click(); await expect(page.getByText(/Brisanje je završeno/)).toBeVisible();
+  await page.getByRole("button", { name: "Obriši šifrarnik", exact: true }).click(); await page.getByRole("alertdialog").getByRole("button", { name: "Obriši", exact: true }).click(); await expect(page.getByText("Šifrarnik i njegove vrijednosti su obrisani.", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Kategorija", { exact: true })).toHaveValue("MigrationCodes"); expect(await page.getByRole("cell", { name: "Neaktivan", exact: true }).count()).toBe(2);
   const state = await (await request.get("/__fixtures/codes-state", { headers })).json(); expect(state.definitions).toEqual([{ name: "MigrationCodes", description: "Fixture purpose", isActive: false }]);
   expect(state.values.filter((item: any) => item.kategorija === "MigrationCodes").every((item: any) => !item.aktivan)).toBe(true); expect(state.audit.map((item: any) => item.action)).toEqual(["CODELIST_DELETE"]);

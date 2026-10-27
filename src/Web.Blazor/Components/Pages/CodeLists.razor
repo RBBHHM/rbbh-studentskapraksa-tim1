@@ -29,7 +29,7 @@ else
     @if (_error is not null) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_error]" /><RbiButton Disabled="_busy" OnClick="LoadAsync">@T["state.retry"]</RbiButton> }
     @if (_canRead)
     {
-        @if (_notice is not null) { <p role="status">@_notice</p> }
+        @if (_notice is not null) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@_notice" /></div> }
         <fieldset disabled="@(_busy || _refreshing)" class="registry-category"><legend class="app-visually-hidden">@T["codes.category"]</legend>
             <div class="registry-field registry-field--category"><label for="code-category">@T["codes.category"]</label>
             <RbiSelect TValue="string" Id="code-category" @bind-Value="_category" @bind-Value:after="CategoryChangedAsync" Disabled="@(_categories.Count == 0)">
@@ -130,7 +130,7 @@ else
             if (draft.Definition) { await Api.CreateCategoryAsync(draft.Name.Trim(), draft.NullDescription, _token); _category = draft.Name.Trim(); }
             else if (draft.Id is { } id) await Api.UpdateAsync(id, draft.UpdateRequest(), _token);
             else await Api.CreateAsync(draft.CreateRequest(), _token);
-            _draft = null; _notice = T["common.saved"]; await LoadAsync();
+            _notice = T[draft.Definition ? "toast.code-def" : "toast.code-saved"]; _draft = null; await LoadAsync();
         }
         finally { _busy = false; }
     }
@@ -143,7 +143,7 @@ else
         {
             if (_deleteValue is { } value) await Api.DeleteAsync(value.Id, _token);
             else if (_deleteCategory is { } category) await Api.DeleteCategoryAsync(category, _token);
-            _notice = T["codes.deleted"]; await LoadAsync();
+            _notice = T[_deleteValue is not null ? "toast.code-value-deleted" : "toast.code-deleted"]; _deleteValue = null; _deleteCategory = null; await LoadAsync();
         }
         catch (RegistryApiException exception) { _error = (int?)exception.StatusCode == 400 ? "codes.delete-rejected" : MutationError(exception); }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }

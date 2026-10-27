@@ -45,3 +45,16 @@ Legal duplicate/verify/delete confirmations, import success/error result dialog 
 * Inline field messages and the summary box both appear (WCAG 3.3.1); input borders keep RBI strong border (WCAG 1.4.11).
 * React shows raw API timestamps in some tables; native keeps readable formatting for audit/notifications.
 * Code-list header actions wrap at 375px (React overflows and clips them).
+## Third pass (after 896cea9)
+Product decisions applied: verify runs immediately with a React-style toast (failure → danger toast; period lock stays authoritative server-side); delete wording/confirmation copy "Obriši"/"Obrisati zapis?" for persons, legal entities and limits (backend soft-deactivation unchanged); React toast copy per action; audit/notification timestamps and report date rendered like the reference (BS "yyyy M10 dd HH:mm", EN "dd MMM yyyy, HH:mm", reports raw ISO); users edit/delete dialog copy, row tooltips and bold name cell; period note dialog (compact RBI dialog, description, counter, confirm disabled below 10 characters), period action buttons (small, destructive reject), request form panel; audit/notification no-match copy; SMTP banner kept for assistive tech only; checkbox sizing in dialogs.
+
+### Intentional differences
+* INTENTIONAL_ACCESSIBILITY_DIFFERENCE: input borders (WCAG 1.4.11); field message + summary box (WCAG 3.3.1); wrapping code-list header actions at 375px; required-field asterisks.
+* INTENTIONAL_SECURITY_DIFFERENCE: self-protected users row stays disabled; access-denied presentation follows the approved authorization model (Guest does not see admin navigation); import errors are redacted/localized instead of echoing backend text.
+* Data completeness: audit keeps server paging with a pager (React shows only the first page without a pager).
+
+### Still not inspected side by side
+Legal delete result and read-only/locked variants of every form at 375px, code-list XLSX preview/duplicate/partial-import dialogs (covered by browser tests only), profile backend-unavailable, capital empty, reports failure/unavailable, limits locked, most dark/375px dialog variants. These are not claimed EXACT.
+
+### Verification
+Unit 210/210. Browser, workers=1, retries=0, six full suites on the final code: admin 77, FL 37, PL 35, kapital 40, limiti 31, gost 27 = 247 passed. Release build of Web.Blazor: 0 warnings, 0 errors. `git diff --check` clean.

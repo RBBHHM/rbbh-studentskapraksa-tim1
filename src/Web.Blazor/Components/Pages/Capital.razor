@@ -30,7 +30,7 @@ else if (!_canRead) { <RbiAlert Title="@T["errors.forbidden"]" /> }
 else
 {
     @if (_canEdit && _periodLocked) { <RbiAlert Title="@T[_periodError ?? "errors.locked"]" /> }
-    @if (_notice) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@T["common.saved"]" /></div> }
+    @if (_notice) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@T["toast.capital"]" /></div> }
     @if (_record is { } record)
     {
         <RbiTable AccessibleLabel="@T["capital.title"]" Class="registry-table registry-capital-table">

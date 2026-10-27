@@ -28,10 +28,10 @@ for (const length of [9, 10, 490, 491, 500]) test(`native clarification boundary
   // form validation; the real backend is probed separately below as authority.
   if (length > 490) await input.evaluate(element => element.removeAttribute("maxlength"));
   await input.fill("x".repeat(length)); await expect(dialog.getByText(`Uneseno ${length} od najviše 490 znakova; najmanje 10 znakova teksta.`, { exact: true })).toBeVisible();
-  await dialog.getByRole("button", { name: "Potvrdi", exact: true }).click();
+  const confirm = dialog.getByRole("button", { name: "Potvrdi", exact: true }); if (length < 10) await expect(confirm).toBeDisabled(); else await confirm.click();
   const accepted = length >= 10 && length <= 490;
   if (accepted) await expect(dialog).toHaveCount(0);
-  else await expect(dialog.locator("div[role=alert]").first()).toContainText("Dopuna mora sadržavati od 10 do 490 znakova.");
+  else if (length >= 10) await expect(dialog.locator("div[role=alert]").first()).toContainText("Dopuna mora sadržavati od 10 do 490 znakova.");
   const state = await (await request.get("/__fixtures/period-state", { headers })).json();
   expect(state.requests).toHaveLength(accepted ? 2 : 1);
   if (accepted) {

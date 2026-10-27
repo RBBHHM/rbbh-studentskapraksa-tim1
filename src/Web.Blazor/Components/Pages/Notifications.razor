@@ -18,16 +18,16 @@ else if (_error is not null)
 else if (!_canRead) { <RbiAlert Title="@T["errors.forbidden"]" /> }
 else
 {
-    @if (_log.Provider.Equals("smtp", StringComparison.OrdinalIgnoreCase)) { <RbiAlert Title="@T["notifications.smtp"]" /> }
+    @if (_log.Provider.Equals("smtp", StringComparison.OrdinalIgnoreCase)) { <p class="app-visually-hidden" role="status">@T["notifications.smtp"]</p> }
     <div class="registry-controls"><RegistrySearch Id="notification-search" @bind-Value="_search" /></div>
-    @if (!Filtered.Any()) { <div class="registry-surface"><RegistryEmpty /></div> }
+    @if (!Filtered.Any()) { <div class="registry-surface"><RegistryEmpty Body="@T[string.IsNullOrWhiteSpace(_search) ? "state.empty-body" : "state.no-match"]" /></div> }
     else
     {
         <RbiTable AccessibleLabel="@T["notifications.title"]" Class="registry-table registry-notifications-table">
             <thead><tr><th scope="col">@T["notifications.purpose"]</th><th scope="col">@T["notifications.to"]</th><th scope="col">@T["notifications.subject"]</th><th scope="col">@T["notifications.status"]</th><th scope="col">@T["notifications.time"]</th></tr></thead>
             <tbody>@foreach (var entry in Filtered)
             {
-                <tr @key="entry.Id"><td>@entry.Purpose</td><td>@entry.To</td><td>@entry.Subject</td><td>@entry.DeliveryStatus</td><td>@entry.SentAt.ToString("g")</td></tr>
+                <tr @key="entry.Id"><td>@entry.Purpose</td><td>@entry.To</td><td>@entry.Subject</td><td>@entry.DeliveryStatus</td><td>@AppFormat.Timestamp(entry.SentAt)</td></tr>
             }</tbody>
         </RbiTable>
     }

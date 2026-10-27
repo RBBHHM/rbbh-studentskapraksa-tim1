@@ -19,14 +19,14 @@ else if (!_admin) { <RbiAlert Title="@T["errors.forbidden"]" /> }
 else
 {
     <div class="registry-controls"><RegistrySearch Id="audit-search" Label="@T["audit.search"]" @bind-Value="_search" /></div>
-    @if (!Filtered.Any()) { <div class="registry-surface"><RegistryEmpty Body="@T["audit.empty"]" /></div> }
+    @if (!Filtered.Any()) { <div class="registry-surface"><RegistryEmpty Body="@T[string.IsNullOrWhiteSpace(_search) ? "audit.empty" : "state.no-match"]" /></div> }
     else
     {
         <RbiTable AccessibleLabel="@T["audit.title"]" Class="registry-table registry-audit-table">
             <thead><tr><th scope="col">@T["audit.time"]</th><th scope="col">@T["audit.action"]</th><th scope="col">@T["audit.area"]</th><th scope="col">@T["audit.change"]</th><th scope="col">@T["audit.user"]</th><th scope="col">@T["audit.ip"]</th></tr></thead>
             <tbody>@foreach (var entry in Filtered)
             {
-                <tr @key="entry.Id"><td>@entry.Timestamp.ToString("g")</td><td>@entry.ActionDisplay</td><td>@entry.AreaDisplay</td><td>@entry.ChangeSummary</td><td>@entry.Username</td><td>@entry.IpAddress</td></tr>
+                <tr @key="entry.Id"><td>@AppFormat.Timestamp(entry.Timestamp)</td><td>@entry.ActionDisplay</td><td>@entry.AreaDisplay</td><td>@entry.ChangeSummary</td><td>@entry.Username</td><td>@entry.IpAddress</td></tr>
             }</tbody>
         </RbiTable>
     }

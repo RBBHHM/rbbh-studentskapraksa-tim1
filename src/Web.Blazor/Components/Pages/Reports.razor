@@ -53,7 +53,7 @@ else if (_authenticated)
             <thead><tr><th scope="col">@T["reports.type"]</th><th scope="col">@T["reports.date"]</th><th scope="col">@T["reports.clients"]</th><th scope="col">@T["reports.breached"]</th><th scope="col">@T["reports.exposure"]</th><th scope="col">@T["reports.author"]</th><th scope="col">@T["reports.file"]</th></tr></thead>
             <tbody>@foreach (var report in Records)
             {
-                <tr @key="report.Id"><td>@TypeLabel(report.ReportType)</td><td>@report.ReportDate.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)</td><td>@report.TotalClients</td><td>@report.ClientsWithBreachedLimit</td><td>@report.TotalExposure.ToString(System.Globalization.CultureInfo.InvariantCulture)</td><td>@report.CreatedBy</td><td class="registry-center"><RbiButton Size="RbiButtonSize.Small" Disabled="_busy" OnClick="() => DownloadSnapshotAsync(report.Id)" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.Download" />@T["reports.download"]</RbiButton></td></tr>
+                <tr @key="report.Id"><td>@TypeLabel(report.ReportType)</td><td>@AppFormat.RawTimestamp(report.ReportDate)</td><td>@report.TotalClients</td><td>@report.ClientsWithBreachedLimit</td><td>@report.TotalExposure.ToString(System.Globalization.CultureInfo.InvariantCulture)</td><td>@report.CreatedBy</td><td class="registry-center"><RbiButton Size="RbiButtonSize.Small" Disabled="_busy" OnClick="() => DownloadSnapshotAsync(report.Id)" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.Download" />@T["reports.download"]</RbiButton></td></tr>
             }</tbody>
         </RbiTable></div>
         @if (DailyPages > 1)

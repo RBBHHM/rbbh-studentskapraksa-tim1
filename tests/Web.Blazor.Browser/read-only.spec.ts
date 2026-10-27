@@ -9,7 +9,7 @@ test("ordinary authenticated Guest sees real existing data and download, not mut
   await openPhysical(page);
   await expect(page.getByRole("row", { name: /ReadOnly Fixture/ })).toBeVisible();
   await expect(page.getByRole("button", { name: "Izvezi Excel", exact: true })).toBeVisible();
-  for (const name of ["Novi zapis", "Uvezi Excel", "Uredi", "Verificiraj", "Deaktiviraj"])
+  for (const name of ["Novi zapis", "Uvezi Excel", "Uredi", "Verificiraj", "Obriši"])
     await expect(page.getByRole("button", { name, exact: true })).toHaveCount(0);
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Izvezi Excel", exact: true }).click();

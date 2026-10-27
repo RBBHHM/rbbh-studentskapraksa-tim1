@@ -5,15 +5,17 @@
 <EditForm EditContext="_context" OnSubmit="SubmitAsync" FormName="@_id" class="registry-period-form" novalidate>
     <fieldset disabled="@_submission.IsSubmitting">
         <legend class="app-visually-hidden">@T[LabelKey]</legend>
+        @if (ShowCancel) { <p class="registry-period-dialog__help">@T["period.dialog-help"]</p> }
         <RbiField TValue="string" Id="@_id" Label="@T[LabelKey]" Required For="@(() => Model.Text)">
-            <RbiTextArea Id="@_id" @bind-Value="Model.Text" @oninput="InputChanged" Rows="4" minlength="10" maxlength="@Model.Maximum" aria-describedby="@(_id + "-help")" />
+            <RbiTextArea Id="@_id" @bind-Value="Model.Text" @oninput="InputChanged" Rows="4" placeholder="@(ShowCancel ? T["period.placeholder"] : null)" minlength="10" maxlength="@Model.Maximum" aria-describedby="@(_id + "-help")" />
         </RbiField>
         <p class="app-visually-hidden" id="@(_id + "-help")">@T[Model.Kind == PeriodNoteKind.Response ? "period.response-range" : "period.note-range"]</p>
         @if (Model.Kind != PeriodNoteKind.RequestUnlock) { <p class="app-visually-hidden">@T.Format("period.count", Model.Text.Length, Model.Maximum)</p> }
+        @if (ShowCancel) { <p class="registry-period-dialog__count" aria-hidden="true">@T.Format("period.min-count", Model.Text.Trim().Length)</p> }
     <div role="alert" tabindex="-1" @ref="_summary"><ValidationSummary /></div>
         <div class="registry-toolbar">
             @if (ShowCancel) { <RbiButton OnClick="Cancel" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton> }
-            <RbiButton Type="RbiButtonType.Submit">@T[SubmitKey]</RbiButton>
+            <RbiButton Type="RbiButtonType.Submit" Disabled="@(ShowCancel && Model.Text.Trim().Length < 10)">@T[SubmitKey]</RbiButton>
         </div>
     </fieldset>
 </EditForm>

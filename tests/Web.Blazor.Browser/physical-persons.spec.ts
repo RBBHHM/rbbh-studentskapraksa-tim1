@@ -72,7 +72,7 @@ test("locked period disables physical verification without changing the record o
   await request.post("/__fixtures/lock", { headers }); await page.reload(); await interactive(page);
   await expect(page.getByRole("button", { name: "Verificiraj", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Uredi", exact: true })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Deaktiviraj", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Obriši", exact: true })).toBeDisabled();
   await expect(page.getByText("Period je zaključan. Izmjene nisu dozvoljene.", { exact: true })).toBeVisible();
   expect(await (await request.get("/__fixtures/counts", { headers })).json()).toEqual(before);
 });
@@ -82,7 +82,7 @@ test("unavailable period disables physical verification until an explicit refres
   await request.post("/__fixtures/period-unavailable", { headers }); await page.reload(); await interactive(page);
   await expect(page.getByRole("button", { name: "Verificiraj", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Uredi", exact: true })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Deaktiviraj", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Obriši", exact: true })).toBeDisabled();
   await expect(page.getByText(/Stanje perioda trenutno nije dostupno/)).toBeVisible();
   await request.post("/__fixtures/period-available", { headers }); await page.reload(); await interactive(page);
   await expect(page.getByRole("button", { name: "Verificiraj", exact: true })).toBeEnabled();
@@ -99,7 +99,6 @@ test("duplicates block progression, edit excludes self, verification and deactiv
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
   await expect(dialog).not.toBeVisible();
   await row.getByRole("button", { name: "Verificiraj", exact: true }).click();
-  await page.getByRole("alertdialog").getByRole("button", { name: "Potvrdi", exact: true }).click();
   await expect(row.getByText("Verificirano", { exact: true })).toBeVisible();
   await expect(row.getByRole("button", { name: "Verificiraj", exact: true })).toHaveCount(0);
   await beginNonresident(page, "Duplicate", "LIF12345", "765432");
@@ -108,8 +107,8 @@ test("duplicates block progression, edit excludes self, verification and deactiv
   await expect(dialog.getByText("Zapis s ovom identifikacijom već postoji.").first()).toBeVisible();
   await expect(dialog.getByLabel("Broj pasoša", { exact: false })).toBeVisible();
   await dialog.getByRole("button", { name: "Odustani", exact: true }).click();
-  await row.getByRole("button", { name: "Deaktiviraj", exact: true }).click();
-  await page.getByRole("alertdialog").getByRole("button", { name: "Potvrdi", exact: true }).click();
+  await row.getByRole("button", { name: "Obriši", exact: true }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Obriši", exact: true }).click();
   await expect(row).toHaveCount(0);
   await page.reload(); await interactive(page);
   await expect(page.getByRole("row", { name: /Lifecycle Fixture/ })).toHaveCount(0);
@@ -140,8 +139,8 @@ test("unified family form locks required flags and backend relationship tree sur
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
   await expect(dialog).not.toBeVisible();
   await expect(page.locator(".app-tree strong").filter({ hasText: "FamilyUpdated Fixture" })).toBeVisible();
-  await page.getByRole("row", { name: /FamilyUpdated Fixture/ }).getByRole("button", { name: "Deaktiviraj", exact: true }).click();
-  await page.getByRole("alertdialog").getByRole("button", { name: "Potvrdi", exact: true }).click();
+  await page.getByRole("row", { name: /FamilyUpdated Fixture/ }).getByRole("button", { name: "Obriši", exact: true }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Obriši", exact: true }).click();
   await expect(page.getByRole("row", { name: /FamilyUpdated Fixture/ })).toHaveCount(0);
   await expect(page.locator(".app-tree strong").filter({ hasText: "FamilyUpdated Fixture" })).toHaveCount(0);
 });
@@ -164,10 +163,10 @@ test("valid backend workbook import refreshes list; invalid schema does not crea
   await page.getByLabel("Uvezi Excel", { exact: true }).setInputFiles(path.resolve("../../artifacts/migration-browser-fixtures/invalid-physical.xlsx"));
   await expect(dialog.getByText("Uvezeno: 0.", { exact: false })).toBeVisible();
   await expect(dialog.getByText("Predložak mora imati 15 kolona; pronađeno: 1.", { exact: true })).toBeVisible();
-  await dialog.getByRole("button", { name: "Zatvori", exact: true }).first().click();
+  await dialog.getByRole("button", { name: "Zatvori", exact: true }).first().click(); await expect(dialog).not.toBeVisible();
   await page.getByLabel("Uvezi Excel", { exact: true }).setInputFiles(path.resolve("../../artifacts/migration-browser-fixtures/valid-physical.xlsx"));
   await expect(dialog.getByText("Uvezeno: 1. Neuspješno: 0.")).toBeVisible();
-  await dialog.getByRole("button", { name: "Zatvori", exact: true }).first().click();
+  await dialog.getByRole("button", { name: "Zatvori", exact: true }).first().click(); await expect(dialog).not.toBeVisible();
   await expect(page.getByRole("row", { name: /Import Fixture/ })).toBeVisible();
 });
 

@@ -14,7 +14,7 @@ for (const fault of ["lock", "period-unavailable"]) test(`${area} disables mutat
   await page.goto(`/app/${area}`); await interactive(page);
   const actions = area === "capital" ? ["Uredi kapital"]
     : area === "physical-persons" ? ["Novi zapis", "Uvezi Excel"]
-    : area === "legal-persons" ? ["Novi zapis", "Uvezi Excel", "Uredi", "Verificiraj", "Deaktiviraj"]
+    : area === "legal-persons" ? ["Novi zapis", "Uvezi Excel", "Uredi", "Verificiraj", "Obriši"]
     : ["Novi zapis", "Uredi", "Obriši"];
   for (const name of actions.filter((item) => item !== "Uvezi Excel")) await expect(page.getByRole("main").getByRole("button", { name, exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Izvezi Excel", exact: true })).toBeEnabled();
