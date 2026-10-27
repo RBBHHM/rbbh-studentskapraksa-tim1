@@ -3,18 +3,21 @@
 @implements IDisposable
 
 <EditForm EditContext="_context" OnSubmit="SubmitAsync" FormName="code-list-editor" class="registry-codes-form" novalidate>
-    <div role="alert" tabindex="-1" @ref="_summary"><ValidationSummary /></div>
     <fieldset disabled="@_submission.IsSubmitting">
-        <legend>@T[Model.Definition ? "codes.definition-create" : Model.Id is null ? "codes.create" : "codes.edit"]</legend>
-        <RbiField TValue="string" Id="code-name" Label="@T[Model.Definition ? "codes.definition-name" : "codes.name"]" Required For="@(() => Model.Name)"><RbiInput Id="code-name" @bind-Value="Model.Name" maxlength="@(Model.Definition ? 100 : 200)" /></RbiField>
+        <legend class="app-visually-hidden">@T[Model.Definition ? "codes.definition-create" : Model.Id is null ? "codes.create" : "codes.edit"]</legend>
+        <div class="registry-form-grid">
+        <RbiField Class="app-span-2" TValue="string" Id="code-name" Label="@T[Model.Definition ? "codes.definition-name" : "codes.name"]" Required For="@(() => Model.Name)"><RbiInput Id="code-name" @bind-Value="Model.Name" maxlength="@(Model.Definition ? 100 : 200)" /></RbiField>
         @if (!Model.Definition)
         {
             <RbiField TValue="string" Id="code-key" Label="@T["codes.code"]" Required For="@(() => Model.Code)"><RbiInput Id="code-key" @bind-Value="Model.Code" Disabled="@(Model.Id is not null)" maxlength="50" /></RbiField>
-            <p>@T["codes.immutable"]</p>
+
             <RbiField TValue="string" Id="code-order" Label="@T["codes.order"]" For="@(() => Model.Order)"><RbiInput Id="code-order" @bind-Value="Model.Order" inputmode="numeric" /></RbiField>
         }
         <RbiField TValue="string" Id="code-description" Label="@T[Model.Definition ? "codes.purpose" : "codes.description"]" For="@(() => Model.Description)"><RbiTextArea Id="code-description" @bind-Value="Model.Description" maxlength="500" /></RbiField>
         @if (!Model.Definition) { <RbiCheckbox @bind-Value="Model.Active">@T["codes.active"]</RbiCheckbox> }
+        </div>
+        @if (!Model.Definition) { <p class="app-visually-hidden">@T["codes.immutable"]</p> }
+    <div role="alert" tabindex="-1" @ref="_summary"><ValidationSummary /></div>
         <div class="registry-toolbar"><RbiButton OnClick="Cancel" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton><RbiButton Type="RbiButtonType.Submit">@T["common.save"]</RbiButton></div>
     </fieldset>
 </EditForm>

@@ -3,9 +3,8 @@
 @implements IDisposable
 
 <EditForm EditContext="_context" OnSubmit="SubmitAsync" FormName="legal-entity" novalidate>
-    <div role="alert" tabindex="-1" @ref="_summary"><ValidationSummary /></div>
     <fieldset disabled="@_submission.IsSubmitting">
-        <legend>@T["legal.details"]</legend>
+        <legend class="app-visually-hidden">@T["legal.details"]</legend>
         <div class="registry-form-grid">
             <RbiField TValue="string" Label="@T["legal.name"]" Required For="@(() => Model.Name)"><RbiInput @bind-Value="Model.Name" maxlength="100" /></RbiField>
             <RbiRadioGroup TValue="bool?" Label="@T["person.residency"]" Required @bind-Value="Model.IsResident" @bind-Value:after="Model.ResidencyChanged">
@@ -15,7 +14,7 @@
             <RbiField TValue="string" Label="@T["person.fba"]" Required="@(Model.IsResident == false)" Disabled="@(Model.IsResident == true)" For="@(() => Model.FbaId)"><RbiInput @bind-Value="Model.FbaId" maxlength="10" inputmode="numeric" /></RbiField>
             <RbiField TValue="string" Label="@T["legal.registration"]" For="@(() => Model.MaticniBroj)"><RbiInput @bind-Value="Model.MaticniBroj" maxlength="50" inputmode="numeric" /></RbiField>
             <RbiField TValue="string" Label="@T["person.basis"]" Required For="@(() => Model.BasisOfConnection)">
-                <RbiSelect TValue="string" @bind-Value="Model.BasisOfConnection" @bind-Value:after="BasisChanged" Placeholder="@T["common.select"]">
+                <RbiSelect TValue="string" @bind-Value="Model.BasisOfConnection" @bind-Value:after="BasisChanged"><option value="">@T["common.select"]</option>
                     @foreach (var option in Bases) { <option value="@option.Kod">@option.Naziv</option> }
                 </RbiSelect>
             </RbiField>
@@ -26,6 +25,7 @@
             <RbiField TValue="DateTime?" Id="legal-from" Label="@T["person.from"]" Required For="@(() => Model.DateFrom)"><InputDate TValue="DateTime?" id="legal-from" class="rbi-control" @bind-Value="Model.DateFrom" ParsingErrorMessage="@T["validation.date"]" /></RbiField>
             <RbiField TValue="DateTime?" Id="legal-to" Label="@T["person.to"]" For="@(() => Model.DateTo)"><InputDate TValue="DateTime?" id="legal-to" class="rbi-control" @bind-Value="Model.DateTo" ParsingErrorMessage="@T["validation.date"]" /></RbiField>
         </div>
+    <div role="alert" tabindex="-1" @ref="_summary"><ValidationSummary /></div>
         <div class="registry-toolbar">
             <RbiButton OnClick="Cancel" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton>
             <RbiButton Type="RbiButtonType.Submit" Disabled="MutationBlocked">@T["common.save"]</RbiButton>

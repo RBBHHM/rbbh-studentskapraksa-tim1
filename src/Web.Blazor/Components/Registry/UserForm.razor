@@ -3,9 +3,8 @@
 @implements IDisposable
 
 <EditForm EditContext="_context" OnSubmit="SubmitAsync" FormName="application-user" class="registry-user-form" novalidate>
-    <div role="alert" tabindex="-1" @ref="_summary"><ValidationSummary /></div>
     <fieldset disabled="@_submission.IsSubmitting">
-        <legend>@T[Model.Id is null ? "users.create" : "users.roles-edit"]</legend>
+        <legend class="app-visually-hidden">@T[Model.Id is null ? "users.create" : "users.roles-edit"]</legend>
         @if (Model.Id is null)
         {
             <div class="registry-form-grid">
@@ -15,14 +14,16 @@
                 <RbiField TValue="string" Id="user-email" Label="@T["users.email"]" Required For="@(() => Model.Email)"><RbiInput Id="user-email" @bind-Value="Model.Email" Type="RbiInputType.Email" /></RbiField>
             </div>
         }
-        <fieldset><legend>@T["users.accesses"]</legend><p>@T["users.multiple"]</p>
+        <fieldset class="registry-user-fieldset"><legend class="app-required-legend">@T["users.accesses"]</legend><p>@T["users.multiple"]</p>
             <div class="registry-user-accesses">@foreach (var choice in Model.Roles)
             {
                 <RbiCheckbox @key="choice.Id" @bind-Value="choice.Selected">@T["users.role." + choice.Name.ToLowerInvariant()]</RbiCheckbox>
             }</div>
             <ValidationMessage For="@(() => Model.Roles)" />
-            @if (Model.SelectedRoles.Length == 0) { <p>@T["users.empty-roles"]</p> }
+            <p class="registry-help">@T["users.empty-roles"]</p>
+            @if (Model.SelectedRoles.Length == 0) { <p>@T["users.empty-roles-detail"]</p> }
         </fieldset>
+    <div role="alert" tabindex="-1" @ref="_summary"><ValidationSummary /></div>
         <div class="registry-toolbar"><RbiButton OnClick="Cancel" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton><RbiButton Type="RbiButtonType.Submit">@T["common.save"]</RbiButton></div>
     </fieldset>
 </EditForm>

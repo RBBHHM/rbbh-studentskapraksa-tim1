@@ -14,8 +14,8 @@
     <Actions>
         @if (_authenticated && _canRead && !_loading && _error is null)
         {
-            <RbiButton Disabled="@(_busy || _openingEditor)" Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Ghost">@T["common.refresh"]</RbiButton>
-            @if (_canCreate) { <RbiButton Disabled="@(_busy || _openingEditor || _refreshing || _periodLocked)" OnClick="() => _importOpen = true" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.FileUp" />@T["common.import"]</RbiButton> }
+
+            @if (_canCreate) { <label class="registry-file-button registry-file-button--secondary"><RbiIcon Name="RbiIconName.FileUp" /><span>@T["common.import"]</span><InputFile @key="_fileKey" id="physical-import" accept=".xlsx" OnChange="ChooseImport" disabled="@(_busy || _openingEditor || _refreshing || _periodLocked)" /></label> }
             <RbiButton Disabled="@(_busy || _openingEditor || _refreshing)" OnClick="ExportAsync" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.Download" />@T["common.export"]</RbiButton>
             @if (_canCreate) { <RbiButton Disabled="@(_busy || _refreshing || _periodLocked)" Loading="_openingEditor" LoadingLabel="@T["state.loading"]" OnClick="() => Edit(null)"><RbiIcon Name="RbiIconName.Plus" />@T["common.new"]</RbiButton> }
         }
@@ -94,7 +94,7 @@ else
 
 @if (_draft is { } draft)
 {
-    <RbiDialog Open Title="@T[_editingId.HasValue ? "common.edit" : "common.new"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseEditor">
+    <RbiDialog Open Class="app-form-dialog" Title="@T[_editingId.HasValue ? "common.edit" : "common.new"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseEditor">
         <DialogBody>
             @if (_fallback) { <RbiAlert Title="@T["person.fallback"]" /> }
             <PhysicalPersonForm MutationBlocked="_periodLocked" @key="draft" Model="draft" Id="_editingId" People="_people" Bases="_bases" SpecialBases="_special" Save="SaveAsync" Cancel="() => CloseEditor(false)" />
@@ -106,22 +106,19 @@ else
                 ConfirmLoadingLabel="@T["common.saving"]" Confirming="_busy" OnConfirm="RunActionAsync">
     @if (_actionError is not null) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_actionError]" /> }
 </RbiAlertDialog>
-<RbiDialog Open="_importOpen" OpenChanged="CloseImport" Title="@T["common.import"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)">
+<RbiDialog Open="@(_importResult is not null || _importError is not null)" OpenChanged="CloseImport" Class="app-result-dialog" Title="@T["import.result-title"]" Description="@(_importResult is { } summary ? T.Format("import.result", summary.Imported, summary.Failed) : null)" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)">
     <DialogBody>
-        <p>@T["import.help"]</p>
-        <label for="physical-import">@T["import.file"]</label>
-        <InputFile id="physical-import" accept=".xlsx" OnChange="ChooseImport" disabled="@(_busy || _periodLocked)" />
-        @if (_importError is not null) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_importError]" /> }
-        @if (_importResult is { } result)
+        @if (_importError is not null) { <div class="app-result app-result--danger" role="alert">@T[_importError]</div> }
+        else if (_importResult is { } result)
         {
-            <div role="status"><p>@T.Format("import.result", result.Imported, result.Failed)</p></div>
             @if (result.Errors.Count > 0)
             {
-                <ul>@foreach (var error in result.Errors) { <li>@SafeImportError(error)</li> }</ul>
+                <div class="app-result app-result--danger" role="status"><p><strong>@T["import.fix-title"]</strong></p><ol>@foreach (var error in result.Errors) { <li>@SafeImportError(error)</li> }</ol></div>
             }
+            else { <div class="app-result app-result--success" role="status">@T["import.success"]</div> }
         }
-        <RbiButton Disabled="@(_busy || _importFile is null || _periodLocked)" OnClick="ImportAsync">@T["common.import"]</RbiButton>
     </DialogBody>
+    <DialogFooter><RbiButton OnClick="() => CloseImport(false)" Disabled="_busy">@T["common.close"]</RbiButton></DialogFooter>
 </RbiDialog>
 
 @code {
@@ -137,6 +134,7 @@ else
     private Guid? _editingId, _treePerson;
     private RelatedPerson? _action;
     private IBrowserFile? _importFile;
+    private Guid _fileKey = Guid.NewGuid();
     private ImportResult? _importResult;
     private string? _search, _error, _notice, _actionError, _importError;
     private string? _periodError;
@@ -243,14 +241,15 @@ else
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         finally { if (!token.IsCancellationRequested) _treeLoading = false; }
     }
-    private void CloseImport(bool open) { if (!_busy) { _importOpen = open; if (!open) { _importFile = null; _importResult = null; _importError = null; } } }
-    private void ChooseImport(InputFileChangeEventArgs args)
+    private void CloseImport(bool open) { if (!_busy) { _importOpen = open; if (!open) { _importFile = null; _importResult = null; _importError = null; _fileKey = Guid.NewGuid(); } } }
+    private async Task ChooseImport(InputFileChangeEventArgs args)
     {
         _importFile = null; _importResult = null; _importError = null;
         if (!_authenticated || !_canCreate) { _importError = "errors.forbidden"; return; }
         var file = args.File;
         if (file.Size is <= 0 or > 10485760 || !file.Name.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase)) { _importError = "import.invalid-file"; return; }
         _importFile = file;
+        await ImportAsync();
     }
     private async Task ImportAsync()
     {

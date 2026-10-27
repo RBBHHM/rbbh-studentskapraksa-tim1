@@ -11,7 +11,6 @@
 
 <PageTitle>@T["reports.title"]</PageTitle>
 <HeroBar Title="@T["reports.title"]" Description="@T["reports.subtitle"]">
-    <Actions>@if (_authenticated && (_canRead || _refreshing)) { <RbiButton Disabled="_busy" Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Ghost">@T["common.refresh"]</RbiButton> }</Actions>
 </HeroBar>
 @if (!_authenticated && !_refreshing) { <IdentityNotice /> }
 else if (_authenticated && !_canRead && !_refreshing)
@@ -33,7 +32,7 @@ else if (_authenticated)
             </RbiSelect></div>
             <div class="registry-field"><label for="report-month">@T["reports.month"]</label>
             <RbiSelect TValue="int" Id="report-month" @bind-Value="_month" Disabled="@(_busy || _refreshing)">
-                @for (var month = 1; month <= 12; month++) { <option value="@month">@System.Globalization.CultureInfo.CurrentUICulture.DateTimeFormat.GetMonthName(month)</option> }
+                @for (var month = 1; month <= 12; month++) { <option value="@month">@month</option> }
             </RbiSelect></div>
             <RbiButton Disabled="@(_busy || _refreshing || !ValidPeriod)" OnClick="() => GenerateAsync(true)"><RbiIcon Name="RbiIconName.FileText" />@T["reports.generate-monthly"]</RbiButton>
         }
@@ -43,8 +42,8 @@ else if (_authenticated)
                   aria-invalid="@(!string.IsNullOrEmpty(_identifier) && !ValidIdentifier ? "true" : null)" aria-describedby="report-identifier-help" /></div>
         <RbiButton Disabled="@(_busy || _refreshing || !ValidIdentifier)" OnClick="ExportClientAsync" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.Download" />@T["reports.client-download"]</RbiButton>
     </div>
-    @if (_canGenerate) { <p class="registry-help">@T["reports.persist-help"]</p> }
-    <p id="report-identifier-help" class="registry-help">@T["reports.identifier-help"]</p>
+    @if (_canGenerate) { <p class="registry-help app-visually-hidden">@T["reports.persist-help"]</p> }
+    <p id="report-identifier-help" class="registry-help app-visually-hidden">@T["reports.identifier-help"]</p>
     @if (_refreshing) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
     else if (_loadError is not null)
     {

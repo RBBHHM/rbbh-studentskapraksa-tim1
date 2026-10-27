@@ -11,7 +11,7 @@
     <Actions>
         @if (_authenticated && _canRead && !_loading)
         {
-            <RbiButton Disabled="@(_busy || _refreshing)" OnClick="LoadAsync" Variant="RbiButtonVariant.Ghost">@T["common.refresh"]</RbiButton>
+
             @if (_canWrite)
             {
                 <RbiButton Disabled="@(_busy || _refreshing)" OnClick="NewDefinition" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.Plus" />@T["codes.definition-create"]</RbiButton>
@@ -40,18 +40,18 @@ else
                 <RbiButton OnClick="() => _deleteCategory = _category" Variant="RbiButtonVariant.Destructive"><RbiIcon Name="RbiIconName.Trash2" />@T["codes.delete-category"]</RbiButton>
             }
         </fieldset>
-        @if (_canWrite && _category.Length > 0) { <p class="registry-help">@T["codes.import-help"]</p> }
+        @if (_canWrite && _category.Length > 0) { <p class="registry-help app-visually-hidden">@T["codes.import-help"]</p> }
         @if (_refreshing) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
         else if (_category.Length == 0) { <div class="registry-surface"><RegistryEmpty Body="@T["codes.no-categories"]" /></div> }
         else if (_values.Count == 0 && _error is null) { <div class="registry-surface"><RegistryEmpty Body="@T["codes.empty"]" /></div> }
         else if (_error is null)
         {
-            <p class="registry-help">@T["codes.history"]</p>
+            <p class="registry-help app-visually-hidden">@T["codes.history"]</p>
             <RbiTable AccessibleLabel="@T["codes.title"]" Class="registry-table registry-codes-table"><caption>@_category</caption>
-                <thead><tr><th scope="col">@T["codes.code"]</th><th scope="col">@T["codes.name"]</th><th scope="col">@T["codes.description"]</th><th scope="col">@T["codes.order"]</th><th scope="col" class="registry-center">@T["codes.active"]</th><th scope="col">@T["codes.modified"]</th>@if (_canWrite) { <th scope="col" class="registry-center registry-actions-cell">@T["users.actions"]</th> }</tr></thead>
+                <thead><tr><th scope="col">@T["codes.code"]</th><th scope="col">@T["codes.name"]</th><th scope="col">@T["codes.description"]</th><th scope="col" class="registry-center">@T["codes.active"]</th>@if (_canWrite) { <th scope="col" class="registry-center registry-actions-cell">@T["users.actions"]</th> }</tr></thead>
                 <tbody>@foreach (var value in _values)
                 {
-                    <tr @key="value.Id"><td>@value.Code</td><td>@value.Value</td><td>@value.Description</td><td>@value.DisplayOrder</td><td class="registry-center"><Indicator Kind="@(value.IsActive ? "active" : "inactive")" Label="@T[value.IsActive ? "codes.active" : "codes.inactive"]" /></td><td>@value.ModifiedBy @value.ModifiedAt?.ToString("g")</td>
+                    <tr @key="value.Id"><td>@value.Code</td><td class="registry-strong">@value.Value</td><td>@(string.IsNullOrWhiteSpace(value.Description) ? "—" : value.Description)</td><td class="registry-center"><Indicator Kind="@(value.IsActive ? "active" : "inactive")" Label="@T[value.IsActive ? "codes.active" : "codes.inactive"]" /></td>
                         @if (_canWrite) { <td class="registry-actions-cell"><div class="registry-row-actions"><RbiButton Disabled="@(_busy || _refreshing)" OnClick="() => Edit(value)" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["codes.edit"]" title="@T["codes.edit"]"><RbiIcon Name="RbiIconName.Pencil" /></RbiButton><RbiButton Disabled="@(_busy || _refreshing)" OnClick="() => _deleteValue = value" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["codes.delete-value"]" title="@T["codes.delete-value"]" Class="registry-danger-icon"><RbiIcon Name="RbiIconName.Trash2" /></RbiButton></div></td> }
                     </tr>
                 }</tbody>
@@ -61,7 +61,7 @@ else
 }
 @if (_draft is { } draft)
 {
-    <RbiDialog Open Class="registry-codes-dialog" Title="@T[draft.Definition ? "codes.definition-create" : draft.Id is null ? "codes.create" : "codes.edit"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseEditor">
+    <RbiDialog Open Class="app-form-dialog app-form-dialog--sm registry-codes-dialog" Title="@T[draft.Definition ? "codes.definition-create" : draft.Id is null ? "codes.create" : "codes.edit"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseEditor">
         <DialogBody><CodeListForm @key="draft" Model="draft" Save="SaveAsync" Cancel="() => CloseEditor(false)" /></DialogBody>
     </RbiDialog>
 }

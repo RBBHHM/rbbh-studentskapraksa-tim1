@@ -19,8 +19,8 @@ else if (_user?.Identity?.IsAuthenticated == true)
             <div class="profile-hero__text">
                 <RbiText Tone="RbiTextTone.Secondary">@T["profile.current"]</RbiText>
                 <RbiHeading Level="1" VisualLevel="4" Class="profile-hero__name">@((_profile?.FullName ?? DisplayName) ?? "—")</RbiHeading>
-                <p class="profile-hero__line"><RbiIcon Name="RbiIconName.UserRound" />@(Username ?? "—")</p>
-                <p class="profile-hero__line"><RbiIcon Name="RbiIconName.Info" />@(Claim(ClaimTypes.Email) ?? Claim("email") ?? "—")</p>
+                <p class="profile-hero__line"><AppIcon Name="AppIconName.KeyRound" />@(Username ?? "—")</p>
+                <p class="profile-hero__line"><AppIcon Name="AppIconName.Mail" />@(Claim(ClaimTypes.Email) ?? Claim("email") ?? "—")</p>
             </div>
         </div>
         <dl class="profile-grid">
@@ -42,6 +42,7 @@ else if (_user?.Identity?.IsAuthenticated == true)
                 @if ((Claim(ClaimTypes.NameIdentifier) ?? Claim("sub")) is { } subject) { <dt>@T["profile.subject"]</dt><dd>@subject</dd> }
             </div>
         </dl>
+        @if (_profile is not null) { <div class="profile-note"><AppIcon Name="AppIconName.ShieldCheck" /><span>@T["profile.note"]</span></div> }
         @if (_error) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T["profile.unavailable"]" /><RbiButton OnClick="LoadAsync">@T["state.retry"]</RbiButton> }
     </section>
 }

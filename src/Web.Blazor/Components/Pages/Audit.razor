@@ -7,7 +7,6 @@
 
 <PageTitle>@T["audit.title"]</PageTitle>
 <HeroBar Title="@T["audit.title"]" Description="@T["audit.subtitle"]" Eyebrow="@T["nav.area.administration"]">
-    <Actions>@if (_authenticated && _admin && !_loading && _error is null) { <RbiButton Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Ghost">@T["common.refresh"]</RbiButton> }</Actions>
 </HeroBar>
 @if (!_authenticated && !_loading) { <IdentityNotice /> }
 else if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
@@ -31,8 +30,11 @@ else
             }</tbody>
         </RbiTable>
     }
-    <p role="status">@T.Format("audit.page-summary", _page, TotalPages, _result.Total)</p>
+    @if (TotalPages > 1)
+    {
+        <p role="status">@T.Format("audit.page-summary", _page, TotalPages, _result.Total)</p>
     <RbiPagination CurrentPage="_page" CurrentPageChanged="ChangePageAsync" TotalPages="TotalPages" AccessibleLabel="@T["audit.pages"]" PreviousLabel="@T["common.back"]" PreviousAccessibleLabel="@T["legal.previous"]" NextLabel="@T["common.actions.continue"]" NextAccessibleLabel="@T["legal.next"]" PageAccessibleLabel="@(page => T.Format("legal.page", page))" />
+    }
 }
 @code {
     private readonly CancellationTokenSource _lifetime = new();

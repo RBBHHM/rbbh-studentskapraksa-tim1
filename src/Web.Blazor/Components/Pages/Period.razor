@@ -8,7 +8,6 @@
 
 <PageTitle>@T["period.title"]</PageTitle>
 <HeroBar Title="@T["period.title"]" Description="@T["period.subtitle"]">
-    <Actions>@if (_authenticated && _canRead && _current is not null) { <RbiButton Disabled="_busy" Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Ghost">@T["common.refresh"]</RbiButton> }</Actions>
 </HeroBar>
 @if (!_authenticated && !_loading) { <IdentityNotice /> }
 else if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
@@ -58,12 +57,15 @@ else if (_current is { } current)
             }</tbody>
         </RbiTable>
     }
-    <p role="status">@T.Format("legal.page-summary", _page, TotalPages, _requests.Total)</p>
+    @if (TotalPages > 1)
+    {
+        <p role="status">@T.Format("legal.page-summary", _page, TotalPages, _requests.Total)</p>
     <RbiPagination CurrentPage="_page" CurrentPageChanged="ChangePageAsync" TotalPages="TotalPages" AccessibleLabel="@T["period.pages"]" PreviousLabel="@T["common.back"]" PreviousAccessibleLabel="@T["legal.previous"]" NextLabel="@T["common.actions.continue"]" NextAccessibleLabel="@T["legal.next"]" PageAccessibleLabel="@(page => T.Format("legal.page", page))" />
+    }
 }
 @if (_draft is { } draft)
 {
-    <RbiDialog Open Class="registry-period-dialog" Title="@T[draft.Kind == PeriodNoteKind.Response ? "period.response" : "period.note"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseEditor">
+    <RbiDialog Open Class="app-form-dialog app-form-dialog--sm registry-period-dialog" Title="@T[draft.Kind == PeriodNoteKind.Response ? "period.response" : "period.note"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseEditor">
         <DialogBody><PeriodNoteForm @key="draft" Model="draft" LabelKey="@(draft.Kind == PeriodNoteKind.Response ? "period.response" : "period.note")" Save="SaveNoteAsync" Cancel="() => CloseEditor(false)" /></DialogBody>
     </RbiDialog>
 }

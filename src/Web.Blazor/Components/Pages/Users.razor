@@ -5,12 +5,12 @@
 @inject IProfileApi Profile
 @inject IUsersApi Api
 
-<PageTitle>@T["users.title"]</PageTitle>
-<HeroBar Title="@T["users.title"]" Description="@T["users.subtitle"]">
+<PageTitle>@T["users.page-title"]</PageTitle>
+<HeroBar Title="@T["users.page-title"]" Description="@T["users.subtitle"]">
     <Actions>
         @if (_authenticated && _canRead && !_loading && _error is null)
         {
-            <RbiButton Disabled="_busy" Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Ghost">@T["common.refresh"]</RbiButton>
+
             @if (_canWrite) { <RbiButton Disabled="@(_busy || _refreshing)" OnClick="() => Edit(null)"><RbiIcon Name="RbiIconName.Plus" />@T["users.add"]</RbiButton> }
         }
     </Actions>
@@ -30,27 +30,30 @@ else
     else
     {
         <RbiTable AccessibleLabel="@T["users.title"]" Class="registry-table registry-users-table">
-            <thead><tr><th scope="col">@T["users.user"]</th><th scope="col">@T["users.email"]</th><th scope="col">@T["users.accesses"]</th><th scope="col">@T["users.permissions"]</th><th scope="col" class="registry-center">@T["users.status"]</th>@if (_canWrite) { <th scope="col" class="registry-center registry-actions-cell">@T["users.actions"]</th> }</tr></thead>
+            <thead><tr><th scope="col">@T["users.user"]</th><th scope="col">@T["users.email"]</th><th scope="col">@T["users.col-accesses"]</th><th scope="col">@T["users.permissions"]</th><th scope="col" class="registry-center">@T["users.status"]</th>@if (_canWrite) { <th scope="col" class="registry-center registry-actions-cell">@T["users.actions"]</th> }</tr></thead>
             <tbody>@foreach (var user in _result.Users)
             {
                 <tr @key="user.Id"><td>@user.FirstName @user.LastName<br />@user.Username</td><td>@user.Email</td><td>@(user.IsActive && user.Roles.Count == 0 ? RoleLabel("gost") : string.Join(", ", user.Roles.Select(RoleLabel)))</td><td class="registry-permissions">@string.Join(", ", user.EffectivePermissions)</td><td class="registry-center"><Indicator Kind="@(user.IsActive ? "active" : "inactive")" Label="@T[user.IsActive ? "users.active" : "users.inactive"]" /></td>
                 @if (_canWrite)
                 {
                     <td class="registry-actions-cell"><div class="registry-row-actions">
-                        <RbiButton Disabled="@(_busy || _refreshing || IsSelf(user))" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["users.roles-edit"]" title="@T["users.roles-edit"]" OnClick="() => Edit(user)"><RbiIcon Name="RbiIconName.Settings" /></RbiButton>
-                        <RbiButton Disabled="@(_busy || _refreshing || (user.IsActive && IsSelf(user)))" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T[user.IsActive ? "users.deactivate" : "users.reactivate"]" title="@T[user.IsActive ? "users.deactivate" : "users.reactivate"]" OnClick="() => Confirm(user, false)"><RbiIcon Name="@(user.IsActive ? RbiIconName.Lock : RbiIconName.RotateCcw)" /></RbiButton>
+                        <RbiButton Disabled="@(_busy || _refreshing || IsSelf(user))" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["users.roles-edit"]" title="@T["users.roles-edit"]" OnClick="() => Edit(user)"><AppIcon Name="AppIconName.UserCog" /></RbiButton>
+                        <RbiButton Disabled="@(_busy || _refreshing || (user.IsActive && IsSelf(user)))" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T[user.IsActive ? "users.deactivate" : "users.reactivate"]" title="@T[user.IsActive ? "users.deactivate" : "users.reactivate"]" OnClick="() => Confirm(user, false)"><AppIcon Name="AppIconName.Power" /></RbiButton>
                         <RbiButton Disabled="@(_busy || _refreshing || IsSelf(user))" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["users.delete"]" title="@T["users.delete"]" Class="registry-danger-icon" OnClick="() => Confirm(user, true)"><RbiIcon Name="RbiIconName.Trash2" /></RbiButton>
-                    </div>@if (IsSelf(user)) { <p class="registry-help registry-help--tight">@T["users.self-protected"]</p> }</td>
+                    </div>@if (IsSelf(user)) { <p class="app-visually-hidden">@T["users.self-protected"]</p> }</td>
                 }</tr>
             }</tbody>
         </RbiTable>
     }
-    <p role="status">@T.Format("legal.page-summary", _page, TotalPages, _result.Total)</p>
+    @if (TotalPages > 1)
+    {
+        <p role="status">@T.Format("legal.page-summary", _page, TotalPages, _result.Total)</p>
     <RbiPagination CurrentPage="_page" CurrentPageChanged="ChangePageAsync" TotalPages="TotalPages" AccessibleLabel="@T["users.pages"]" PreviousLabel="@T["common.back"]" PreviousAccessibleLabel="@T["legal.previous"]" NextLabel="@T["common.actions.continue"]" NextAccessibleLabel="@T["legal.next"]" PageAccessibleLabel="@(page => T.Format("legal.page", page))" />
+    }
 }
 @if (_draft is { } draft)
 {
-    <RbiDialog Open Class="registry-users-dialog" Title="@T[draft.Id is null ? "users.create" : "users.roles-edit"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseEditor">
+    <RbiDialog Open Class="app-form-dialog app-form-dialog--md registry-users-dialog" Title="@T[draft.Id is null ? "users.create" : "users.roles-edit"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseEditor">
         <DialogBody><UserForm @key="draft" Model="draft" Save="SaveAsync" Cancel="() => CloseEditor(false)" /></DialogBody>
     </RbiDialog>
 }
