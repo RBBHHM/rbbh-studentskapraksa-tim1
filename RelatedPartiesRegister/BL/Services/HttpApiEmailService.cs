@@ -107,7 +107,7 @@ public sealed class HttpApiEmailService(
         try
         {
             var httpClient = httpClientFactory.CreateClient();
-            var response = await httpClient.PostAsJsonAsync(emailApiUrl, emailDto);
+            using var response = await httpClient.PostAsJsonAsync(emailApiUrl, emailDto);
 
             if (!response.IsSuccessStatusCode)
             {

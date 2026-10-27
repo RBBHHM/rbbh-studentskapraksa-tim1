@@ -109,10 +109,12 @@ public class AutoLockHostedService : BackgroundService
         var auditService = scope.ServiceProvider.GetRequiredService<IAuditService>();
         await auditService.LogAsync(new AuditEntry
         {
-            TableName = "PeriodLock", RecordId = $"{year}-{month:D2}",
+            TableName = "PeriodLock",
+            RecordId = $"{year}-{month:D2}",
             Action = "PERIOD_LOCK",
             NewValues = JsonSerializer.Serialize(new { year, month, lockedBy = "system" }),
-            UserId = "system", Username = "system"
+            UserId = "system",
+            Username = "system"
         });
 
         await NotifyAllUsersAsync(scope.ServiceProvider, year, month);
@@ -158,16 +160,6 @@ public class AutoLockHostedService : BackgroundService
         return nextRun - now;
     }
 
-    private static bool IsLastWorkingDayOfMonth(DateTime date)
-    {
-        var lastDay = new DateTime(date.Year, date.Month, DateTime.DaysInMonth(date.Year, date.Month));
-
-        while (lastDay.DayOfWeek == DayOfWeek.Saturday ||
-               lastDay.DayOfWeek == DayOfWeek.Sunday)
-        {
-            lastDay = lastDay.AddDays(-1);
-        }
-
-        return date.Date == lastDay.Date;
-    }
+    private static bool IsLastWorkingDayOfMonth(DateTime date) =>
+        date.Date == AutoLockHelper.GetLastWorkingDay(date.Year, date.Month).Date;
 }
