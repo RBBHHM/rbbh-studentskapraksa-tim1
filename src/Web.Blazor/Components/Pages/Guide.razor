@@ -5,13 +5,15 @@
 @inject IProfileApi Profile
 
 <PageTitle>@T["guide.title"]</PageTitle>
+<div class="guide-card">
 <div class="guide-hero">
-    <span class="guide-hero__icon"><RbiIcon Name="RbiIconName.Info" /></span>
+    <span class="guide-hero__icon"><AppIcon Name="AppIconName.BookOpenCheck" /></span>
     <div>
         <RbiEyebrow Class="guide-hero__eyebrow">@T["guide.eyebrow"]</RbiEyebrow>
         <RbiHeading Level="1" VisualLevel="4" Class="guide-hero__title">@T["guide.title"]</RbiHeading>
         <RbiText Tone="RbiTextTone.Secondary" Class="guide-hero__lead">@T["guide.lead"]</RbiText>
     </div>
+</div>
 </div>
 @if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
 else if (!_authenticated) { <IdentityNotice /> }
@@ -24,15 +26,20 @@ else if (_profile is not null)
         @foreach (var section in GuideContent.Visible(_profile))
         {
             <details open="@(section.Id == GuideContent.Visible(_profile).First().Id)">
-                <summary><strong>@T["guide." + section.Id + ".title"]</strong> — @T["guide." + section.Id + ".summary"]</summary>
+                <summary>
+                    <span class="guide-section__icon"><AppIcon Name="SectionIcon(section.Id)" /></span>
+                    <span class="guide-section__text"><strong>@T["guide." + section.Id + ".title"]</strong><span>@T["guide." + section.Id + ".summary"]</span></span>
+                    <RbiIcon Name="RbiIconName.ChevronDown" Class="guide-section__chevron" />
+                </summary>
                 <ol>@for (var index = 1; index <= section.Points; index++) { <li>@T["guide." + section.Id + ".point" + index]</li> }</ol>
             </details>
         }
-        <RbiCallout Title="@T["guide.before-title"]">@T["guide.before"]</RbiCallout>
+        <div class="guide-before"><AppIcon Name="AppIconName.ClipboardCheck" Class="guide-before__icon" /><div><h2>@T["guide.before-title"]</h2><p>@T["guide.before"]</p></div></div>
     </section>
 }
 @code {
     private static readonly string[] States = ["draft", "verified", "rejected", "inactive"];
+    private static AppIconName SectionIcon(string id) => id switch { "physical" => AppIconName.UsersRound, "legal" => AppIconName.Building2, "limits" => AppIconName.Scale, "reports" => AppIconName.FileSpreadsheet, _ => AppIconName.UserCog };
     private readonly CancellationTokenSource _lifetime = new();
     private readonly CancellationToken _token;
     public Guide() => _token = _lifetime.Token;

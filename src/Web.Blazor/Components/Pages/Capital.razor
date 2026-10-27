@@ -9,11 +9,11 @@
 @inject FileDelivery Files
 
 <PageTitle>@T["capital.title"]</PageTitle>
-<HeroBar Title="@T["capital.title"]" Description="@T["capital.subtitle"]" Icon="RbiIconName.Wallet">
+<HeroBar Title="@T["capital.title"]" Description="@T["capital.subtitle"]" Glyph="AppIconName.Landmark">
     <Actions>
         @if (_authenticated && _canRead && !_loading && _error is null)
         {
-            <RbiButton Disabled="_busy" Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Ghost">@T["common.refresh"]</RbiButton>
+
             <RbiButton Disabled="@(_busy || _refreshing)" OnClick="ExportAsync" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.Download" />@T["common.export"]</RbiButton>
             @if (_canEdit) { <RbiButton Disabled="@(_busy || _refreshing || _periodLocked)" OnClick="Edit"><RbiIcon Name="RbiIconName.Pencil" />@T["capital.edit"]</RbiButton> }
         }
@@ -35,14 +35,14 @@ else
     {
         <RbiTable AccessibleLabel="@T["capital.title"]" Class="registry-table registry-capital-table">
             <thead><tr><th scope="col">@T["limit.core"]</th><th scope="col">@T["limit.regulatory"]</th><th scope="col">@T["capital.supplementary"]</th><th scope="col">@T["capital.date"]</th></tr></thead>
-            <tbody><tr><td>@Money(record.CoreCapital)</td><td>@Money(record.RegulatoryCapital)</td><td>@Money(record.SupplementaryCapital)</td><td>@record.CapitalDate.ToString("d")</td></tr></tbody>
+            <tbody><tr><td>@Money(record.CoreCapital)</td><td>@Money(record.RegulatoryCapital)</td><td>@Money(record.SupplementaryCapital)</td><td>@CapitalDay(record.CapitalDate)</td></tr></tbody>
         </RbiTable>
     }
     else { <div class="registry-surface"><RegistryEmpty Body="@T["capital.empty"]" /></div> }
 }
 @if (_draft is { } draft)
 {
-    <RbiDialog Open Title="@T["capital.edit"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseEditor">
+    <RbiDialog Open Class="app-form-dialog app-form-dialog--sm" Title="@T["capital.edit"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseEditor">
         <DialogBody><CapitalForm MutationBlocked="_periodLocked" @key="draft" Model="draft" Save="SaveAsync" Cancel="() => CloseEditor(false)" /></DialogBody>
     </RbiDialog>
 }
@@ -56,7 +56,8 @@ else
     private string? _periodError;
     private bool _periodLocked = true;
     private bool _disposed, _authenticated, _canRead, _canEdit, _busy, _loading = true, _refreshing, _loaded, _notice;
-    private static string Money(decimal amount) => amount.ToString("N2") + (System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "bs" ? " KM" : " BAM");
+    private static string Money(decimal amount) => "BAM\u00a0" + amount.ToString("N2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+    private static string CapitalDay(DateTime date) => System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "bs" ? date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) : date.ToString("dd/MM/yyyy", System.Globalization.CultureInfo.InvariantCulture);
     protected override Task OnInitializedAsync() => LoadAsync();
     private async Task LoadAsync()
     {
