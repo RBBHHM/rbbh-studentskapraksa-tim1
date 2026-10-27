@@ -103,6 +103,8 @@ public class RelatedPersonService(
             return Result<List<RelatedPersonTreeNodeDTO>>.NotFoundError("Odabrano fizičko lice nije pronađeno.");
 
         var byId = people.ToDictionary(person => person.Id);
+        var childrenByParent = people.Where(person => person.RelatedToPersonId.HasValue)
+            .ToLookup(person => person.RelatedToPersonId!.Value);
         var root = selected;
         var visited = new HashSet<Guid>();
         while (root.RelatedToPersonId.HasValue
@@ -122,8 +124,7 @@ public class RelatedPersonService(
             };
 
             if (!path.Add(person.Id)) return node;
-            node.Children = people
-                .Where(candidate => candidate.RelatedToPersonId == person.Id)
+            node.Children = childrenByParent[person.Id]
                 .Select(candidate => Build(candidate, new HashSet<Guid>(path)))
                 .ToList();
             return node;
@@ -555,21 +556,21 @@ public class RelatedPersonService(
         {
             try
             {
-                var firstName     = ws.Cell(row, 1).GetString().Trim();
-                var lastName      = ws.Cell(row, 2).GetString().Trim();
-                var residencyStr  = ws.Cell(row, 3).GetString().Trim();
-                var jmbg          = ws.Cell(row, 4).GetString().Trim();
-                var passport      = ws.Cell(row, 5).GetString().Trim();
-                var fbaId         = ws.Cell(row, 6).GetString().Trim();
+                var firstName = ws.Cell(row, 1).GetString().Trim();
+                var lastName = ws.Cell(row, 2).GetString().Trim();
+                var residencyStr = ws.Cell(row, 3).GetString().Trim();
+                var jmbg = ws.Cell(row, 4).GetString().Trim();
+                var passport = ws.Cell(row, 5).GetString().Trim();
+                var fbaId = ws.Cell(row, 6).GetString().Trim();
                 var relationBasis = ws.Cell(row, 7).GetString().Trim();
-                var specialBasis  = ws.Cell(row, 8).GetString().Trim();
-                var dateFromStr   = ws.Cell(row, 9).GetString().Trim();
-                var dateToStr     = ws.Cell(row, 10).GetString().Trim();
-                var noFamilyStr   = ws.Cell(row, 11).GetString().Trim();
-                var connBankStr   = ws.Cell(row, 12).GetString().Trim();
+                var specialBasis = ws.Cell(row, 8).GetString().Trim();
+                var dateFromStr = ws.Cell(row, 9).GetString().Trim();
+                var dateToStr = ws.Cell(row, 10).GetString().Trim();
+                var noFamilyStr = ws.Cell(row, 11).GetString().Trim();
+                var connBankStr = ws.Cell(row, 12).GetString().Trim();
                 var specialRelStr = ws.Cell(row, 13).GetString().Trim();
-                var specContStr   = ws.Cell(row, 14).GetString().Trim();
-                var malusStr      = ws.Cell(row, 15).GetString().Trim();
+                var specContStr = ws.Cell(row, 14).GetString().Trim();
+                var malusStr = ws.Cell(row, 15).GetString().Trim();
 
                 if (string.IsNullOrWhiteSpace(firstName) && string.IsNullOrWhiteSpace(lastName))
                     continue; // prazan red — preskoči bez greške
@@ -589,27 +590,27 @@ public class RelatedPersonService(
                 var residency = isResident ? ResidencyType.Resident : ResidencyType.NonResident;
 
                 DateTime? dateFrom = ParseOptionalDate(dateFromStr, "Datum od");
-                DateTime? dateTo   = ParseOptionalDate(dateToStr, "Datum do");
+                DateTime? dateTo = ParseOptionalDate(dateToStr, "Datum do");
 
                 var dto = new CreateRelatedPersonDTO
                 {
-                    FirstName    = firstName,
-                    LastName     = lastName,
-                    Residency    = residency,
-                    JMBG         = string.IsNullOrWhiteSpace(jmbg) ? null : jmbg,
+                    FirstName = firstName,
+                    LastName = lastName,
+                    Residency = residency,
+                    JMBG = string.IsNullOrWhiteSpace(jmbg) ? null : jmbg,
                     PassportNumber = string.IsNullOrWhiteSpace(passport) ? null : passport,
-                    FBAId        = string.IsNullOrWhiteSpace(fbaId) ? null : fbaId,
-                    RelationBasis      = string.IsNullOrWhiteSpace(relationBasis) ? null : relationBasis,
+                    FBAId = string.IsNullOrWhiteSpace(fbaId) ? null : fbaId,
+                    RelationBasis = string.IsNullOrWhiteSpace(relationBasis) ? null : relationBasis,
                     RelationDescription = string.IsNullOrWhiteSpace(relationBasis) ? null : relationBasis,
                     SpecialRelationBasis = string.IsNullOrWhiteSpace(specialBasis) ? null : specialBasis,
-                    DateFrom     = dateFrom,
-                    DateTo       = dateTo,
+                    DateFrom = dateFrom,
+                    DateTo = dateTo,
                     IsIdentifiedStaff = true,
-                    DeclarationNoFamilyMembers  = ParseRequiredBool(noFamilyStr, "Izjava o nepostojanju članova porodice"),
-                    ConnectedWithBank            = ParseRequiredBool(connBankStr, "Povezano lice sa Bankom"),
-                    SpecialRelationshipWithBank  = ParseRequiredBool(specialRelStr, "Lice u posebnom odnosu sa Bankom"),
-                    SpecialContract              = ParseRequiredBool(specContStr, "Poseban ugovor"),
-                    MalusClawback                 = ParseRequiredBool(malusStr, "Malus & Clawback")
+                    DeclarationNoFamilyMembers = ParseRequiredBool(noFamilyStr, "Izjava o nepostojanju članova porodice"),
+                    ConnectedWithBank = ParseRequiredBool(connBankStr, "Povezano lice sa Bankom"),
+                    SpecialRelationshipWithBank = ParseRequiredBool(specialRelStr, "Lice u posebnom odnosu sa Bankom"),
+                    SpecialContract = ParseRequiredBool(specContStr, "Poseban ugovor"),
+                    MalusClawback = ParseRequiredBool(malusStr, "Malus & Clawback")
                 };
                 var validationError = RelatedPersonValidator.Validate(dto);
                 if (validationError is not null) throw new InvalidOperationException(validationError);
@@ -638,10 +639,10 @@ public class RelatedPersonService(
                     SpecialRelationshipWithBank = dto.SpecialRelationshipWithBank,
                     SpecialContract = dto.SpecialContract,
                     MalusClawback = dto.MalusClawback,
-                    Status       = RelatedPersonStatus.Draft,
-                    IsActive     = true,
-                    CreatedAt    = DateTime.UtcNow,
-                    CreatedBy    = createdBy
+                    Status = RelatedPersonStatus.Draft,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = createdBy
                 };
 
                 _dbContext.RelatedPersons.Add(entity);
