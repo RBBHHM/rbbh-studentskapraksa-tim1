@@ -15,7 +15,7 @@
     <Actions>
         @if (_authenticated && _canRead && !_loading && _error is null)
         {
-            <RbiButton Disabled="@(_busy || _openingEditor)" Loading="_refreshing" LoadingLabel="@T["state.loading"]" OnClick="LoadAsync" Variant="RbiButtonVariant.Ghost">@T["common.refresh"]</RbiButton>
+
             <RbiButton Disabled="@(_busy || _openingEditor || _refreshing)" OnClick="ExportAsync" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.Download" />@T["common.export"]</RbiButton>
             @if (_canCreate) { <RbiButton Disabled="@(_busy || _refreshing || _periodLocked)" Loading="_openingEditor" LoadingLabel="@T["state.loading"]" OnClick="() => Edit(null)"><RbiIcon Name="RbiIconName.Plus" />@T["common.new"]</RbiButton> }
         }
@@ -36,8 +36,7 @@ else
     <div class="registry-controls">
         <RegistrySearch Id="limit-search" @bind-Value="_search" />
         <div class="registry-filter">
-            <label for="limit-filter" class="registry-filter__label">@T["limit.filter"]</label>
-            <LimitEntityPicker Id="limit-filter" Value="_filter" ValueChanged="FilterAsync" RequireData="false" Disabled="@(_busy || _refreshing || _openingEditor)" />
+            <LimitEntityPicker Id="limit-filter" Filter Value="_filter" ValueChanged="FilterAsync" RequireData="false" Disabled="@(_busy || _refreshing || _openingEditor)" />
         </div>
     </div>
     @if (!Filtered.Any()) { <div class="registry-surface"><RegistryEmpty Body="@T[string.IsNullOrWhiteSpace(_search) && _filter is null ? "state.empty-body" : "state.no-match"]" /></div> }
@@ -62,7 +61,7 @@ else
 }
 @if (_draft is { } draft)
 {
-    <RbiDialog Open Title="@T[_editingId.HasValue ? "common.edit" : "common.new"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseEditor">
+    <RbiDialog Open Class="app-form-dialog" Title="@T[_editingId.HasValue ? "common.edit" : "common.new"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseEditor">
         <DialogBody>
             @if (_types.Count == 0) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T["limit.no-types"]" /> }
             <LimitForm MutationBlocked="_periodLocked" @key="draft" Model="draft" Types="_types" Save="SaveAsync" Cancel="() => CloseEditor(false)" />

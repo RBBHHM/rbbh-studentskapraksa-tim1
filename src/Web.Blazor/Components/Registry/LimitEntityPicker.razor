@@ -1,24 +1,44 @@
-@using RBI.DesignSystem.Components.Forms
 @implements IDisposable
 @inject ILimitsApi Api
 
-<div>
-    <label for="@(Id + "-search")">@T["limit.entity-search"]</label>
-    <div class="registry-toolbar">
-        <RbiInput Id="@(Id + "-search")" @bind-Value="_search" Disabled="@(Disabled || _searching)" />
-        <RbiButton Disabled="@Disabled" Loading="_searching" LoadingLabel="@T["state.loading"]" OnClick="SearchAsync" Variant="RbiButtonVariant.Secondary">@T["common.search"]</RbiButton>
+@* Type-ahead over the backend legal-entity search (same interaction as the reference product): typing searches after a short pause,
+   the results list is a keyboard-operable listbox, a chosen client is shown and can be cleared. *@
+@if (Filter && Value.HasValue && _selectedName is not null)
+{
+    <div class="app-typeahead__chip" id="@Id">
+        <span class="app-typeahead__chip-text">@T["limit.client"]: <strong>@_selectedName</strong></span>
+        <RbiButton Disabled="Disabled" OnClick="ClearAsync" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["limit.clear-filter"]" title="@T["limit.clear-filter"]"><RbiIcon Name="RbiIconName.X" /></RbiButton>
     </div>
-    <RbiSelect TValue="Guid?" Id="@Id" Value="Value" ValueChanged="SelectAsync" ValueExpression="@(ValueExpression ?? (() => Value))" Disabled="Disabled" Placeholder="@T["common.select"]">
-        @foreach (var item in _options) { <option value="@item.Id">@item.Name · @item.MaticniBroj</option> }
-    </RbiSelect>
-    <p>@T["limit.lookup-help"]</p>
-    @if (_loading) { <div role="status">@T["state.loading"]</div> }
-    @if (_error is not null)
-    {
-        <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_error]" />
-        <RbiButton Disabled="@Disabled" OnClick="RetryAsync" Variant="RbiButtonVariant.Secondary">@T["state.retry"]</RbiButton>
-    }
-</div>
+}
+else
+{
+    <div class="app-typeahead">
+        <input type="text" id="@Id" class="rbi-control rbi-input app-typeahead__input" autocomplete="off" data-app-combobox
+               role="combobox" aria-autocomplete="list" aria-expanded="@(ListVisible ? "true" : "false")" aria-controls="@ListId" aria-activedescendant="@ActiveId"
+               aria-label="@(Filter ? T["limit.filter"] : null)" disabled="@Disabled"
+               placeholder="@T[Filter ? "limit.filter-placeholder" : "limit.entity-placeholder"]"
+               value="@_query" @oninput="TypedAsync" @onfocus="OpenList" @onblur="CloseList" @onkeydown="KeyAsync" />
+        @if (ListVisible)
+        {
+            <ul id="@ListId" role="listbox" class="app-typeahead__list" aria-label="@T["limit.entity-search"]">
+                @if (_searching) { <li class="app-typeahead__note" role="presentation">@T["limit.searching"]</li> }
+                else if (_results.Count == 0) { <li class="app-typeahead__note" role="presentation">@T["limit.no-results"]</li> }
+                @for (var index = 0; index < _results.Count; index++)
+                {
+                    var item = _results[index]; var position = index;
+                    <li id="@OptionId(position)" role="option" aria-selected="@(position == _active ? "true" : "false")" class="app-typeahead__option" data-active="@(position == _active ? "true" : "false")"
+                        @onmousedown:preventDefault @onclick="() => SelectAsync(item)">@item.Name</li>
+                }
+            </ul>
+        }
+    </div>
+}
+@if (_loading) { <div role="status" class="app-visually-hidden">@T["state.loading"]</div> }
+@if (_error is not null)
+{
+    <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_error]" />
+    <RbiButton Disabled="@Disabled" OnClick="RetryAsync" Variant="RbiButtonVariant.Secondary">@T["state.retry"]</RbiButton>
+}
 
 @code {
     [Parameter, EditorRequired] public string Id { get; set; } = "";
@@ -28,34 +48,98 @@
     [Parameter] public EventCallback<LimitEntityData?> DataChanged { get; set; }
     [Parameter] public bool RequireData { get; set; } = true;
     [Parameter] public bool Disabled { get; set; }
+    /// <summary>Filter mode shows the chosen client as a removable chip instead of keeping its name in the box.</summary>
+    [Parameter] public bool Filter { get; set; }
     private readonly CancellationTokenSource _lifetime = new();
-    private CancellationTokenSource? _selection;
-    private IReadOnlyList<LimitEntityOption> _options = [];
-    private string? _search, _error;
-    private bool _searching, _loading;
-    protected override async Task OnInitializedAsync() { await SearchAsync(); if (Value.HasValue && RequireData) await LoadDataAsync(Value.Value); }
+    private CancellationTokenSource? _selection, _typing;
+    private IReadOnlyList<LimitEntityOption> _results = [];
+    private string _query = string.Empty;
+    private string? _selectedName, _error;
+    private bool _searching, _loading, _open;
+    private int _active = -1;
+    private string ListId => Id + "-list";
+    private string OptionId(int index) => $"{Id}-option-{index}";
+    private string? ActiveId => ListVisible && _active >= 0 && _active < _results.Count ? OptionId(_active) : null;
+    private bool ListVisible => _open && _query.Trim().Length > 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Value.HasValue && RequireData) await LoadDataAsync(Value.Value);
+    }
+
+    private void OpenList() { _open = true; }
+    private void CloseList() { _open = false; _active = -1; }
+
+    private async Task TypedAsync(ChangeEventArgs args)
+    {
+        _query = args.Value?.ToString() ?? string.Empty;
+        _open = true; _active = -1; _error = null;
+        if (_query.Trim().Length == 0)
+        {
+            _typing?.Cancel(); _results = []; _searching = false;
+            if (Value.HasValue) { Value = null; _selectedName = null; await ValueChanged.InvokeAsync(null); await DataChanged.InvokeAsync(null); }
+            return;
+        }
+        _ = SearchAsync();
+    }
+
     private async Task SearchAsync()
     {
-        if (Disabled || _searching) return;
-        _searching = true; _error = null;
+        _typing?.Cancel(); _typing?.Dispose();
+        _typing = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
+        var token = _typing.Token; var term = _query.Trim();
+        _searching = true;
         try
         {
-            var options = await Api.SearchEntitiesAsync(_search, _lifetime.Token);
-            var selected = _options.FirstOrDefault(option => option.Id == Value);
-            _options = selected is not null && !options.Any(option => option.Id == selected.Id) ? [.. options, selected] : options;
+            await Task.Delay(250, token);
+            var found = await Api.SearchEntitiesAsync(term, token);
+            token.ThrowIfCancellationRequested();
+            _results = found; _active = -1;
         }
-        catch (RegistryApiException exception) { _error = exception.MessageKey; }
-        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
-        finally { _searching = false; }
+        catch (RegistryApiException exception) { if (!token.IsCancellationRequested) { _results = []; _error = exception.MessageKey; _searching = false; await InvokeAsync(StateHasChanged); } return; }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { return; }
+        _searching = false;
+        await InvokeAsync(StateHasChanged);
     }
-    private async Task SelectAsync(Guid? id)
+
+    private async Task KeyAsync(KeyboardEventArgs args)
+    {
+        switch (args.Key)
+        {
+            case "ArrowDown":
+                if (!_open) _open = true;
+                if (_results.Count > 0) _active = (_active + 1) % _results.Count;
+                break;
+            case "ArrowUp":
+                if (_results.Count > 0) _active = _active <= 0 ? _results.Count - 1 : _active - 1;
+                break;
+            case "Enter":
+                if (ListVisible && _active >= 0 && _active < _results.Count) await SelectAsync(_results[_active]);
+                break;
+            case "Escape":
+                CloseList();
+                break;
+        }
+    }
+
+    private async Task SelectAsync(LimitEntityOption item)
     {
         if (Disabled) return;
         _selection?.Cancel();
-        _loading = false; _error = null;
-        Value = id; await ValueChanged.InvokeAsync(id); await DataChanged.InvokeAsync(null);
-        if (id is { } selected && RequireData) await LoadDataAsync(selected);
+        _typing?.Cancel();
+        _open = false; _active = -1; _loading = false; _error = null; _searching = false;
+        _selectedName = item.Name; _query = Filter ? string.Empty : item.Name; _results = [];
+        Value = item.Id; await ValueChanged.InvokeAsync(item.Id); await DataChanged.InvokeAsync(null);
+        if (RequireData) await LoadDataAsync(item.Id);
     }
+
+    private async Task ClearAsync()
+    {
+        if (Disabled) return;
+        _selection?.Cancel(); _loading = false; _error = null; _query = string.Empty; _selectedName = null; _results = [];
+        Value = null; await ValueChanged.InvokeAsync(null); await DataChanged.InvokeAsync(null);
+    }
+
     private async Task LoadDataAsync(Guid id)
     {
         _selection?.Cancel(); _selection?.Dispose(); _selection = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
@@ -63,13 +147,20 @@
         try
         {
             var data = await Api.EntityDataAsync(id, token); token.ThrowIfCancellationRequested();
-            if (!_options.Any(option => option.Id == id)) _options = [.. _options, new(id, data.Name, data.MaticniBroj, data.TaxNumber)];
+            _selectedName = data.Name; if (!Filter) _query = data.Name;
             await DataChanged.InvokeAsync(data);
         }
         catch (RegistryApiException exception) { if (!token.IsCancellationRequested) _error = exception.MessageKey; }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         finally { if (!token.IsCancellationRequested) _loading = false; }
     }
-    private async Task RetryAsync() { await SearchAsync(); if (Value is { } id && RequireData) await LoadDataAsync(id); }
-    public void Dispose() { _lifetime.Cancel(); _selection?.Cancel(); _selection?.Dispose(); _lifetime.Dispose(); }
+
+    private async Task RetryAsync()
+    {
+        _error = null;
+        if (Value is { } id && RequireData) await LoadDataAsync(id);
+        else if (_query.Trim().Length > 0) await SearchAsync();
+    }
+
+    public void Dispose() { _lifetime.Cancel(); _selection?.Cancel(); _selection?.Dispose(); _typing?.Cancel(); _typing?.Dispose(); _lifetime.Dispose(); }
 }
