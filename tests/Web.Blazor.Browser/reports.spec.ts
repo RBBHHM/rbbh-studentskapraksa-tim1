@@ -10,8 +10,8 @@ async function open(page: Page) { await page.goto("/app/reports"); await interac
 test("empty archive, labelled generation controls and authenticated read tools are accessible", async ({ page }) => {
   await open(page); await expect(page.getByText("Još nema generisanih izvještaja za prikaz.", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Generiši dnevni", exact: true })).toBeVisible();
-  await expect(page.getByLabel("Godina", { exact: true }).locator("option").first()).toHaveAttribute("value", "2000");
-  await expect(page.getByLabel("Godina", { exact: true }).locator("option").last()).toHaveAttribute("value", String(new Date().getUTCFullYear()));
+  await expect(page.getByLabel("Godina", { exact: true })).toHaveAttribute("min", "2000");
+  await expect(page.getByLabel("Godina", { exact: true })).toHaveAttribute("max", String(new Date().getUTCFullYear()));
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
 });
 test("daily generation persists real snapshot and automatically downloads without changing period scope", async ({ page, request }, info) => {
@@ -27,7 +27,7 @@ test("daily generation persists real snapshot and automatically downloads withou
   await page.reload(); await interactive(page); await expect(page.getByRole("row", { name: /Dnevni/ })).toBeVisible();
 });
 test("monthly generation respects actual backend year bounds and persists the selected period", async ({ page, request }) => {
-  await open(page); await page.getByLabel("Godina", { exact: true }).selectOption("2000"); await page.getByLabel("Mjesec", { exact: true }).selectOption("12");
+  await open(page); await page.getByLabel("Godina", { exact: true }).fill("2000"); await page.getByLabel("Mjesec", { exact: true }).fill("12");
   const pending = page.waitForEvent("download"); await page.getByRole("button", { name: "Generiši mjesečni", exact: true }).click(); await pending;
   await expect(page.getByRole("row", { name: /Mjesečni/ })).toBeVisible();
   const state = await (await request.get("/__fixtures/reports", { headers })).json();

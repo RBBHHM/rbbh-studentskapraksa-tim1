@@ -40,9 +40,9 @@ test("Admin sees real user/access metadata, accessible create form and disabled 
 });
 test("create preserves multiple application roles and persists the actual backend record", async ({ page, request }) => {
   await visit(page); const dialog = await createFields(page);
-  await dialog.getByText("Fizička lica", { exact: true }).click();
-  await expect(dialog.getByRole("checkbox", { name: "Fizička lica", exact: true })).toBeChecked();
-  await access(dialog, "Pravna lica", true);
+  await dialog.getByText("FL", { exact: true }).click();
+  await expect(dialog.getByRole("checkbox", { name: "FL", exact: true })).toBeChecked();
+  await access(dialog, "PL", true);
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).toHaveCount(0);
   const row = page.getByRole("row").filter({ hasText: "new.user@raiffeisengroup.ba" });
   await expect(row).toContainText("FL_CREATE"); await expect(row).toContainText("PL_CREATE");
@@ -50,7 +50,7 @@ test("create preserves multiple application roles and persists the actual backen
   const state = await (await request.get("/__fixtures/users-state", { headers })).json();
   expect(state.users.find((user: { username: string }) => user.username === "new.user")).toMatchObject({ firstName: "Native", lastName: "User", isActive: true });
   expect(state.audit.map((entry: { action: string }) => entry.action)).toEqual(["CREATE"]);
-  const duplicate = await createFields(page); await access(duplicate, "Fizička lica", true);
+  const duplicate = await createFields(page); await access(duplicate, "FL", true);
   await duplicate.getByRole("button", { name: "Sačuvaj", exact: true }).click();
   await expect(duplicate.getByText("Backend je odbio podatke. Provjerite unesena polja.", { exact: true })).toBeVisible();
   const afterDuplicate = await (await request.get("/__fixtures/users-state", { headers })).json();
@@ -63,7 +63,7 @@ test("required names and corporate email block requests; Guest needs no checkbox
   await expect(dialog.getByRole("alert").first()).toBeVisible();
   expect((await (await request.get("/__fixtures/counts", { headers })).json()).mutations).toBe(0);
   await dialog.getByRole("button", { name: "Odustani", exact: true }).click(); dialog = await createFields(page, "invalid@example.test");
-  await access(dialog, "Fizička lica", true); await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
+  await access(dialog, "FL", true); await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
   await expect(dialog.getByText("Unesite ispravnu email adresu s domenom @raiffeisengroup.ba.", { exact: true }).first()).toBeVisible();
   expect((await (await request.get("/__fixtures/counts", { headers })).json()).mutations).toBe(0);
 });
@@ -71,7 +71,7 @@ test("role replacement and non-final empty roles preserve the existing mapping-r
   await request.post("/__fixtures/users-reference", { headers }); await visit(page);
   let other = page.getByRole("row").filter({ hasText: "other-FL@fixture.test" });
   await other.getByRole("button", { name: "Promijeni funkcionalne pristupe", exact: true }).click();
-  let dialog = page.getByRole("dialog"); await access(dialog, "Fizička lica", false);
+  let dialog = page.getByRole("dialog"); await access(dialog, "FL", false);
   await access(dialog, "Kapital", true); await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
   await expect(dialog).toHaveCount(0); await expect(other).toContainText("KAPITAL_CREATE");
   await other.getByRole("button", { name: "Promijeni funkcionalne pristupe", exact: true }).click(); dialog = page.getByRole("dialog");

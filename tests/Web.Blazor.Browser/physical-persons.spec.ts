@@ -129,21 +129,21 @@ test("unified family form locks required flags and backend relationship tree sur
   await dialog.getByLabel("Datum do", { exact: false }).fill("2026-12-31");
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
   await expect(dialog).not.toBeVisible();
-  await page.getByLabel("Fizičko lice", { exact: true }).selectOption({ label: "Parent Fixture" });
-  await expect(page.locator(".registry-tree strong").filter({ hasText: "Family Fixture" })).toBeVisible();
+  await page.getByLabel("Fizičko lice", { exact: true }).selectOption({ label: "Parent Fixture — Zaposlenik" });
+  await expect(page.locator(".app-tree strong").filter({ hasText: "Family Fixture" })).toBeVisible();
   await page.reload(); await interactive(page);
-  await page.getByLabel("Fizičko lice", { exact: true }).selectOption({ label: "Parent Fixture" });
-  await expect(page.locator(".registry-tree strong").filter({ hasText: "Family Fixture" })).toBeVisible();
+  await page.getByLabel("Fizičko lice", { exact: true }).selectOption({ label: "Parent Fixture — Zaposlenik" });
+  await expect(page.locator(".app-tree strong").filter({ hasText: "Family Fixture" })).toBeVisible();
   await page.getByRole("row", { name: /Family Fixture/ }).getByRole("button", { name: "Uredi", exact: true }).click();
   await dialog.getByLabel(/^Ime/).fill("FamilyUpdated");
   await dialog.getByRole("button", { name: "Nastavi", exact: true }).click();
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
   await expect(dialog).not.toBeVisible();
-  await expect(page.locator(".registry-tree strong").filter({ hasText: "FamilyUpdated Fixture" })).toBeVisible();
+  await expect(page.locator(".app-tree strong").filter({ hasText: "FamilyUpdated Fixture" })).toBeVisible();
   await page.getByRole("row", { name: /FamilyUpdated Fixture/ }).getByRole("button", { name: "Deaktiviraj", exact: true }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Potvrdi", exact: true }).click();
   await expect(page.getByRole("row", { name: /FamilyUpdated Fixture/ })).toHaveCount(0);
-  await expect(page.locator(".registry-tree strong").filter({ hasText: "FamilyUpdated Fixture" })).toHaveCount(0);
+  await expect(page.locator(".app-tree strong").filter({ hasText: "FamilyUpdated Fixture" })).toHaveCount(0);
 });
 
 test("backend XLSX export delivers the attachment bytes and filename", async ({ page }, info) => {

@@ -336,3 +336,26 @@ h1[tabindex="-1"]:focus, h1:focus-visible { outline: none; }
 .registry-users-table td:not(:nth-child(4)), .registry-codes-table td:not(:nth-child(3)), .registry-period-table td:not(:nth-child(3)):not(:nth-child(5)), .registry-capital-table td, .registry-reports-table td { white-space: nowrap; overflow-wrap: normal; }
 :root[data-theme="dark"] .registry-form-grid .rbi-control { background: var(--surface-muted); }
 .registry-form-grid .rbi-radio-group__options { background: transparent; }
+.registry-persons-table th { white-space: normal; }
+.registry-number { width: 6.5rem; }
+.registry-panel .registry-number { height: 2.5rem; }
+:root[data-theme="dark"] .app-typeahead__input, :root[data-theme="dark"] .registry-field .rbi-control, :root[data-theme="dark"] .registry-family__select .rbi-control { background: var(--surface-muted); }
+.registry-status-card { padding: 1.25rem; }.registry-limits-table { min-width: 900px; }
+.registry-field > label { font-weight: var(--font-weight-medium); color: var(--text-primary); }
+.registry-field--status { min-width: 0; width: 10rem; }
+.registry-category { flex-wrap: nowrap; align-items: flex-end; }
+.registry-field--category { flex: 0 1 28rem; min-width: 0; }
+.app-page-header__icon { flex-shrink: 1; min-width: 0; }
+.profile-hero__line { margin: .25rem 0 0; }
+.profile-card__title { font-size: 1.25rem; line-height: 1.75rem; margin-block-end: .75rem; }.app-indicator--sm { width: 1.75rem; height: 1.75rem; }
+.app-indicator--sm .app-indicator__icon { width: .875rem; height: .875rem; }
+.app-tree, .app-tree__children { display: grid; gap: .5rem; margin: 0; padding: 0; list-style: none; }
+.app-tree__children { margin-inline-start: 1.25rem; margin-block-start: .5rem; border-inline-start: 1px solid var(--border-subtle); padding-inline-start: 1rem; }
+.app-tree__node { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; border: 1px solid var(--border-subtle); border-radius: .25rem; background: var(--surface-subtle); padding: .5rem .75rem; font-size: var(--font-size-sm); }
+.app-tree__node .rbi-icon { width: 1rem; height: 1rem; }.registry-limits-table th { white-space: normal; }
+.registry-limits-table td:first-child { min-width: 9rem; }
+/* Success notices behave like the reference toasts: bottom-right card that leaves after a few seconds (content stays in the live region). */
+.app-toast { position: fixed; z-index: 60; inset-block-end: 1rem; inset-inline-end: 1rem; width: min(22rem, calc(100vw - 2rem)); animation: app-toast-out .2s ease 6s forwards; }
+.app-toast .rbi-alert { border: 1px solid var(--border-subtle); border-radius: .25rem; background: var(--surface-raised); box-shadow: var(--elevation-lg, 0 8px 24px rgb(0 0 0 / .18)); padding: .75rem 1rem; align-items: center; }
+@keyframes app-toast-out { to { opacity: 0; visibility: hidden; } }
+@media (prefers-reduced-motion: reduce) { .app-toast { animation-duration: .01s; } }

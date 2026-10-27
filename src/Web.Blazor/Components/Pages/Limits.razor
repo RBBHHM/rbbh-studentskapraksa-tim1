@@ -32,7 +32,7 @@ else if (!_canRead) { <RbiAlert Title="@T["errors.forbidden"]" /> }
 else
 {
     @if ((_canCreate || _canEdit || _canDelete) && _periodLocked) { <RbiAlert Title="@T[_periodError ?? "errors.locked"]" /> }
-    @if (_notice is not null) { <div role="status"><RbiAlert Title="@T[_notice]" /></div> }
+    @if (_notice is not null) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@T[_notice]" /></div> }
     <div class="registry-controls">
         <RegistrySearch Id="limit-search" @bind-Value="_search" />
         <div class="registry-filter">
@@ -42,11 +42,11 @@ else
     @if (!Filtered.Any()) { <div class="registry-surface"><RegistryEmpty Body="@T[string.IsNullOrWhiteSpace(_search) && _filter is null ? "state.empty-body" : "state.no-match"]" /></div> }
     else
     {
-        <RbiTable AccessibleLabel="@T["limit.title"]" Class="registry-table registry-persons-table">
+        <RbiTable AccessibleLabel="@T["limit.title"]" Class="registry-table registry-limits-table">
             <thead><tr><th scope="col">@T["legal.name"]</th><th scope="col">@T["limit.type"]</th><th scope="col">@T["limit.approved"]</th><th scope="col">@T["limit.expected"]</th><th scope="col">@T["limit.deadline"]</th><th scope="col">@T["limit.regulatory"]</th><th scope="col">@T["limit.core"]</th>@if (_canEdit || _canDelete) { <th scope="col" class="registry-center registry-actions-cell">@T["common.actions"]</th> }</tr></thead>
             <tbody>@foreach (var record in Filtered)
             {
-                <tr @key="record.Id"><td>@record.Naziv</td><td>@record.TipLimita</td><td>@record.OdobreniLimit?.ToString("N2")</td><td>@record.MaksimalnaOcekivanaUtilizacija?.ToString("N2")</td><td>@record.RokOcekivaneUtilizacije?.ToString("d")</td><td>@record.RegulatorniKapital?.ToString("N2")</td><td>@record.OsnovniKapital?.ToString("N2")</td>
+                <tr @key="record.Id"><td>@record.Naziv</td><td>@record.TipLimita</td><td>@Plain(record.OdobreniLimit)</td><td>@Plain(record.MaksimalnaOcekivanaUtilizacija)</td><td>@(record.RokOcekivaneUtilizacije?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) ?? "—")</td><td>@Plain(record.RegulatorniKapital)</td><td>@Plain(record.OsnovniKapital)</td>
                     @if (_canEdit || _canDelete)
                     {
                         <td class="registry-actions-cell"><div class="registry-row-actions">
@@ -74,6 +74,7 @@ else
 </RbiAlertDialog>
 
 @code {
+    private static string Plain(decimal? value) => value is null ? "—" : value.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
     private readonly CancellationTokenSource _lifetime = new();
     private readonly CancellationToken _token;
     public Limits() => _token = _lifetime.Token;

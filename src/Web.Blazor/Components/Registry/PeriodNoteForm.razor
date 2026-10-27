@@ -8,8 +8,8 @@
         <RbiField TValue="string" Id="@_id" Label="@T[LabelKey]" Required For="@(() => Model.Text)">
             <RbiTextArea Id="@_id" @bind-Value="Model.Text" @oninput="InputChanged" Rows="4" minlength="10" maxlength="@Model.Maximum" aria-describedby="@(_id + "-help")" />
         </RbiField>
-        <p id="@(_id + "-help")">@T[Model.Kind == PeriodNoteKind.Response ? "period.response-range" : "period.note-range"]</p>
-        @if (Model.Kind != PeriodNoteKind.RequestUnlock) { <p>@T.Format("period.count", Model.Text.Length, Model.Maximum)</p> }
+        <p class="app-visually-hidden" id="@(_id + "-help")">@T[Model.Kind == PeriodNoteKind.Response ? "period.response-range" : "period.note-range"]</p>
+        @if (Model.Kind != PeriodNoteKind.RequestUnlock) { <p class="app-visually-hidden">@T.Format("period.count", Model.Text.Length, Model.Maximum)</p> }
     <div role="alert" tabindex="-1" @ref="_summary"><ValidationSummary /></div>
         <div class="registry-toolbar">
             @if (ShowCancel) { <RbiButton OnClick="Cancel" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton> }

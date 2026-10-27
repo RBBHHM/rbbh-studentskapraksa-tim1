@@ -32,7 +32,7 @@ else if (!_canRead) { <RbiAlert Title="@T["errors.forbidden"]" /> }
 else
 {
     @if ((_canCreate || _canEdit || _canDelete) && _periodLocked) { <RbiAlert Title="@T[_periodError ?? "errors.locked"]" /> }
-    @if (_notice is not null) { <div role="status"><RbiAlert Title="@T[_notice]" /></div> }
+    @if (_notice is not null) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@T[_notice]" /></div> }
     <div class="registry-controls"><RegistrySearch Id="physical-search" @bind-Value="_search" /></div>
     <div class="registry-surface">
     @if (!Filtered.Any()) { <RegistryEmpty Body="@T[string.IsNullOrWhiteSpace(_search) ? "state.empty-body" : "state.no-match"]" /> }
@@ -76,7 +76,7 @@ else
         </div>
         <label for="family-person" class="registry-family__label">@T["family.person"]</label>
         <div class="registry-family__select"><RbiSelect TValue="Guid?" Id="family-person" @bind-Value="_treePerson" @bind-Value:after="LoadTreeAsync" Placeholder="@T["family.placeholder"]">
-            @foreach (var person in _people) { <option value="@person.Id">@person.FirstName @person.LastName</option> }
+            @foreach (var person in _people) { <option value="@person.Id">@person.FirstName @person.LastName — @T[person.RelatedToPersonId.HasValue ? "person.family" : person.IsIdentifiedStaff ? "person.employee" : "person.related"]</option> }
         </RbiSelect></div>
         <div class="registry-family__panel">
         @if (_treePerson is null) { <RbiText Tone="RbiTextTone.Secondary">@T["family.prompt"]</RbiText> }

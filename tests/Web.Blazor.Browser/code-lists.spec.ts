@@ -27,7 +27,7 @@ test("real categories/history and native definition/value forms remain accessibl
 test("create definition, value, immutable code edit and soft-delete preserve actual records and audit", async ({ page, request }) => {
   await visit(page); await page.getByRole("button", { name: "Novi šifrarnik", exact: true }).click(); let dialog = page.getByRole("dialog");
   await dialog.getByRole("textbox", { name: /^Naziv definicije/ }).fill("NativeCodes"); await dialog.getByRole("textbox", { name: "Poslovna svrha", exact: true }).fill("Native fixture purpose");
-  await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).toHaveCount(0);
+  await dialog.getByRole("button", { name: "Kreiraj", exact: true }).click(); await expect(dialog).toHaveCount(0);
   await expect(page.getByLabel("Kategorija", { exact: true })).toHaveValue("NativeCodes"); await expect(page.getByText("Nema vrijednosti u odabranoj kategoriji.", { exact: true })).toBeVisible();
   dialog = await fillValue(page, "CODE_1", "Native value"); await dialog.getByRole("textbox", { name: "Redoslijed prikaza", exact: true }).fill("0");
   await dialog.getByRole("textbox", { name: "Opis", exact: true }).fill("Owned description"); await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).toHaveCount(0);

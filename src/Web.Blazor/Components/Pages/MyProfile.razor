@@ -35,12 +35,6 @@ else if (_user?.Identity?.IsAuthenticated == true)
                     <dd><ul class="profile-permissions">@foreach (var permission in profile.Permissions) { <li><RbiIcon Name="RbiIconName.CheckCircle2" />@permission</li> }</ul></dd>
                 </div>
             }
-            <div class="profile-card profile-card--details">
-                @if (DisplayName is { } displayName) { <dt>@T["profile.name"]</dt><dd>@displayName</dd> }
-                @if (Username is { } username) { <dt>@T["profile.username"]</dt><dd>@username</dd> }
-                @if ((Claim(ClaimTypes.Email) ?? Claim("email")) is { } email) { <dt>@T["profile.email"]</dt><dd>@email</dd> }
-                @if ((Claim(ClaimTypes.NameIdentifier) ?? Claim("sub")) is { } subject) { <dt>@T["profile.subject"]</dt><dd>@subject</dd> }
-            </div>
         </dl>
         @if (_profile is not null) { <div class="profile-note"><AppIcon Name="AppIconName.ShieldCheck" /><span>@T["profile.note"]</span></div> }
         @if (_error) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T["profile.unavailable"]" /><RbiButton OnClick="LoadAsync">@T["state.retry"]</RbiButton> }

@@ -33,7 +33,7 @@ else if (!_canRead) { <RbiAlert Title="@T["errors.forbidden"]" /> }
 else
 {
     @if ((_canCreate || _canEdit || _canDelete) && _periodLocked) { <RbiAlert Title="@T[_periodError ?? "errors.locked"]" /> }
-    @if (_notice is not null) { <div role="status"><RbiAlert Title="@T[_notice]" /></div> }
+    @if (_notice is not null) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@T[_notice]" /></div> }
     <div class="registry-controls"><RegistrySearch Id="legal-search" Label="@T["legal.search"]" @bind-Value="_search" /></div>
     @if (!Filtered.Any()) { <div class="registry-surface"><RegistryEmpty Body="@T[string.IsNullOrWhiteSpace(_search) ? "state.empty-body" : "state.no-match"]" /></div> }
     else

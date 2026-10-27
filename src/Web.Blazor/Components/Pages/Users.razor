@@ -25,7 +25,7 @@ else if (_error is not null)
 else if (!_canRead) { <RbiAlert Title="@T["errors.forbidden"]" /> }
 else
 {
-    @if (_notice) { <div role="status"><RbiAlert Title="@T["common.saved"]" /></div> }
+    @if (_notice) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@T["common.saved"]" /></div> }
     @if (_result.Users.Count == 0) { <div class="registry-surface"><RegistryEmpty Body="@T["users.empty"]" /></div> }
     else
     {

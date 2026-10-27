@@ -18,7 +18,7 @@
         </div>
         @if (!Model.Definition) { <p class="app-visually-hidden">@T["codes.immutable"]</p> }
     <div role="alert" tabindex="-1" @ref="_summary"><ValidationSummary /></div>
-        <div class="registry-toolbar"><RbiButton OnClick="Cancel" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton><RbiButton Type="RbiButtonType.Submit">@T["common.save"]</RbiButton></div>
+        <div class="registry-toolbar"><RbiButton OnClick="Cancel" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton><RbiButton Type="RbiButtonType.Submit">@T[Model.Definition ? "codes.create-submit" : "common.save"]</RbiButton></div>
     </fieldset>
 </EditForm>
 @code {

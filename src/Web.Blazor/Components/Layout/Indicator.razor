@@ -1,8 +1,9 @@
-﻿<span class="app-indicator app-indicator--@Tone" title="@Label"><AppIcon Name="Icon" Class="app-indicator__icon" /><span class="app-visually-hidden">@Label</span></span>
+<span class="@Classes" title="@Label"><AppIcon Name="Icon" Class="app-indicator__icon" /><span class="app-visually-hidden">@Label</span></span>
 
 @code {
     [Parameter, EditorRequired] public string Kind { get; set; } = string.Empty;
     [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter] public bool Small { get; set; }
 
     // Same glyph and tone vocabulary as the reference product's status indicators.
     private (AppIconName Icon, string Tone) Definition => Kind switch
@@ -22,6 +23,7 @@
         "monthly" => (AppIconName.CalendarRange, "brand"),
         _ => (AppIconName.CircleMinus, "neutral")
     };
+    private string Classes => $"app-indicator app-indicator--{Tone}" + (Small ? " app-indicator--sm" : "");
     private AppIconName Icon => Definition.Icon;
     private string Tone => Definition.Tone;
 }

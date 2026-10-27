@@ -20,20 +20,16 @@ else if (_authenticated && !_canRead && !_refreshing)
 }
 else if (_authenticated)
 {
-    @if (_notice is not null) { <div role="status"><RbiAlert Title="@T[_notice]" /></div> }
+    @if (_notice is not null) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@T[_notice]" /></div> }
     @if (_actionError is not null) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_actionError]" Announcement="RbiAlertAnnouncement.Assertive" /> }
     <div class="registry-panel">
         @if (_canGenerate) { <RbiButton Disabled="@(_busy || _refreshing)" OnClick="() => GenerateAsync(false)"><RbiIcon Name="RbiIconName.FileText" />@T["reports.generate-daily"]</RbiButton> }
         @if (_canGenerate)
         {
             <div class="registry-field"><label for="report-year">@T["reports.year"]</label>
-            <RbiSelect TValue="int" Id="report-year" @bind-Value="_year" Disabled="@(_busy || _refreshing)">
-                @foreach (var year in Enumerable.Range(2000, DateTime.UtcNow.Year - 1999)) { <option value="@year">@year</option> }
-            </RbiSelect></div>
+            <input id="report-year" type="number" class="rbi-control rbi-input registry-number" min="2000" max="@DateTime.UtcNow.Year" step="1" @bind="_year" disabled="@(_busy || _refreshing)" /></div>
             <div class="registry-field"><label for="report-month">@T["reports.month"]</label>
-            <RbiSelect TValue="int" Id="report-month" @bind-Value="_month" Disabled="@(_busy || _refreshing)">
-                @for (var month = 1; month <= 12; month++) { <option value="@month">@month</option> }
-            </RbiSelect></div>
+            <input id="report-month" type="number" class="rbi-control rbi-input registry-number" min="1" max="12" step="1" @bind="_month" disabled="@(_busy || _refreshing)" /></div>
             <RbiButton Disabled="@(_busy || _refreshing || !ValidPeriod)" OnClick="() => GenerateAsync(true)"><RbiIcon Name="RbiIconName.FileText" />@T["reports.generate-monthly"]</RbiButton>
         }
         <RbiButton Disabled="@(_busy || _refreshing)" OnClick="ExportAllAsync" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.Download" />@T["reports.all-clients"]</RbiButton>
@@ -54,10 +50,10 @@ else if (_authenticated)
     else
     {
         <div class="registry-surface"><RbiTable AccessibleLabel="@T["reports.title"]" Class="registry-table registry-reports-table">
-            <thead><tr><th scope="col">@T["reports.type"]</th><th scope="col">@T["reports.date"]</th><th scope="col">@T["reports.clients"]</th><th scope="col">@T["reports.breached"]</th><th scope="col">@T["reports.exposure"]</th><th scope="col">@T["reports.author"]</th><th scope="col">@T["common.actions"]</th></tr></thead>
+            <thead><tr><th scope="col">@T["reports.type"]</th><th scope="col">@T["reports.date"]</th><th scope="col">@T["reports.clients"]</th><th scope="col">@T["reports.breached"]</th><th scope="col">@T["reports.exposure"]</th><th scope="col">@T["reports.author"]</th><th scope="col">@T["reports.file"]</th></tr></thead>
             <tbody>@foreach (var report in Records)
             {
-                <tr @key="report.Id"><td>@TypeLabel(report.ReportType)</td><td>@report.ReportDate.ToString("d")</td><td>@report.TotalClients</td><td>@report.ClientsWithBreachedLimit</td><td>@report.TotalExposure.ToString("N2")</td><td>@report.CreatedBy</td><td><RbiButton Disabled="_busy" OnClick="() => DownloadSnapshotAsync(report.Id)" Variant="RbiButtonVariant.Secondary">@T["reports.download"]</RbiButton></td></tr>
+                <tr @key="report.Id"><td>@TypeLabel(report.ReportType)</td><td>@report.ReportDate.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)</td><td>@report.TotalClients</td><td>@report.ClientsWithBreachedLimit</td><td>@report.TotalExposure.ToString(System.Globalization.CultureInfo.InvariantCulture)</td><td>@report.CreatedBy</td><td class="registry-center"><RbiButton Size="RbiButtonSize.Small" Disabled="_busy" OnClick="() => DownloadSnapshotAsync(report.Id)" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.Download" />@T["reports.download"]</RbiButton></td></tr>
             }</tbody>
         </RbiTable></div>
         @if (DailyPages > 1)

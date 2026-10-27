@@ -44,7 +44,7 @@ test("dashboard and navigation reflect actual DB baseline reads and privileged A
 test("template profile displays authenticated identity and current backend-owned grants, not forged provider roles", async ({ page, request }) => {
   await request.post("/__fixtures/forge-provider-admin", { headers }); await visit(page, "/app/profile");
   const main = page.getByRole("main"); await expect(main.getByText(role + "@fixture.test", { exact: true }).first()).toBeVisible();
-  await expect(main.getByText("fixture-user", { exact: true })).toBeVisible(); await expect(main.getByText("Korisničko ime", { exact: true })).toBeVisible();
+  await expect(main.getByText("Trenutno prijavljeni korisnik", { exact: true })).toBeVisible(); await expect(main.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(main.locator("dt").filter({ hasText: "Efektivna ovlaštenja" }).locator("+ dd")).toContainText("FL_VIEW");
   const grants = await main.locator("dl").innerText(); expect(grants.includes("ADMINISTRATION_MANAGE")).toBe(admin);
   if (!admin) expect(await main.locator("dt").filter({ hasText: /^Dodijeljene uloge$/ }).locator("+ dd").innerText()).not.toMatch(/\badmin\b/i);

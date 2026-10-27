@@ -1,11 +1,14 @@
-<ul class="registry-tree">
+<ul class="@(Nested ? "app-tree__children" : "app-tree")">
     @foreach (var node in Nodes)
     {
+        var kind = node.PersonType switch { "Employee" => "employee", "FamilyMember" => "family", _ => "related" };
         <li @key="node.Id">
-            <strong>@node.FirstName @node.LastName</strong>
-            <RbiBadge>@T[node.PersonType switch { "Employee" => "person.employee", "FamilyMember" => "person.family", _ => "person.related" }]</RbiBadge>
-            @if (node.Children.Count > 0) { <PersonTree Nodes="node.Children" /> }
+            <div class="app-tree__node"><RbiIcon Name="RbiIconName.UserRound" /><strong>@node.FirstName @node.LastName</strong><Indicator Small Kind="@kind" Label="@T[kind == "employee" ? "person.employee" : kind == "family" ? "person.family" : "person.related"]" /></div>
+            @if (node.Children.Count > 0) { <PersonTree Nodes="node.Children" Nested /> }
         </li>
     }
 </ul>
-@code { [Parameter] public IReadOnlyList<PersonTreeNode> Nodes { get; set; } = []; }
+@code {
+    [Parameter] public IReadOnlyList<PersonTreeNode> Nodes { get; set; } = [];
+    [Parameter] public bool Nested { get; set; }
+}

@@ -11,8 +11,8 @@
                 <RbiRadio TValue="bool?" Value="@((bool?)true)">@T["person.resident"]</RbiRadio><RbiRadio TValue="bool?" Value="@((bool?)false)">@T["person.nonresident"]</RbiRadio>
             </RbiRadioGroup>
             <RbiField TValue="string" Label="@T["legal.tax"]" Required="@(Model.IsResident == true)" Disabled="@(Model.IsResident == false)" For="@(() => Model.TaxNumber)"><RbiInput @bind-Value="Model.TaxNumber" maxlength="13" inputmode="numeric" /></RbiField>
-            <RbiField TValue="string" Label="@T["person.fba"]" Required="@(Model.IsResident == false)" Disabled="@(Model.IsResident == true)" For="@(() => Model.FbaId)"><RbiInput @bind-Value="Model.FbaId" maxlength="10" inputmode="numeric" /></RbiField>
             <RbiField TValue="string" Label="@T["legal.registration"]" For="@(() => Model.MaticniBroj)"><RbiInput @bind-Value="Model.MaticniBroj" maxlength="50" inputmode="numeric" /></RbiField>
+            <RbiField TValue="string" Label="@T["person.fba"]" Required="@(Model.IsResident == false)" Disabled="@(Model.IsResident == true)" For="@(() => Model.FbaId)"><RbiInput @bind-Value="Model.FbaId" maxlength="10" inputmode="numeric" /></RbiField>
             <RbiField TValue="string" Label="@T["person.basis"]" Required For="@(() => Model.BasisOfConnection)">
                 <RbiSelect TValue="string" @bind-Value="Model.BasisOfConnection" @bind-Value:after="BasisChanged"><option value="">@T["common.select"]</option>
                     @foreach (var option in Bases) { <option value="@option.Kod">@option.Naziv</option> }
