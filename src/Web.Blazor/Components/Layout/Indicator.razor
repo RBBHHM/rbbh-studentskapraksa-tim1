@@ -1,26 +1,27 @@
-<span class="app-indicator app-indicator--@Tone" title="@Label"><RbiIcon Name="Icon" Class="app-indicator__icon" /><span class="app-visually-hidden">@Label</span></span>
+﻿<span class="app-indicator app-indicator--@Tone" title="@Label"><AppIcon Name="Icon" Class="app-indicator__icon" /><span class="app-visually-hidden">@Label</span></span>
 
 @code {
     [Parameter, EditorRequired] public string Kind { get; set; } = string.Empty;
     [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
 
-    private (RbiIconName Icon, string Tone) Definition => Kind switch
+    // Same glyph and tone vocabulary as the reference product's status indicators.
+    private (AppIconName Icon, string Tone) Definition => Kind switch
     {
-        "active" or "yes" => (RbiIconName.Check, "success"),
-        "inactive" => (RbiIconName.Minus, "warning"),
-        "no" => (RbiIconName.X, "neutral"),
-        "verified" => (RbiIconName.ShieldCheck, "success"),
-        "draft" => (RbiIconName.MoreHorizontal, "info"),
-        "rejected" => (RbiIconName.X, "danger"),
-        "employee" => (RbiIconName.UserRound, "info"),
-        "family" => (RbiIconName.Users, "brand"),
-        "related" => (RbiIconName.Network, "neutral"),
-        "resident" => (RbiIconName.Check, "success"),
-        "nonresident" => (RbiIconName.Globe, "info"),
-        "daily" => (RbiIconName.RotateCw, "info"),
-        "monthly" => (RbiIconName.Layers, "brand"),
-        _ => (RbiIconName.Circle, "neutral")
+        "active" or "yes" => (AppIconName.Check, "success"),
+        "inactive" => (AppIconName.CircleMinus, "warning"),
+        "no" => (AppIconName.X, "neutral"),
+        "verified" => (AppIconName.ShieldCheck, "success"),
+        "draft" => (AppIconName.Clock3, "info"),
+        "rejected" => (AppIconName.X, "danger"),
+        "employee" => (AppIconName.BriefcaseBusiness, "info"),
+        "family" => (AppIconName.UsersRound, "brand"),
+        "related" => (AppIconName.Link2, "neutral"),
+        "resident" => (AppIconName.Home, "success"),
+        "nonresident" => (AppIconName.Globe2, "info"),
+        "daily" => (AppIconName.CalendarDays, "info"),
+        "monthly" => (AppIconName.CalendarRange, "brand"),
+        _ => (AppIconName.CircleMinus, "neutral")
     };
-    private RbiIconName Icon => Definition.Icon;
+    private AppIconName Icon => Definition.Icon;
     private string Tone => Definition.Tone;
 }

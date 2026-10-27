@@ -1,6 +1,6 @@
 <header class="app-page-header">
     <div class="app-page-header__main">
-        @if (Icon is { } icon) { <RbiIcon Name="icon" Class="app-page-header__icon" /> }
+        @if (Glyph is { } glyph) { <AppIcon Name="glyph" Class="app-page-header__icon" /> } else if (Icon is { } icon) { <RbiIcon Name="icon" Class="app-page-header__icon" /> }
         <div class="app-page-header__title">
             @if (!string.IsNullOrWhiteSpace(Eyebrow)) { <RbiEyebrow>@Eyebrow</RbiEyebrow> }
             <RbiHeading Level="1" VisualLevel="4" Class="@(string.IsNullOrWhiteSpace(Eyebrow) ? "app-page-header__heading app-page-header__heading--flush" : "app-page-header__heading")">@Title</RbiHeading>
@@ -16,5 +16,6 @@
     /// <summary>Small caps label above the title (the reference product shows the area on resource pages only).</summary>
     [Parameter] public string? Eyebrow { get; set; }
     [Parameter] public RbiIconName? Icon { get; set; }
+    [Parameter] public AppIconName? Glyph { get; set; }
     [Parameter] public RenderFragment? Actions { get; set; }
 }

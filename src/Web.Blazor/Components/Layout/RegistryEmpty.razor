@@ -1,9 +1,9 @@
 <div class="registry-empty" role="status">
     @if (Title != string.Empty) { <h2 class="registry-empty__title">@(Title ?? T["state.empty-title"])</h2> }
-    <p class="registry-empty__body">@Body</p>
+    <p class="registry-empty__body">@(Body ?? T["state.empty-body"])</p>
 </div>
 
 @code {
     [Parameter] public string? Title { get; set; }
-    [Parameter, EditorRequired] public string Body { get; set; } = string.Empty;
+    [Parameter] public string? Body { get; set; }
 }
