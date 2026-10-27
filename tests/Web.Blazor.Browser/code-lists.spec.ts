@@ -1,6 +1,6 @@
 import { expect, test, type Page, type Locator } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { interactive } from "./readiness";
+import { interactive, chooseLanguage } from "./readiness";
 const headers = { "X-Fixture-Control": "true" };
 const fixtures = "../../artifacts/migration-browser-fixtures/";
 async function visit(page: Page, category?: string) { await page.goto("/app/admin/code-lists"); await interactive(page); if (category) await page.getByLabel("Kategorija", { exact: true }).selectOption(category); }
@@ -108,6 +108,6 @@ test("375px editor, focus return and English resources remain usable", async ({ 
   const bounds = await dialog.boundingBox(); expect(bounds!.x).toBeGreaterThanOrEqual(0); expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(375);
   expect(await dialog.locator(".rbi-modal__body").evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true); await page.screenshot({ path: info.outputPath("codes-mobile.png"), fullPage: true });
   await page.keyboard.press("Escape"); await expect(trigger).toBeFocused(); await page.getByRole("button", { name: "Prikaži ili sakrij navigaciju", exact: true }).click(); const nav = page.getByRole("dialog");
-  await nav.getByLabel("Jezik", { exact: true }).selectOption("en"); await nav.getByRole("button", { name: "Primijeni", exact: true }).click(); await interactive(page);
+  await chooseLanguage(nav, "en");
   await expect(page.getByRole("heading", { name: "Code lists", exact: true })).toBeVisible(); await page.getByRole("button", { name: "New value", exact: true }).click(); await expect(page.getByRole("dialog").getByRole("textbox", { name: /^Name/ })).toBeVisible();
 });

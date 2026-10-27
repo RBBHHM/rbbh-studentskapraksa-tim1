@@ -1,12 +1,12 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { interactive } from "./readiness";
+import { interactive, chooseLanguage } from "./readiness";
 const headers = { "X-Fixture-Control": "true" };
 test.beforeEach(async ({ request }) => { expect((await request.post("/__fixtures/reset", { headers })).status()).toBe(204); });
 test("empty notification log is accessible and has no business mutations", async ({ page }) => {
   await page.goto("/app/notifications"); await interactive(page);
   await expect(page.getByRole("heading", { name: "Notifikacije", exact: true })).toBeVisible();
-  await expect(page.getByText("Nema evidentiranih obavijesti za prikaz.", { exact: true })).toBeVisible();
+  await expect(page.getByText("Servis je odgovorio uspješno, ali trenutno nema podataka za prikaz.", { exact: true })).toBeVisible();
   for (const name of ["Novi zapis", "Uredi", "Obriši", "Pošalji"]) await expect(page.getByRole("button", { name, exact: true })).toHaveCount(0);
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
 });
@@ -24,7 +24,7 @@ test("SMTP empty response is explicit, not a fabricated sent or delivered mailbo
   await request.post("/__fixtures/email-existing", { headers }); await request.post("/__fixtures/email-smtp", { headers });
   await page.goto("/app/notifications"); await interactive(page);
   await expect(page.getByText("SMTP isporuka se ne prikazuje", { exact: false })).toBeVisible(); await expect(page.getByRole("row", { name: /Fixture notification/ })).toHaveCount(0);
-  await request.post("/__fixtures/email-demo", { headers }); await page.getByRole("button", { name: "Osvježi", exact: true }).click();
+  await request.post("/__fixtures/email-demo", { headers }); await page.reload(); await interactive(page);
   await expect(page.getByRole("row", { name: /Fixture notification/ })).toBeVisible();
 });
 test("notification outage is redacted and retry recovers", async ({ page, request }) => {
@@ -32,7 +32,7 @@ test("notification outage is redacted and retry recovers", async ({ page, reques
   await expect(page.getByText("Servis trenutno nije dostupan. Pokušajte ponovo.", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("private-fixture-detail-not-for-ui", { exact: false })).toHaveCount(0);
   await request.post("/__fixtures/available", { headers }); await page.getByRole("button", { name: "Pokušaj ponovo", exact: true }).click();
-  await expect(page.getByText("Nema evidentiranih obavijesti za prikaz.", { exact: true })).toBeVisible();
+  await expect(page.getByText("Servis je odgovorio uspješno, ali trenutno nema podataka za prikaz.", { exact: true })).toBeVisible();
 });
 test("375px notification table remains within its scroll region", async ({ page, request }, info) => {
   await request.post("/__fixtures/email-existing", { headers }); await page.setViewportSize({ width: 375, height: 812 }); await page.goto("/app/notifications"); await interactive(page);
@@ -41,8 +41,8 @@ test("375px notification table remains within its scroll region", async ({ page,
 });
 test("BS/EN labels and actual backend notification wording follow selected culture", async ({ page, request }) => {
   await request.post("/__fixtures/email-existing", { headers }); await page.goto("/app/notifications"); await interactive(page);
-  await page.getByLabel("Jezik", { exact: true }).selectOption("en"); await expect(page.locator("form.app-language")).toHaveAttribute("action", /\/en\?/);
-  await page.getByRole("button", { name: "Primijeni", exact: true }).click(); await interactive(page);
+  await chooseLanguage(page, "en");
+
   await expect(page.getByRole("heading", { name: "Notifications", exact: true })).toBeVisible();
   await expect(page.getByRole("cell", { name: "Period lock/unlock notice to all users", exact: true })).toBeVisible();
   await expect(page.getByRole("cell", { name: "Recorded", exact: true })).toBeVisible();

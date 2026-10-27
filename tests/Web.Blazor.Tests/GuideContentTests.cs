@@ -10,7 +10,7 @@ public sealed class GuideContentTests
     [InlineData("FL_VIEW", "physical")]
     [InlineData("PL_VIEW", "legal")]
     [InlineData("LIMITI_VIEW", "limits")]
-    [InlineData("KAPITAL_VIEW", "capital")]
+    [InlineData("KAPITAL_VIEW", "limits")]
     public void SectionsFollowActualPermissionsRatherThanRoleNames(string permission, string section)
     {
         var visible = GuideContent.Visible(new("u", "Name", "user", "u@example.test", ["gost"], [permission]));
@@ -35,7 +35,7 @@ public sealed class GuideContentTests
         using var document = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory.FullName, "src", "Web.Blazor", "Localization", culture + ".json")));
         var resource = document.RootElement.GetProperty("translations");
         var all = GuideContent.Visible(new("u", null, null, null, ["admin"], ["FL_VIEW", "PL_VIEW", "LIMITI_VIEW", "KAPITAL_VIEW", "ADMINISTRATION_MANAGE"]));
-        Assert.Equal(7, all.Count);
+        Assert.Equal(5, all.Count);
         foreach (var section in all)
         {
             Assert.False(string.IsNullOrWhiteSpace(resource.GetProperty($"guide.{section.Id}.title").GetString()));

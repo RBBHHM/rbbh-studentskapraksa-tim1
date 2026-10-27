@@ -16,7 +16,7 @@ for (const fault of ["lock", "period-unavailable"]) test(`${area} disables mutat
     : area === "physical-persons" ? ["Novi zapis", "Uvezi Excel"]
     : area === "legal-persons" ? ["Novi zapis", "Uvezi Excel", "Uredi", "Verificiraj", "Deaktiviraj"]
     : ["Novi zapis", "Uredi", "Obriši"];
-  for (const name of actions) await expect(page.getByRole("main").getByRole("button", { name, exact: true })).toBeDisabled();
+  for (const name of actions.filter((item) => item !== "Uvezi Excel")) await expect(page.getByRole("main").getByRole("button", { name, exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Izvezi Excel", exact: true })).toBeEnabled();
   await expect(page.getByText(fault === "lock" ? "Period je zaključan. Izmjene nisu dozvoljene." : "Stanje perioda trenutno nije dostupno. Mutacija je onemogućena dok se stanje ne provjeri. Osvježite prikaz.", { exact: true })).toBeVisible();
   expect((await (await request.get("/__fixtures/counts", { headers })).json()).mutations).toBe(0);

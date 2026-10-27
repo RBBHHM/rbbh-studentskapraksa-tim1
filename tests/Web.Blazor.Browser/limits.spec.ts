@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { interactive } from "./readiness";
+import { interactive, chooseLanguage } from "./readiness";
 import { readFile } from "node:fs/promises";
 
 const headers = { "X-Fixture-Control": "true" };
@@ -9,8 +9,8 @@ test.beforeEach(async ({ request }) => {
 });
 async function open(page: Page) { await page.goto("/app/limits"); await interactive(page); }
 async function selectEntity(dialog: Locator, name = "Existing Company 00") {
-  const value = await dialog.locator("#limit-entity option").filter({ hasText: name }).getAttribute("value");
-  expect(value).toBeTruthy(); await dialog.locator("#limit-entity").selectOption(value!);
+  const combobox = dialog.getByRole("combobox", { name: "Pravno lice", exact: false }); await combobox.fill(name);
+  await dialog.getByRole("option", { name, exact: true }).click(); await expect(combobox).toHaveValue(name);
   await expect(dialog.getByRole("heading", { name: "Podaci preuzeti iz backenda", exact: true })).toBeVisible();
 }
 async function begin(page: Page) {
@@ -22,7 +22,7 @@ test("empty state and native entity picker use accessible labels", async ({ page
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
   const dialog = await begin(page);
   await expect(dialog.getByText("SERVER-ONLY-789", { exact: true })).toBeVisible();
-  await expect(dialog.getByText("1.234.567,89", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("BAM 1,234,567.89", { exact: true })).toBeVisible();
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
 });
 test("create keeps zero/null and backend-derived capital, edit and confirmed delete persist", async ({ page, request }) => {
@@ -60,10 +60,10 @@ test("negative amounts remain field errors without persistence", async ({ page, 
 test("entity search reaches beyond the initial 20 and derives the selected entity only", async ({ page, request }) => {
   await request.post("/__fixtures/legal-pages", { headers }); await open(page);
   await page.getByRole("button", { name: "Novi zapis", exact: true }).click(); const dialog = page.getByRole("dialog");
-  await expect(dialog.locator("#limit-entity option").filter({ hasText: "Existing Company 21" })).toHaveCount(0);
-  await dialog.getByLabel("Pretraga pravnih lica po nazivu ili matičnom broju", { exact: true }).fill("Company 21");
-  await dialog.getByRole("button", { name: "Pretraži zapise", exact: true }).click();
-  await expect(dialog.locator("#limit-entity option").filter({ hasText: "Existing Company 21" })).toHaveCount(1);
+  const combobox = dialog.getByRole("combobox", { name: "Pravno lice", exact: false });
+  await combobox.fill("No such company"); await expect(dialog.getByText("Nema rezultata.", { exact: true })).toBeVisible();
+  await combobox.fill("Company 21"); await expect(dialog.getByRole("option", { name: "Existing Company 21", exact: true })).toHaveCount(1);
+  await combobox.press("ArrowDown"); await expect(combobox).toHaveAttribute("aria-activedescendant", /limit-entity-option-0/); await combobox.press("Escape"); await expect(combobox).toHaveAttribute("aria-expanded", "false");
   await selectEntity(dialog, "Existing Company 21");
   await dialog.getByLabel("Tip limita", { exact: false }).selectOption("REG");
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).not.toBeVisible();
@@ -73,12 +73,13 @@ test("filter and metadata search preserve scope and real XLSX download", async (
   await request.post("/__fixtures/limit-existing", { headers }); await open(page);
   await page.getByLabel("Pretraži zapise", { exact: true }).fill("fixture");
   const row = page.getByRole("row", { name: /Existing Company 00/ }); await expect(row).toBeVisible();
-  const id = await page.locator("#limit-filter option").filter({ hasText: "Existing Company 00" }).getAttribute("value");
-  await page.locator("#limit-filter").selectOption(id!); await expect(row).toBeVisible();
+  const filter = page.getByRole("combobox", { name: "Filtriraj limite po pravnom licu", exact: true }); await filter.fill("Company 00");
+  await page.getByRole("option", { name: "Existing Company 00", exact: true }).click();
+  await expect(page.getByText("Klijent:", { exact: false })).toBeVisible(); await expect(row).toBeVisible();
   const pending = page.waitForEvent("download"); await page.getByRole("button", { name: "Izvezi Excel", exact: true }).click();
   const download = await pending; expect(download.suggestedFilename()).toMatch(/^limiti-.*\.xlsx$/);
   const target = info.outputPath("limits.xlsx"); await download.saveAs(target); expect((await readFile(target)).subarray(0, 2)).toEqual(Buffer.from([0x50, 0x4b]));
-  await page.locator("#limit-filter").selectOption(""); await expect(row).toBeVisible();
+  await page.getByRole("button", { name: "Ukloni filter", exact: true }).click(); await expect(filter).toBeVisible(); await expect(row).toBeVisible();
 });
 test("actual period lock rejects create without record or audit writes", async ({ page, request }) => {
   await open(page); const dialog = await begin(page);
@@ -116,9 +117,9 @@ test("no active types disables saving instead of inventing a type", async ({ pag
   expect(await (await request.get("/__fixtures/limits", { headers })).json()).toEqual([]);
 });
 test("BS/EN limit copy persists and reaches the backend", async ({ page, request }) => {
-  await open(page); await page.getByLabel("Jezik", { exact: true }).selectOption("en");
-  await expect(page.locator("form.app-language")).toHaveAttribute("action", /\/en\?/);
-  await page.getByRole("button", { name: "Primijeni", exact: true }).click(); await interactive(page);
+  await open(page); await chooseLanguage(page, "en");
+
+
   await expect(page.getByRole("heading", { name: "Limits", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "New record", exact: true }).click();
   await expect(page.getByRole("dialog").getByLabel("Approved limit", { exact: false })).toBeVisible();

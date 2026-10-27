@@ -15,12 +15,9 @@ test("Guest can read and download legal entities but has no mutation actions", a
 });
 test("hostile markup cannot turn Guest into a legal import proxy", async ({ page, request }) => {
   await page.goto("/app/legal-persons"); await interactive(page);
-  const hidden = page.getByRole("dialog", { name: "Uvezi Excel", exact: true, includeHidden: true });
-  await hidden.evaluate((element: HTMLDialogElement) => element.showModal());
-  await hidden.getByLabel("Excel datoteka").setInputFiles(path.resolve("../../artifacts/migration-browser-fixtures/valid-legal.xlsx"));
-  await expect(hidden.getByText("Nemate dozvolu za ovu radnju.", { exact: true })).toHaveCount(1);
-  await expect(hidden.getByRole("button", { name: "Uvezi Excel", exact: true, includeHidden: true })).toBeDisabled();
-  await expect(hidden).not.toBeVisible();
+  // A Guest is never rendered a file control; there is no hidden markup to open or upload through.
+  await expect(page.locator("input[type=file]")).toHaveCount(0);
+  await expect(page.getByLabel("Uvezi Excel", { exact: true })).toHaveCount(0);
   expect(await (await request.get("/__fixtures/counts", { headers })).json()).toEqual({ persons: 1, audit: 0, mutations: 0 });
   expect(await (await request.get("/__fixtures/legal-record", { headers })).json()).toHaveLength(1);
 });

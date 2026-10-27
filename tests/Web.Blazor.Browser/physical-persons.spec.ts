@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { interactive, openPhysical } from "./readiness";
+import { interactive, openPhysical, chooseLanguage } from "./readiness";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -53,7 +53,7 @@ test("resident identity validation blocks invalid JMBG and saves a valid residen
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel(/^Ime/).fill("Resident");
   await dialog.getByLabel(/^Prezime/).fill("Fixture");
-  await dialog.getByLabel("Rezidentnost", { exact: false }).selectOption("1");
+  await dialog.getByRole("radio", { name: "Rezident", exact: true }).check();
   await expect(dialog.getByLabel("Broj pasoša", { exact: false })).toBeDisabled();
   await dialog.getByLabel("JMBG", { exact: false }).fill("0101990500000");
   await dialog.getByRole("button", { name: "Nastavi", exact: true }).click();
@@ -84,7 +84,7 @@ test("unavailable period disables physical verification until an explicit refres
   await expect(page.getByRole("button", { name: "Uredi", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Deaktiviraj", exact: true })).toBeDisabled();
   await expect(page.getByText(/Stanje perioda trenutno nije dostupno/)).toBeVisible();
-  await request.post("/__fixtures/period-available", { headers }); await page.getByRole("button", { name: "Osvježi", exact: true }).click();
+  await request.post("/__fixtures/period-available", { headers }); await page.reload(); await interactive(page);
   await expect(page.getByRole("button", { name: "Verificiraj", exact: true })).toBeEnabled();
 });
 test("duplicates block progression, edit excludes self, verification and deactivation refresh", async ({ page }) => {
@@ -160,16 +160,14 @@ test("backend XLSX export delivers the attachment bytes and filename", async ({ 
 
 test("valid backend workbook import refreshes list; invalid schema does not create records", async ({ page }) => {
   await openPhysical(page);
-  await page.getByRole("button", { name: "Uvezi Excel", exact: true }).click();
   const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Excel datoteka").setInputFiles(path.resolve("../../artifacts/migration-browser-fixtures/invalid-physical.xlsx"));
-  await dialog.getByRole("button", { name: "Uvezi Excel", exact: true }).click();
+  await page.getByLabel("Uvezi Excel", { exact: true }).setInputFiles(path.resolve("../../artifacts/migration-browser-fixtures/invalid-physical.xlsx"));
   await expect(dialog.getByText("Uvezeno: 0.", { exact: false })).toBeVisible();
   await expect(dialog.getByText("Predložak mora imati 15 kolona; pronađeno: 1.", { exact: true })).toBeVisible();
-  await dialog.getByLabel("Excel datoteka").setInputFiles(path.resolve("../../artifacts/migration-browser-fixtures/valid-physical.xlsx"));
-  await dialog.getByRole("button", { name: "Uvezi Excel", exact: true }).click();
+  await dialog.getByRole("button", { name: "Zatvori", exact: true }).first().click();
+  await page.getByLabel("Uvezi Excel", { exact: true }).setInputFiles(path.resolve("../../artifacts/migration-browser-fixtures/valid-physical.xlsx"));
   await expect(dialog.getByText("Uvezeno: 1. Neuspješno: 0.")).toBeVisible();
-  await dialog.getByRole("button", { name: "Zatvori", exact: true }).click();
+  await dialog.getByRole("button", { name: "Zatvori", exact: true }).first().click();
   await expect(page.getByRole("row", { name: /Import Fixture/ })).toBeVisible();
 });
 
@@ -220,9 +218,9 @@ test("existing business codebook fallback remains available during reference out
 
 test("BS/EN cookie selection persists and reaches the actual backend", async ({ page, request }) => {
   await openPhysical(page);
-  await page.getByLabel("Jezik", { exact: true }).selectOption("en");
-  await expect(page.locator("form.app-language")).toHaveAttribute("action", /\/en\?/);
-  await page.getByRole("button", { name: "Primijeni", exact: true }).click();
+  await chooseLanguage(page, "en");
+
+
   await interactive(page);
   await expect(page.getByRole("heading", { name: "Individuals", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "New record", exact: true })).toBeVisible();
@@ -254,7 +252,7 @@ async function beginNonresident(page: import("@playwright/test").Page, name: str
   await page.getByRole("button", { name: "Novi zapis", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel(/^Ime/).fill(name); await dialog.getByLabel(/^Prezime/).fill("Fixture");
-  await dialog.getByLabel("Rezidentnost", { exact: false }).selectOption("2");
+  await dialog.getByRole("radio", { name: "Nerezident", exact: true }).check();
   await dialog.getByLabel("Broj pasoša", { exact: false }).fill(passport);
   await dialog.getByLabel("FBA ID", { exact: false }).fill(fba);
   // Finish real blur-triggered validation before callers activate Continue.

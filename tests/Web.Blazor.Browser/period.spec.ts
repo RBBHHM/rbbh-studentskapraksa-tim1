@@ -1,6 +1,6 @@
 import { expect, test, type Page, type Locator } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { interactive } from "./readiness";
+import { interactive, chooseLanguage } from "./readiness";
 const headers = { "X-Fixture-Control": "true" };
 async function visit(page: Page) { await page.goto("/app/admin/period"); await interactive(page); }
 async function settled(dialog: Locator) {
@@ -87,7 +87,7 @@ test("post-persist failure warns about uncertainty and refresh does not duplicat
   let state = await (await request.get("/__fixtures/period-state", { headers })).json(); expect(state.requests).toHaveLength(2); expect(state.audit).toEqual([]);
   expect((await (await request.get("/__fixtures/counts", { headers })).json()).mutations).toBe(1);
   await request.post("/__fixtures/period-audit-restored", { headers }); await dialog.getByRole("button", { name: "Odustani", exact: true }).click();
-  await page.getByRole("button", { name: "Osvježi", exact: true }).click(); await expect(page.getByRole("row").filter({ hasText: "[ODGOVOR] Potpuna trazena dopuna" })).toBeVisible();
+  await page.reload(); await interactive(page); await expect(page.getByRole("row").filter({ hasText: "[ODGOVOR] Potpuna trazena dopuna" })).toBeVisible();
   state = await (await request.get("/__fixtures/period-state", { headers })).json(); expect(state.requests).toHaveLength(2);
   expect((await (await request.get("/__fixtures/counts", { headers })).json()).mutations).toBe(1);
 });
@@ -99,7 +99,7 @@ test("375px clarification dialog and BS/EN limit/count wording remain usable", a
   expect(await dialog.locator(".rbi-modal__body").evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
   await page.screenshot({ path: info.outputPath("period-mobile.png"), fullPage: true }); await dialog.getByRole("button", { name: "Odustani", exact: true }).click();
   await page.getByRole("button", { name: "Prikaži ili sakrij navigaciju", exact: true }).click(); const nav = page.getByRole("dialog");
-  await nav.getByLabel("Jezik", { exact: true }).selectOption("en"); await nav.getByRole("button", { name: "Primijeni", exact: true }).click(); await interactive(page);
+  await chooseLanguage(nav, "en");
   await expect(page.getByRole("heading", { name: "Period management", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Provide requested information", exact: true }).click(); dialog = page.getByRole("dialog"); await expect(dialog.getByText("Enter a clarification of 10 to 490 characters. Text is not truncated.", { exact: true })).toBeVisible();
 });

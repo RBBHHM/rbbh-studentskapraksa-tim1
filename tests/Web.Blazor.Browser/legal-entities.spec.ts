@@ -1,6 +1,6 @@
 import { expect, test, type Page, type Locator } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { interactive } from "./readiness";
+import { interactive, chooseLanguage } from "./readiness";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -114,14 +114,13 @@ test("real backend XLSX download and import retain counts and safe schema guidan
   const download = await pending; expect(download.suggestedFilename()).toMatch(/^pravna-lica-.*\.xlsx$/);
   const target = info.outputPath("legal.xlsx"); await download.saveAs(target);
   expect((await readFile(target)).subarray(0, 2)).toEqual(Buffer.from([0x50, 0x4b]));
-  await page.getByRole("button", { name: "Uvezi Excel", exact: true }).click(); const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Excel datoteka").setInputFiles(path.resolve("../../artifacts/migration-browser-fixtures/invalid-physical.xlsx"));
-  await dialog.getByRole("button", { name: "Uvezi Excel", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await page.getByLabel("Uvezi Excel", { exact: true }).setInputFiles(path.resolve("../../artifacts/migration-browser-fixtures/invalid-physical.xlsx"));
   await expect(dialog.getByText("Predložak mora imati 10 kolona", { exact: false })).toBeVisible();
-  await dialog.getByLabel("Excel datoteka").setInputFiles(path.resolve("../../artifacts/migration-browser-fixtures/valid-legal.xlsx"));
-  await dialog.getByRole("button", { name: "Uvezi Excel", exact: true }).click();
+  await dialog.getByRole("button", { name: "Zatvori", exact: true }).first().click();
+  await page.getByLabel("Uvezi Excel", { exact: true }).setInputFiles(path.resolve("../../artifacts/migration-browser-fixtures/valid-legal.xlsx"));
   await expect(dialog.getByText("Uvezeno: 1", { exact: false })).toBeVisible();
-  await dialog.getByRole("button", { name: "Zatvori", exact: true }).click();
+  await dialog.getByRole("button", { name: "Zatvori", exact: true }).first().click();
   await expect(page.getByRole("row", { name: /Imported Company/ })).toBeVisible();
 });
 test("locked period disables legal verification and preserves draft state and audit", async ({ page, request }) => {
@@ -139,7 +138,7 @@ test("unavailable period disables legal verification until an explicit refresh",
   await expect(page.getByRole("button", { name: "Uredi", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Deaktiviraj", exact: true })).toBeDisabled();
   await expect(page.getByText(/Stanje perioda trenutno nije dostupno/)).toBeVisible();
-  await request.post("/__fixtures/period-available", { headers }); await page.getByRole("button", { name: "Osvježi", exact: true }).click();
+  await request.post("/__fixtures/period-available", { headers }); await page.reload(); await interactive(page);
   await expect(page.getByRole("button", { name: "Verificiraj", exact: true })).toBeEnabled();
 });
 test("locked real period rejects persistence with zero records and audit writes", async ({ page, request }) => {
@@ -171,9 +170,9 @@ test("375px legal table and form remain usable without page overflow", async ({ 
   await page.screenshot({ path: info.outputPath("legal-mobile.png"), fullPage: true });
 });
 test("legal BS/EN copy persists with backend culture propagation", async ({ page, request }) => {
-  await open(page); await page.getByLabel("Jezik", { exact: true }).selectOption("en");
-  await expect(page.locator("form.app-language")).toHaveAttribute("action", /\/en\?/);
-  await page.getByRole("button", { name: "Primijeni", exact: true }).click(); await interactive(page);
+  await open(page); await chooseLanguage(page, "en");
+
+
   await expect(page).toHaveURL(/\/app\/legal-persons$/);
   await expect(page.getByRole("heading", { name: "Legal entities", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "New record", exact: true }).click();

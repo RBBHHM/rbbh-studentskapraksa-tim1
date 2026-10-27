@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { interactive } from "./readiness";
+import { interactive, chooseLanguage } from "./readiness";
 const headers = { "X-Fixture-Control": "true" };
 test.beforeEach(async ({ request }) => { expect((await request.post("/__fixtures/reset", { headers })).status()).toBe(204); });
 test("database Admin reads the real empty audit contract without mutation controls", async ({ page, request }) => {
@@ -37,8 +37,8 @@ test("375px audit view and BS/EN backend display copy remain usable", async ({ p
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true); await page.screenshot({ path: info.outputPath("audit-mobile.png"), fullPage: true });
   await page.getByRole("button", { name: "Prikaži ili sakrij navigaciju", exact: true }).click();
   const navigation = page.getByRole("dialog"); await expect(navigation).toBeVisible();
-  await navigation.getByLabel("Jezik", { exact: true }).selectOption("en"); await expect(navigation.locator("form.app-language")).toHaveAttribute("action", /\/en\?/);
-  await navigation.getByRole("button", { name: "Primijeni", exact: true }).click(); await interactive(page);
+  await chooseLanguage(navigation, "en");
+
   await expect(page.getByRole("heading", { name: "Audit log", exact: true })).toBeVisible();
   const row = page.getByRole("row", { name: /fixture-auditor/ }); await expect(row.getByRole("cell", { name: "Create", exact: true })).toBeVisible();
   await expect(row.getByRole("cell", { name: "Individuals", exact: true })).toBeVisible();

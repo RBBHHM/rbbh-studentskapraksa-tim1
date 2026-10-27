@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { interactive } from "./readiness";
+import { interactive, chooseLanguage } from "./readiness";
 import { readFile } from "node:fs/promises";
 const headers = { "X-Fixture-Control": "true" };
 test.beforeEach(async ({ request }) => {
@@ -48,7 +48,7 @@ test("uncertain post-persist failure is explicit and never causes an automatic d
   await expect(page.getByText("Rezultat generisanja nije potvrđen.", { exact: false })).toBeVisible();
   await expect(page.getByText("private-fixture-audit-failure", { exact: false })).toHaveCount(0);
   let state = await (await request.get("/__fixtures/reports", { headers })).json(); expect(state.attempts).toBe(1); expect(state.records).toHaveLength(1);
-  await page.getByRole("button", { name: "Osvježi", exact: true }).click(); await expect(page.getByRole("row", { name: /Dnevni/ })).toBeVisible();
+  await page.reload(); await interactive(page); await expect(page.getByRole("row", { name: /Dnevni/ })).toBeVisible();
   const pending = page.waitForEvent("download"); await page.getByRole("row", { name: /Dnevni/ }).getByRole("button", { name: "Preuzmi", exact: true }).click(); await pending;
   state = await (await request.get("/__fixtures/reports", { headers })).json(); expect(state.attempts).toBe(1); expect(state.records).toHaveLength(1);
 });
@@ -72,8 +72,8 @@ test("375px report controls and archive have no page overflow", async ({ page, r
   await page.screenshot({ path: info.outputPath("reports-mobile.png"), fullPage: true });
 });
 test("BS/EN reporting copy and API culture persist", async ({ page, request }) => {
-  await open(page); await page.getByLabel("Jezik", { exact: true }).selectOption("en"); await expect(page.locator("form.app-language")).toHaveAttribute("action", /\/en\?/);
-  await page.getByRole("button", { name: "Primijeni", exact: true }).click(); await interactive(page);
+  await open(page); await chooseLanguage(page, "en");
+
   await expect(page.getByRole("heading", { name: "Regulatory reporting", exact: true })).toBeVisible(); await expect(page.getByRole("button", { name: "Generate daily", exact: true })).toBeVisible();
   await page.reload(); await interactive(page); await expect(page.getByRole("heading", { name: "Regulatory reporting", exact: true })).toBeVisible();
   expect((await (await request.get("/__fixtures/culture", { headers })).json()).language).toBe("en");

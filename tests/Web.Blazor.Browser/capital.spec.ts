@@ -1,6 +1,6 @@
 import { expect, test, type Page, type Locator } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { interactive } from "./readiness";
+import { interactive, chooseLanguage } from "./readiness";
 import { readFile } from "node:fs/promises";
 
 const headers = { "X-Fixture-Control": "true" };
@@ -25,7 +25,7 @@ test("unknown period status fails closed for capital editing and refresh recover
   await request.post("/__fixtures/period-unavailable", { headers }); await open(page);
   await expect(page.getByRole("button", { name: "Uredi kapital", exact: true })).toBeDisabled();
   await expect(page.getByText(/Stanje perioda trenutno nije dostupno/)).toBeVisible();
-  await request.post("/__fixtures/period-available", { headers }); await page.getByRole("button", { name: "Osvježi", exact: true }).click();
+  await request.post("/__fixtures/period-available", { headers }); await page.reload(); await interactive(page);
   await expect(page.getByRole("button", { name: "Uredi kapital", exact: true })).toBeEnabled();
 });
 test("a period locked after opening the capital editor is still rejected by backend", async ({ page, request }) => {
@@ -43,14 +43,14 @@ test("actual empty singleton, accessible editor and zero-valued upsert retain on
   await expect(dialog.getByLabel("Osnovni kapital", { exact: false })).toHaveValue(""); await fill(dialog);
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).not.toBeVisible();
-  await expect(page.getByRole("cell", { name: "0,00 KM", exact: true })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "BAM 0.00", exact: true })).toBeVisible();
   let records = await (await request.get("/__fixtures/capital", { headers })).json(); expect(records).toHaveLength(1);
   const id = records[0].id; expect(records[0].coreCapital).toBe(0); expect(records[0].regulatoryCapital).toBe(123.45);
   await page.getByRole("button", { name: "Uredi kapital", exact: true }).click();
   expect(Number(await dialog.getByLabel("Regulatorni kapital", { exact: false }).inputValue())).toBe(123.45);
   await fill(dialog, "10", "20", "30"); await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).not.toBeVisible();
   records = await (await request.get("/__fixtures/capital", { headers })).json(); expect(records).toHaveLength(1); expect(records[0].id).toBe(id); expect(records[0].coreCapital).toBe(20);
-  await page.reload(); await interactive(page); await expect(page.getByRole("cell", { name: "20,00 KM", exact: true })).toBeVisible();
+  await page.reload(); await interactive(page); await expect(page.getByRole("cell", { name: "BAM 20.00", exact: true })).toBeVisible();
 });
 test("required amounts/date and negative values cannot persist", async ({ page, request }) => {
   await open(page); await page.getByRole("button", { name: "Uredi kapital", exact: true }).click(); const dialog = page.getByRole("dialog");
@@ -64,8 +64,8 @@ test("empty and populated capital export use real backend XLSX", async ({ page, 
   await open(page);
   let pending = page.waitForEvent("download"); await page.getByRole("button", { name: "Izvezi Excel", exact: true }).click();
   let download = await pending; expect(download.suggestedFilename()).toMatch(/^kapital-.*\.xlsx$/);
-  await request.post("/__fixtures/limit-reference", { headers }); await page.getByRole("button", { name: "Osvježi", exact: true }).click();
-  await expect(page.getByRole("cell", { name: "1.234.567,89 KM", exact: true })).toBeVisible();
+  await request.post("/__fixtures/limit-reference", { headers }); await page.reload(); await interactive(page);
+  await expect(page.getByRole("cell", { name: "BAM 1,234,567.89", exact: true })).toBeVisible();
   pending = page.waitForEvent("download"); await page.getByRole("button", { name: "Izvezi Excel", exact: true }).click(); download = await pending;
   const target = info.outputPath("capital.xlsx"); await download.saveAs(target); expect((await readFile(target)).subarray(0, 2)).toEqual(Buffer.from([0x50, 0x4b]));
 });
@@ -86,9 +86,9 @@ test("375px capital view/editor retain keyboard focus and no page overflow", asy
   await page.screenshot({ path: info.outputPath("capital-mobile.png"), fullPage: true });
 });
 test("BS/EN capital wording and API culture persist", async ({ page, request }) => {
-  await open(page); await page.getByLabel("Jezik", { exact: true }).selectOption("en");
-  await expect(page.locator("form.app-language")).toHaveAttribute("action", /\/en\?/);
-  await page.getByRole("button", { name: "Primijeni", exact: true }).click(); await interactive(page);
+  await open(page); await chooseLanguage(page, "en");
+
+
   await expect(page.getByRole("heading", { name: "Capital", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Edit capital", exact: true }).click();
   await expect(page.getByRole("dialog").getByLabel("Supplementary capital", { exact: false })).toBeVisible();

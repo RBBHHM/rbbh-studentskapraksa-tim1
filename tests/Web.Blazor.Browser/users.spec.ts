@@ -1,6 +1,6 @@
 import { expect, test, type Page, type Locator } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { interactive } from "./readiness";
+import { interactive, chooseLanguage } from "./readiness";
 const headers = { "X-Fixture-Control": "true" };
 async function visit(page: Page) { await page.goto("/app/admin/users"); await interactive(page); }
 async function settled(dialog: Locator) {
@@ -131,7 +131,7 @@ test("375px user table/form and BS/EN owned copy remain usable", async ({ page }
   await page.screenshot({ path: info.outputPath("users-mobile.png"), fullPage: true });
   await page.getByRole("dialog").getByRole("button", { name: "Odustani", exact: true }).click();
   await page.getByRole("button", { name: "Prikaži ili sakrij navigaciju", exact: true }).click();
-  const nav = page.getByRole("dialog"); await nav.getByLabel("Jezik", { exact: true }).selectOption("en"); await nav.getByRole("button", { name: "Primijeni", exact: true }).click(); await interactive(page);
-  await expect(page.getByRole("heading", { name: "Users", exact: true })).toBeVisible();
+  const nav = page.getByRole("dialog"); await chooseLanguage(nav, "en");
+  await expect(page.getByRole("heading", { name: "User management", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Add user", exact: true }).click(); await expect(page.getByRole("dialog").getByText("Functional accesses", { exact: true })).toBeVisible();
 });

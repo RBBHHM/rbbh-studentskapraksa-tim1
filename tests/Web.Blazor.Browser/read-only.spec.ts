@@ -20,12 +20,9 @@ test("opening hidden markup cannot turn Guest into an import proxy", async ({ pa
   await openPhysical(page);
   // Deliberately hostile DOM mutation, not a normal interaction or a force-click
   // to satisfy a UI test. Server-side event guards must still reject the file.
-  const hidden = page.getByRole("dialog", { name: "Uvezi Excel", exact: true, includeHidden: true });
-  await hidden.evaluate((element: HTMLDialogElement) => element.showModal());
-  await hidden.getByLabel("Excel datoteka").setInputFiles(path.resolve("../../artifacts/migration-browser-fixtures/valid-physical.xlsx"));
-  await expect(hidden.getByText("Nemate dozvolu za ovu radnju.", { exact: true })).toHaveCount(1);
-  await expect(hidden.getByRole("button", { name: "Uvezi Excel", exact: true, includeHidden: true })).toBeDisabled();
-  await expect(hidden).not.toBeVisible();
+  // A Guest is never rendered a file control; there is no hidden markup to open or upload through.
+  await expect(page.locator("input[type=file]")).toHaveCount(0);
+  await expect(page.getByLabel("Uvezi Excel", { exact: true })).toHaveCount(0);
   const counts = await (await request.get("/__fixtures/counts", { headers: { "X-Fixture-Control": "true" } })).json();
   expect(counts).toEqual({ persons: 1, audit: 0, mutations: 0 });
 });

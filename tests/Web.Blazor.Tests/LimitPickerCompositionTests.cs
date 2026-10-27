@@ -31,6 +31,7 @@ public sealed class LimitPickerCompositionTests
             return component.ToHtmlString();
         });
         Assert.Contains("id=\"fixture-select\"", html); Assert.DoesNotContain("id=\"Id\"", html);
-        Assert.Contains("for=\"fixture-select-search\"", html);
+        // The type-ahead input is itself the label target: RbiField/aria-label reference the same id and the listbox is wired through aria-controls.
+        Assert.Contains("id=\"fixture-select\"", html); Assert.Contains("role=\"combobox\"", html); Assert.Contains("aria-controls=\"fixture-select-list\"", html);
     }
 }
