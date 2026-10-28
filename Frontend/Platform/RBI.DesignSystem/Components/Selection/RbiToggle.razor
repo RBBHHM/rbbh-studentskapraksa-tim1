@@ -1,0 +1,32 @@
+<button @attributes="SafeAttributes" type="button" class="@CssClass" disabled="@Disabled" aria-pressed="@(EffectivePressed ? "true" : "false")" @onclick="ToggleAsync">
+    @ChildContent
+</button>
+
+@code {
+    [Parameter] public bool Pressed { get; set; }
+    [Parameter] public EventCallback<bool> PressedChanged { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public RbiToggleVariant Variant { get; set; }
+    [Parameter] public RbiToggleSize Size { get; set; } = RbiToggleSize.Medium;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private bool _initialized, _lastPressed, _localPressed;
+    private bool EffectivePressed => PressedChanged.HasDelegate ? Pressed : _localPressed;
+    protected override void OnParametersSet()
+    {
+        if (!_initialized || Pressed != _lastPressed) _localPressed = Pressed;
+        _initialized = true;
+        _lastPressed = Pressed;
+    }
+    private string CssClass => string.Join(' ', new[] { "rbi-toggle", $"rbi-toggle--{Variant.ToString().ToLowerInvariant()}", $"rbi-toggle--{Size.ToString().ToLowerInvariant()}", EffectivePressed ? "rbi-toggle--pressed" : null, Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private IReadOnlyDictionary<string, object>? SafeAttributes => RBI.DesignSystem.Components.Forms.RbiFormUtilities.SafeAttributes(AdditionalAttributes, "class", "type", "disabled", "aria-pressed");
+    private async Task ToggleAsync()
+    {
+        if (Disabled) return;
+        var next = !EffectivePressed;
+        if (!PressedChanged.HasDelegate) _localPressed = next;
+        await PressedChanged.InvokeAsync(next);
+    }
+}

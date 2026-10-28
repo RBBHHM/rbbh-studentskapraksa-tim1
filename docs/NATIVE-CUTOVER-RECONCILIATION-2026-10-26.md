@@ -1,4 +1,4 @@
-# Final native integration and React source retirement — 2026-10-26
+# Final native integration and React source retirement â€” 2026-10-26
 
 Base for this continuation:43d51b605b35785798cdc211447bce7ed2a92318.
 The owner explicitly confirmed Claude's final visual batch and requested integration.
@@ -80,13 +80,13 @@ results do not claim pixel-identical or complete assistive-technology certificat
 
 ## Retirement boundary
 
-275 tracked files under src/Web were removed only AFTER the integrated gate.
-This includes React source/assets, pnpm manifests/lock, webpack/Tailwind/i18next
+275 tracked files under the retired React reference tree were removed only AFTER the integrated gate.
+This includes React source/assets, retired JS package tooling manifests/lock, retired bundler/Tailwind/i18next
 tooling, static IIS/runtime-config packaging and their obsolete React-only Node
 contract tests. Maintained backend and native .NET/Playwright test projects remain.
 Prior source is recoverable from Git, including the pre-retirement ccca8c5 tree.
 
-The final root helpers scripts/dev-api.cmd and scripts/testing/Test-LocalApi.ps1
+The final root helpers the retired API wrapper and scripts/testing/Test-LocalApi.ps1
 were removed with their only remaining React package.json consumer. Their native
 replacement is the direct dotnet test/run workflow already documented in README.
 There are no tracked root scripts/ files and no new wrapper scripts were added.
@@ -95,7 +95,7 @@ remain deliberately to avoid exposing local residue.
 
 RelatedPartiesRegister.Migration.slnx was renamed100% unchanged to
 RelatedPartiesRegister.slnx. The old backend-only
-RelatedPartiesRegister/RelatedPartiesRegister.sln was removed. CI build/CodeQL,
+Backend/RelatedPartiesRegister.sln was removed. CI build/CodeQL,
 README/native instructions and all four test-root discovery sites were updated
 together. The solution contains backend, native app, backend unit/integration,
 frontend tests and the native browser host. No React build is required.
@@ -124,7 +124,7 @@ Source retirement is complete; no further work waits for Claude's commit deliver
 
 Production cutover remains external:real realm email_verified/sub/export approval,
 one-time subject manifest/backfill, historical global-period reconciliation,
-deployed SQL migration/concurrency permissions, approved RBI package publication,
+deployed SQL migration/concurrency permissions, reviewed tracked RBI source,
 real confidential OIDC/session/logout/refresh, shared cache/DataProtection,
 SMTP/HTTP recipients/delivery, OCP/proxy/WebSocket/TLS/runner/registry configuration,
 corporate advisory-feed and runtime-servicing acceptance. F3 stays PARTIAL for

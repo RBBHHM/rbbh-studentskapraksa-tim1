@@ -1,0 +1,6 @@
+#nullable enable
+RBI.Hosting.RbiHealthCheckTags
+RBI.Hosting.RbiHostingExtensions
+const RBI.Hosting.RbiHealthCheckTags.Ready = "ready" -> string!
+static RBI.Hosting.RbiHostingExtensions.AddRbiHosting(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Microsoft.AspNetCore.Builder.ForwardedHeadersOptions!>? configureForwardedHeaders = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static RBI.Hosting.RbiHostingExtensions.UseRbiHosting(this Microsoft.AspNetCore.Builder.WebApplication! app) -> Microsoft.AspNetCore.Builder.WebApplication!

@@ -1,0 +1,30 @@
+@using RBI.DesignSystem.Components.Icons
+
+@if (_series.Length > 0)
+{
+<div class="@($"rbi-chart__legend rbi-chart__legend--{Position.ToString().ToLowerInvariant()} {Class}".TrimEnd())">
+    @foreach (var series in _series)
+    {
+        <span class="rbi-chart__legend-item">
+            @if (series.Icon is { } icon && !HideCustomIcons) { <RbiIcon Name="icon" /> }
+            else { <span class="rbi-chart__legend-dot" aria-hidden="true" style="@($"background:{Context!.GetColor(series.Key)}")"></span> }
+            @if (series.LabelContent is not null) { @series.LabelContent } else { @series.Label }
+        </span>
+    }
+</div>
+}
+
+@code {
+    [CascadingParameter] private RbiChartContext? Context { get; set; }
+    [Parameter] public RbiChartLegendPosition Position { get; set; }
+    [Parameter] public bool HideCustomIcons { get; set; }
+    [Parameter] public IReadOnlyList<string>? SeriesKeys { get; set; }
+    [Parameter] public string? Class { get; set; }
+    private RbiChartSeries[] _series = [];
+    protected override void OnParametersSet()
+    {
+        if (Context is null) throw new InvalidOperationException("Chart legend requires an RbiChart context.");
+        if (!Enum.IsDefined(Position)) throw new ArgumentOutOfRangeException(nameof(Position));
+        _series = SeriesKeys is null ? Context.Series.ToArray() : SeriesKeys.Select(key => Context.GetSeries(key) ?? throw new ArgumentException("Legend series must exist in the chart configuration.")).ToArray();
+    }
+}

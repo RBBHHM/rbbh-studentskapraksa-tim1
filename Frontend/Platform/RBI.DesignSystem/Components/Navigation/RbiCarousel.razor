@@ -1,0 +1,65 @@
+@typeparam TItem
+@using RBI.DesignSystem.Components.Icons
+@using RBI.DesignSystem.Components.Overlay
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject IJSRuntime JavaScript
+
+<div class="@($"rbi-carousel rbi-carousel--{Orientation.ToString().ToLowerInvariant()} {Class}".TrimEnd())" role="region" aria-roledescription="@RoleDescription" aria-label="@AccessibleLabel" data-rbi-carousel-loop="@(EffectiveLoop ? "true" : "false")" @ref="_root">
+    <div class="rbi-carousel__viewport" data-rbi-carousel-viewport tabindex="0" role="group" aria-label="@AccessibleLabel">
+        <div class="rbi-carousel__content">
+            @for (var index = 0; index < Items.Count; index++)
+            {
+                var item = Items[index];
+                <div class="rbi-carousel__item" role="group" aria-roledescription="@SlideRoleDescription" aria-label="@SlideLabel(item)" data-rbi-carousel-slide data-rbi-current="@(index == EffectiveIndex ? "true" : "false")">@SlideTemplate(item)</div>
+            }
+        </div>
+    </div>
+    <button type="button" class="rbi-carousel__control rbi-carousel__previous" data-rbi-carousel-previous disabled="@(!Loop && EffectiveIndex == 0 || Items.Count < 2)" aria-label="@PreviousLabel"><RbiIcon Name="RbiIconName.ArrowLeft" /></button>
+    <button type="button" class="rbi-carousel__control rbi-carousel__next" data-rbi-carousel-next disabled="@(!Loop && EffectiveIndex >= Items.Count - 1 || Items.Count < 2)" aria-label="@NextLabel"><RbiIcon Name="RbiIconName.ArrowRight" /></button>
+</div>
+
+@code {
+    private ElementReference _root;
+    private RbiAnchoredOverlayInterop? _interop;
+    private bool _initialized, _disposed;
+    private int _nativeIndex, _lastIndex;
+    [Parameter, EditorRequired] public string AccessibleLabel { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string PreviousLabel { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string NextLabel { get; set; } = string.Empty;
+    [Parameter] public string RoleDescription { get; set; } = "carousel";
+    [Parameter] public string SlideRoleDescription { get; set; } = "slide";
+    [Parameter, EditorRequired] public IReadOnlyList<TItem> Items { get; set; } = Array.Empty<TItem>();
+    [Parameter, EditorRequired] public RenderFragment<TItem> SlideTemplate { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<TItem, string> SlideLabel { get; set; } = default!;
+    [Parameter] public int ActiveIndex { get; set; }
+    [Parameter] public EventCallback<int> ActiveIndexChanged { get; set; }
+    [Parameter] public RbiOrientation Orientation { get; set; }
+    [Parameter] public bool Loop { get; set; }
+    [Parameter] public string? Class { get; set; }
+    private int EffectiveIndex => ActiveIndexChanged.HasDelegate ? ActiveIndex : _nativeIndex;
+    private bool EffectiveLoop => Loop && Items.Count > 1;
+    protected override void OnParametersSet()
+    {
+        ArgumentNullException.ThrowIfNull(Items); ArgumentNullException.ThrowIfNull(SlideTemplate); ArgumentNullException.ThrowIfNull(SlideLabel);
+        if (string.IsNullOrWhiteSpace(AccessibleLabel) || string.IsNullOrWhiteSpace(PreviousLabel) || string.IsNullOrWhiteSpace(NextLabel) || Items.Any(item => string.IsNullOrWhiteSpace(SlideLabel(item)))) throw new ArgumentException("Localized carousel/slide/action names are required.");
+        if (!Enum.IsDefined(Orientation) || ActiveIndex < 0 || ActiveIndex >= Math.Max(1, Items.Count)) throw new ArgumentOutOfRangeException(nameof(ActiveIndex));
+        if (!_initialized || ActiveIndex != _lastIndex) _nativeIndex = ActiveIndex;
+        _nativeIndex = Math.Min(_nativeIndex, Math.Max(0, Items.Count - 1));
+        _lastIndex = ActiveIndex; _initialized = true;
+    }
+    [JSInvokable] public async Task NativeCarouselIndex(int index)
+    {
+        if (_disposed || index < 0 || index >= Items.Count || index == EffectiveIndex) return;
+        if (!ActiveIndexChanged.HasDelegate) _nativeIndex = index;
+        await ActiveIndexChanged.InvokeAsync(index);
+        if (!_disposed) StateHasChanged();
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_disposed) return;
+        _interop ??= new(JavaScript, "./_content/RBI.DesignSystem/js/rbi-extended-controls.js");
+        await _interop.SyncControlsAsync(_root, this, "carousel", new { index = EffectiveIndex, loop = EffectiveLoop, vertical = Orientation == RbiOrientation.Vertical });
+    }
+    public async ValueTask DisposeAsync() { _disposed = true; if (_interop is not null) await _interop.DisposeAsync(); }
+}

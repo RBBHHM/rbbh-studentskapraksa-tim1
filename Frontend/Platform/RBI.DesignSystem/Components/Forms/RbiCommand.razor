@@ -1,0 +1,135 @@
+@typeparam TValue
+@using RBI.DesignSystem.Components.Icons
+@using RBI.DesignSystem.Components.Overlay
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject IJSRuntime JavaScript
+
+<div class="@($"rbi-command {Class}".TrimEnd())" @ref="_root">
+    <div class="rbi-command__input-wrapper">
+        <RbiIcon Name="RbiIconName.Search" />
+        <RbiInput Value="@EffectiveQuery" ValueChanged="QueryChangedAsync" ValueExpression="@(() => _nativeQuery)" Placeholder="@Placeholder" Disabled="@Disabled" UpdateMode="RbiInputUpdateMode.Input" AdditionalAttributes="@InputAttributes" />
+    </div>
+    @if (_filtered.Length == 0) { <div class="rbi-command__empty" role="status">@EmptyText</div> }
+    <div id="@(_id + "-list")" class="rbi-command__list" role="listbox" aria-label="@AccessibleLabel" hidden="@(_filtered.Length == 0)">
+        @for (var groupIndex = 0; groupIndex < _groups.Length; groupIndex++)
+        {
+            var group = _groups[groupIndex];
+            var labelId = _id + "-group-" + group.First().Index;
+            @if (groupIndex > 0 && EffectiveQuery.Length == 0) { <div class="rbi-command__separator" role="presentation" aria-hidden="true"></div> }
+            <div class="rbi-command__group" role="group" aria-labelledby="@(group.Key is null ? null : labelId)">
+                @if (group.Key is not null) { <div id="@labelId" class="rbi-command__group-heading">@group.Key</div> }
+                @foreach (var item in EffectiveQuery.Length == 0 ? group.AsEnumerable() : group.OrderBy(item => !item.Option.Disabled))
+                {
+                    <div id="@(_id + "-option-" + item.Index)" class="rbi-command__item" role="option" aria-selected="@(item.Index == _active ? "true" : "false")" aria-disabled="@(Disabled || item.Option.Disabled ? "true" : null)" data-rbi-command-index="@item.Index" @onclick="() => ExecuteAsync(item.Index)" @onpointerenter="() => SetActiveAsync(item.Index)">
+                        @if (item.Option.Icon.HasValue) { <RbiIcon Name="@item.Option.Icon.Value" /> }
+                        @item.Option.Label
+                        @if (item.Option.Shortcut is not null) { <span class="rbi-command__shortcut" aria-hidden="true">@item.Option.Shortcut</span> }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private readonly string _id = RbiFormUtilities.Id("command");
+    private ElementReference _root;
+    private RbiAnchoredOverlayInterop? _interop;
+    private bool _disposed, _initialized;
+    private string _nativeQuery = string.Empty, _lastQuery = string.Empty;
+    private int _active = -1;
+    private (RbiCommandOption<TValue> Option, int Index)[] _filtered = [];
+    private IGrouping<string?, (RbiCommandOption<TValue> Option, int Index)>[] _groups = [];
+    [Parameter, EditorRequired] public string AccessibleLabel { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string SearchLabel { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string EmptyText { get; set; } = string.Empty;
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter, EditorRequired] public IReadOnlyList<RbiCommandOption<TValue>> Options { get; set; } = Array.Empty<RbiCommandOption<TValue>>();
+    [Parameter] public string Query { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> QueryChanged { get; set; }
+    /// <summary>Optional controlled active option value, independent of execution and search.</summary>
+    [Parameter] public TValue? ActiveValue { get; set; }
+    /// <summary>Proposes active-option changes; a consumer may reject a proposal.</summary>
+    [Parameter] public EventCallback<TValue?> ActiveValueChanged { get; set; }
+    [Parameter] public EventCallback<TValue> OnExecute { get; set; }
+    [Parameter] public EventCallback OnEscape { get; set; }
+    [Parameter] public bool Loop { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public Func<RbiCommandOption<TValue>, string, double>? Filter { get; set; }
+    [Parameter] public string? Class { get; set; }
+    private string EffectiveQuery => QueryChanged.HasDelegate ? Query : _nativeQuery;
+    private IReadOnlyDictionary<string, object> InputAttributes => new Dictionary<string, object> { ["role"] = "combobox", ["aria-label"] = SearchLabel, ["aria-expanded"] = _filtered.Length > 0 ? "true" : "false", ["aria-autocomplete"] = "list", ["aria-controls"] = _id + "-list", ["aria-activedescendant"] = _active < 0 ? string.Empty : _id + "-option-" + _active };
+    protected override void OnParametersSet()
+    {
+        ArgumentNullException.ThrowIfNull(Options); ArgumentNullException.ThrowIfNull(Query);
+        if (string.IsNullOrWhiteSpace(AccessibleLabel) || string.IsNullOrWhiteSpace(SearchLabel) || string.IsNullOrWhiteSpace(EmptyText) || Options.Any(item => string.IsNullOrWhiteSpace(item.Label)) || Options.Select(item => item.Value).Distinct().Count() != Options.Count) throw new ArgumentException("Named commands with unique typed values are required.");
+        var queryChanged = !_initialized || Query != _lastQuery;
+        if (queryChanged) _nativeQuery = Query;
+        _lastQuery = Query; _initialized = true; Refilter(queryChanged);
+    }
+    private void Refilter(bool resetSelection = false)
+    {
+        _filtered = Options.Select((option, index) => (Option: option, Index: index, Score: Filter?.Invoke(option, EffectiveQuery) ?? Score(option, EffectiveQuery))).Where(item => item.Score > 0).OrderByDescending(item => item.Score).Select(item => (item.Option, item.Index)).ToArray();
+        _groups = _filtered.GroupBy(item => item.Option.Group).ToArray();
+        if (ActiveValueChanged.HasDelegate) ReconcileSelection();
+        else if (resetSelection || !_filtered.Any(item => item.Index == _active && !item.Option.Disabled)) _active = _groups.SelectMany(group => group).FirstOrDefault(item => !item.Option.Disabled, (default!, -1)).Index;
+    }
+    private void ReconcileSelection() => _active = _filtered.FirstOrDefault(item => !item.Option.Disabled && EqualityComparer<TValue>.Default.Equals(item.Option.Value, ActiveValue!), (default!, -1)).Index;
+    private static double Score(RbiCommandOption<TValue> option, string query)
+    {
+        if (query.Length == 0) return 1;
+        return RbiCommandScoring.Score(RbiCommandScoring.Trim(option.SearchText ?? option.Label), query, option.Keywords);
+    }
+    private async Task QueryChangedAsync(string value)
+    {
+        if (_disposed || Disabled) return;
+        var previousQuery = EffectiveQuery;
+        if (!QueryChanged.HasDelegate) _nativeQuery = value;
+        await QueryChanged.InvokeAsync(value); if (!_disposed) Refilter(previousQuery != EffectiveQuery);
+        if (!_disposed && ActiveValueChanged.HasDelegate && previousQuery != EffectiveQuery)
+        {
+            var first = _groups.SelectMany(group => group).FirstOrDefault(item => !item.Option.Disabled, (default!, -1)).Index;
+            if (first >= 0) await SetActiveAsync(first);
+        }
+    }
+    private async Task SetActiveAsync(int index)
+    {
+        if (_disposed || Disabled || index == _active || !_filtered.Any(item => item.Index == index && !item.Option.Disabled)) return;
+        if (!ActiveValueChanged.HasDelegate) _active = index;
+        else { await ActiveValueChanged.InvokeAsync(Options[index].Value); if (!_disposed) ReconcileSelection(); }
+    }
+    private async Task ExecuteAsync(int index)
+    {
+        if (_disposed || Disabled || !_filtered.Any(item => item.Index == index && !item.Option.Disabled)) return;
+        await SetActiveAsync(index);
+        if (!_disposed) await OnExecute.InvokeAsync(Options[index].Value);
+    }
+    [JSInvokable] public async Task NativeCommandKey(string key)
+    {
+        if (_disposed || Disabled) return;
+        if (key == "Escape") { await OnEscape.InvokeAsync(); return; }
+        if (key == "Enter") { await ExecuteAsync(_active); return; }
+        var enabled = _groups.SelectMany(group => group).Where(item => !item.Option.Disabled).Select(item => item.Index).ToArray();
+        if (enabled.Length == 0) return;
+        var current = Array.IndexOf(enabled, _active);
+        if (key is "GroupNext" or "GroupPrevious")
+        {
+            var groups = _groups.Select(group => group.Where(item => !item.Option.Disabled).Select(item => item.Index).ToArray()).Where(group => group.Length > 0).ToArray();
+            var groupIndex = Array.FindIndex(groups, group => group.Contains(_active));
+            var adjacent = groupIndex + (key == "GroupNext" ? 1 : -1);
+            if (adjacent >= 0 && adjacent < groups.Length) { await SetActiveAsync(groups[adjacent][0]); if (!_disposed) StateHasChanged(); return; }
+            key = key == "GroupNext" ? "ArrowDown" : "ArrowUp";
+        }
+        var next = key switch { "Home" => 0, "End" => enabled.Length - 1, "ArrowDown" => current + 1, "ArrowUp" => current - 1, _ => current };
+        next = Loop ? (next + enabled.Length) % enabled.Length : Math.Clamp(next, 0, enabled.Length - 1);
+        await SetActiveAsync(enabled[next]); if (!_disposed) StateHasChanged();
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_disposed) return;
+        _interop ??= new(JavaScript, "./_content/RBI.DesignSystem/js/rbi-extended-controls.js");
+        await _interop.SyncControlsAsync(_root, this, "command", new { active = _active });
+    }
+    public async ValueTask DisposeAsync() { _disposed = true; if (_interop is not null) await _interop.DisposeAsync(); }
+}

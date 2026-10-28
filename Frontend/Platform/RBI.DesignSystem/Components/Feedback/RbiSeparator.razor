@@ -1,0 +1,18 @@
+<div @attributes="SafeAttributes"
+     class="@CssClass"
+     role="@Role"
+     aria-orientation="@AriaOrientation"
+     aria-hidden="@AriaHidden"></div>
+
+@code {
+    [Parameter] public RbiSeparatorOrientation Orientation { get; set; } = RbiSeparatorOrientation.Horizontal;
+    [Parameter] public bool Decorative { get; set; } = true;
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CssClass => string.Join(' ', new[] { "rbi-separator", $"rbi-separator--{Orientation.ToString().ToLowerInvariant()}", Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private string? Role => Decorative ? null : "separator";
+    private string? AriaOrientation => Decorative ? null : Orientation.ToString().ToLowerInvariant();
+    private string? AriaHidden => Decorative ? "true" : null;
+    private IReadOnlyDictionary<string, object>? SafeAttributes => RBI.DesignSystem.Components.Forms.RbiFormUtilities.SafeAttributes(AdditionalAttributes, "class", "role", "aria-orientation", "aria-hidden");
+}

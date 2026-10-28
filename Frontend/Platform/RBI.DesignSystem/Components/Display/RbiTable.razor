@@ -1,0 +1,20 @@
+<div class="rbi-table-scroll" role="region" aria-label="@AccessibleLabel" tabindex="0">
+    <table @attributes="AdditionalAttributes" class="@CssClass">
+        @ChildContent
+    </table>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string AccessibleLabel { get; set; } = string.Empty;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CssClass => string.Join(' ', new[] { "rbi-table", Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(AccessibleLabel))
+            throw new InvalidOperationException($"{nameof(AccessibleLabel)} is required for the scrollable table region.");
+    }
+}

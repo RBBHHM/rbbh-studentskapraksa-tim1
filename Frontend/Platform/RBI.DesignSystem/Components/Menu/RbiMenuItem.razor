@@ -1,0 +1,58 @@
+@using RBI.DesignSystem.Components.Forms
+
+<button @attributes="SafeAttributes"
+        type="button"
+        role="menuitem"
+        class="@CssClass"
+        tabindex="-1"
+        aria-disabled="@AriaDisabled"
+        data-rbi-menu-item
+        data-rbi-menu-text="@Label"
+        @onclick="ActivateAsync">
+    @if (Icon is not null)
+    {
+        <span class="rbi-menu-item__icon" aria-hidden="true">@Icon</span>
+    }
+    <span class="rbi-menu-item__label">@Label</span>
+    @if (!string.IsNullOrWhiteSpace(Shortcut))
+    {
+        <span class="rbi-menu-item__shortcut" aria-hidden="true">@Shortcut</span>
+    }
+</button>
+
+@code {
+    [CascadingParameter] private RbiMenuContext? Context { get; set; }
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter] public RenderFragment? Icon { get; set; }
+    [Parameter] public string? Shortcut { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    /// <summary>Indents the item to align with items that carry a leading selection indicator.</summary>
+    [Parameter] public bool Inset { get; set; }
+    [Parameter] public bool CloseOnSelect { get; set; } = true;
+    [Parameter] public RbiMenuItemTone Tone { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string? AriaDisabled => Disabled ? "true" : null;
+    private string CssClass => string.Join(' ', new[] { "rbi-menu-item", Tone == RbiMenuItemTone.Danger ? "rbi-menu-item--danger" : null, Disabled ? "rbi-menu-item--disabled" : null, Inset ? "rbi-menu-item--inset" : null, Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private IReadOnlyDictionary<string, object>? SafeAttributes => RbiFormUtilities.SafeAttributes(AdditionalAttributes, "class", "role", "type", "tabindex", "aria-disabled", "data-rbi-menu-item", "data-rbi-menu-text");
+
+    protected override void OnInitialized()
+    {
+        if (Context is null) throw new InvalidOperationException($"{nameof(RbiMenuItem)} must be used inside an RBI menu.");
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(Label)) throw new InvalidOperationException($"{nameof(Label)} is required.");
+    }
+
+    public async Task ActivateAsync()
+    {
+        if (Disabled || Context is null) return;
+        if (CloseOnSelect) await Context.CloseAsync(true);
+        if (OnClick.HasDelegate) await OnClick.InvokeAsync();
+    }
+
+}

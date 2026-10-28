@@ -1,0 +1,82 @@
+@using RBI.DesignSystem.Components.Forms
+@implements IAsyncDisposable
+@inject IJSRuntime JavaScript
+
+@if (Trigger is not null) { @Trigger(EventCallback.Factory.Create(this, OpenAsync)) }
+<dialog @ref="_dialog" @attributes="SafeAttributes" class="@($"rbi-drawer {Class}".TrimEnd())" tabindex="-1" aria-labelledby="@($"{_id}-title")" aria-describedby="@(string.IsNullOrWhiteSpace(Description) ? null : $"{_id}-description")" data-rbi-drawer-snap="@(SnapPoints.Count > 0 ? "true" : "false")">
+    <div class="rbi-drawer__handle" data-rbi-drawer-handle aria-hidden="true"></div>
+    <div class="rbi-drawer__header" data-rbi-drawer-focus tabindex="-1">
+        <h2 id="@($"{_id}-title")" class="rbi-drawer__title">@Title</h2>
+        @if (!string.IsNullOrWhiteSpace(Description)) { <p id="@($"{_id}-description")" class="rbi-drawer__description">@Description</p> }
+    </div>
+    <div class="rbi-drawer__body">@ChildContent</div>
+    @if (Footer is not null) { <div class="rbi-drawer__footer">@Footer(EventCallback.Factory.Create(this, CloseAsync))</div> }
+</dialog>
+
+@code {
+    [Parameter] public bool Open { get; set; }
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? Description { get; set; }
+    [Parameter] public bool Dismissible { get; set; } = true;
+    [Parameter] public bool ScaleBackground { get; set; } = true;
+    [Parameter] public RenderFragment<EventCallback>? Trigger { get; set; }
+    [Parameter] public RenderFragment<EventCallback>? Footer { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public IReadOnlyList<double> SnapPoints { get; set; } = Array.Empty<double>();
+    [Parameter] public int ActiveSnapIndex { get; set; }
+    [Parameter] public EventCallback<int> ActiveSnapIndexChanged { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+    private readonly string _id = RbiFormUtilities.Id("drawer");
+    private ElementReference _dialog;
+    private RbiModalInterop? _modal;
+    private RbiAnchoredOverlayInterop? _drag;
+    private bool _nativeOpen, _lastOpen, _initialized, _disposed;
+    private int _nativeSnap, _lastSnap;
+    private bool EffectiveOpen => OpenChanged.HasDelegate ? Open : _nativeOpen;
+    private int EffectiveSnap => ActiveSnapIndexChanged.HasDelegate ? ActiveSnapIndex : _nativeSnap;
+    private IReadOnlyDictionary<string, object>? SafeAttributes => RbiFormUtilities.SafeAttributes(AdditionalAttributes, "class", "open", "role", "aria-label", "aria-labelledby", "aria-describedby", "data-rbi-drawer-snap", "tabindex");
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(Title)) throw new ArgumentException("A localized drawer title is required.");
+        ArgumentNullException.ThrowIfNull(SnapPoints);
+        if (SnapPoints.Any(point => !double.IsFinite(point) || point is <= 0 or > 1) || SnapPoints.Zip(SnapPoints.Skip(1)).Any(pair => pair.First >= pair.Second)) throw new ArgumentException("Snap points must be distinct, increasing viewport fractions in (0,1].", nameof(SnapPoints));
+        if (ActiveSnapIndex < 0 || ActiveSnapIndex >= Math.Max(1, SnapPoints.Count)) throw new ArgumentOutOfRangeException(nameof(ActiveSnapIndex));
+        if (!_initialized || Open != _lastOpen) _nativeOpen = Open;
+        if (!_initialized || ActiveSnapIndex != _lastSnap) _nativeSnap = ActiveSnapIndex;
+        _nativeSnap = Math.Min(_nativeSnap, Math.Max(0, SnapPoints.Count - 1));
+        _lastOpen = Open; _lastSnap = ActiveSnapIndex; _initialized = true;
+    }
+    private Task OpenAsync() => SetOpenAsync(true);
+    private Task CloseAsync() => SetOpenAsync(false);
+    private async Task SetOpenAsync(bool open)
+    {
+        if (_disposed || EffectiveOpen == open) return;
+        if (!OpenChanged.HasDelegate) _nativeOpen = open;
+        await OpenChanged.InvokeAsync(open);
+        if (!_disposed) StateHasChanged();
+    }
+    [JSInvokable] public Task RequestClose(string reason) => !_disposed && Dismissible ? SetOpenAsync(false) : Task.CompletedTask;
+    [JSInvokable] public async Task NativeDrawerSnap(int index)
+    {
+        if (_disposed || index < 0 || index >= SnapPoints.Count || index == EffectiveSnap) return;
+        if (!ActiveSnapIndexChanged.HasDelegate) _nativeSnap = index;
+        await ActiveSnapIndexChanged.InvokeAsync(index);
+        if (!_disposed) StateHasChanged();
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_disposed) return;
+        _modal ??= new(JavaScript);
+        _drag ??= new(JavaScript, "./_content/RBI.DesignSystem/js/rbi-extended-controls.js");
+        await _modal.SyncAsync(_dialog, this, EffectiveOpen, "[data-rbi-drawer-focus]", Dismissible, Dismissible);
+        if (!_disposed) await _drag.SyncControlsAsync(_dialog, this, "drawer", new { open = EffectiveOpen, dismissible = Dismissible, scaleBackground = ScaleBackground, snapPoints = SnapPoints.ToArray(), index = EffectiveSnap });
+    }
+    public async ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        if (_drag is not null) await _drag.DisposeAsync();
+        if (_modal is not null) await _modal.DisposeAsync();
+    }
+}

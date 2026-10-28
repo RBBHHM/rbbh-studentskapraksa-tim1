@@ -1,0 +1,81 @@
+<nav @attributes="SafeAttributes" class="@CssClass" aria-label="@AccessibleLabel">
+    <ul class="rbi-pagination__list">
+        <li>
+            <button type="button" class="rbi-pagination__control rbi-pagination__edge" disabled="@(CurrentPage <= 1)" aria-label="@PreviousAccessibleLabel" @onclick="PreviousAsync">
+                @RBI.DesignSystem.Components.RbiControlIcon.Render("previous")<span class="rbi-pagination__edge-label">@PreviousLabel</span>
+            </button>
+        </li>
+        @foreach (var page in VisiblePages)
+        {
+            <li class="@(page is null ? "rbi-pagination__ellipsis-item" : $"rbi-pagination__page-item{(page == CurrentPage ? " rbi-pagination__page-item--current" : string.Empty)}{(page == 1 || page == TotalPages ? " rbi-pagination__page-item--edge" : string.Empty)}")">
+                @if (page is null)
+                {
+                    <span class="rbi-pagination__ellipsis" aria-hidden="true">@RBI.DesignSystem.Components.RbiControlIcon.Render("ellipsis")</span>
+                }
+                else
+                {
+                    <button type="button"
+                            class="rbi-pagination__control"
+                            aria-label="@PageAccessibleLabel(page.Value)"
+                            aria-current="@(page == CurrentPage ? "page" : null)"
+                            @onclick="() => ChangePageAsync(page.Value)">@(page.Value)</button>
+                }
+            </li>
+        }
+        <li>
+            <button type="button" class="rbi-pagination__control rbi-pagination__edge" disabled="@(CurrentPage >= TotalPages)" aria-label="@NextAccessibleLabel" @onclick="NextAsync">
+                <span class="rbi-pagination__edge-label">@NextLabel</span>@RBI.DesignSystem.Components.RbiControlIcon.Render("next")
+            </button>
+        </li>
+    </ul>
+</nav>
+
+@code {
+    [Parameter] public int CurrentPage { get; set; } = 1;
+    [Parameter] public EventCallback<int> CurrentPageChanged { get; set; }
+    [Parameter] public int TotalPages { get; set; } = 1;
+    [Parameter, EditorRequired] public string AccessibleLabel { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string PreviousAccessibleLabel { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string NextAccessibleLabel { get; set; } = string.Empty;
+    [Parameter] public string? PreviousLabel { get; set; }
+    [Parameter] public string? NextLabel { get; set; }
+    [Parameter, EditorRequired] public Func<int, string> PageAccessibleLabel { get; set; } = default!;
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CssClass => string.Join(' ', new[] { "rbi-pagination", Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private IReadOnlyDictionary<string, object>? SafeAttributes => RBI.DesignSystem.Components.Forms.RbiFormUtilities.SafeAttributes(AdditionalAttributes, "class", "aria-label");
+    private IReadOnlyList<int?> VisiblePages => BuildPages(CurrentPage, TotalPages);
+
+    protected override void OnParametersSet()
+    {
+        if (TotalPages < 1) throw new ArgumentOutOfRangeException(nameof(TotalPages));
+        if (CurrentPage < 1 || CurrentPage > TotalPages) throw new ArgumentOutOfRangeException(nameof(CurrentPage));
+        if (string.IsNullOrWhiteSpace(AccessibleLabel) || string.IsNullOrWhiteSpace(PreviousAccessibleLabel) || string.IsNullOrWhiteSpace(NextAccessibleLabel) || PageAccessibleLabel is null)
+            throw new InvalidOperationException("Pagination navigation and page labels are required.");
+    }
+
+    private Task PreviousAsync() => ChangePageAsync(CurrentPage - 1);
+    private Task NextAsync() => ChangePageAsync(CurrentPage + 1);
+    private async Task ChangePageAsync(int page)
+    {
+        if (page < 1 || page > TotalPages || page == CurrentPage) return;
+        await CurrentPageChanged.InvokeAsync(page);
+    }
+
+    private static IReadOnlyList<int?> BuildPages(int current, int total)
+    {
+        if (total <= 7) return Enumerable.Range(1, total).Select(page => (int?)page).ToArray();
+        var pages = new SortedSet<int> { 1, total };
+        for (var page = Math.Max(2, current - 1); page <= Math.Min(total - 1, current + 1); page++) pages.Add(page);
+        var result = new List<int?>();
+        var previous = 0;
+        foreach (var page in pages)
+        {
+            if (previous > 0 && page - previous > 1) result.Add(null);
+            result.Add(page);
+            previous = page;
+        }
+        return result;
+    }
+}

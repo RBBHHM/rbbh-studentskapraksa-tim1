@@ -10,7 +10,7 @@ Audited baseline: `5ad555448a175790fbf2b9d8d856ffd870328d03`, branch `release-v1
 | HIGH | Native RBI.Hosting currently trusts framework loopback only. Real OCP proxy trust is not bound from deployment configuration, so HTTPS redirects/callbacks behind remote proxies remain unverified. Approve actual proxy addresses/CIDRs/hop count, bind native hosting options, and test public scheme/host/IP and WebSockets. API trust-all was fixed separately below; it does not fix the native host. |
 | HIGH | API/SSO/SQL/mail endpoints, CA chains, AllowedHosts, real audience, redirect URIs, email_verified, subject-link approval/backfill and realm reconciliation remain environment-owner gates. Native Apis__BaseUrl is not startup-required today; blank configuration gives unavailable clients, not a usable application. Confirm it explicitly and add a critical native readiness dependency once the shared-provider integration is chosen. |
 | HIGH | OCP template has one replica, default RollingUpdate behavior, no explicit resource requests/limits, termination budget, PDB, persistent/shared state, Route or network policy. Native circuits, cookie/session continuity, surge/overlap with the API scheduler, WebSocket affinity and capacity need owner-approved design/values. No resource numbers or storage/provider assumptions were invented. |
-| HIGH | Corporate publication/access to RBI 0.1.0 and ApiCore/Authentication 0.1.1-migration.1 is not proven by local cache restore. CI/Dockerfiles do not configure private-feed credentials. Runners must have approved network/auth access; do not embed credentials in tracked NuGet.config or build arguments. Use an approved ephemeral/BuildKit secret-based solution if feed auth is required. |
+| RESOLVED | RBI runtime dependencies are now tracked source projects in Frontend/Platform. Only normal third-party packages require a public source or approved mirror; no private RBI publication is a prerequisite. |
 | HIGH | No Docker daemon or live OCP/registry access here. Linux image/SCC/CA behavior, real production startup, public-route health, rollout and SIGTERM drain are NOT_RUN_INFRASTRUCTURE. These are release gates, not local PASS results. |
 | MEDIUM | Actions/base images/SQL test image use moving version tags; there is no SDK global.json or NuGet lock file. Commit-tag refusal and digest deployment help promotion, but strict clean-build reproducibility/provenance and registry write-once policy still need owner controls. Deploy accepts an operator-supplied tag/digest pair, not a verified signed build attestation. |
 | MEDIUM | SQL readiness checks connectivity, not migration completion, permissions, role/reference seed correctness or mail/SSO readiness. Native readiness has no critical application dependency registered. Schema/data/SSO acceptance must be checked before traffic cutover; an HTTP 200 alone is insufficient. |
@@ -23,7 +23,7 @@ Audited baseline: `5ad555448a175790fbf2b9d8d856ffd870328d03`, branch `release-v1
 - API no longer clears proxy trust to accept everyone. Production requires explicit ReverseProxy KnownProxies/KnownNetworks, positive ForwardLimit and non-wildcard AllowedHosts. Invalid IP/CIDR, /0 networks and missing settings fail closed. Development keeps framework loopback defaults. HTTP tests prove peer trust, host filtering, forwarded scheme and audit address behavior.
 - API health endpoints explicitly allow anonymous probes, retain 200/503 semantics and return only status. Dependency failure does not change process liveness. SQL connectivity is exercised against a test-owned GUID LocalDB database.
 - OCP startup probe now uses /health/live, not dependency readiness. Readiness still gates traffic through /health/ready. Probe Host is explicitly owner-configured to match AllowedHosts, instead of using the changing pod IP. Deployment credentials use a job-scoped KUBECONFIG removed with an always cleanup step.
-- Docker context and Git ignore patterns cover local env/secrets/private keys/tooling. Both projects exclude NuGet.config from publish output. Final published trees contain no NuGet config, source/project files, dotenv or private keys. No credential was introduced or printed.
+- Docker context and Git ignore patterns cover local env/secrets/private keys/tooling. The root NuGet.config is outside both application publish inputs. Final published trees contain no NuGet config, source/project files, dotenv or private keys. No credential was introduced or printed.
 
 ## Required configuration inventory
 
@@ -47,7 +47,7 @@ Current runtime secrets: API/client/admin credentials, SQL credentials, SMTP cre
 
 Exactly three root workflows remain: build-and-push-image.yml, codeql.yml, deploy-to-ocp.yml. All were read completely. PRs validate; manual/tag builds publish only after full .NET/SQL and six-role browser gates. No release-branch push trigger exists: use the intended manual/tag process. CodeQL runs PR/manual/weekly with explicit solution build; security-events write is scoped to analysis, other jobs use contents read. Fork PRs do not receive TEST_SQL_SA_PASSWORD and will fail the required SQL configuration check; approve a safe organization CI strategy instead of exposing secrets to untrusted PR code.
 
-Web build context: src/Web.Blazor, Dockerfile there. API context: repository root, RelatedPartiesRegister/Dockerfile, tests/local files excluded. Both are multi-stage .NET 10 builds, publish --no-restore, final aspnet runtime, non-root APP_UID, exec-form dotnet entrypoint, port 8080. Web relies on the official base HTTP-port default; OCP explicitly sets ASPNETCORE_URLS on both. No runtime/framework upgrade was made. Build caches are not runtime copies; no credential build ARG exists. Enterprise mirror availability/contents/APP_UID/ICU/timezone/cert compatibility require actual Linux image verification. Publish carries existing API compilation references by project design; they were not removed as a speculative optimization.
+Web build context: Frontend, Dockerfile there. API context: repository root, Backend/Dockerfile, tests/local files excluded. Both are multi-stage .NET 10 builds, publish --no-restore, final aspnet runtime, non-root APP_UID, exec-form dotnet entrypoint, port 8080. Web relies on the official base HTTP-port default; OCP explicitly sets ASPNETCORE_URLS on both. No runtime/framework upgrade was made. Build caches are not runtime copies; no credential build ARG exists. Enterprise mirror availability/contents/APP_UID/ICU/timezone/cert compatibility require actual Linux image verification. Publish carries existing API compilation references by project design; they were not removed as a speculative optimization.
 
 Images are distinct web/API names tagged sha-<full commit>. Publishing rejects existing tags/non-404 registry responses and serializes same-commit/component work. Registry owners must enforce immutability against other writers. Deployment validates full commit tag/digest and always pins @sha256. Concurrency serializes environment/component, cancel-in-progress=false; job timeouts and failure propagation remain enabled. Current image provenance is traceability to the supplied digest/build summary, not signed attestation.
 
@@ -57,19 +57,19 @@ The generated Deployment has replicas=1 and defaults to RollingUpdate; Service m
 
 ## Build, migrations and rollback runbook
 
-1. Approve native cache/key-ring/proxy implementation and all environment values. Confirm real realm audience/claims/redirects, subject linkage, SQL/SMTP, private packages and CA chains. Complete Claude visual acceptance and the integrated final gate.
-2. Clean checkout needs .NET SDK 10 (local verification: 10.0.401), approved NuGet access and the repository-local dotnet-ef 10.0.3 tool. Node 22/npm/Chromium are only for native Playwright, not runtime/product publish. No React/pnpm build remains. SQL Server/LocalDB is needed for disposable SQL tests; Docker/BuildKit and corporate mirror access for images; oc plus cluster access for deployment. Lack of SDK/transitive lock files is reproducibility debt; promote the tested image digest instead of rebuilding it per environment.
+1. Approve native cache/key-ring/proxy implementation and all environment values. Confirm real realm audience/claims/redirects, subject linkage, SQL/SMTP and CA chains. Complete Claude visual acceptance and the integrated final gate.
+2. Clean checkout needs .NET SDK 10 (local verification: 10.0.401), approved NuGet access and the repository-local dotnet-ef 10.0.3 tool. Node 22/npm/Chromium are only for native Playwright, not runtime/product publish. No React/retired JS package tooling build remains. SQL Server/LocalDB is needed for disposable SQL tests; Docker/BuildKit and corporate mirror access for images; oc plus cluster access for deployment. Lack of SDK/transitive lock files is reproducibility debt; promote the tested image digest instead of rebuilding it per environment.
 3. Restore/build/test and publish:
 
 ```powershell
-dotnet restore RelatedPartiesRegister.slnx --configfile <approved-config>
+dotnet restore RelatedPartiesRegister.slnx --configfile NuGet.config
 dotnet build RelatedPartiesRegister.slnx -c Release --no-restore -p:RunAnalyzers=true
 # RBBH_TEST_SQLSERVER must name a disposable test instance without Initial Catalog.
 dotnet test RelatedPartiesRegister.slnx -c Release --no-build --no-restore
-dotnet publish RelatedPartiesRegister/RelatedPartiesRegister.csproj -c Release --no-restore -o artifacts/publish/api
-dotnet publish src/Web.Blazor/RBBH.RelatedPartiesRegister.Web.csproj -c Release --no-restore -o artifacts/publish/web
-docker build -f RelatedPartiesRegister/Dockerfile -t <local-api-tag> .
-docker build -f src/Web.Blazor/Dockerfile -t <local-web-tag> src/Web.Blazor
+dotnet publish Backend/RelatedPartiesRegister.csproj -c Release --no-restore -o artifacts/publish/api
+dotnet publish Frontend/RBBH.RelatedPartiesRegister.Web.csproj -c Release --no-restore -o artifacts/publish/web
+docker build -f Backend/Dockerfile -t <local-api-tag> .
+docker build -f Frontend/Dockerfile -t <local-web-tag> .
 ```
 
 4. Migration model is **manual/controlled DB deployment**, never application startup. Review an idempotent EF script using dotnet tool restore / dotnet tool run dotnet-ef migrations script --idempotent with the actual project/context; submit through the central DB change workflow. Back up and rehearse restore, confirm __EFMigrationsHistory, seed/reference/role data, subject-link and historical global-period reconciliation. Do not run EF database update or F3 backfill automatically in this audit/deploy workflow. SQL connectivity alone does not prove schema readiness.

@@ -1,0 +1,79 @@
+@implements IAsyncDisposable
+@inject IJSRuntime JavaScript
+
+<dialog @ref="_dialogElement"
+        @attributes="SafeAttributes"
+        class="@CssClass"
+        tabindex="-1"
+        aria-labelledby="@_titleId"
+        aria-describedby="@DescriptionId">
+    @* The Legacy SheetContent renders its close button before the content, so it is the first tab stop. *@
+    @if (Dismissible)
+    {
+        <button type="button" class="rbi-modal__close" aria-label="@CloseLabel" @onclick="CloseAsync">
+            @RBI.DesignSystem.Components.RbiControlIcon.Render("close")
+        </button>
+    }
+    <div class="rbi-modal__header">
+        <h2 id="@_titleId" class="rbi-modal__title">@Title</h2>
+        @if (!string.IsNullOrWhiteSpace(Description))
+        {
+            <p id="@_descriptionId" class="rbi-modal__description">@Description</p>
+        }
+    </div>
+    <div class="rbi-modal__body">@SheetBody</div>
+    @if (SheetFooter is not null)
+    {
+        <div class="rbi-modal__footer">@SheetFooter</div>
+    }
+</dialog>
+
+@code {
+    private readonly string _baseId = RBI.DesignSystem.Components.Forms.RbiFormUtilities.Id("sheet");
+    private ElementReference _dialogElement;
+    private RbiModalInterop? _interop;
+
+    [Parameter] public bool Open { get; set; }
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? Description { get; set; }
+    [Parameter, EditorRequired] public string CloseLabel { get; set; } = string.Empty;
+    [Parameter] public bool Dismissible { get; set; } = true;
+    [Parameter] public RbiSheetSide Side { get; set; } = RbiSheetSide.Right;
+    [Parameter, EditorRequired] public RenderFragment? SheetBody { get; set; }
+    [Parameter] public RenderFragment? SheetFooter { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string _titleId => $"{_baseId}-title";
+    private string _descriptionId => $"{_baseId}-description";
+    private string? DescriptionId => string.IsNullOrWhiteSpace(Description) ? null : _descriptionId;
+    private string CssClass => string.Join(' ', new[] { "rbi-modal", "rbi-sheet", $"rbi-sheet--{Side.ToString().ToLowerInvariant()}", Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private IReadOnlyDictionary<string, object>? SafeAttributes => RBI.DesignSystem.Components.Forms.RbiFormUtilities.SafeAttributes(AdditionalAttributes, "class", "role", "open", "aria-label", "aria-labelledby", "aria-describedby");
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(Title)) throw new InvalidOperationException($"{nameof(Title)} is required.");
+        if (Dismissible && string.IsNullOrWhiteSpace(CloseLabel)) throw new InvalidOperationException($"{nameof(CloseLabel)} is required when {nameof(Dismissible)} is true.");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        _interop ??= new RbiModalInterop(JavaScript);
+        await _interop.SyncAsync(_dialogElement, this, Open, null, Dismissible, Dismissible);
+    }
+
+    [JSInvokable] public Task RequestClose(string reason) => SetOpenAsync(false);
+    private Task CloseAsync() => SetOpenAsync(false);
+    private async Task SetOpenAsync(bool value)
+    {
+        if (Open == value) return;
+        await OpenChanged.InvokeAsync(value);
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_interop is not null) await _interop.DisposeAsync();
+    }
+}

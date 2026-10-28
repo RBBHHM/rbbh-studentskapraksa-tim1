@@ -194,7 +194,7 @@ internal static class BrowserHostProgram
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.UseEnvironment("Development");
-            builder.UseContentRoot(Path.Combine(FindRoot(), "src", "Web.Blazor"));
+            builder.UseContentRoot(Path.Combine(FindRoot(), "Frontend"));
             builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Authentication:Authority"] = "",

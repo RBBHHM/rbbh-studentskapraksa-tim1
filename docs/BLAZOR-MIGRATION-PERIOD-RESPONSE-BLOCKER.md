@@ -40,7 +40,7 @@ behavior still requires its own environment acceptance.
 ## Historical red reproduction
 
 At discovery the uncommitted file was:
-`RelatedPartiesRegister/IntegrationTests/Tests/PeriodLock/UnlockResponseStorageDiscoveryTests.cs`.
+`tests/Backend.IntegrationTests/Tests/PeriodLock/UnlockResponseStorageDiscoveryTests.cs`.
 
 Run the IntegrationTests project with `--artifacts-path artifacts/users-safety
 --no-restore --filter FullyQualifiedName~UnlockResponseStorageDiscoveryTests`.

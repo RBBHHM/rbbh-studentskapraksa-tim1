@@ -1,0 +1,26 @@
+@using RBI.DesignSystem.Components.Forms
+
+<div @attributes="SafeAttributes" class="@CssClass" role="group" aria-labelledby="@_labelId">
+    <div id="@_labelId" class="@(Inset ? "rbi-menu-group__label rbi-menu-group__label--inset" : "rbi-menu-group__label")">@Label</div>
+    @ChildContent
+</div>
+
+@code {
+    private readonly string _labelId = RbiFormUtilities.Id("menu-group-label");
+
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public RenderFragment? ChildContent { get; set; }
+    /// <summary>Indents the group label to align with items that carry a leading selection indicator.</summary>
+    [Parameter] public bool Inset { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CssClass => string.Join(' ', new[] { "rbi-menu-group", Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private IReadOnlyDictionary<string, object>? SafeAttributes => RbiFormUtilities.SafeAttributes(AdditionalAttributes, "class", "role", "aria-labelledby");
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(Label)) throw new InvalidOperationException($"{nameof(Label)} is required.");
+        if (ChildContent is null) throw new InvalidOperationException($"{nameof(ChildContent)} is required.");
+    }
+}

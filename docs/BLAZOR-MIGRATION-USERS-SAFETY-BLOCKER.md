@@ -33,9 +33,9 @@ current database-backed transformation remains authoritative.
 ## Historical red reproduction
 
 At discovery the uncommitted file was:
-`RelatedPartiesRegister/IntegrationTests/Tests/Users/UsersSelfRemovalDiscoveryTests.cs`.
+`tests/Backend.IntegrationTests/Tests/Users/UsersSelfRemovalDiscoveryTests.cs`.
 
-Run `dotnet test RelatedPartiesRegister/IntegrationTests/IntegrationTests.csproj
+Run `dotnet test tests/Backend.IntegrationTests/IntegrationTests.csproj
 --no-restore --filter FullyQualifiedName~UsersSelfRemovalDiscoveryTests`.
 Receipt: ignored `artifacts/migration-template/users-self-removal-discovery.log`.
 Result: **2 FAIL / 1 PASS**, no skips. Assertions were not weakened. This discovery

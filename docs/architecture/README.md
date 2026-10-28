@@ -1,6 +1,6 @@
 # Arhitektura
 
-Tok zahtjeva je `Browser → React (src/Web) → HTTPS/OpenAPI → .NET API (RelatedPartiesRegister) → EF Core → SQL Server`. React prikazuje podatke i stanje korisničkog interfejsa; API provodi poslovna pravila i jedini pristupa bazi. Keycloak izdaje tokene, frontend ih šalje API-ju, a API validira potpis i claimove. U Development režimu nedostupne vanjske zavisnosti zamjenjuju se eksplicitnim lokalnim adapterima.
+Tok zahtjeva je `Browser → React (the retired React reference tree) → HTTPS/OpenAPI → .NET API (RelatedPartiesRegister) → EF Core → SQL Server`. React prikazuje podatke i stanje korisničkog interfejsa; API provodi poslovna pravila i jedini pristupa bazi. Keycloak izdaje tokene, frontend ih šalje API-ju, a API validira potpis i claimove. U Development režimu nedostupne vanjske zavisnosti zamjenjuju se eksplicitnim lokalnim adapterima.
 
 Frontend koristi jedan API klijent za JSON i preuzimanje fajlova. OpenAPI je ugovor između Reacta i .NET-a; generisani tipovi smanjuju mogućnost da frontend pošalje pogrešan oblik podataka. Backend centralno vraća sigurne poslovne greške, a tehnički detalj zapisuje samo u log.
 

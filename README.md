@@ -1,104 +1,112 @@
 # RBBH Related Parties Register
 
-Registar povezanih lica: fizička i pravna lica, porodične veze, import/export,
-limiti, kapital, izvještaji, periodi, obavijesti, korisnici, šifrarnici i audit.
+Native Blazor Server frontend and ASP.NET Core backend on .NET 10. Application
+permissions are database-owned; Keycloak supplies identity. The backend remains
+the authority for user safety, global period locking and report persistence.
 
-Native frontend je `src/Web.Blazor`, .NET10/RBI NuGet aplikacija s postojećim
-API/BL/DL backendom. Claudeov vizuelni batch je integrisan i verifikovan;
-verzionirani React izvor i njegovi wrapperi su uklonjeni. Prethodna referenca
-ostaje dostupna u Git historiji. Lokalni testovi nisu odobrenje produkcijske isporuke.
+## Repository
 
-## Identitet, dozvole i period
-
-Keycloak autentificira identitet; aplikacijska baza dodjeljuje pet eksplicitnih
-rola: FL, PL, limiti, kapital, admin. Provider role/permission claimovi ne daju
-aplikacijske dozvole. Svaki autentificirani identitet bez eksplicitnog mapiranja
-ima **virtualni Guest** read/download baseline, bez dodjeljivanja `gost` role.
-Deaktivirani aplikacijski korisnik ostaje bez pristupa. Pražnjenje rola zadržava
-zapis identiteta i status; aktivni korisnik postaje Guest. Self role-management,
-self deaktivacija/brisanje i gubitak posljednjeg aktivnog Admina su zabranjeni.
-
-Reporting READ/DOWNLOAD je dostupan autentificiranim identitetima koji nisu
-deaktivirani; GENERATE/PERSIST zahtijeva DB KAPITAL_CREATE (Kapital/Admin), jer
-kreira zapis. Backend ostaje autoritet. Sve period-osjetljive mutacije koriste
-**jedan globalni period**, bez username/department zaključavanja. Native kontrole
-su onemogućene kada je period zaključan ili nedostupan; backend423 štiti race.
-Korisnička dopuna odgovora ima10–490 znakova, bez trunciranja ili promjene polja500.
-
-Ljudske mutacije koriste isključivo `ClaimTypes.Email`; nedostajući email daje
-siguran401 prije izmjene. Potvrđeni Keycloak subject je trajan identitetski ključ.
-Postojeći placeholder nije dokaz veze. Nova EF migracija dodaje metapodatke
-potvrde bez automatskog povezivanja produkcijskih korisnika. Prvo povezivanje je
-isključeno dok vlasnik ne odobri provjereni email/subject postupak.
-[Subject-link i global-period postupak](docs/IDENTITY-AND-PERIOD-HARDENING-2026-10-26.md).
-
-## Struktura i lokalni razvoj
-
-- `RelatedPartiesRegister` — backend i backend testovi.
-- `src/Web.Blazor` — native interaktivni frontend, app-owned BS/EN.
-- `tests/Web.Blazor.Tests` — frontend .NET testovi.
-- `tests/Web.Blazor.Browser*` — Playwright i izolovani testni host.
-- `RelatedPartiesRegister.slnx` — jedino održavano zajedničko rješenje za backend,
-  native frontend i .NET testove. Stari backend-only .sln je uklonjen.
-
-Potreban je .NET SDK10 i odobren feed s RBI paketima. ApiCore/Authentication
-koriste `0.1.1-migration.1`; ostali RBI runtime paketi su0.1.0. Privatna objava
-paketa je preduvjet, ne rezultat lokalnog cache restorea. Ne unositi tajne u Git.
-
-Iz root direktorija, direktnim standardnim komandama:
-
-```powershell
-dotnet restore RelatedPartiesRegister.slnx --configfile <approved-config> --artifacts-path artifacts/local
-dotnet build RelatedPartiesRegister.slnx --artifacts-path artifacts/local --no-restore -p:RunAnalyzers=true
-dotnet test RelatedPartiesRegister.slnx --artifacts-path artifacts/local --no-restore
-dotnet publish src/Web.Blazor/RBBH.RelatedPartiesRegister.Web.csproj -c Release --artifacts-path artifacts/local --no-restore -o artifacts/publish/web
-dotnet publish RelatedPartiesRegister/RelatedPartiesRegister.csproj -c Release --artifacts-path artifacts/local --no-restore -o artifacts/publish/api
+```text
+Backend/       RelatedPartiesRegister.csproj, API, business services, persistence
+Frontend/      RBBH.RelatedPartiesRegister.Web.csproj, Components, application clients
+  Platform/    seven required RBI runtime source projects
+tests/        backend unit/integration, Blazor .NET and native browser suites
+ docs/         configuration, database, deployment and acceptance evidence
+.github/       exactly three build/CodeQL/deployment workflows
+RelatedPartiesRegister.slnx
+NuGet.config   one public third-party restore source
+.env.example   safe backend Development example
 ```
 
-Za SQL testove postaviti `RBBH_TEST_SQLSERVER` na odobren **disposable** SQL Server
-instance bez Initial Catalog; fixture kreira/briše samo svoju GUID bazu. Bez
-varijable SQL testovi su SKIPPED, nikada PASS. Ne koristiti produkcijsku bazu.
+RBI runtime libraries are tracked source under `Frontend/Platform` and connected
+through `ProjectReference`. A clone needs no separate RBI checkout or private RBI
+package delivery. See [source provenance](Frontend/Platform/SOURCE.md).
 
-U dva terminala, nakon sigurne konfiguracije SQL/SSO/backend URL-a:
+## Fresh clone
+
+Install .NET SDK 10. SQL integration tests require Windows LocalDB or a disposable
+SQL Server instance configured with `RBBH_TEST_SQLSERVER` (no database catalog;
+tests create and remove their own uniquely named databases). Never use production SQL.
 
 ```powershell
-dotnet run --project RelatedPartiesRegister/RelatedPartiesRegister.csproj --artifacts-path artifacts/local --no-build --no-launch-profile -- --environment Development --urls http://127.0.0.1:5000
-dotnet run --project src/Web.Blazor/RBBH.RelatedPartiesRegister.Web.csproj --artifacts-path artifacts/local --no-build --no-launch-profile -- --environment Development --urls http://127.0.0.1:5080
+git clone <repository-url>
+cd <cloned-repository>
+dotnet restore RelatedPartiesRegister.slnx
+dotnet build RelatedPartiesRegister.slnx
+dotnet test RelatedPartiesRegister.slnx
 ```
 
-Backend učitava postojeću lokalnu .env konfiguraciju; nikada je ne kopirati u Git.
-Startup ne izvršava migracije/seed. Native Development bez auth/API konfiguracije
-prikazuje istinit signed-out ekran, bez lažnog korisnika ili anonimnog API proxyja.
-[Native konfiguracija](src/Web.Blazor/README.md).
+`NuGet.config` uses nuget.org for third-party packages. Where corporate policy
+requires a public-package proxy, replace that source with the approved mirror and
+supply credentials outside the repository. No RBI package feed is needed.
 
-Browser provjera (izolovani HTTP backend/controller pipeline, ne produkcijski SSO):
+## A. Seeded local demo / test application
+
+The test-only BrowserHost provides realistic isolated data and an Admin identity
+without SQL, Keycloak or mail. It is loopback-only and is never published or deployed.
 
 ```powershell
-dotnet build tests/Web.Blazor.BrowserHost/Web.Blazor.BrowserHost.csproj --artifacts-path artifacts/local --no-restore
+$env:BROWSER_FIXTURE_ROLE = "admin"
+$env:BROWSER_FIXTURE_URL = "http://127.0.0.1:5273"
+dotnet run --project tests/Web.Blazor.BrowserHost/Web.Blazor.BrowserHost.csproj --no-launch-profile
+```
+
+Open http://127.0.0.1:5273/app. All Admin routes are available, including physical
+and legal persons, limits, capital, reports, notifications, users, period, code
+lists, audit, profile and guide. BS/EN and light/dark controls belong to the app.
+This test identity is not a production authentication mode.
+
+## B. Real application development
+
+In one terminal, copy `.env.example` to `Backend/.env`, review its values, then:
+
+```powershell
+$env:ASPNETCORE_ENVIRONMENT = "Development"
+$env:Email__Provider = "demo"
+dotnet run --project Backend/RelatedPartiesRegister.csproj --no-launch-profile --urls http://localhost:5000
+```
+
+Absent SQL settings, Development uses an empty InMemory store; it does not provide
+the seeded demo. Startup does not apply migrations or seed a real database.
+
+In another terminal, configure the frontend's real backend and approved local OIDC
+client through user-secrets (do not put credentials in tracked files), then:
+
+```powershell
+dotnet user-secrets set "Apis:BaseUrl" "http://localhost:5000" --project Frontend/RBBH.RelatedPartiesRegister.Web.csproj
+$env:ASPNETCORE_ENVIRONMENT = "Development"
+dotnet run --project Frontend/RBBH.RelatedPartiesRegister.Web.csproj --no-launch-profile --urls http://localhost:5080
+```
+
+Set `Authentication:Authority`, `Authentication:ClientId`, and
+`Authentication:ClientSecret` for real sign-in. A signed-out host with blank
+identity settings is not the full demo. See [configuration](docs/configuration/ENVIRONMENT-VARIABLES.md).
+
+## Verification and delivery
+
+```powershell
+dotnet build RelatedPartiesRegister.slnx -c Release -p:RunAnalyzers=true
+dotnet test RelatedPartiesRegister.slnx -c Release --no-build
+# Node 22 and Chromium are required only for native browser testing:
 cd tests/Web.Blazor.Browser
 npm ci
 npx playwright install chromium
-$env:BROWSER_ARTIFACTS_PATH = '../../artifacts/local'
-$env:BROWSER_FIXTURE_ROLE = 'admin'
+# Run separately for admin, gost, kapital, PL, limiti and FL:
+$env:BROWSER_FIXTURE_ROLE = "admin"
 npm test -- --workers=1 --retries=0
 ```
 
-Ponoviti za gost, kapital, PL, limiti i FL. Browser testovi uključuju Axe i375px;
-ne zamjenjuju pregled Claudeovih vizuelnih izmjena ili stvarni SSO/UAT prihvat.
-
-## Containeri i isporuka
+Both image builds use the repository root as context:
 
 ```powershell
-docker build -f src/Web.Blazor/Dockerfile -t rbbh-register-web:local src/Web.Blazor
-docker build -f RelatedPartiesRegister/Dockerfile -t rbbh-register-api:local .
+dotnet publish Backend/RelatedPartiesRegister.csproj -c Release -o artifacts/publish/api
+dotnet publish Frontend/RBBH.RelatedPartiesRegister.Web.csproj -c Release -o artifacts/publish/web
+docker build -f Backend/Dockerfile -t rbbh-api:local .
+docker build -f Frontend/Dockerfile -t rbbh-web:local .
 ```
 
-Tačno tri root workflowa: `build-and-push-image.yml`, `codeql.yml`,
-`deploy-to-ocp.yml`. Nema nested workflowa ili IIS deploya. Build testira i gradi
-native web/API odvojeno; deploy je ručan, s punim commit tagom i digestom.
-[Pipeline konfiguracija i preduvjeti](docs/NATIVE-PIPELINE-2026-10-26.md).
-
-System.Security.Cryptography.Pkcs ostaje9.0.21. NU1900/NU1902/NU1903 se ne skrivaju.
-Stvarni SSO, odobren subject backfill, SQL/SMTP, shared cache/DataProtection,
-privatni feed i OCP/circuit/certifikati ostaju deployment gateovi.
-[Aktuelni handoff](docs/REACT-TO-BLAZOR-FINAL-HANDOFF.md).
+Production still requires approved shared session/cache and Data Protection storage,
+proxy/host/CA settings, SQL/SSO/mail validation, resource/drain/scheduler policy and
+subject-link migration approval. See [production readiness](docs/PRODUCTION-READINESS.md)
+and [final handoff](docs/REACT-TO-BLAZOR-FINAL-HANDOFF.md). Source delivery does not
+resolve those external prerequisites.

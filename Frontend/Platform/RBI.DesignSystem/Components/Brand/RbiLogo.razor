@@ -1,0 +1,48 @@
+<span class="@CssClass" @attributes="AdditionalAttributes">
+    @if (Variant is { } variant)
+    {
+        var asset = Asset(variant);
+        <img src="@($"_content/RBI.DesignSystem/assets/logos/{asset.File}.png")" width="@asset.Width" height="@asset.Height" alt="@(Decorative ? string.Empty : AlternativeText)" aria-hidden="@(Decorative ? "true" : null)" />
+    }
+    else
+    {
+    <img class="rbi-logo__light" src="_content/RBI.DesignSystem/assets/logos/rbi-bank-mono-pos.png" alt="@(Decorative ? string.Empty : AlternativeText)" aria-hidden="@(Decorative ? "true" : null)" />
+    <img class="rbi-logo__dark" src="_content/RBI.DesignSystem/assets/logos/rbi-bank-yellow-neg.png" alt="@(Decorative ? string.Empty : AlternativeText)" aria-hidden="@(Decorative ? "true" : null)" />
+    }
+</span>
+
+@code {
+    [Parameter] public string AlternativeText { get; set; } = string.Empty;
+    /// <summary>Explicit approved artwork; null preserves the existing theme-aware bank pair.</summary>
+    [Parameter] public RbiLogoVariant? Variant { get; set; }
+    /// <summary>Optional optical height; null preserves existing consumer styling.</summary>
+    [Parameter] public RbiLogoSize? Size { get; set; }
+    /// <summary>Hides artwork from assistive technology when the containing link is named.</summary>
+    [Parameter] public bool Decorative { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CssClass => $"rbi-logo{(Variant is null ? string.Empty : " rbi-logo--explicit")}{(Size is { } size ? $" rbi-logo--{size.ToString().ToLowerInvariant()}" : string.Empty)} {Class}";
+
+    protected override void OnParametersSet()
+    {
+        if (Variant is { } variant && !Enum.IsDefined(variant)) throw new ArgumentOutOfRangeException(nameof(Variant));
+        if (Size is { } size && !Enum.IsDefined(size)) throw new ArgumentOutOfRangeException(nameof(Size));
+        if (Variant is not null && !Decorative && string.IsNullOrWhiteSpace(AlternativeText))
+            throw new InvalidOperationException($"{nameof(AlternativeText)} is required for meaningful explicit artwork.");
+    }
+
+    private static (string File, int Width, int Height) Asset(RbiLogoVariant variant) => variant switch
+    {
+        RbiLogoVariant.Colour => ("rbi-logo-col-pos", 1400, 415),
+        RbiLogoVariant.ColourInverse => ("rbi-logo-col-neg", 1400, 415),
+        RbiLogoVariant.Mono => ("rbi-logo-mono-pos", 1400, 410),
+        RbiLogoVariant.MonoInverse => ("rbi-logo-mono-neg", 1400, 410),
+        RbiLogoVariant.YellowInverse => ("rbi-logo-yellow-neg", 1400, 410),
+        RbiLogoVariant.BankMono => ("rbi-bank-mono-pos", 1200, 302),
+        RbiLogoVariant.BankYellowInverse => ("rbi-bank-yellow-neg", 1200, 302),
+        RbiLogoVariant.BankMark => ("rbi-bank-squared-col", 385, 385),
+        _ => throw new ArgumentOutOfRangeException(nameof(variant)),
+    };
+}

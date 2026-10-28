@@ -1,0 +1,48 @@
+@using RBI.DesignSystem.Components.Forms
+@using RBI.DesignSystem.Components.Icons
+@using RBI.DesignSystem.Components.Overlay
+@using Microsoft.AspNetCore.Components.Rendering
+@using Microsoft.AspNetCore.Components.Web
+
+@if (!string.IsNullOrWhiteSpace(Tooltip))
+{
+    <RbiTooltip Content="@Tooltip" Delay="0" Placement="RbiOverlayPlacement.Right" Disabled="@(!Context!.Collapsed || Context.Mobile)">@Control</RbiTooltip>
+}
+else { @Control }
+
+@code {
+    [CascadingParameter] private RbiSidebarState? Context { get; set; }
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter] public RbiIconName? Icon { get; set; }
+    [Parameter] public bool Active { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool Nested { get; set; }
+    [Parameter] public string? Href { get; set; }
+    [Parameter] public string? Tooltip { get; set; }
+    [Parameter] public RbiSidebarItemSize Size { get; set; }
+    [Parameter] public RbiSidebarItemVariant Variant { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+    protected override void OnParametersSet()
+    {
+        if (Context is null) throw new InvalidOperationException("Sidebar items require an RbiSidebar owner.");
+        if (string.IsNullOrWhiteSpace(Label) || Href is not null && string.IsNullOrWhiteSpace(Href)) throw new ArgumentException("A localized item label and non-blank destination are required.");
+        if (!Enum.IsDefined(Size) || !Enum.IsDefined(Variant) || Icon is { } icon && !Enum.IsDefined(icon)) throw new ArgumentOutOfRangeException(nameof(Size));
+    }
+    private RenderFragment Control => builder =>
+    {
+        builder.OpenElement(0, Href is null ? "button" : "a");
+        builder.AddMultipleAttributes(1, RbiFormUtilities.SafeAttributes(AdditionalAttributes, "class", "href", "type", "disabled", "aria-label", "aria-disabled", "aria-current", "tabindex", "onclick", "data-active"));
+        builder.AddAttribute(2, "class", $"rbi-sidebar-{(Nested ? "sub-button" : "menu-button")} rbi-sidebar-item--{Size.ToString().ToLowerInvariant()} rbi-sidebar-item--{Variant.ToString().ToLowerInvariant()} {Class}".TrimEnd());
+        builder.AddAttribute(3, "type", Href is null ? "button" : null); builder.AddAttribute(4, "href", Href);
+        builder.AddAttribute(5, "disabled", Href is null && Disabled); builder.AddAttribute(6, "aria-disabled", Disabled ? "true" : null);
+        builder.AddAttribute(7, "aria-current", Active && Href is not null ? "page" : null); builder.AddAttribute(8, "aria-label", Label);
+        builder.AddAttribute(9, "data-active", Active ? "true" : "false"); builder.AddAttribute(10, "tabindex", Disabled && Href is not null ? "-1" : null);
+        builder.AddAttribute(11, "onclick", EventCallback.Factory.Create<MouseEventArgs>(this, ActivateAsync));
+        builder.AddEventPreventDefaultAttribute(12, "onclick", Disabled && Href is not null);
+        if (Icon is { } icon) { builder.OpenComponent<RbiIcon>(13); builder.AddAttribute(14, nameof(RbiIcon.Name), icon); builder.CloseComponent(); }
+        builder.OpenElement(15, "span"); builder.AddContent(16, Label); builder.CloseElement(); builder.CloseElement();
+    };
+    private Task ActivateAsync(MouseEventArgs args) => Disabled ? Task.CompletedTask : OnClick.InvokeAsync(args);
+}

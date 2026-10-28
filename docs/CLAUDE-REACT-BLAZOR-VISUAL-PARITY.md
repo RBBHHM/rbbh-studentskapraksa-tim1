@@ -7,7 +7,7 @@ including existing Axe/375px checks. Post-retirement evidence is in
 NATIVE-CUTOVER-RECONCILIATION-2026-10-26.md. Original manual visual limitations
 below are retained; functional checks are not a pixel-equality certificate.
 
-Branch `ai/claude-visual-parity`, base `18702db`. React (`src/Web`, webpack dev server) and native Blazor (`src/Web.Blazor`) were run side by side against the same seeded backend (Kestrel harness built from `tests/Web.Blazor.BrowserHost`, kept outside the repository) and compared at 1440×900, light theme.
+Branch `ai/claude-visual-parity`, base `18702db`. React (`the retired React reference tree`, retired bundler dev server) and native Blazor (`Frontend`) were run side by side against the same seeded backend (Kestrel harness built from `tests/Web.Blazor.BrowserHost`, kept outside the repository) and compared at 1440×900, light theme.
 
 ## Root cause
 The generated template shell (`RbiSidebar` rail with the title inside it, `HeroBar` as a bare heading, `RbiCard` grid dashboard, plain tables with text buttons) shared tokens with the React product but none of its composition: no top bar with logo, no grouped navigation, no yellow active state, no brand hero, no bento dashboard cards, no icon indicators or icon actions, a different page-header pattern.

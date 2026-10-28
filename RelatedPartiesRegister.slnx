@@ -1,8 +1,15 @@
 <Solution>
-  <Project Path="RelatedPartiesRegister/RelatedPartiesRegister.csproj" />
-  <Project Path="RelatedPartiesRegister/UnitTests/UnitTests.csproj" />
-  <Project Path="RelatedPartiesRegister/IntegrationTests/IntegrationTests.csproj" />
-  <Project Path="src/Web.Blazor/RBBH.RelatedPartiesRegister.Web.csproj" />
+  <Project Path="Backend/RelatedPartiesRegister.csproj" />
+  <Project Path="tests/Backend.UnitTests/UnitTests.csproj" />
+  <Project Path="tests/Backend.IntegrationTests/IntegrationTests.csproj" />
+  <Project Path="Frontend/RBBH.RelatedPartiesRegister.Web.csproj" />
   <Project Path="tests/Web.Blazor.Tests/Web.Blazor.Tests.csproj" />
   <Project Path="tests/Web.Blazor.BrowserHost/Web.Blazor.BrowserHost.csproj" />
+  <Project Path="Frontend/Platform/RBI.DesignSystem/RBI.DesignSystem.csproj" />
+  <Project Path="Frontend/Platform/RBI.Hosting/RBI.Hosting.csproj" />
+  <Project Path="Frontend/Platform/RBI.Forms/RBI.Forms.csproj" />
+  <Project Path="Frontend/Platform/RBI.Authorization/RBI.Authorization.csproj" />
+  <Project Path="Frontend/Platform/RBI.Localization/RBI.Localization.csproj" />
+  <Project Path="Frontend/Platform/RBI.ApiCore/RBI.ApiCore.csproj" />
+  <Project Path="Frontend/Platform/RBI.Authentication/RBI.Authentication.csproj" />
 </Solution>

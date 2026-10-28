@@ -1,0 +1,53 @@
+<div @attributes="AdditionalAttributes" class="@CssClass">
+    @if (IsComposed)
+    {
+        @if (HasHeader)
+        {
+            <div class="rbi-card__header">
+                @if (Header is not null) { @Header }
+                else
+                {
+                    @if (!string.IsNullOrWhiteSpace(Title)) { @TitleContent }
+                    @if (!string.IsNullOrWhiteSpace(Description)) { <p class="rbi-card__description">@Description</p> }
+                }
+            </div>
+        }
+        <div class="rbi-card__content">@ChildContent</div>
+        @if (Footer is not null) { <div class="rbi-card__footer">@Footer</div> }
+    }
+    else { @ChildContent }
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RbiCardPadding Padding { get; set; } = RbiCardPadding.Default;
+    /// <summary>Optional semantic card title; enables source-backed structured slots.</summary>
+    [Parameter] public string? Title { get; set; }
+    /// <summary>Optional supporting description under the title.</summary>
+    [Parameter] public string? Description { get; set; }
+    /// <summary>Semantic heading level, independent of its approved visual size.</summary>
+    [Parameter] public int HeadingLevel { get; set; } = 3;
+    /// <summary>Optional custom header, replacing default title/description content.</summary>
+    [Parameter] public RenderFragment? Header { get; set; }
+    /// <summary>Optional source-backed footer slot for composed actions.</summary>
+    [Parameter] public RenderFragment? Footer { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private bool HasHeader => Header is not null || !string.IsNullOrWhiteSpace(Title) || !string.IsNullOrWhiteSpace(Description);
+    private bool IsComposed => HasHeader || Footer is not null;
+    private string CssClass => $"rbi-card rbi-card--padding-{(IsComposed ? "none" : Padding.ToString().ToLowerInvariant())} {Class}".TrimEnd();
+    protected override void OnParametersSet()
+    {
+        if (!Enum.IsDefined(Padding)) throw new ArgumentOutOfRangeException(nameof(Padding));
+        if (HeadingLevel is < 1 or > 6) throw new ArgumentOutOfRangeException(nameof(HeadingLevel));
+    }
+    private RenderFragment TitleContent => builder =>
+    {
+        builder.OpenElement(0, $"h{HeadingLevel}");
+        builder.AddAttribute(1, "class", "rbi-card__title");
+        builder.AddContent(2, Title);
+        builder.CloseElement();
+    };
+}

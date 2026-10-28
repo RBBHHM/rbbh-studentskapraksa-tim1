@@ -10,7 +10,7 @@ Build runs Release/analyzers/full .NET including disposable SQL tests and the
 six-role native browser matrix (workers1/retries0). It rejects skipped SQL tests.
 Pull requests validate only. Manual/tag runs publish separate web/API images
 after validation; neither build context includes the React application runtime.
-Web context is src/Web.Blazor; API context is root with RelatedPartiesRegister/Dockerfile.
+Both image contexts are the repository root; Dockerfiles are Frontend/Dockerfile and Backend/Dockerfile.
 CodeQL scans C# with an explicit maintained-solution build and native JS/TS tests;
 React reference/artifacts/generated dependencies are excluded from JS analysis.
 TLS/security checks are not bypassed.
@@ -29,11 +29,11 @@ GitHub UAT/PROD environments require protected review and approved network acces
   `<image-name>-config` ConfigMap / `<image-name>-secrets` Secret.
   Runtime API/SSO/SQL/email/shared-state configuration is environment-owned.
 
-The corporate NuGet proxy must contain the approved RBI packages, including
-ApiCore/Authentication0.1.1-migration.1. Their local availability does not prove
-corporate publication. Public GitHub-hosted runner network access must be accepted
-or replaced with the organization's approved equivalent runner before activation.
-No credentials or live deployment were used to verify these workflows locally.
+All seven RBI runtime libraries are tracked source ProjectReferences. The root
+NuGet.config restores only public third-party dependencies; an approved corporate
+mirror may replace that source where required. Public runner network access and
+registry/cluster credentials remain owner-provisioned. No credentials or live
+deployment were used to verify these workflows locally.
 
 ## Immutable deployment and rollback
 
@@ -59,7 +59,7 @@ schema downgrade discards subject confirmation metadata and needs explicit revie
 Removed: old artifact/deploy .yaml workflows, nested template workflows, root
 Makefile, build/restore/test/dev-web .cmd wrappers, IIS deploy and candidate
 publish/startup helpers. README now uses direct dotnet/docker commands.
-After final Claude integration, the remaining scripts/dev-api.cmd and
+After final Claude integration, the remaining the retired API wrapper and
 scripts/testing/Test-LocalApi.ps1 were retired with their React package.json
 consumer. No tracked files remain under root scripts/. No new wrapper was added.
 The canonical solution is RelatedPartiesRegister.slnx; the temporary migration

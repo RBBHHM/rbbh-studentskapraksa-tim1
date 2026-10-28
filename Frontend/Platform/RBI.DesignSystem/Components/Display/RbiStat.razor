@@ -1,0 +1,65 @@
+@using RBI.DesignSystem.Components.Icons
+<div @attributes="AdditionalAttributes" class="@CssClass">
+    <div class="rbi-stat__heading">
+        <span class="rbi-stat__label">@Label</span>
+        @if (Icon is not null)
+        {
+            <span class="rbi-stat__icon" aria-hidden="true">@Icon</span>
+        }
+    </div>
+    <div class="rbi-stat__value">@Value</div>
+    @if (!string.IsNullOrWhiteSpace(Trend))
+    {
+        <div class="@TrendCssClass">
+            @if (TrendDirection is { } direction)
+            {
+                <span class="rbi-stat__trend-icon" aria-hidden="true"><RbiIcon Name="@TrendIcon(direction)" /></span>
+            }
+            <span class="rbi-stat__trend-value">@Trend</span>
+            @if (!string.IsNullOrWhiteSpace(TrendCaption))
+            {
+                <span class="rbi-stat__trend-caption">@TrendCaption</span>
+            }
+        </div>
+    }
+    @if (!string.IsNullOrWhiteSpace(SupportingText))
+    {
+        <div class="rbi-stat__supporting">@SupportingText</div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Value { get; set; } = string.Empty;
+    [Parameter] public string? SupportingText { get; set; }
+    [Parameter] public string? Trend { get; set; }
+    [Parameter] public string? TrendCaption { get; set; }
+    [Parameter] public RbiStatTrendTone TrendTone { get; set; }
+    /// <summary>Direction of the change; draws the source direction icon and implies the Positive, Negative or Neutral tone for Up, Down and Flat.</summary>
+    [Parameter] public RbiStatTrendDirection? TrendDirection { get; set; }
+    [Parameter] public RenderFragment? Icon { get; set; }
+    [Parameter] public RbiStatVariant Variant { get; set; } = RbiStatVariant.Rule;
+    [Parameter] public RbiStatSize Size { get; set; } = RbiStatSize.Medium;
+    [Parameter] public RbiStatAlign Align { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CssClass => string.Join(' ', new[]
+    {
+        "rbi-stat",
+        $"rbi-stat--{Variant.ToString().ToLowerInvariant()}",
+        $"rbi-stat--{Size.ToString().ToLowerInvariant()}",
+        $"rbi-stat--align-{Align.ToString().ToLowerInvariant()}",
+        Class,
+    }.Where(value => !string.IsNullOrWhiteSpace(value)));
+
+    private RbiStatTrendTone EffectiveTrendTone => TrendDirection switch { RbiStatTrendDirection.Up => RbiStatTrendTone.Positive, RbiStatTrendDirection.Down => RbiStatTrendTone.Negative, RbiStatTrendDirection.Flat => RbiStatTrendTone.Neutral, _ => TrendTone };
+    private string TrendCssClass => $"rbi-stat__trend rbi-stat__trend--{EffectiveTrendTone.ToString().ToLowerInvariant()}";
+    private static RbiIconName TrendIcon(RbiStatTrendDirection direction) => direction switch { RbiStatTrendDirection.Up => RbiIconName.ArrowUpRight, RbiStatTrendDirection.Down => RbiIconName.ArrowDownRight, _ => RbiIconName.Minus };
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(Label)) throw new InvalidOperationException($"{nameof(Label)} is required.");
+        if (string.IsNullOrWhiteSpace(Value)) throw new InvalidOperationException($"{nameof(Value)} is required.");
+    }
+}

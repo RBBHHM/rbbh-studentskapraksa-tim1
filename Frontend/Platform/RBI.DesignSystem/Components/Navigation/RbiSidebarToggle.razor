@@ -1,0 +1,18 @@
+@using RBI.DesignSystem.Components.Button
+@using RBI.DesignSystem.Components.Icons
+
+@if (Rail)
+{
+    <button type="button" class="@($"rbi-sidebar-rail {Class}".TrimEnd())" aria-label="@Context!.ToggleLabel" title="@Context.ToggleLabel" aria-controls="@Context.PanelId" aria-expanded="@(Context.Expanded ? "true" : "false")" tabindex="-1" @onclick="Context.Toggle"></button>
+}
+else
+{
+    <RbiButton Variant="RbiButtonVariant.Ghost" IconOnly AccessibleLabel="@Context!.ToggleLabel" Class="@($"rbi-sidebar-trigger {Class}".TrimEnd())" aria-controls="@Context.PanelId" aria-expanded="@(Context.Expanded ? "true" : "false")" OnClick="Context.Toggle"><RbiIcon Name="RbiIconName.PanelLeft" /></RbiButton>
+}
+
+@code {
+    [CascadingParameter] private RbiSidebarState? Context { get; set; }
+    [Parameter] public bool Rail { get; set; }
+    [Parameter] public string? Class { get; set; }
+    protected override void OnParametersSet() { if (Context is null) throw new InvalidOperationException("Sidebar toggle requires an RbiSidebar owner."); }
+}

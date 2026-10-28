@@ -1,0 +1,132 @@
+@using RBI.DesignSystem.Components.Icons
+@using RBI.DesignSystem.Components.Overlay
+@implements IAsyncDisposable
+@inject IJSRuntime JavaScript
+
+<section class="@($"rbi-toaster {Class}".TrimEnd())" aria-label="@AccessibleLabel" tabindex="-1" aria-live="polite" aria-relevant="additions text" aria-atomic="false" @ref="_root">
+    <ol class="rbi-toaster__list" tabindex="-1">
+        @foreach (var row in _rows)
+        {
+            var entry = row.Entry;
+            var message = entry.Message;
+            <li @key="entry.Id" class="@($"rbi-toast rbi-toast--{message.Tone.ToString().ToLowerInvariant()}")" tabindex="@(row.Leaving ? null : "0")" data-rbi-toast-id="@entry.Id" data-rbi-removed="@(row.Leaving ? "true" : null)" aria-hidden="@(row.Leaving ? "true" : null)" inert="@row.Leaving">
+                @if (message.Tone != RbiToastTone.Neutral)
+                {
+                    <span class="rbi-toast__icon"><RbiIcon Name="@Icon(message.Tone)" /></span>
+                }
+                <div class="rbi-toast__content">
+                    <div class="rbi-toast__title">@message.Title</div>
+                    @if (!string.IsNullOrWhiteSpace(message.Description)) { <div class="rbi-toast__description">@message.Description</div> }
+                </div>
+                @if (message.Cancel is { } cancel)
+                {
+                    <button type="button" class="rbi-toast__cancel" disabled="@_busy.Contains(entry.Id)" @onclick="() => ActivateAsync(entry, cancel)">@cancel.Label</button>
+                }
+                @if (message.Action is { } action)
+                {
+                    <button type="button" class="rbi-toast__action" disabled="@_busy.Contains(entry.Id)" @onclick="() => ActivateAsync(entry, action)">@action.Label</button>
+                }
+                <button type="button" class="rbi-toast__close" aria-label="@CloseLabel" @onclick="() => Queue.Dismiss(entry.Id)"><RbiIcon Name="RbiIconName.X" /></button>
+            </li>
+        }
+    </ol>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public RbiToastQueue Queue { get; set; } = default!;
+    [Parameter, EditorRequired] public string AccessibleLabel { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string CloseLabel { get; set; } = string.Empty;
+    [Parameter] public int VisibleCount { get; set; } = 3;
+    [Parameter] public string? Class { get; set; }
+    private RbiToastQueue? _subscribed;
+    // A dismissed or expired toast stays mounted for the source's 200 ms exit (fade and slide) before it is removed.
+    private sealed record Row(RbiToastEntry Entry, bool Leaving);
+    private const int ExitMilliseconds = 200;
+    private IReadOnlyList<Row> _rows = Array.Empty<Row>();
+    private readonly HashSet<Guid> _exiting = [];
+    private CancellationTokenSource _lifetime = new();
+    private readonly HashSet<Guid> _busy = [];
+    private IDisposable? _pause;
+    private ElementReference _root;
+    private RbiAnchoredOverlayInterop? _interop;
+    private bool _disposed;
+    private int _queueEpoch;
+    protected override void OnParametersSet()
+    {
+        ArgumentNullException.ThrowIfNull(Queue);
+        if (string.IsNullOrWhiteSpace(AccessibleLabel) || string.IsNullOrWhiteSpace(CloseLabel)) throw new ArgumentException("Localized notification and close names are required.");
+        if (VisibleCount < 1) throw new ArgumentOutOfRangeException(nameof(VisibleCount));
+        if (!ReferenceEquals(_subscribed, Queue))
+        {
+            if (_subscribed is not null) _subscribed.Changed -= Refresh;
+            _pause?.Dispose(); _pause = null;
+            _subscribed = Queue; Queue.Changed += Refresh;
+            _queueEpoch++;
+        }
+        Rebuild();
+    }
+    private void Rebuild()
+    {
+        var live = Queue.Entries.Reverse().ToList();
+        var visible = live.Take(VisibleCount).Select(entry => new Row(entry, false)).ToList();
+        var liveIds = live.Select(entry => entry.Id).ToHashSet();
+        // Rows that left the queue (not merely beyond the visible count) keep their slot while they exit.
+        for (var index = 0; index < _rows.Count; index++)
+        {
+            var previous = _rows[index].Entry;
+            if (liveIds.Contains(previous.Id) || visible.Any(row => row.Entry.Id == previous.Id)) continue;
+            if (_exiting.Add(previous.Id)) _ = CompleteExitAsync(previous.Id, _lifetime.Token);
+            visible.Insert(Math.Min(index, visible.Count), new Row(previous, true));
+        }
+        _rows = visible.Where(row => !row.Leaving || _exiting.Contains(row.Entry.Id)).ToList();
+    }
+    private async Task CompleteExitAsync(Guid id, CancellationToken token)
+    {
+        try { await Task.Delay(ExitMilliseconds, token); }
+        catch (OperationCanceledException) { return; }
+        await InvokeAsync(() =>
+        {
+            if (_disposed) return;
+            _exiting.Remove(id);
+            _rows = _rows.Where(row => row.Entry.Id != id).ToList();
+            StateHasChanged();
+        });
+    }
+    private void Refresh()
+    {
+        if (!_disposed) _ = InvokeAsync(() => { if (!_disposed) { Rebuild(); StateHasChanged(); } });
+    }
+    private static RbiIconName Icon(RbiToastTone tone) => tone switch { RbiToastTone.Success => RbiIconName.ToastSuccess, RbiToastTone.Warning => RbiIconName.ToastWarning, _ => RbiIconName.ToastDanger };
+    private async Task ActivateAsync(RbiToastEntry entry, RbiToastAction action)
+    {
+        if (_disposed || !_busy.Add(entry.Id)) return;
+        var owner = Queue;
+        try { await action.InvokeAsync(); if (!_disposed) owner.Dismiss(entry.Id); }
+        finally { _busy.Remove(entry.Id); }
+    }
+    [JSInvokable] public void NativeToastPause(bool paused)
+    {
+        if (_disposed) return;
+        if (paused) _pause ??= Queue.PauseIfAlive();
+        else { _pause?.Dispose(); _pause = null; }
+    }
+    [JSInvokable] public void NativeToastDismiss(string id)
+    {
+        if (!_disposed && Guid.TryParse(id, out var value)) Queue.Dismiss(value);
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_disposed) return;
+        _interop ??= new(JavaScript, "./_content/RBI.DesignSystem/js/rbi-extended-controls.js");
+        await _interop.SyncControlsAsync(_root, this, "toaster", new { queueEpoch = _queueEpoch });
+    }
+    public async ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        _lifetime.Cancel();
+        _lifetime.Dispose();
+        if (_subscribed is not null) _subscribed.Changed -= Refresh;
+        _pause?.Dispose(); _pause = null;
+        if (_interop is not null) await _interop.DisposeAsync();
+    }
+}

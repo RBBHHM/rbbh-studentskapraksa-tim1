@@ -1,0 +1,104 @@
+@typeparam TValue
+
+<div @attributes="SafeAttributes" class="@CssClass">
+    <CascadingValue Value="@Context" IsFixed="false">
+        <div role="tablist" aria-label="@AccessibleLabel" aria-orientation="@OrientationValue" class="rbi-tabs__list">
+            @TabList
+        </div>
+        <div class="rbi-tabs__panels">@ChildContent</div>
+    </CascadingValue>
+</div>
+
+@code {
+    private readonly string _id = RBI.DesignSystem.Components.Forms.RbiFormUtilities.Id("tabs");
+    private readonly List<RbiTabRegistration<TValue>> _tabs = [];
+
+    [Parameter] public TValue? Value { get; set; }
+    [Parameter] public EventCallback<TValue?> ValueChanged { get; set; }
+    [Parameter] public RbiTabsOrientation Orientation { get; set; } = RbiTabsOrientation.Horizontal;
+    [Parameter] public RbiTabsActivation Activation { get; set; } = RbiTabsActivation.Automatic;
+    [Parameter, EditorRequired] public string AccessibleLabel { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public RenderFragment? TabList { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string OrientationValue => Orientation.ToString().ToLowerInvariant();
+    private string CssClass => string.Join(' ', new[] { "rbi-tabs", $"rbi-tabs--{OrientationValue}", Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private RbiTabsContext<TValue> Context => new(Register, Resolve, IsSelected, IsFocusable, SelectAsync, HandleKeyAsync);
+    private IReadOnlyDictionary<string, object>? SafeAttributes => RBI.DesignSystem.Components.Forms.RbiFormUtilities.SafeAttributes(AdditionalAttributes, "class", "role", "aria-label", "aria-orientation");
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(AccessibleLabel)) throw new InvalidOperationException($"{nameof(AccessibleLabel)} is required.");
+        var selected = _tabs.FirstOrDefault(tab => IsSelected(tab.Value));
+        if (selected is not null && !_tabs.Any(tab => tab.Focused)) selected.Focused = true;
+    }
+
+    private RbiTabRegistration<TValue> Register(TValue value, bool disabled)
+    {
+        var existing = _tabs.FirstOrDefault(tab => EqualityComparer<TValue?>.Default.Equals(tab.Value, value));
+        if (existing is not null)
+        {
+            existing.Disabled = disabled;
+            return existing;
+        }
+        var index = _tabs.Count;
+        var registration = new RbiTabRegistration<TValue> { Value = value, Disabled = disabled, TabId = $"{_id}-tab-{index}", PanelId = $"{_id}-panel-{index}" };
+        if (IsSelected(value) || _tabs.Count == 0) registration.Focused = true;
+        _tabs.Add(registration);
+        return registration;
+    }
+
+    private RbiTabRegistration<TValue> Resolve(TValue value) =>
+        _tabs.FirstOrDefault(tab => EqualityComparer<TValue?>.Default.Equals(tab.Value, value)) ?? Register(value, false);
+
+    private bool IsSelected(TValue value) => EqualityComparer<TValue?>.Default.Equals(Value, value);
+    private bool IsFocusable(TValue value) => _tabs.FirstOrDefault(tab => EqualityComparer<TValue?>.Default.Equals(tab.Value, value))?.Focused == true;
+
+    private async Task SelectAsync(TValue value)
+    {
+        var registration = Register(value, false);
+        if (registration.Disabled) return;
+        foreach (var tab in _tabs) tab.Focused = ReferenceEquals(tab, registration);
+        if (!IsSelected(value))
+        {
+            await ValueChanged.InvokeAsync(value);
+        }
+        StateHasChanged();
+    }
+
+    private async Task HandleKeyAsync(TValue value, string key)
+    {
+        if (key is "Enter" or " " or "Spacebar")
+        {
+            await SelectAsync(value);
+            return;
+        }
+
+        var previousKey = Orientation == RbiTabsOrientation.Horizontal ? "ArrowLeft" : "ArrowUp";
+        var nextKey = Orientation == RbiTabsOrientation.Horizontal ? "ArrowRight" : "ArrowDown";
+        if (key != previousKey && key != nextKey && key is not ("Home" or "End")) return;
+
+        var enabled = _tabs.Where(tab => !tab.Disabled).ToList();
+        if (enabled.Count == 0) return;
+        var current = enabled.FindIndex(tab => EqualityComparer<TValue?>.Default.Equals(tab.Value, value));
+        if (current < 0) current = 0;
+        var targetIndex = key switch
+        {
+            "Home" => 0,
+            "End" => enabled.Count - 1,
+            var candidate when candidate == previousKey => (current - 1 + enabled.Count) % enabled.Count,
+            _ => (current + 1) % enabled.Count,
+        };
+        var target = enabled[targetIndex];
+        foreach (var tab in _tabs) tab.Focused = ReferenceEquals(tab, target);
+        if (Activation == RbiTabsActivation.Automatic && !IsSelected(target.Value))
+        {
+            await ValueChanged.InvokeAsync(target.Value);
+        }
+        StateHasChanged();
+        await Task.Yield();
+        if (target.FocusAsync is not null) await target.FocusAsync();
+    }
+}

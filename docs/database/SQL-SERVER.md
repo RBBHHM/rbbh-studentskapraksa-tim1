@@ -30,8 +30,8 @@ $env:Database__ServerName='localhost\SQLEXPRESS'
 $env:Database__Name='RPR_Local'
 $env:Database__IntegratedSecurity='true'
 dotnet ef migrations add NazivPromjene `
-  --project RelatedPartiesRegister/RelatedPartiesRegister.csproj `
-  --startup-project RelatedPartiesRegister/RelatedPartiesRegister.csproj
+  --project Backend/RelatedPartiesRegister.csproj `
+  --startup-project Backend/RelatedPartiesRegister.csproj
 ```
 
 Backend ne primjenjuje migracije, ne kreira shemu i ne izvršava seed ni u jednom

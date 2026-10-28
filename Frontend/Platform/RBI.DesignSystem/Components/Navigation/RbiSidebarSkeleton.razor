@@ -1,0 +1,13 @@
+@using RBI.DesignSystem.Components.Feedback
+
+<div class="@($"rbi-sidebar-skeleton {Class}".TrimEnd())" aria-hidden="true">
+    @if (ShowIcon) { <RbiSkeleton Class="rbi-sidebar-skeleton__icon" /> }
+    <RbiSkeleton Class="rbi-sidebar-skeleton__text" style="@($"max-width:{WidthPercent}%")" />
+</div>
+
+@code {
+    [Parameter] public bool ShowIcon { get; set; }
+    [Parameter] public int WidthPercent { get; set; } = 70;
+    [Parameter] public string? Class { get; set; }
+    protected override void OnParametersSet() { if (WidthPercent is < 50 or > 90) throw new ArgumentOutOfRangeException(nameof(WidthPercent)); }
+}

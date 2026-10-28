@@ -1,0 +1,92 @@
+@implements IAsyncDisposable
+@inject IJSRuntime JavaScript
+@using RBI.DesignSystem.Components.Button
+
+<dialog @ref="_dialogElement"
+        @attributes="SafeAttributes"
+        class="@CssClass"
+        tabindex="-1"
+        role="alertdialog"
+        aria-labelledby="@_titleId"
+        aria-describedby="@_descriptionId">
+    <div class="rbi-modal__header">
+        <h2 id="@_titleId" class="rbi-modal__title">@Title</h2>
+        <p id="@_descriptionId" class="rbi-modal__description">@Description</p>
+    </div>
+    @if (ChildContent is not null)
+    {
+        <div class="rbi-modal__body">@ChildContent</div>
+    }
+    <div class="rbi-modal__footer">
+        <RbiButton Variant="RbiButtonVariant.Secondary" Disabled="@Confirming" OnClick="CancelAsync" data-rbi-alert-cancel autofocus>@CancelLabel</RbiButton>
+        <RbiButton Variant="RbiButtonVariant.Destructive" Disabled="@ConfirmDisabled" Loading="@Confirming" LoadingLabel="@ConfirmLoadingLabel" OnClick="ConfirmAsync">@ConfirmLabel</RbiButton>
+    </div>
+</dialog>
+
+@code {
+    private readonly string _baseId = RBI.DesignSystem.Components.Forms.RbiFormUtilities.Id("alert-dialog");
+    private ElementReference _dialogElement;
+    private RbiModalInterop? _interop;
+
+    [Parameter] public bool Open { get; set; }
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Description { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string CancelLabel { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string ConfirmLabel { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string ConfirmLoadingLabel { get; set; } = string.Empty;
+    [Parameter] public bool Confirming { get; set; }
+    [Parameter] public bool ConfirmDisabled { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string _titleId => $"{_baseId}-title";
+    private string _descriptionId => $"{_baseId}-description";
+    private string CssClass => string.Join(' ', new[] { "rbi-modal", "rbi-dialog", "rbi-alert-dialog", Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private IReadOnlyDictionary<string, object>? SafeAttributes => RBI.DesignSystem.Components.Forms.RbiFormUtilities.SafeAttributes(AdditionalAttributes, "class", "role", "open", "aria-label", "aria-labelledby", "aria-describedby");
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(Title) || string.IsNullOrWhiteSpace(Description)) throw new InvalidOperationException($"{nameof(Title)} and {nameof(Description)} are required.");
+        if (string.IsNullOrWhiteSpace(CancelLabel) || string.IsNullOrWhiteSpace(ConfirmLabel)) throw new InvalidOperationException("Cancel and confirmation labels are required.");
+        if (Confirming && string.IsNullOrWhiteSpace(ConfirmLoadingLabel)) throw new InvalidOperationException($"{nameof(ConfirmLoadingLabel)} is required while confirming.");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        _interop ??= new RbiModalInterop(JavaScript);
+        await _interop.SyncAsync(_dialogElement, this, Open, "[data-rbi-alert-cancel]", false, !Confirming);
+    }
+
+    [JSInvokable]
+    public async Task RequestClose(string reason)
+    {
+        if (Confirming) return;
+        await OnCancel.InvokeAsync();
+        await SetOpenAsync(false);
+    }
+
+    private async Task CancelAsync(MouseEventArgs args)
+    {
+        if (Confirming) return;
+        await OnCancel.InvokeAsync();
+        await SetOpenAsync(false);
+    }
+
+    private Task ConfirmAsync(MouseEventArgs args) => OnConfirm.InvokeAsync();
+
+    private async Task SetOpenAsync(bool value)
+    {
+        if (Open == value) return;
+        await OpenChanged.InvokeAsync(value);
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_interop is not null) await _interop.DisposeAsync();
+    }
+}

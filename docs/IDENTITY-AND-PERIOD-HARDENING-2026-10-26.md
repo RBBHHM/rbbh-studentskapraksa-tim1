@@ -113,7 +113,7 @@ realm export or user data was read. Never mark every existing GUID confirmed.
    identity rows securely. Review unique normalized email, collisions, existing
    placeholders, inactive accounts and intended application roles.
 2. Generate/review the additive migration with the approved EF tool/feed:
-   `dotnet ef migrations script 20260929102823_AddGlobalCapital 20261026115804_ConfirmKeycloakSubjects --idempotent --project RelatedPartiesRegister/RelatedPartiesRegister.csproj --output artifacts/subject-schema.sql`.
+   `dotnet ef migrations script 20260929102823_AddGlobalCapital 20261026115804_ConfirmKeycloakSubjects --idempotent --project Backend/RelatedPartiesRegister.csproj --output artifacts/subject-schema.sql`.
    DBA applies the reviewed SQL via the existing production migration policy.
    Startup never migrates/seeds. Back up first.
 3. Prefer a signed-off per-row backfill: bind the parameters below from that

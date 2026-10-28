@@ -49,17 +49,14 @@ ScaffoldingReadMe.txt
 .runtime/
 dist/
 # Retired React workstation caches: preserve local data without shipping it.
-src/Web/artifacts/
-src/Web/.runtime/
-src/Web/dist/
 
-# Research agent – lokalni podaci (ne commitovati)
+# Research agent â€“ lokalni podaci (ne commitovati)
 .research/logs/*.jsonl
 .research/tasks/active-task.json
 .research/tasks/completed/*.json
 .research/infra/config.json
 
-# Mentor izvještaji (lokalni, ne commitovati)
+# Mentor izvjeÅ¡taji (lokalni, ne commitovati)
 reports/
 
 # Others

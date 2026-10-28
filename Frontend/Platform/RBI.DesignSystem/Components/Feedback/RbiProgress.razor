@@ -1,0 +1,26 @@
+<progress @attributes="SafeAttributes"
+          class="@CssClass"
+          max="@Max"
+          value="@DeterminateValue"
+          aria-label="@AccessibleLabel"
+          aria-valuetext="@ValueText"></progress>
+
+@code {
+    [Parameter] public double Value { get; set; }
+    [Parameter] public double Max { get; set; } = 100;
+    [Parameter, EditorRequired] public string AccessibleLabel { get; set; } = string.Empty;
+    [Parameter] public string? ValueText { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private double DeterminateValue => Math.Clamp(Value, 0, Max);
+    private string CssClass => string.Join(' ', new[] { "rbi-progress", Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private IReadOnlyDictionary<string, object>? SafeAttributes => RBI.DesignSystem.Components.Forms.RbiFormUtilities.SafeAttributes(AdditionalAttributes, "class", "max", "value", "aria-label", "aria-valuetext");
+
+    protected override void OnParametersSet()
+    {
+        if (!double.IsFinite(Max) || Max <= 0) throw new ArgumentOutOfRangeException(nameof(Max), "Max must be finite and greater than zero.");
+        if (!double.IsFinite(Value)) throw new ArgumentOutOfRangeException(nameof(Value), "Value must be finite.");
+        if (string.IsNullOrWhiteSpace(AccessibleLabel)) throw new InvalidOperationException($"{nameof(AccessibleLabel)} is required.");
+    }
+}

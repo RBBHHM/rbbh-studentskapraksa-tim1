@@ -1,0 +1,44 @@
+@inherits InputBase<string?>
+
+<textarea @attributes="SafeAttributes"
+          id="@ResolvedId"
+          class="@ControlClass"
+          placeholder="@Placeholder"
+          rows="@Rows"
+          disabled="@EffectiveDisabled"
+          readonly="@ReadOnly"
+          required="@EffectiveRequired"
+          aria-invalid="@AriaInvalid"
+          aria-describedby="@DescribedBy"
+          @onchange="ChangeValue">@CurrentValueAsString</textarea>
+
+@code {
+    private readonly string _generatedId = RbiFormUtilities.Id("textarea");
+
+    [CascadingParameter] private RbiFieldContext? Field { get; set; }
+    [Parameter] public string? Id { get; set; }
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public int Rows { get; set; } = 2;
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool ReadOnly { get; set; }
+    [Parameter] public bool Required { get; set; }
+    [Parameter] public bool Invalid { get; set; }
+
+    private bool EffectiveDisabled => Disabled || Field?.Disabled == true;
+    private bool EffectiveRequired => Required || Field?.Required == true;
+    private bool ValidationInvalid => EditContext?.GetValidationMessages(FieldIdentifier).Any() == true;
+    private bool EffectiveInvalid => Invalid || Field?.Invalid == true || ValidationInvalid;
+    private string ResolvedId => Id ?? RbiFormUtilities.Attribute(AdditionalAttributes, "id") ?? Field?.ControlId ?? _generatedId;
+    private string ControlClass => string.Join(' ', new[] { "rbi-control", "rbi-textarea", CssClass, EffectiveInvalid ? "rbi-control--invalid" : null }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private string? AriaInvalid => EffectiveInvalid ? "true" : RbiFormUtilities.Attribute(AdditionalAttributes, "aria-invalid");
+    private string? DescribedBy => RbiFormUtilities.JoinIds(Field?.DescribedBy, RbiFormUtilities.Attribute(AdditionalAttributes, "aria-describedby"));
+    private IReadOnlyDictionary<string, object>? SafeAttributes => RbiFormUtilities.SafeAttributes(AdditionalAttributes, "id", "class", "value", "placeholder", "rows", "disabled", "readonly", "required", "aria-invalid", "aria-describedby");
+
+    private void ChangeValue(ChangeEventArgs args) => CurrentValueAsString = args.Value?.ToString();
+    protected override bool TryParseValueFromString(string? value, out string? result, out string validationErrorMessage)
+    {
+        result = value;
+        validationErrorMessage = string.Empty;
+        return true;
+    }
+}

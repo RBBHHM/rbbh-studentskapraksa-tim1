@@ -1,0 +1,26 @@
+<div @attributes="AdditionalAttributes" class="@CssClass">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RbiStackDirection Direction { get; set; } = RbiStackDirection.Column;
+    [Parameter] public RbiStackGap Gap { get; set; } = RbiStackGap.Medium;
+    [Parameter] public RbiStackAlign Align { get; set; } = RbiStackAlign.Stretch;
+    [Parameter] public RbiStackJustify Justify { get; set; } = RbiStackJustify.Start;
+    [Parameter] public bool Wrap { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CssClass => string.Join(' ', new[]
+    {
+        "rbi-stack",
+        $"rbi-stack--{Direction.ToString().ToLowerInvariant()}",
+        $"rbi-stack--gap-{Gap.ToString().ToLowerInvariant()}",
+        $"rbi-stack--align-{Align.ToString().ToLowerInvariant()}",
+        $"rbi-stack--justify-{Justify.ToString().ToLowerInvariant()}",
+        Wrap ? "rbi-stack--wrap" : null,
+        Class,
+    }.Where(value => !string.IsNullOrWhiteSpace(value)));
+}

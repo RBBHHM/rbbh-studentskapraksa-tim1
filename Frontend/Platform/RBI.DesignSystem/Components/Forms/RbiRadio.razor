@@ -1,0 +1,59 @@
+@typeparam TValue
+@using System.Globalization
+
+<label class="@CssClass">
+    <input @attributes="SafeAttributes"
+           id="@ResolvedId"
+           class="rbi-choice__input"
+           type="radio"
+           name="@Group.Name"
+           value="@FormattedValue"
+           checked="@(IsChecked ? ToggledCheckedValue() : null)"
+           disabled="@EffectiveDisabled"
+           required="@Group.Required"
+           aria-invalid="@AriaInvalid"
+           aria-describedby="@DescribedBy"
+           @onchange="SelectAsync" />
+    <span class="rbi-radio__control" aria-hidden="true"></span>
+    <span class="rbi-choice__content">
+        <span class="rbi-choice__label">@ChildContent</span>
+        @if (!string.IsNullOrWhiteSpace(Description))
+        {
+            <span id="@DescriptionId" class="rbi-choice__description">@Description</span>
+        }
+    </span>
+</label>
+
+@code {
+    private readonly string _generatedId = RbiFormUtilities.Id("radio");
+    private bool _checkedValueToggle;
+
+    [CascadingParameter] private RbiRadioGroupContext<TValue> Group { get; set; } = default!;
+    [Parameter, EditorRequired] public TValue Value { get; set; } = default!;
+    [Parameter] public string? Id { get; set; }
+    [Parameter] public string? Description { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private bool IsChecked => EqualityComparer<TValue?>.Default.Equals(Group.Value, Value);
+    // Like framework InputRadio, force the selected sibling back into the DOM
+    // after a rejected proposal: the browser silently unchecked it without a change event.
+    private string ToggledCheckedValue() => (_checkedValueToggle = !_checkedValueToggle) ? "a" : "b";
+    private bool EffectiveDisabled => Disabled || Group.Disabled;
+    private string ResolvedId => Id ?? RbiFormUtilities.Attribute(AdditionalAttributes, "id") ?? _generatedId;
+    private string? FormattedValue => BindConverter.FormatValue(Value, CultureInfo.CurrentCulture)?.ToString();
+    private string DescriptionId => $"{ResolvedId}-description";
+    private string CssClass => string.Join(' ', new[] { "rbi-choice", "rbi-radio", EffectiveDisabled ? "rbi-choice--disabled" : null, Group.Invalid ? "rbi-choice--invalid" : null, Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private string? AriaInvalid => Group.Invalid ? "true" : RbiFormUtilities.Attribute(AdditionalAttributes, "aria-invalid");
+    private string? DescribedBy => RbiFormUtilities.JoinIds(Group.DescribedBy, string.IsNullOrWhiteSpace(Description) ? null : DescriptionId, RbiFormUtilities.Attribute(AdditionalAttributes, "aria-describedby"));
+    private IReadOnlyDictionary<string, object>? SafeAttributes => RbiFormUtilities.SafeAttributes(AdditionalAttributes, "id", "class", "type", "name", "value", "checked", "disabled", "required", "aria-invalid", "aria-describedby");
+
+    protected override void OnParametersSet()
+    {
+        if (Group is null) throw new InvalidOperationException($"{nameof(RbiRadio<TValue>)} must be placed inside {nameof(RbiRadioGroup<TValue>)}.");
+    }
+
+    private Task SelectAsync() => EffectiveDisabled ? Task.CompletedTask : Group.SelectAsync(Value);
+}

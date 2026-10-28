@@ -1,0 +1,11 @@
+<span @attributes="SafeAttributes" class="@CssClass" aria-hidden="true"></span>
+
+@code {
+    [Parameter] public RbiSkeletonShape Shape { get; set; } = RbiSkeletonShape.Text;
+    [Parameter] public RbiSkeletonSize Size { get; set; } = RbiSkeletonSize.Full;
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CssClass => string.Join(' ', new[] { "rbi-skeleton", $"rbi-skeleton--{Shape.ToString().ToLowerInvariant()}", $"rbi-skeleton--{Size.ToString().ToLowerInvariant()}", Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private IReadOnlyDictionary<string, object>? SafeAttributes => RBI.DesignSystem.Components.Forms.RbiFormUtilities.SafeAttributes(AdditionalAttributes, "class", "aria-hidden");
+}

@@ -75,7 +75,7 @@ by this migration. Production authorization data must not be silently reseeded.
 ## Regression evidence
 
 Baseline backend tests: 208 unit + 52 integration = 260 passed, no skips.
-Baseline React: 13/13 Node tests, localization/lint/build passed (webpack has
+Baseline React: 13/13 Node tests, localization/lint/build passed (retired bundler has
 two existing asset-size warnings). Corporate NuGet restore fails with NU1301;
 an isolated explicit public-source restore succeeds without changing NuGet config.
 That restore reports existing NU1902/NU1903 for System.Security.Cryptography.Pkcs

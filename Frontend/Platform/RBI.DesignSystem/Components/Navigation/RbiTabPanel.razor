@@ -1,0 +1,32 @@
+@typeparam TValue
+
+<div @attributes="SafeAttributes"
+     role="tabpanel"
+     id="@Registration.PanelId"
+     class="@CssClass"
+     aria-labelledby="@Registration.TabId"
+     tabindex="0"
+     hidden="@(!Selected)">
+    @ChildContent
+</div>
+
+@code {
+    private RbiTabRegistration<TValue>? _registration;
+
+    [CascadingParameter] private RbiTabsContext<TValue> Tabs { get; set; } = default!;
+    [Parameter, EditorRequired] public TValue Value { get; set; } = default!;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private RbiTabRegistration<TValue> Registration => _registration ??= Tabs.Resolve(Value);
+    private bool Selected => Tabs.IsSelected(Value);
+    private string CssClass => string.Join(' ', new[] { "rbi-tab-panel", Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private IReadOnlyDictionary<string, object>? SafeAttributes => RBI.DesignSystem.Components.Forms.RbiFormUtilities.SafeAttributes(AdditionalAttributes, "class", "role", "id", "aria-labelledby", "tabindex", "hidden");
+
+    protected override void OnParametersSet()
+    {
+        if (Tabs is null) throw new InvalidOperationException($"{nameof(RbiTabPanel<TValue>)} must be placed inside {nameof(RbiTabs<TValue>)}.");
+        _registration = Tabs.Resolve(Value);
+    }
+}

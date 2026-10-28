@@ -1,8 +1,4 @@
-# Environment varijable
+# Configuration
 
-Jedini aktuelni izvor je
-[`docs/configuration/ENVIRONMENT-VARIABLES.md`](docs/configuration/ENVIRONMENT-VARIABLES.md),
-a kopirljivi primjer je u [`.env.example`](.env.example).
-
-Stari `ConnectionStrings__Default`, `RPR_*` i svi `VITE_*` oblici više nisu
-podržani. Naziv baze postavlja se kroz `Database__Name`.
+See [current environment variables](docs/configuration/ENVIRONMENT-VARIABLES.md)
+and the safe root `.env.example`. Frontend local secrets belong in user-secrets.

@@ -1,0 +1,50 @@
+@implements IAsyncDisposable
+@inject IJSRuntime JavaScript
+
+<span @ref="_root" class="rbi-anchored-overlay-host" data-rbi-tooltip-host>
+    @ChildContent
+    <span @attributes="SafeAttributes"
+          id="@_tooltipId"
+          class="@CssClass"
+          role="tooltip"
+          popover="manual"
+          data-rbi-anchored-surface
+          data-rbi-open="false"
+          data-rbi-preferred-placement="@PlacementValue">@Content</span>
+</span>
+
+@code {
+    private readonly string _tooltipId = RBI.DesignSystem.Components.Forms.RbiFormUtilities.Id("tooltip");
+    private ElementReference _root;
+    private RbiAnchoredOverlayInterop? _interop;
+
+    [Parameter, EditorRequired] public string Content { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RbiOverlayPlacement Placement { get; set; } = RbiOverlayPlacement.Top;
+    [Parameter] public int Delay { get; set; } = 700;
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string PlacementValue => Placement.ToString().ToLowerInvariant();
+    private string CssClass => string.Join(' ', new[] { "rbi-anchored-surface", "rbi-tooltip", Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private IReadOnlyDictionary<string, object>? SafeAttributes => RBI.DesignSystem.Components.Forms.RbiFormUtilities.SafeAttributes(AdditionalAttributes, "id", "class", "role", "popover", "aria-label", "aria-labelledby", "aria-describedby");
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(Content)) throw new InvalidOperationException($"{nameof(Content)} is required.");
+        if (ChildContent is null) throw new InvalidOperationException($"{nameof(ChildContent)} is required.");
+        if (Delay < 0) throw new ArgumentOutOfRangeException(nameof(Delay), "Tooltip delay cannot be negative.");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        _interop ??= new RbiAnchoredOverlayInterop(JavaScript);
+        await _interop.SyncTooltipAsync(_root, Placement, Delay, !Disabled);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_interop is not null) await _interop.DisposeAsync();
+    }
+}

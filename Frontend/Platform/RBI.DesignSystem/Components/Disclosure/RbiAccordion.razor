@@ -1,0 +1,73 @@
+<div @attributes="SafeAttributes" class="@CssClass">
+    <CascadingValue Value="@Context" IsFixed="false">@ChildContent</CascadingValue>
+</div>
+
+@code {
+    private readonly Dictionary<string, (bool Disabled, Func<ValueTask> Focus)> _items = new(StringComparer.Ordinal);
+    private readonly List<string> _order = [];
+    private HashSet<string> _expanded = new(StringComparer.Ordinal);
+    private bool _initialized;
+
+    [Parameter] public RbiAccordionMode Mode { get; set; } = RbiAccordionMode.Single;
+    [Parameter] public bool AllowCollapse { get; set; } = true;
+    [Parameter] public IReadOnlyList<string>? ExpandedValues { get; set; }
+    [Parameter] public EventCallback<IReadOnlyList<string>> ExpandedValuesChanged { get; set; }
+    [Parameter] public IReadOnlyList<string>? DefaultExpandedValues { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CssClass => string.Join(' ', new[] { "rbi-accordion", Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private RbiAccordionContext Context => new(IsExpanded, ToggleAsync, Register, HandleKeyAsync);
+    private IReadOnlyDictionary<string, object>? SafeAttributes => RBI.DesignSystem.Components.Forms.RbiFormUtilities.SafeAttributes(AdditionalAttributes, "class");
+
+    protected override void OnParametersSet()
+    {
+        if (ExpandedValues is not null) _expanded = ExpandedValues.ToHashSet(StringComparer.Ordinal);
+        else if (!_initialized) _expanded = (DefaultExpandedValues ?? []).ToHashSet(StringComparer.Ordinal);
+        _initialized = true;
+        if (Mode == RbiAccordionMode.Single && _expanded.Count > 1) _expanded = [_expanded.First()];
+    }
+
+    private bool IsExpanded(string value) => _expanded.Contains(value);
+
+    private async Task ToggleAsync(string value, bool disabled)
+    {
+        if (disabled) return;
+        var next = new HashSet<string>(_expanded, StringComparer.Ordinal);
+        if (next.Contains(value))
+        {
+            if (Mode == RbiAccordionMode.Multiple || AllowCollapse) next.Remove(value);
+        }
+        else
+        {
+            if (Mode == RbiAccordionMode.Single) next.Clear();
+            next.Add(value);
+        }
+        if (ExpandedValues is null) _expanded = next;
+        StateHasChanged();
+        await ExpandedValuesChanged.InvokeAsync(next.ToArray());
+    }
+
+    private void Register(string value, bool disabled, Func<ValueTask> focus)
+    {
+        if (!_items.ContainsKey(value)) _order.Add(value);
+        _items[value] = (disabled, focus);
+    }
+
+    private async Task HandleKeyAsync(string value, string key)
+    {
+        if (key is not ("ArrowDown" or "ArrowUp" or "Home" or "End")) return;
+        var enabled = _order.Where(item => !_items[item].Disabled).ToList();
+        if (enabled.Count == 0) return;
+        var current = Math.Max(0, enabled.IndexOf(value));
+        var target = key switch
+        {
+            "Home" => 0,
+            "End" => enabled.Count - 1,
+            "ArrowUp" => (current - 1 + enabled.Count) % enabled.Count,
+            _ => (current + 1) % enabled.Count,
+        };
+        await _items[enabled[target]].Focus();
+    }
+}

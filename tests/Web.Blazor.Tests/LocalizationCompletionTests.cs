@@ -13,7 +13,7 @@ public sealed class LocalizationCompletionTests
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "RelatedPartiesRegister.slnx"))) directory = directory.Parent;
-        return Path.Combine(directory!.FullName, "src", "Web.Blazor");
+        return Path.Combine(directory!.FullName, "Frontend");
     }
     [Fact]
     public void BothBusinessCatalogsHaveIdenticalKeysAndNoEmptyValuesOrDuplicateProperties()

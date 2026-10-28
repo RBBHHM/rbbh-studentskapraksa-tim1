@@ -1,0 +1,23 @@
+#nullable enable
+RBI.Authorization.IRbiPermissionService
+RBI.Authorization.IRbiPermissionService.HasPermissionAsync(string! permission, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
+RBI.Authorization.IRbiPermissionSource
+RBI.Authorization.IRbiPermissionSource.HasPermissionAsync(System.Security.Claims.ClaimsPrincipal! principal, string! permission, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
+RBI.Authorization.RbiAuthorizationEndpointConventionBuilderExtensions
+RBI.Authorization.RbiAuthorizationOptions
+RBI.Authorization.RbiAuthorizationOptions.MapAuthenticatedFallback(params string![]! permissions) -> RBI.Authorization.RbiAuthorizationOptions!
+RBI.Authorization.RbiAuthorizationOptions.MapRole(string! role, params string![]! permissions) -> RBI.Authorization.RbiAuthorizationOptions!
+RBI.Authorization.RbiAuthorizationOptions.RbiAuthorizationOptions() -> void
+RBI.Authorization.RbiAuthorizationServiceCollectionExtensions
+RBI.Authorization.RbiAuthorize
+RBI.Authorization.RbiAuthorize.ChildContent.get -> Microsoft.AspNetCore.Components.RenderFragment?
+RBI.Authorization.RbiAuthorize.ChildContent.set -> void
+RBI.Authorization.RbiAuthorize.NotAuthorized.get -> Microsoft.AspNetCore.Components.RenderFragment?
+RBI.Authorization.RbiAuthorize.NotAuthorized.set -> void
+RBI.Authorization.RbiAuthorize.Permission.get -> string!
+RBI.Authorization.RbiAuthorize.Permission.set -> void
+RBI.Authorization.RbiAuthorize.RbiAuthorize() -> void
+override RBI.Authorization.RbiAuthorize.OnParametersSetAsync() -> System.Threading.Tasks.Task!
+static RBI.Authorization.RbiAuthorizationEndpointConventionBuilderExtensions.RequireRbiPermission<TBuilder>(this TBuilder builder, string! permission) -> TBuilder
+static RBI.Authorization.RbiAuthorizationServiceCollectionExtensions.AddRbiAuthorization(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<RBI.Authorization.RbiAuthorizationOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+~override RBI.Authorization.RbiAuthorize.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

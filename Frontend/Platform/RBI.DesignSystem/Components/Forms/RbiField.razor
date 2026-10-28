@@ -1,0 +1,77 @@
+@typeparam TValue
+@implements IDisposable
+@using System.Linq.Expressions
+@using Microsoft.AspNetCore.Components.Forms
+
+<div @attributes="AdditionalAttributes" class="@CssClass">
+    <label class="rbi-field__label" for="@_controlId">
+        @Label
+        @if (Required)
+        {
+            <span class="rbi-field__required" aria-hidden="true">*</span>
+        }
+    </label>
+    <CascadingValue Value="@FieldContext" IsFixed="false">
+        @ChildContent
+    </CascadingValue>
+    @if (HasHelpText)
+    {
+        <p id="@_helpId" class="rbi-field__help">@HelpText</p>
+    }
+    @* The message container is always present so assistive technology registers it before an error exists. An error is announced once when it appears or its text
+       changes; an unchanged error is not re-announced because its node is not re-rendered. *@
+    <div class="@MessageCssClass" aria-live="polite" aria-atomic="true">@if (Invalid) {<p id="@_errorId" class="rbi-field__error">@ResolvedError</p>}</div>
+</div>
+
+@code {
+    private readonly string _generatedId = RbiFormUtilities.Id("field");
+    private string _controlId = string.Empty;
+    private string _helpId = string.Empty;
+    private string _errorId = string.Empty;
+    private FieldIdentifier? _fieldIdentifier;
+    private EditContext? _subscribedContext;
+
+    [CascadingParameter] private EditContext? EditContext { get; set; }
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter] public string? Id { get; set; }
+    [Parameter] public string? HelpText { get; set; }
+    [Parameter] public string? ErrorText { get; set; }
+    [Parameter] public bool Required { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public Expression<Func<TValue>>? For { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string? ValidationError => _fieldIdentifier is { } fieldIdentifier && EditContext is not null
+        ? EditContext.GetValidationMessages(fieldIdentifier).FirstOrDefault()
+        : null;
+    private string? ResolvedError => ErrorText ?? ValidationError;
+    private bool Invalid => !string.IsNullOrWhiteSpace(ResolvedError);
+    private string CssClass => string.Join(' ', new[] { "rbi-field", Disabled ? "rbi-field--disabled" : null, Invalid ? "rbi-field--invalid" : null, Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private string MessageCssClass => Invalid ? "rbi-field__message" : "rbi-field__message rbi-field__message--empty";
+    private bool HasHelpText => !string.IsNullOrWhiteSpace(HelpText);
+    private RbiFieldContext FieldContext => new(_controlId, RbiFormUtilities.JoinIds(HasHelpText ? _helpId : null, Invalid ? _errorId : null), Disabled, Required, Invalid);
+
+    protected override void OnParametersSet()
+    {
+        _controlId = string.IsNullOrWhiteSpace(Id) ? _generatedId : Id;
+        _helpId = $"{_controlId}-help";
+        _errorId = $"{_controlId}-error";
+        _fieldIdentifier = RbiFormUtilities.FieldFor(For);
+
+        if (!ReferenceEquals(_subscribedContext, EditContext))
+        {
+            if (_subscribedContext is not null) _subscribedContext.OnValidationStateChanged -= ValidationChanged;
+            _subscribedContext = EditContext;
+            if (_subscribedContext is not null) _subscribedContext.OnValidationStateChanged += ValidationChanged;
+        }
+    }
+
+    private void ValidationChanged(object? sender, ValidationStateChangedEventArgs args) => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        if (_subscribedContext is not null) _subscribedContext.OnValidationStateChanged -= ValidationChanged;
+    }
+}
