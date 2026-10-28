@@ -96,7 +96,8 @@ $env:BROWSER_FIXTURE_ROLE = "admin"
 npm test -- --workers=1 --retries=0
 ```
 
-Both image builds use the repository root as context:
+Return to the repository root for the following commands. Both image builds use
+the repository root as context:
 
 ```powershell
 dotnet publish Backend/RelatedPartiesRegister.csproj -c Release -o artifacts/publish/api

@@ -18,8 +18,9 @@ reference app is included.
 The five original runtime library receipts identify the first revision. Transport
 receipts carry the pre-patch fdefb8a stamp; their approved file transport extension
 is preserved from a38b94c. No newer platform UI implementation is substituted.
-A file-level integrity manifest and verification results are in the structural
-cleanup report under `docs/`.
+A file-level integrity manifest is in `SOURCE-MANIFEST.json`; verification results
+are in the structural cleanup report under `docs/`. Manifest hashes describe source
+bytes before Git checkout line-ending conversion (LF/CRLF is not a runtime patch).
 
 ## Local build adaptation
 

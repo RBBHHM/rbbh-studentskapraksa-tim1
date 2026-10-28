@@ -7,7 +7,7 @@ Ovaj dokument prevodi centralni RBBH Operation Manual na potrebe aplikacije **RB
 - Aplikacijski repozitorij sadrži EF Core model, migraciju i provjeren idempotentni SQL artefakt.
 - `rbbh-coredb-microsvcdb-cac` je centralni repozitorij iz kojeg se SQL odobrava i izvršava na UAT/produkciji.
 - OCP aplikacija u UAT/produkciji **ne izvršava DDL automatski**. Baza mora biti ažurirana kroz odobreni SQL tok prije ili zajedno s novom verzijom API-ja.
-- Lokalni Development može automatski primijeniti EF migracije radi brzog rada developera.
+- Lokalni developer eksplicitno primjenjuje pregledane EF migracije; aplikacijski startup ne mijenja shemu niti izvršava seed.
 
 ## Kratki operativni postupak
 
