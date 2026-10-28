@@ -367,3 +367,18 @@ h1[tabindex="-1"]:focus, h1:focus-visible { outline: none; }
 .registry-period-dialog .registry-period-form { margin: 0; border: 0; padding: 0; background: transparent; }
 .registry-period-table .registry-toolbar { flex-wrap: nowrap; margin: 0; justify-content: center; }@media (max-width: 639px) { .registry-period-dialog .registry-toolbar { flex-direction: column-reverse; align-items: stretch; } .registry-period-dialog .registry-toolbar .rbi-button { width: 100%; } }
 .app-form-dialog .rbi-checkbox__control { width: 1rem; height: 1rem; flex: none; border-radius: .125rem; }
+.rbi-dialog.registry-codes-confirm:not(.rbi-command-dialog) { width: min(calc(100vw - 2rem), 32rem); }
+.registry-codes-confirm .rbi-modal__header { text-align: start; }
+.registry-codes-confirm__summary { margin: 0 0 .75rem; font-size: var(--font-size-sm); color: var(--text-secondary); }
+.registry-codes-confirm__issues { margin: 0; font-size: var(--font-size-sm); font-weight: var(--font-weight-bold); }
+.registry-codes-confirm__errors { margin: .25rem 0 1rem; padding-inline-start: 1.25rem; font-size: var(--font-size-sm); color: var(--text-secondary); }
+.registry-codes-confirm .registry-toolbar { justify-content: flex-end; margin-block-start: 1rem; }.registry-codes-confirm__summary, .registry-codes-confirm__issues, .registry-codes-confirm__errors, .registry-codes-confirm__errors li { display: inline; }
+.registry-codes-confirm__issues { margin: 0; font-weight: var(--font-weight-regular, 400); color: var(--text-secondary); }
+.registry-codes-confirm__issues::after { content: ":"; }
+.registry-codes-confirm__errors { margin: 0; padding: 0; list-style: none; }
+.registry-codes-confirm__errors li { margin-inline-end: .25rem; }
+.registry-codes-confirm .rbi-modal__body > .registry-toolbar { margin-block-start: 1rem; }.registry-codes-confirm__summary { margin-inline-end: .25rem; }
+.registry-codes-confirm__issues::after { content: ": "; }
+@media (max-width: 639px) { .registry-codes-confirm .registry-toolbar { flex-direction: column-reverse; align-items: stretch; } .registry-codes-confirm .registry-toolbar .rbi-button { width: 100%; } }.app-confirm--primary .rbi-button--destructive { background: var(--action-primary-background); color: var(--action-primary-foreground); }
+.app-confirm--primary .rbi-button--destructive:hover:not(:disabled) { background: var(--action-primary-background-hover); }
+.registry-family__icon { flex-shrink: 1; min-width: 0; }

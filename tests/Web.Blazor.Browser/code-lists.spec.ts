@@ -79,7 +79,7 @@ test("category soft-delete keeps inactive administrative history instead of pret
 test("real XLSX preview does not persist; confirmed valid-row import preserves duplicate/error/code-collision behavior", async ({ page, request }) => {
   await request.post("/__fixtures/codes-reference", { headers }); await visit(page, "MigrationCodes");
   const before = await (await request.get("/__fixtures/codes-state", { headers })).json(); await page.locator("#code-file").setInputFiles(fixtures + "code-values.xlsx"); let dialog = page.getByRole("dialog"); await settled(dialog);
-  await expect(dialog.getByText("Provjereno redova: 4; spremno: 2; postojećih: 1; upozorenja: 2.", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("Provjereno je 4 redova: 2 spremno za uvoz, 1 postojećih vrijednosti koje će biti preskočene.", { exact: true })).toBeVisible();
   await expect(dialog.getByText("Red 5: naziv smije imati najviše 200 znakova.", { exact: true })).toBeVisible(); await expect(dialog.getByText("Redovi 3, 4: vrijednost 'New imported' je ponovljena u datoteci.", { exact: true })).toBeVisible();
   expect(await (await request.get("/__fixtures/codes-state", { headers })).json()).toEqual(before);
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);

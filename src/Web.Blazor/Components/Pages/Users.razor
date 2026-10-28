@@ -59,7 +59,7 @@ else
 }
 @if (_target is { } target)
 {
-    <RbiAlertDialog Open Class="registry-users-dialog" Title="@T[_delete ? "users.delete-title" : target.IsActive ? "users.deactivate-title" : "users.reactivate-title"]" Description="@T.Format(_delete ? "users.delete-description" : "users.state-description", target.Username)" CancelLabel="@T["common.cancel"]" ConfirmLabel="@T[_delete ? "common.delete" : target.IsActive ? "users.deactivate" : "users.reactivate"]" Confirming="_busy" ConfirmLoadingLabel="@T["state.loading"]" OnConfirm="MutateAsync" OnCancel="CancelConfirmation" OpenChanged="CloseConfirmation" />
+    <RbiAlertDialog Open Class="@("registry-users-dialog" + (!_delete && !target.IsActive ? " app-confirm--primary" : ""))" Title="@T[_delete ? "users.delete-title" : target.IsActive ? "users.deactivate-title" : "users.reactivate-title"]" Description="@T.Format(_delete ? "users.delete-description" : "users.state-description", target.Username)" CancelLabel="@T["common.cancel"]" ConfirmLabel="@T[_delete ? "common.delete" : target.IsActive ? "users.deactivate" : "users.reactivate"]" Confirming="_busy" ConfirmLoadingLabel="@T["state.loading"]" OnConfirm="MutateAsync" OnCancel="CancelConfirmation" OpenChanged="CloseConfirmation" />
 }
 @code {
     private readonly CancellationTokenSource _lifetime = new();

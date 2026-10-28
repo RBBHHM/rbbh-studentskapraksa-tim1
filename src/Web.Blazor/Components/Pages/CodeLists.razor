@@ -72,12 +72,12 @@ else
 }
 @if (_preview is { } preview)
 {
-    <RbiDialog Open Class="registry-codes-dialog" Title="@T["codes.preview"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="ClosePreview">
-        <DialogBody><p>@_pendingCategory — @_fileName</p><p>@T.Format("codes.preview-summary", preview.TotalRows, preview.ToImport.Count, preview.Duplicates.Count, preview.Errors.Count)</p>
-            @if (preview.ToImport.Count > 0) { <h2>@T["codes.ready"]</h2><ul>@foreach (var value in preview.ToImport) { <li>@value</li> }</ul> }
-            @if (preview.Duplicates.Count > 0) { <h2>@T["codes.duplicates"]</h2><ul>@foreach (var value in preview.Duplicates) { <li>@value</li> }</ul> }
-            @if (preview.Errors.Count > 0) { <h2>@T["codes.issues"]</h2><ul>@foreach (var error in preview.Errors) { <li>@ImportError(error)</li> }</ul> }
-            <p>@T["codes.partial-help"]</p>
+    <RbiDialog Open Class="registry-codes-dialog registry-codes-confirm" Title="@T["codes.preview"]" CloseLabel="@T["common.close"]" Dismissible="false" OpenChanged="ClosePreview">
+        <DialogBody><p class="app-visually-hidden">@_pendingCategory — @_fileName</p><p class="registry-codes-confirm__summary">@T.Format("codes.preview-summary", preview.TotalRows, preview.ToImport.Count, preview.Duplicates.Count)</p>
+            @if (preview.ToImport.Count > 0) { <h2 class="app-visually-hidden">@T["codes.ready"]</h2><ul class="app-visually-hidden">@foreach (var value in preview.ToImport) { <li>@value</li> }</ul> }
+            @if (preview.Duplicates.Count > 0) { <h2 class="app-visually-hidden">@T["codes.duplicates"]</h2><ul class="app-visually-hidden">@foreach (var value in preview.Duplicates) { <li>@value</li> }</ul> }
+            @if (preview.Errors.Count > 0) { <h2 class="registry-codes-confirm__issues">@T["codes.issues"]</h2><ul class="registry-codes-confirm__errors">@foreach (var error in preview.Errors) { <li>@ImportError(error)</li> }</ul> }
+            <p class="app-visually-hidden">@T["codes.partial-help"]</p>
             <div class="registry-toolbar"><RbiButton Disabled="_busy" OnClick="() => ClosePreview(false)" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton><RbiButton Disabled="@(_busy || preview.ToImport.Count == 0)" OnClick="ImportAsync">@T["codes.import-valid"]</RbiButton></div>
         </DialogBody>
     </RbiDialog>
