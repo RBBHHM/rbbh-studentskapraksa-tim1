@@ -1,0 +1,74 @@
+@page "/profile"
+@page "/app/profile"
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationState
+@inject IProfileApi Profile
+@implements IDisposable
+
+<PageTitle>@T["profile.title"]</PageTitle>
+@if (_loading)
+{
+    <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div>
+}
+else if (_user?.Identity?.IsAuthenticated == true)
+{
+    <section class="registry-profile">
+        <div class="profile-hero">
+            <span class="profile-hero__avatar" role="img" aria-label="@T["profile.visual"]"><RbiIcon Name="RbiIconName.UserRound" /></span>
+            <div class="profile-hero__text">
+                <RbiText Tone="RbiTextTone.Secondary">@T["profile.current"]</RbiText>
+                <RbiHeading Level="1" VisualLevel="4" Class="profile-hero__name">@((_profile?.FullName ?? DisplayName) ?? "—")</RbiHeading>
+                <p class="profile-hero__line"><AppIcon Name="AppIconName.KeyRound" />@(Username ?? "—")</p>
+                <p class="profile-hero__line"><AppIcon Name="AppIconName.Mail" />@(Claim(ClaimTypes.Email) ?? Claim("email") ?? "—")</p>
+            </div>
+        </div>
+        <dl class="profile-grid">
+            @if (_profile is { } profile)
+            {
+                <div class="profile-card">
+                    <dt class="profile-card__title">@T["profile.roles"]</dt>
+                    <dd class="profile-roles">@if (AccessRoles(profile).Any()) { @foreach (var role in AccessRoles(profile)) { <span class="profile-role">@RoleLabel(role)</span> } } else { <RbiText Tone="RbiTextTone.Secondary">@T["profile.no-access"]</RbiText> }</dd>
+                </div>
+                <div class="profile-card">
+                    <dt class="profile-card__title">@T["profile.permissions"]</dt>
+                    <dd><ul class="profile-permissions">@foreach (var permission in profile.Permissions) { <li><RbiIcon Name="RbiIconName.CheckCircle2" />@permission</li> }</ul></dd>
+                </div>
+            }
+        </dl>
+        @if (_profile is not null) { <div class="profile-note"><AppIcon Name="AppIconName.ShieldCheck" /><span>@T["profile.note"]</span></div> }
+        @if (_error) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T["profile.unavailable"]" /><RbiButton OnClick="LoadAsync">@T["state.retry"]</RbiButton> }
+    </section>
+}
+else { <HeroBar Title="@T["profile.title"]" Description="@T["profile.description"]" /><IdentityNotice /> }
+
+@code {
+    private ClaimsPrincipal? _user = null;
+    private bool _loading = true;
+    private ApplicationProfile? _profile;
+    private bool _error;
+    private readonly CancellationTokenSource _lifetime = new();
+    private readonly CancellationToken _token;
+    public MyProfile() => _token = _lifetime.Token;
+    protected override Task OnInitializedAsync() => LoadAsync();
+    private async Task LoadAsync()
+    {
+        _loading = true; _error = false; _profile = null;
+        _user = (await AuthenticationState.GetAuthenticationStateAsync()).User;
+        if (_user.Identity?.IsAuthenticated == true)
+        {
+            try { _profile = await Profile.GetAsync(_token); }
+            catch (RegistryApiException) { _error = true; }
+            catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        }
+        _loading = false;
+    }
+    private string? Claim(string type) => _user?.FindFirst(type)?.Value;
+    private string? DisplayName => Claim(ClaimTypes.Name) ?? Claim("name") ?? _user?.Identity?.Name;
+    private string? Username => Claim(ClaimTypes.Upn) ?? Claim("preferred_username") ?? _profile?.Username;
+    private static readonly string[] AccessKeys = ["fl", "pl", "limiti", "kapital", "admin"];
+    private static IEnumerable<string> AccessRoles(ApplicationProfile profile) => profile.Roles.Where(role => AccessKeys.Contains(role.ToLowerInvariant()));
+    private string RoleLabel(string role) => role.ToLowerInvariant() switch { "fl" => T["person.title"], "pl" => T["legal.title"], "limiti" => T["limit.title"], "kapital" => T["capital.title"], "admin" => T["profile.admin"], _ => role };
+    private string Initials => string.IsNullOrWhiteSpace(DisplayName) ? "?" : DisplayName[..1].ToUpperInvariant();
+    public void Dispose() { _lifetime.Cancel(); _lifetime.Dispose(); }
+}

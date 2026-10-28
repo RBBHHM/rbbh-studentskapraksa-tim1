@@ -1,0 +1,6 @@
+name: Maintained native application
+paths-ignore:
+  - artifacts
+  - "**/bin"
+  - "**/obj"
+  - "**/node_modules"

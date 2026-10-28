@@ -1,0 +1,101 @@
+@page "/app/capital"
+@using RBBH.RelatedPartiesRegister.Web.Components.Registry
+@using Microsoft.JSInterop
+@implements IDisposable
+@inject AuthenticationStateProvider AuthenticationState
+@inject IProfileApi Profile
+@inject ICapitalApi Api
+@inject IPeriodApi Period
+@inject FileDelivery Files
+
+<PageTitle>@T["capital.title"]</PageTitle>
+<HeroBar Title="@T["capital.title"]" Description="@T["capital.subtitle"]" Glyph="AppIconName.Landmark">
+    <Actions>
+        @if (_authenticated && _canRead && !_loading && _error is null)
+        {
+
+            <RbiButton Disabled="@(_busy || _refreshing)" OnClick="ExportAsync" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.Download" />@T["common.export"]</RbiButton>
+            @if (_canEdit) { <RbiButton Disabled="@(_busy || _refreshing || _periodLocked)" OnClick="Edit"><RbiIcon Name="RbiIconName.Pencil" />@T["capital.edit"]</RbiButton> }
+        }
+    </Actions>
+</HeroBar>
+@if (!_authenticated && !_loading) { <IdentityNotice /> }
+else if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
+else if (_error is not null)
+{
+    <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_error]" Announcement="RbiAlertAnnouncement.Assertive" />
+    <RbiButton OnClick="LoadAsync">@T["state.retry"]</RbiButton>
+}
+else if (!_canRead) { <RbiAlert Title="@T["errors.forbidden"]" /> }
+else
+{
+    @if (_canEdit && _periodLocked) { <RbiAlert Title="@T[_periodError ?? "errors.locked"]" /> }
+    @if (_notice) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@T["toast.capital"]" /></div> }
+    <RbiTable AccessibleLabel="@T["capital.title"]" Class="registry-table registry-capital-table">
+        <thead><tr><th scope="col">@T["limit.core"]</th><th scope="col">@T["limit.regulatory"]</th><th scope="col">@T["capital.supplementary"]</th><th scope="col">@T["capital.date"]</th></tr></thead>
+        <tbody>
+            @if (_record is { } record) { <tr><td>@Money(record.CoreCapital)</td><td>@Money(record.RegulatoryCapital)</td><td>@Money(record.SupplementaryCapital)</td><td>@CapitalDay(record.CapitalDate)</td></tr> }
+            else { <tr><td colspan="4" role="status">@T["capital.empty"]</td></tr> }
+        </tbody>
+    </RbiTable>
+}
+@if (_draft is { } draft)
+{
+    <RbiDialog Open Class="app-form-dialog app-form-dialog--sm" Title="@T["capital.edit"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseEditor">
+        <DialogBody><CapitalForm MutationBlocked="_periodLocked" @key="draft" Model="draft" Save="SaveAsync" Cancel="() => CloseEditor(false)" /></DialogBody>
+    </RbiDialog>
+}
+@code {
+    private readonly CancellationTokenSource _lifetime = new();
+    private readonly CancellationToken _token;
+    public Capital() => _token = _lifetime.Token;
+    private CapitalRecord? _record;
+    private CapitalDraft? _draft;
+    private string? _error;
+    private string? _periodError;
+    private bool _periodLocked = true;
+    private bool _disposed, _authenticated, _canRead, _canEdit, _busy, _loading = true, _refreshing, _loaded, _notice;
+    private static string Money(decimal amount) => "BAM\u00a0" + amount.ToString("N2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+    private static string CapitalDay(DateTime date) => System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "bs" ? date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) : date.ToString("dd/MM/yyyy", System.Globalization.CultureInfo.InvariantCulture);
+    protected override Task OnInitializedAsync() => LoadAsync();
+    private async Task LoadAsync()
+    {
+        if (_disposed) return; _loading = !_loaded; _refreshing = true; _error = null;
+        try
+        {
+            _authenticated = (await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true;
+            if (!_authenticated) return;
+            var profile = await Profile.GetAsync(_token);
+            _canRead = profile.Permissions.Contains("KAPITAL_VIEW"); _canEdit = profile.Permissions.Contains("KAPITAL_EDIT");
+            if (!_canRead) return;
+            try { _periodLocked = (await Period.CurrentAsync(_token)).IsLocked; _periodError = null; }
+            catch (RegistryApiException) { _periodLocked = true; _periodError = "period.state-unavailable"; }
+            _record = await Api.GetAsync(_token); _loaded = true;
+        }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        catch (RegistryApiException exception) { _error = exception.MessageKey; }
+        finally { _loading = false; _refreshing = false; }
+    }
+    private void Edit() { if (!_authenticated || !_canEdit || _periodLocked || _busy || _refreshing) return; _draft = CapitalDraft.From(_record); }
+    private void CloseEditor(bool open) { if (!open && !_busy) _draft = null; }
+    private async Task SaveAsync(CapitalRequest request)
+    {
+        if (!_authenticated || !_canEdit) throw new RegistryApiException(System.Net.HttpStatusCode.Forbidden);
+        if (_periodLocked) throw new RegistryApiException((System.Net.HttpStatusCode)423);
+        if (_busy) return; _busy = true;
+        try { await Api.SaveAsync(request, _token); _notice = true; await LoadAsync(); }
+        catch (RegistryApiException exception) when ((int?)exception.StatusCode == 423) { _periodLocked = true; await InvokeAsync(StateHasChanged); throw; }
+        finally { _busy = false; }
+        _draft = null;
+    }
+    private async Task ExportAsync()
+    {
+        if (!_authenticated || !_canRead || _busy) return; _busy = true;
+        try { await Files.DownloadAsync(await Api.ExportAsync(_token), _token); }
+        catch (RegistryApiException exception) { _error = exception.MessageKey; }
+        catch (JSDisconnectedException) { }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally { _busy = false; }
+    }
+    public void Dispose() { _disposed = true; _lifetime.Cancel(); _lifetime.Dispose(); }
+}

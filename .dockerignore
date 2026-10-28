@@ -1,4 +1,4 @@
-# Exclude non-.NET directories from Docker build context
+# API build context excludes the frontend, documentation and local tooling.
 .git
 .github
 .research
@@ -9,11 +9,22 @@ scripts/
 node_modules
 artifacts
 dist
-Makefile
 README.md
 CLAUDE.md
 .env
 .env.example
+**/.env
+**/.env.*
+**/secrets.json
+**/*.pfx
+**/*.p12
+**/*.key
+**/*.pem
+**/appsettings.*.local.json
+**/.vs/
+**/*.user
+**/*.suo
+**/TestResults/
 *.md
 
 # Exclude build output and NuGet assets (Windows paths break Linux Docker build)

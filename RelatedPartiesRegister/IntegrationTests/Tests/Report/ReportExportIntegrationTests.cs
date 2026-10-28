@@ -1,6 +1,7 @@
 using ClosedXML.Excel;
 using FluentAssertions;
 using RBBH.ConnectedParties.API.Controllers;
+using RBBH.ConnectedParties.BL.ServiceInterfaces;
 using RBBH.ConnectedParties.BL.Services;
 using RBBH.ConnectedParties.DL.Entities.Limiti;
 using RBBH.ConnectedParties.Exceptions;
@@ -47,18 +48,15 @@ namespace IntegrationTests.Tests.Report
             var ctx = _fixture.CreateContext();
             var logger = new Mock<ILogger<ReportService>>();
             var service = new ReportService(ctx, logger.Object);
-            return new ReportController(service).WithHttpContext(user);
+            return new ReportController(service, new Mock<IAuditService>().Object).WithHttpContext(user);
         }
 
-        private static Limit NewLimit(string naziv, string tip = "Izloženost") => new()
+        private static Limit NewLimit(Guid legalEntityId, string tip = "MM") => new()
         {
-            Naziv = naziv,
+            LegalEntityId = legalEntityId,
             TipLimita = tip,
-            IznosLimita = 1000m,
-            Utilizacija = 200m,
-            RaspoloziviLimit = 100m,
-            RegulatorniKapital = 5000m,
-            OsnovniKapital = 4000m,
+            OdobreniLimit = 1000m,
+            MaksimalnaOcekivanaUtilizacija = 200m,
             CreatedBy = "seed",
             CreatedAt = DateTime.UtcNow
         };
@@ -80,7 +78,7 @@ namespace IntegrationTests.Tests.Report
             using var ms = new MemoryStream(bytes);
             var ws = new XLWorkbook(ms).Worksheet(1);
             var last = ws.LastRowUsed();
-            return last is null ? 0 : Math.Max(0, last.RowNumber() - 3); // header red = 3
+            return last is null ? 0 : Math.Max(0, last.RowNumber() - 1); // header red = 1
         }
 
         // Export svih klijenata - vraća .xlsx sa redom po limitu (prava baza)
@@ -92,7 +90,10 @@ namespace IntegrationTests.Tests.Report
 
             await using (var ctx = _fixture.CreateContext())
             {
-                ctx.Limiti.AddRange(NewLimit("ACME"), NewLimit("BETA"));
+                var acme = NewEntity("ACME");
+                var beta = NewEntity("BETA");
+                ctx.LegalEntities.AddRange(acme, beta);
+                ctx.Limiti.AddRange(NewLimit(acme.Id), NewLimit(beta.Id));
                 await ctx.SaveChangesAsync();
             }
 
@@ -114,8 +115,9 @@ namespace IntegrationTests.Tests.Report
 
             await using (var ctx = _fixture.CreateContext())
             {
-                ctx.LegalEntities.Add(NewEntity("ACME", tax: "1111111111111"));
-                ctx.Limiti.Add(NewLimit("ACME"));
+                var acme = NewEntity("ACME", tax: "1111111111111");
+                ctx.LegalEntities.Add(acme);
+                ctx.Limiti.Add(NewLimit(acme.Id));
                 await ctx.SaveChangesAsync();
             }
 

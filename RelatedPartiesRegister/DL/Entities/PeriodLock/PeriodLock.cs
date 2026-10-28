@@ -16,8 +16,8 @@ public class PeriodLock
     public bool IsLocked { get; set; }
 
     /// <summary>
-    /// Odjel za koji važi zaključavanje. Null = globalno (svi odjeli).
-    /// Vrijednost odgovara prefiksu korisničkog imena (npr. "compliance", "kadrovski").
+    /// Historical migration boundary only. Runtime reads/writes the null global row;
+    /// no username prefix or department-specific lock contract remains.
     /// </summary>
     [StringLength(50)]
     public string? Department { get; set; }

@@ -23,17 +23,13 @@ public class PeriodLockMiddleware
             return;
         }
 
-        var username = context.User.FindFirst("preferred_username")?.Value
-            ?? context.User.Identity?.Name;
-        var department = DepartmentHelper.ExtractDepartment(username);
-
-        var isLocked = await periodLockRepository.IsCurrentPeriodLockedAsync(department);
+        var isLocked = await periodLockRepository.IsCurrentPeriodLockedAsync();
 
         if (isLocked)
         {
             _logger.LogWarning(
-                "Period lock blocked request. Method: {Method}, Path: {Path}, Department: {Department}",
-                context.Request.Method, context.Request.Path, department ?? "global");
+                "Global period lock blocked request. Method: {Method}, Path: {Path}",
+                context.Request.Method, context.Request.Path);
 
             context.Response.StatusCode = StatusCodes.Status423Locked;
             context.Response.ContentType = "application/json";
@@ -76,10 +72,16 @@ public class PeriodLockMiddleware
         if (path.StartsWith("/api/auth/", StringComparison.OrdinalIgnoreCase))
             return true;
 
+        // Mutations that change period/reportable business data. Capital edits and
+        // entity verification change reportable state, so they are locked too.
+        // Report generation, user administration, code lists and period administration
+        // are deliberately not locked (see the route matrix in PeriodLockCoverageTests).
         var protectedBusinessPath =
             path.StartsWith("/api/related-persons", StringComparison.OrdinalIgnoreCase) ||
             path.StartsWith("/api/legal-entities", StringComparison.OrdinalIgnoreCase) ||
-            path.StartsWith("/api/limiti", StringComparison.OrdinalIgnoreCase);
+            path.StartsWith("/api/limiti", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/api/capital", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/api/verification", StringComparison.OrdinalIgnoreCase);
 
         return !protectedBusinessPath;
     }

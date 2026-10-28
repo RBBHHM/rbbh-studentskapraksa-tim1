@@ -1,0 +1,153 @@
+@using RBI.DesignSystem.Components.Forms
+@using RBI.Forms
+@implements IDisposable
+@inject IRelatedPersonsApi Api
+
+<EditForm EditContext="_context" OnSubmit="SubmitAsync" FormName="physical-person" novalidate>
+    <fieldset disabled="@_submission.IsSubmitting">
+        <legend class="app-visually-hidden" tabindex="-1" @ref="_stepHeading">@T[_step == 1 ? "person.identity-step" : "person.business-step"]</legend>
+        <div class="app-stepper" aria-hidden="true"><span class="app-stepper__bar app-stepper__bar--on"></span><span class="@("app-stepper__bar" + (_step == 2 ? " app-stepper__bar--on" : ""))"></span><span class="app-stepper__label">@T["person.step-1"]</span><span class="app-stepper__label">@T["person.step-2"]</span></div>
+        @if (_step == 1)
+        {
+            <div class="registry-form-grid">
+                <RbiField TValue="string" Label="@T["person.first-name"]" Required For="@(() => Model.FirstName)"><RbiInput @bind-Value="Model.FirstName" maxlength="100" /></RbiField>
+                <RbiField TValue="string" Label="@T["person.last-name"]" Required For="@(() => Model.LastName)"><RbiInput @bind-Value="Model.LastName" maxlength="100" /></RbiField>
+                <RbiRadioGroup TValue="int?" Label="@T["person.residency"]" Required @bind-Value="Model.Residency" @bind-Value:after="Model.ResidencyChanged"><RbiRadio TValue="int?" Value="@((int?)1)">@T["person.resident"]</RbiRadio><RbiRadio TValue="int?" Value="@((int?)2)">@T["person.nonresident"]</RbiRadio></RbiRadioGroup>
+                <RbiField TValue="string" Label="@T["person.jmbg"]" Required="@(Model.Residency == 1)" Disabled="@(Model.Residency == 2)" For="@(() => Model.Jmbg)">
+                    <RbiInput @bind-Value="Model.Jmbg" maxlength="13" inputmode="numeric" @onblur="CheckDuplicatesAsync" />
+                </RbiField>
+                <RbiField TValue="string" Label="@T["person.passport"]" Required="@(Model.Residency == 2)" Disabled="@(Model.Residency == 1)" For="@(() => Model.PassportNumber)">
+                    <RbiInput @bind-Value="Model.PassportNumber" maxlength="20" @onblur="CheckDuplicatesAsync" />
+                </RbiField>
+                <RbiField TValue="string" Label="@T["person.fba"]" Required="@(Model.Residency == 2)" Disabled="@(Model.Residency == 1)" For="@(() => Model.FbaId)">
+                    <RbiInput @bind-Value="Model.FbaId" maxlength="10" inputmode="numeric" @onblur="CheckDuplicatesAsync" />
+                </RbiField>
+            </div>
+        }
+        else
+        {
+            <div class="registry-form-grid">
+                <RbiField TValue="string" Label="@T["person.basis"]" Required For="@(() => Model.RelationBasis)">
+                    <RbiSelect TValue="string" @bind-Value="Model.RelationBasis" @bind-Value:after="BasisChanged"><option value="">@T["common.select"]</option>
+                        @foreach (var option in Bases) { <option value="@option.Kod">@option.Naziv</option> }
+                    </RbiSelect>
+                </RbiField>
+                <RbiField TValue="string" Label="@T["person.description"]" Required For="@(() => Model.RelationDescription)"><RbiTextArea @bind-Value="Model.RelationDescription" ReadOnly /></RbiField>
+                <RbiField TValue="string" Label="@T["person.special-basis"]" Required For="@(() => Model.SpecialRelationBasis)">
+                    <RbiSelect TValue="string" @bind-Value="Model.SpecialRelationBasis" @bind-Value:after="Model.SpecialBasisChanged"><option value="">@T["common.select"]</option>
+                        @foreach (var option in SpecialBases) { <option value="@option.Kod">@option.Naziv</option> }
+                    </RbiSelect>
+                </RbiField>
+                @if (Model.IsFamily)
+                {
+                    <RbiField TValue="Guid?" Label="@T["person.related-to"]" Required For="@(() => Model.RelatedToPersonId)">
+                        <RbiSelect TValue="Guid?" @bind-Value="Model.RelatedToPersonId"><option value="">@T["common.select"]</option>
+                            @foreach (var person in People.Where(person => person.Id != Id)) { <option value="@person.Id">@person.FirstName @person.LastName</option> }
+                        </RbiSelect>
+                    </RbiField>
+                }
+                <RbiRadioGroup TValue="bool?" Label="@T["person.staff"]" Required Disabled="Model.IsFamily" @bind-Value="Model.IsIdentifiedStaff">
+                    <RbiRadio TValue="bool?" Value="@((bool?)true)">@T["common.yes"]</RbiRadio><RbiRadio TValue="bool?" Value="@((bool?)false)">@T["common.no"]</RbiRadio>
+                </RbiRadioGroup>
+                <RbiRadioGroup TValue="bool?" Label="@T["person.connected-bank"]" Required Disabled="Model.IsFamily" @bind-Value="Model.ConnectedWithBank">
+                    <RbiRadio TValue="bool?" Value="@((bool?)true)">@T["common.yes"]</RbiRadio><RbiRadio TValue="bool?" Value="@((bool?)false)">@T["common.no"]</RbiRadio>
+                </RbiRadioGroup>
+                <RbiRadioGroup TValue="bool?" Label="@T["person.special-bank"]" Required Disabled="Model.IsFamily" @bind-Value="Model.SpecialRelationshipWithBank">
+                    <RbiRadio TValue="bool?" Value="@((bool?)true)">@T["common.yes"]</RbiRadio><RbiRadio TValue="bool?" Value="@((bool?)false)">@T["common.no"]</RbiRadio>
+                </RbiRadioGroup>
+                <RbiRadioGroup TValue="bool?" Label="@T["person.contract"]" Required Disabled="Model.IsFamily" @bind-Value="Model.SpecialContract">
+                    <RbiRadio TValue="bool?" Value="@((bool?)true)">@T["common.yes"]</RbiRadio><RbiRadio TValue="bool?" Value="@((bool?)false)">@T["common.no"]</RbiRadio>
+                </RbiRadioGroup>
+                <RbiRadioGroup TValue="bool?" Label="@T["person.malus"]" Required Disabled="Model.IsFamily" @bind-Value="Model.MalusClawback">
+                    <RbiRadio TValue="bool?" Value="@((bool?)true)">@T["common.yes"]</RbiRadio><RbiRadio TValue="bool?" Value="@((bool?)false)">@T["common.no"]</RbiRadio>
+                </RbiRadioGroup>
+                <RbiField TValue="DateTime?" Id="person-from" Label="@T["person.from"]" Required For="@(() => Model.DateFrom)"><InputDate TValue="DateTime?" id="person-from" class="rbi-control" @bind-Value="Model.DateFrom" ParsingErrorMessage="@T["validation.date"]" /></RbiField>
+                <RbiField TValue="DateTime?" Id="person-to" Label="@T["person.to"]" Required For="@(() => Model.DateTo)"><InputDate TValue="DateTime?" id="person-to" class="rbi-control" @bind-Value="Model.DateTo" ParsingErrorMessage="@T["validation.date"]" /></RbiField>
+                <RbiRadioGroup TValue="bool?" Label="@T["person.no-family"]" Required Disabled="Model.IsFamily" @bind-Value="Model.DeclarationNoFamilyMembers">
+                    <RbiRadio TValue="bool?" Value="@((bool?)true)">@T["common.yes"]</RbiRadio><RbiRadio TValue="bool?" Value="@((bool?)false)">@T["common.no"]</RbiRadio>
+                </RbiRadioGroup>
+            </div>
+        }
+    <div role="alert" tabindex="-1" @ref="_summary"><ValidationSummary /></div>
+        <div class="registry-toolbar">
+            <RbiButton OnClick="Cancel" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton>
+            @if (_step == 2) { <RbiButton OnClick="Back" Variant="RbiButtonVariant.Secondary">@T["common.back"]</RbiButton> }
+            <RbiButton Type="RbiButtonType.Submit" Disabled="@(_checking || MutationBlocked)">@T[_step == 1 ? "common.actions.continue" : "common.save"]</RbiButton>
+        </div>
+    </fieldset>
+</EditForm>
+
+@code {
+    [Parameter] public bool MutationBlocked { get; set; }
+    [Parameter, EditorRequired] public PhysicalPersonDraft Model { get; set; } = null!;
+    [Parameter] public Guid? Id { get; set; }
+    [Parameter] public IReadOnlyList<RelatedPerson> People { get; set; } = [];
+    [Parameter] public IReadOnlyList<ReferenceOption> Bases { get; set; } = [];
+    [Parameter] public IReadOnlyList<ReferenceOption> SpecialBases { get; set; } = [];
+    [Parameter] public EventCallback<PersonRequest> Save { get; set; }
+    [Parameter] public EventCallback Cancel { get; set; }
+    private EditContext _context = null!;
+    private RbiServerValidation _validation = null!;
+    private RbiServerValidation _duplicateValidation = null!;
+    private readonly RbiFormSubmissionState _submission = new();
+    private readonly CancellationTokenSource _lifetime = new();
+    private CancellationTokenSource? _duplicate;
+    private int _step = 1;
+    private bool _checking;
+    private bool _focusStep, _focusErrors;
+    private ElementReference _stepHeading, _summary;
+    protected override void OnInitialized() { _context = new(Model); _validation = new(_context); _duplicateValidation = new(_context); }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusErrors) { _focusErrors = false; await _summary.FocusAsync(); }
+        else if (_focusStep) { _focusStep = false; await _stepHeading.FocusAsync(); }
+    }
+    private void Back() { _step = 1; _focusStep = true; }
+    private void BasisChanged() => Model.RelationDescription = Bases.FirstOrDefault(item => item.Kod == Model.RelationBasis)?.Opis;
+    private async Task SubmitAsync()
+    {
+        if (MutationBlocked) return;
+        await _submission.SubmitAsync(async () =>
+        {
+            var parsed = _context.Validate();
+            var errors = Model.Validate(identityOnly: _step == 1);
+            _validation.DisplayErrors(errors.ToDictionary(item => item.Key, item => item.Value.Select(key => T[key]).ToArray()));
+            if (!parsed || errors.Count > 0) { _focusErrors = true; return; }
+            if (!await CheckDuplicatesAsync()) { _step = 1; _focusErrors = true; return; }
+            if (_step == 1) { _step = 2; _focusStep = true; return; }
+            try { await Save.InvokeAsync(Model.ToRequest()); }
+            catch (RegistryApiException exception) { _validation.DisplayFormError(T[exception.MessageKey]); _focusErrors = true; }
+        });
+    }
+    private async Task<bool> CheckDuplicatesAsync()
+    {
+        _duplicate?.Cancel(); _duplicate?.Dispose();
+        _duplicate = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
+        var token = _duplicate.Token;
+        _checking = true;
+        try
+        {
+            var values = new[] { ("jmbg", nameof(Model.Jmbg), Model.Jmbg), ("passportNumber", nameof(Model.PassportNumber), Model.PassportNumber), ("fbaId", nameof(Model.FbaId), Model.FbaId) };
+            var found = new Dictionary<string, string[]>();
+            foreach (var (field, property, value) in values)
+            {
+                if (string.IsNullOrWhiteSpace(value)) continue;
+                var result = await Api.CheckDuplicateAsync(field, value, Id, token);
+                token.ThrowIfCancellationRequested();
+                if (result.Exists) found[property] = [T["validation.duplicate"]];
+            }
+            // Async lookup results must never clear synchronous model/parse
+            // errors (e.g. an invalid JMBG after blur and submit overlap).
+            _duplicateValidation.DisplayErrors(found);
+            return found.Count == 0;
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { return false; }
+        catch (RegistryApiException exception)
+        {
+            if (!token.IsCancellationRequested) _duplicateValidation.DisplayErrors(new Dictionary<string, string[]> { [""] = [T[exception.MessageKey]] });
+            return false;
+        }
+        finally { if (!token.IsCancellationRequested) _checking = false; }
+    }
+    public void Dispose() { _lifetime.Cancel(); _duplicate?.Cancel(); _duplicate?.Dispose(); _lifetime.Dispose(); _validation.Dispose(); _duplicateValidation.Dispose(); }
+}

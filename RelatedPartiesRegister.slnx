@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="RelatedPartiesRegister/RelatedPartiesRegister.csproj" />
+  <Project Path="RelatedPartiesRegister/UnitTests/UnitTests.csproj" />
+  <Project Path="RelatedPartiesRegister/IntegrationTests/IntegrationTests.csproj" />
+  <Project Path="src/Web.Blazor/RBBH.RelatedPartiesRegister.Web.csproj" />
+  <Project Path="tests/Web.Blazor.Tests/Web.Blazor.Tests.csproj" />
+  <Project Path="tests/Web.Blazor.BrowserHost/Web.Blazor.BrowserHost.csproj" />
+</Solution>

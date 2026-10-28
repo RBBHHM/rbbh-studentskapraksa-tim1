@@ -1,0 +1,62 @@
+@page "/app/guide"
+@using RBBH.RelatedPartiesRegister.Web.Components.Registry
+@implements IDisposable
+@inject AuthenticationStateProvider AuthenticationState
+@inject IProfileApi Profile
+
+<PageTitle>@T["guide.title"]</PageTitle>
+<div class="guide-card">
+<div class="guide-hero">
+    <span class="guide-hero__icon"><AppIcon Name="AppIconName.BookOpenCheck" /></span>
+    <div>
+        <RbiEyebrow Class="guide-hero__eyebrow">@T["guide.eyebrow"]</RbiEyebrow>
+        <RbiHeading Level="1" VisualLevel="4" Class="guide-hero__title">@T["guide.title"]</RbiHeading>
+        <RbiText Tone="RbiTextTone.Secondary" Class="guide-hero__lead">@T["guide.lead"]</RbiText>
+    </div>
+</div>
+</div>
+@if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
+else if (!_authenticated) { <IdentityNotice /> }
+else if (_error) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T["profile.unavailable"]" /><RbiButton OnClick="LoadAsync">@T["state.retry"]</RbiButton> }
+else if (_profile is not null)
+{
+    <section class="registry-guide" aria-label="@T["guide.title"]">
+        <div class="guide-legend">@foreach (var state in States)
+        { <div class="guide-legend__item"><Indicator Kind="@state" Label="@T["guide.status." + state]" /><div><h2 class="guide-legend__title">@T["guide.status." + state]</h2><p class="guide-legend__text">@T["guide.status." + state + ".description"]</p></div></div> }</div>
+        @foreach (var section in GuideContent.Visible(_profile))
+        {
+            <details open="@(section.Id == GuideContent.Visible(_profile).First().Id)">
+                <summary>
+                    <span class="guide-section__icon"><AppIcon Name="SectionIcon(section.Id)" /></span>
+                    <span class="guide-section__text"><strong>@T["guide." + section.Id + ".title"]</strong><span>@T["guide." + section.Id + ".summary"]</span></span>
+                    <RbiIcon Name="RbiIconName.ChevronDown" Class="guide-section__chevron" />
+                </summary>
+                <ol>@for (var index = 1; index <= section.Points; index++) { <li>@T["guide." + section.Id + ".point" + index]</li> }</ol>
+            </details>
+        }
+        <div class="guide-before"><AppIcon Name="AppIconName.ClipboardCheck" Class="guide-before__icon" /><div><h2>@T["guide.before-title"]</h2><p>@T["guide.before"]</p></div></div>
+    </section>
+}
+@code {
+    private static readonly string[] States = ["draft", "verified", "rejected", "inactive"];
+    private static AppIconName SectionIcon(string id) => id switch { "physical" => AppIconName.UsersRound, "legal" => AppIconName.Building2, "limits" => AppIconName.Scale, "reports" => AppIconName.FileSpreadsheet, _ => AppIconName.UserCog };
+    private readonly CancellationTokenSource _lifetime = new();
+    private readonly CancellationToken _token;
+    public Guide() => _token = _lifetime.Token;
+    private ApplicationProfile? _profile;
+    private bool _loading = true, _error, _authenticated;
+    protected override Task OnInitializedAsync() => LoadAsync();
+    private async Task LoadAsync()
+    {
+        _loading = true; _error = false; _profile = null;
+        try
+        {
+            _authenticated = (await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true;
+            if (_authenticated) _profile = await Profile.GetAsync(_token);
+        }
+        catch (RegistryApiException) { _error = true; }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally { _loading = false; }
+    }
+    public void Dispose() { _lifetime.Cancel(); _lifetime.Dispose(); }
+}

@@ -16,6 +16,8 @@ public partial class ConnectedPartiesDbContext : DbContext
 
     public virtual DbSet<RBBH.ConnectedParties.DL.Entities.Role.Role> Roles { get; set; }
     public virtual DbSet<UserRole> UserRoles { get; set; }
+    public virtual DbSet<Permission> Permissions { get; set; }
+    public virtual DbSet<RolePermission> RolePermissions { get; set; }
     public virtual DbSet<CodeList> CodeLists { get; set; }
     public virtual DbSet<CodeListDefinition> CodeListDefinitions { get; set; }
     public virtual DbSet<AppUser> AppUsers { get; set; }
@@ -67,6 +69,25 @@ public partial class ConnectedPartiesDbContext : DbContext
                   .WithMany(role => role.UserRoles)
                   .HasForeignKey(e => e.RoleId)
                   .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Permission>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Code).IsUnique();
+        });
+
+        modelBuilder.Entity<RolePermission>(entity =>
+        {
+            entity.HasKey(e => new { e.RoleId, e.PermissionId });
+            entity.HasOne(e => e.Role)
+                  .WithMany(role => role.RolePermissions)
+                  .HasForeignKey(e => e.RoleId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Permission)
+                  .WithMany(permission => permission.RolePermissions)
+                  .HasForeignKey(e => e.PermissionId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
 
         OnModelCreatingPartial(modelBuilder);

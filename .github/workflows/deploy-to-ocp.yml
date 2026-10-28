@@ -1,0 +1,153 @@
+name: Deploy immutable native image to OpenShift
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        options: [UAT, PROD]
+        default: UAT
+        required: true
+      component:
+        type: choice
+        options: [web, api]
+        required: true
+      image_tag:
+        description: sha- followed by the full verified build commit
+        type: string
+        required: true
+      image_digest:
+        description: sha256 digest from the successful image build
+        type: string
+        required: true
+permissions:
+  contents: read
+jobs:
+  deploy:
+    runs-on: rbbh-ghr-0
+    timeout-minutes: 20
+    environment: ${{ inputs.environment }}
+    concurrency:
+      group: ocp-${{ inputs.environment }}-${{ inputs.component }}
+      cancel-in-progress: false
+    env:
+      REGISTRY: ${{ vars.ARTIFACTORY_REGISTRY }}
+      REPOSITORY: ${{ vars.ARTIFACTORY_REPOSITORY }}
+      WEB_IMAGE: ${{ vars.WEB_IMAGE_NAME }}
+      API_IMAGE: ${{ vars.API_IMAGE_NAME }}
+      COMPONENT: ${{ inputs.component }}
+      TARGET_ENVIRONMENT: ${{ inputs.environment }}
+      IMAGE_TAG: ${{ inputs.image_tag }}
+      IMAGE_DIGEST: ${{ inputs.image_digest }}
+      OCP_SERVER: ${{ vars.OCP_SERVER }}
+      OCP_PROJECT: ${{ vars.OCP_PROJECT_NAME }}
+      OCP_TOKEN: ${{ secrets.OCP_TOKEN }}
+      PULL_SECRET: ${{ vars.OCP_PULL_SECRET }}
+      WEB_HEALTH_HOST: ${{ vars.WEB_HEALTH_HOST }}
+      API_HEALTH_HOST: ${{ vars.API_HEALTH_HOST }}
+      KUBECONFIG: ${{ runner.temp }}/rbbh-ocp-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.component }}.config
+    steps:
+      - name: Validate immutable target and environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$REGISTRY" =~ ^[a-zA-Z0-9.-]+(:[0-9]+)?$ ]]
+          [[ "$REPOSITORY" =~ ^[a-z0-9._/-]+$ ]]
+          [[ "$WEB_IMAGE" =~ ^[a-z0-9]+([-a-z0-9]*[a-z0-9])?$ ]]
+          [[ "$API_IMAGE" =~ ^[a-z0-9]+([-a-z0-9]*[a-z0-9])?$ ]]
+          test "$WEB_IMAGE" != "$API_IMAGE"
+          [[ "$IMAGE_TAG" =~ ^sha-[0-9a-f]{40}$ ]]
+          [[ "$IMAGE_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
+          [[ "$PULL_SECRET" =~ ^[a-z0-9]+([-a-z0-9]*[a-z0-9])?$ ]]
+          [[ "$OCP_PROJECT" =~ ^[a-z0-9]+([-a-z0-9]*[a-z0-9])?$ ]]
+          [[ "$OCP_SERVER" =~ ^https:// ]]
+          test -n "$OCP_TOKEN"
+          case "$COMPONENT" in web) name="$WEB_IMAGE"; health_host="$WEB_HEALTH_HOST";; api) name="$API_IMAGE"; health_host="$API_HEALTH_HOST";; *) exit 1;; esac
+          # Kubelet otherwise sends the dynamic pod IP as Host, which a bounded
+          # application AllowedHosts policy must reject. Owner supplies an allowed host.
+          [[ "$health_host" =~ ^[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?$ ]]
+          case "$TARGET_ENVIRONMENT" in PROD) runtime=Production;; UAT) runtime=UAT;; *) exit 1;; esac
+          echo "APP_NAME=$name" >> "$GITHUB_ENV"
+          echo "RUNTIME_ENVIRONMENT=$runtime" >> "$GITHUB_ENV"
+          echo "HEALTH_HOST=$health_host" >> "$GITHUB_ENV"
+      - name: Verify cluster prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Runner trust store must trust the cluster CA. Never bypass TLS.
+          oc login --server="$OCP_SERVER" --token="$OCP_TOKEN"
+          oc project "$OCP_PROJECT"
+          oc get secret "$PULL_SECRET" >/dev/null
+          oc get configmap "${APP_NAME}-config" >/dev/null
+          oc get secret "${APP_NAME}-secrets" >/dev/null
+          oc get configmap ca-certificates >/dev/null
+      - name: Apply digest-pinned deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Full commit tag is retained for traceability; digest is authoritative.
+          readiness="httpGet: { path: /health/ready, port: http, httpHeaders: [{ name: Host, value: \"${HEALTH_HOST}\" }] }"
+          liveness="httpGet: { path: /health/live, port: http, httpHeaders: [{ name: Host, value: \"${HEALTH_HOST}\" }] }"
+          oc apply -f - <<EOF
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: ${APP_NAME}
+            annotations:
+              rbbh/image-tag: "${IMAGE_TAG}"
+          spec:
+            replicas: 1
+            selector:
+              matchLabels: { app: ${APP_NAME} }
+            template:
+              metadata:
+                labels: { app: ${APP_NAME} }
+              spec:
+                imagePullSecrets:
+                  - name: ${PULL_SECRET}
+                containers:
+                  - name: ${APP_NAME}
+                    image: ${REGISTRY}/${REPOSITORY}/${APP_NAME}@${IMAGE_DIGEST}
+                    ports:
+                      - { name: http, containerPort: 8080 }
+                    env:
+                      - { name: ASPNETCORE_URLS, value: "http://+:8080" }
+                      - { name: ASPNETCORE_ENVIRONMENT, value: "${RUNTIME_ENVIRONMENT}" }
+                      - { name: TZ, value: Europe/Sarajevo }
+                      - { name: SSL_CERT_DIR, value: "/etc/ssl/certs:/etc/ssl/certs/additional-certs" }
+                    envFrom:
+                      - configMapRef: { name: "${APP_NAME}-config" }
+                      - secretRef: { name: "${APP_NAME}-secrets" }
+                    startupProbe:
+                      ${liveness}
+                      periodSeconds: 5
+                      failureThreshold: 60
+                    readinessProbe:
+                      ${readiness}
+                    livenessProbe:
+                      ${liveness}
+                    securityContext:
+                      allowPrivilegeEscalation: false
+                      capabilities: { drop: [ALL] }
+                      runAsNonRoot: true
+                    volumeMounts:
+                      - name: ca-certificates
+                        mountPath: /etc/ssl/certs/additional-certs
+                        readOnly: true
+                volumes:
+                  - name: ca-certificates
+                    configMap: { name: ca-certificates }
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: ${APP_NAME}
+          spec:
+            selector: { app: ${APP_NAME} }
+            ports:
+              - { name: http, port: 8080, targetPort: http }
+          EOF
+          oc rollout status "deployment/${APP_NAME}" --timeout=5m
+      - name: Remove job-scoped cluster credentials
+        if: always()
+        shell: bash
+        run: rm -f -- "$KUBECONFIG"

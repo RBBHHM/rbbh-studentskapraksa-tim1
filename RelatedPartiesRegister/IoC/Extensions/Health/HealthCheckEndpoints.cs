@@ -14,7 +14,7 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Health
                 Predicate = check => check.Name == "self", // only "self"
                 ResponseWriter = WriteHealthResponse,
                 ResultStatusCodes = _HealthStatuses
-            });
+            }).AllowAnonymous();
 
             // Readiness (checks if dependencies are available) 
             builder.MapHealthChecks("/health/ready", new HealthCheckOptions
@@ -22,7 +22,7 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Health
                 Predicate = check => check.Tags.Contains("ready"), // only tagged checks
                 ResponseWriter = WriteHealthResponse,
                 ResultStatusCodes = _HealthStatuses
-            });
+            }).AllowAnonymous();
 
             return builder;
         }
@@ -42,14 +42,7 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Health
 
             var result = JsonSerializer.Serialize(new
             {
-                status = report.Status.ToString(),
-                checks = report.Entries.Select(e => new
-                {
-                    name = e.Key,
-                    status = e.Value.Status.ToString(),
-                    description = e.Value.Description
-                }),
-                duration = report.TotalDuration
+                status = report.Status.ToString()
             });
 
             return context.Response.WriteAsync(result);

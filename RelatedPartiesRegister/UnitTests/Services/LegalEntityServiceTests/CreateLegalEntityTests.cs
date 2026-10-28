@@ -33,8 +33,6 @@ namespace UnitTests.Services.LegalEntityServiceTests
             IsResident = true,
             TaxNumber = ValidTaxNumber,
             Name = "Rezidentno DOO",
-            GccNumber = "10001",
-            GccName = "Rezidentna grupa",
             BasisOfConnection = "Vlasništvo",
             ConnectionDescription = "Opis povezanosti",
             ConnectedWithBank = true,
@@ -46,8 +44,6 @@ namespace UnitTests.Services.LegalEntityServiceTests
             IsResident = false,
             FbaId = "1234567890",
             Name = "Nerezidentno LLC",
-            GccNumber = "10002",
-            GccName = "Nerezidentna grupa",
             BasisOfConnection = "Vlasništvo",
             ConnectionDescription = "Opis povezanosti",
             ConnectedWithBank = true,
@@ -138,24 +134,6 @@ namespace UnitTests.Services.LegalEntityServiceTests
             // Assert
             (await act.Should().ThrowAsync<ValidationException>())
                 .Which.Field.Should().Be("taxNumber");
-        }
-
-        // GCC broj je numerički, a naziv se čuva uz odabrani broj.
-        [Fact]
-        public async Task CreateAsync_WithGccFreeText_PersistsGccNumberAndNameAsEntered()
-        {
-            // Arrange
-            var service = NewService(out _);
-            var dto = ValidResidentDto();
-            dto.GccNumber = "123";
-            dto.GccName = "Grupa Primjer";
-
-            // Act
-            var result = await service.CreateAsync(dto, "tester");
-
-            // Assert
-            result.GccNumber.Should().Be("123");
-            result.GccName.Should().Be("Grupa Primjer");
         }
 
         // ── PL-58 - Nerezidentna pravna lica ───────────────────────────────────────

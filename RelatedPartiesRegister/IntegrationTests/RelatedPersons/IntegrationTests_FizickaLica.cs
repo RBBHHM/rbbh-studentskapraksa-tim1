@@ -548,8 +548,6 @@ namespace IntegrationTests.Tests.RelatedPersons
             LastName = "Kovač",
             Residency = ResidencyType.Resident,
             JMBG = jmbg,
-            GCCNumber = "1001",
-            GCCName = "Test GCC",
             RelationBasis = "TestOsnov",
             RelationDescription = "TestOsnov",
             SpecialRelationBasis = "B1",
@@ -566,8 +564,6 @@ namespace IntegrationTests.Tests.RelatedPersons
             Residency = ResidencyType.NonResident,
             PassportNumber = passportNumber,
             FBAId = fbaId,
-            GCCNumber = "1002",
-            GCCName = "Test GCC NR",
             RelationBasis = "TestOsnov",
             RelationDescription = "TestOsnov",
             SpecialRelationBasis = "NKF",
@@ -582,8 +578,7 @@ namespace IntegrationTests.Tests.RelatedPersons
             FirstName = "Amira",
             LastName = "Kovač",
             Residency = ResidencyType.Resident,
-            JMBG = jmbg,
-            RelationshipType = FamilyRelationshipType.Spouse
+            JMBG = jmbg
         };
 
         private static CreateFamilyMemberDTO NerezidentFamilyMemberDto(string passportNumber) => new()
@@ -591,8 +586,7 @@ namespace IntegrationTests.Tests.RelatedPersons
             FirstName = "Anna",
             LastName = "Smith",
             Residency = ResidencyType.NonResident,
-            PassportNumber = passportNumber,
-            RelationshipType = FamilyRelationshipType.Child
+            PassportNumber = passportNumber
         };
     }
 }

@@ -3,61 +3,22 @@ using RBBH.ConnectedParties.DL.DTO.Users;
 using RBBH.ConnectedParties.DL.Persistence;
 using RBBH.ConnectedParties.DL.Entities.Users;
 using RBBH.ConnectedParties.Exceptions.Validations;
-using Mapster;
 using Microsoft.EntityFrameworkCore;
 using RBBH.ConnectedParties.Helpers.Constants;
 
 namespace RBBH.ConnectedParties.BL.Services;
 
-public class AppUserService(ConnectedPartiesDbContext dbContext, KeycloakAdminService keycloakAdmin, IAuditService audit) : IAppUserService
+public partial class AppUserService(ConnectedPartiesDbContext dbContext, KeycloakAdminService keycloakAdmin, IAuditService audit) : IAppUserService
 {
-    private readonly ConnectedPartiesDbContext _db           = dbContext;
-    private readonly KeycloakAdminService  _keycloakAdmin = keycloakAdmin;
-    private readonly IAuditService         _audit         = audit;
+    private readonly ConnectedPartiesDbContext _db = dbContext;
+    private readonly KeycloakAdminService _keycloakAdmin = keycloakAdmin;
+    private readonly IAuditService _audit = audit;
 
     public async Task<Result<GetUsersResponseDTO>> GetUsersAsync(
         int page, int pageSize, string? search, string? role)
     {
         page = Math.Max(page, 1);
         pageSize = Math.Clamp(pageSize, 1, 200);
-        // Primary source: Keycloak (source of truth for users)
-        var kcResult = _keycloakAdmin.IsEnabled
-            ? await _keycloakAdmin.GetUsersAsync(search)
-            : Result<List<UserDTO>>.InternalServerError("Keycloak nije konfigurisan; koristi se lokalni direktorij korisnika.");
-
-        List<UserDTO> users;
-        if (kcResult.IsSuccessful && kcResult.Value.Any())
-        {
-            users = kcResult.Value;
-
-            // Filter by role if specified
-            if (!string.IsNullOrWhiteSpace(role))
-                users = users.Where(u => u.Roles.Contains(role, StringComparer.OrdinalIgnoreCase)).ToList();
-        }
-        else
-        {
-            // Fallback: local DB only
-            users = await GetUsersFromDbAsync(search, role);
-        }
-
-        var total = users.Count;
-        var paged = users
-            .OrderBy(u => u.LastName).ThenBy(u => u.FirstName)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToList();
-
-        return Result<GetUsersResponseDTO>.Success(new GetUsersResponseDTO
-        {
-            Users    = paged,
-            Total    = total,
-            Page     = page,
-            PageSize = pageSize
-        });
-    }
-
-    private async Task<List<UserDTO>> GetUsersFromDbAsync(string? search, string? role)
-    {
         var query = _db.AppUsers.AsNoTracking().AsQueryable();
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -71,36 +32,57 @@ public class AppUserService(ConnectedPartiesDbContext dbContext, KeycloakAdminSe
                     || u.Username.ToLower().Contains(term.ToLower()));
         }
 
-        var users    = await query.ToListAsync();
-        var userIds  = users.Select(u => u.Id).ToList();
+        var users = await query.ToListAsync();
+        var userIds = users.Select(u => u.Id).ToList();
         var userRoles = await _db.UserRoles.AsNoTracking()
             .Where(ur => userIds.Contains(ur.UserId) && ur.IsActive)
-            .Join(_db.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => new { ur.UserId, r.Name })
+            .Join(_db.Roles.Where(role => role.IsActive && ApplicationAccessRoles.Assignable.Contains(role.Name)),
+                ur => ur.RoleId, r => r.Id, (ur, r) => new { ur.UserId, r.Name })
             .ToListAsync();
         var rolesByUser = userRoles.GroupBy(x => x.UserId)
             .ToDictionary(g => g.Key, g => g.Select(x => x.Name).ToList());
+        var grants = await _db.RolePermissions.Where(mapping => mapping.Role.IsActive && mapping.Permission.IsActive)
+            .Select(mapping => new { Role = mapping.Role.Name, Permission = mapping.Permission.Code }).ToListAsync();
 
-        return users.Select(u => new UserDTO
+        // Preserve culture-sensitive in-memory ordering and role comparison. Only
+        // materialize permission lists/DTOs for the requested page (at most 200).
+        var matching = users.AsEnumerable();
+        if (!string.IsNullOrWhiteSpace(role))
+            matching = matching.Where(user => rolesByUser.TryGetValue(user.Id, out var assigned)
+                && assigned.Contains(role, StringComparer.OrdinalIgnoreCase));
+        var filtered = matching.ToList();
+        var pageUsers = filtered.OrderBy(user => user.LastName).ThenBy(user => user.FirstName)
+            .Skip((page - 1) * pageSize).Take(pageSize);
+        var result = pageUsers.Select(u => new UserDTO
         {
-            Id        = u.Id,
-            Username  = u.Username,
+            Id = u.Id,
+            Username = u.Username,
             FirstName = u.FirstName,
-            LastName  = u.LastName,
-            Email     = u.Email,
-            IsActive  = u.IsActive,
-            Roles     = rolesByUser.TryGetValue(u.Id, out var r) ? r : []
+            LastName = u.LastName,
+            Email = u.Email,
+            IsActive = u.IsActive,
+            Roles = rolesByUser.TryGetValue(u.Id, out var r) ? r : [],
+            EffectivePermissions = u.IsActive ? grants.Where(grant =>
+                    rolesByUser.TryGetValue(u.Id, out var assignedRoles) && assignedRoles.Contains(grant.Role))
+                .Select(grant => grant.Permission).Concat(RolePermissionMatrix.PermissionsByRole[ApplicationAccessRoles.Guest])
+                .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList() : []
         }).ToList();
+        return Result<GetUsersResponseDTO>.Success(new GetUsersResponseDTO
+        {
+            Users = result,
+            Total = filtered.Count,
+            Page = page,
+            PageSize = pageSize
+        });
     }
 
-    public async Task<Result<UserDTO>> CreateUserAsync(CreateUserDTO dto, string createdBy)
+    public async Task<Result<UserDTO>> CreateUserAsync(CreateUserDTO dto, string createdBy, string? ipAddress = null)
     {
         var requestedRoleIds = dto.RoleIds
             .Concat(Guid.TryParse(dto.RoleId, out var legacyRoleId) ? [legacyRoleId] : [])
             .Where(id => id != Guid.Empty)
             .Distinct()
             .ToArray();
-        if (requestedRoleIds.Length == 0)
-            return Result<UserDTO>.ValidationError("Odaberite najmanje jedan funkcionalni pristup.");
         if (await _db.AppUsers.AnyAsync(u => u.Username == dto.Username))
             return Result<UserDTO>.ValidationError($"Korisnik s korisničkim imenom '{dto.Username}' već postoji.");
         var normalizedEmail = dto.Email.Trim().ToLower();
@@ -109,103 +91,87 @@ public class AppUserService(ConnectedPartiesDbContext dbContext, KeycloakAdminSe
         if (await _db.AppUsers.AnyAsync(u => u.Email == normalizedEmail))
             return Result<UserDTO>.ValidationError($"Korisnik s email adresom '{dto.Email}' već postoji.");
 
-        List<string> roleNames;
+        var localRoles = await _db.Roles
+            .Where(role => requestedRoleIds.Contains(role.Id) && role.IsActive)
+            .ToListAsync();
+        if (localRoles.Count != requestedRoleIds.Length || localRoles.Any(role => !ApplicationAccessRoles.Assignable.Contains(role.Name)))
+            return Result<UserDTO>.ValidationError("Odabrane aplikacijske role nisu ispravne.");
+
+        var roleNames = localRoles.Select(role => role.Name).ToList();
         var keycloakId = Guid.NewGuid().ToString();
         if (_keycloakAdmin.IsEnabled)
         {
-            var rolesResult = await _keycloakAdmin.GetRealmRolesAsync();
-            var keycloakRoles = rolesResult.Value?
-                .Where(role => requestedRoleIds.Contains(role.Id) && ApplicationAccessRoles.All.Contains(role.Name))
-                .ToList() ?? [];
-            if (keycloakRoles.Count != requestedRoleIds.Length)
-                return Result<UserDTO>.ValidationError("Odabrani pristupi nisu ispravno podešeni u Keycloaku.");
-
-            var kcResult = await _keycloakAdmin.CreateKeycloakUserAsync(
-                dto.Username, dto.FirstName, dto.LastName, normalizedEmail, dto.IsActive);
-            if (!kcResult.IsSuccessful)
+            var keycloakUsers = await _keycloakAdmin.GetUsersAsync(normalizedEmail);
+            if (!keycloakUsers.IsSuccessful)
                 return Result<UserDTO>.InternalServerError(
-                    kcResult.ExceptionMessage ?? "Korisnika trenutno nije moguće kreirati u sistemu za prijavu.");
-            keycloakId = kcResult.Value;
-            var assigned = await _keycloakAdmin.AssignRealmRolesToUserAsync(
-                keycloakId,
-                keycloakRoles.Select(role => new KeycloakAdminService.KeycloakRolePublic(role.Id.ToString(), role.Name)));
-            if (!assigned)
-            {
-                await _keycloakAdmin.DeleteUserAsync(keycloakId);
-                return Result<UserDTO>.InternalServerError("Korisnik je kreiran, ali pristupi nisu sačuvani u Keycloaku.");
-            }
-            roleNames = keycloakRoles.Select(role => role.Name).ToList();
-        }
-        else
-        {
-            var localRoles = await _db.Roles
-                .Where(role => requestedRoleIds.Contains(role.Id) && role.IsActive)
-                .ToListAsync();
-            if (localRoles.Count != requestedRoleIds.Length || localRoles.Any(role => !ApplicationAccessRoles.All.Contains(role.Name)))
-                return Result<UserDTO>.ValidationError("Dozvoljena su samo četiri funkcionalna pristupa aplikaciji.");
-            roleNames = localRoles.Select(role => role.Name).ToList();
+                    keycloakUsers.ExceptionMessage ?? "Korisnika trenutno nije moguće pronaći u sistemu za prijavu.");
+            var keycloakUser = keycloakUsers.Value.SingleOrDefault(user =>
+                user.Email.Equals(normalizedEmail, StringComparison.OrdinalIgnoreCase));
+            if (keycloakUser is null || keycloakUser.Id == Guid.Empty)
+                return Result<UserDTO>.ValidationError("Korisnik s navedenom email adresom nije pronađen u Keycloaku.");
+            keycloakId = keycloakUser.Id.ToString();
+            dto.Username = keycloakUser.Username;
+            dto.FirstName = keycloakUser.FirstName;
+            dto.LastName = keycloakUser.LastName;
         }
 
         var user = new AppUser
         {
-            KeycloakId = string.IsNullOrEmpty(keycloakId) ? Guid.NewGuid().ToString() : keycloakId,
-            Username   = dto.Username.Trim(),
-            FirstName  = dto.FirstName.Trim(),
-            LastName   = dto.LastName.Trim(),
-            Email      = normalizedEmail,
-            IsActive   = dto.IsActive,
-            CreatedBy  = createdBy,
-            CreatedAt  = DateTime.UtcNow
+            KeycloakId = keycloakId, // Unconfirmed placeholder when provider administration is disabled.
+            KeycloakSubjectConfirmed = _keycloakAdmin.IsEnabled && !string.IsNullOrEmpty(keycloakId),
+            KeycloakSubjectLinkedAt = _keycloakAdmin.IsEnabled ? DateTime.UtcNow : null,
+            Username = dto.Username.Trim(),
+            FirstName = dto.FirstName.Trim(),
+            LastName = dto.LastName.Trim(),
+            Email = normalizedEmail,
+            IsActive = dto.IsActive,
+            CreatedBy = createdBy,
+            CreatedAt = DateTime.UtcNow
         };
 
         _db.AppUsers.Add(user);
 
-        var localRolesToAssign = await _db.Roles
-            .Where(role => roleNames.Contains(role.Name) && role.IsActive)
-            .ToListAsync();
-        foreach (var role in localRolesToAssign)
+        foreach (var role in localRoles)
         {
             _db.UserRoles.Add(new DL.Entities.Role.UserRole
             {
-                Id = Guid.NewGuid(), UserId = user.Id, RoleId = role.Id,
-                IsActive = true, CreatedAt = DateTime.UtcNow, CreatedBy = createdBy
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                RoleId = role.Id,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = createdBy
             });
         }
 
-        try
-        {
-            await _db.SaveChangesAsync();
-        }
-        catch
-        {
-            // Keycloak and SQL Server cannot share one transaction. Compensate
-            // the external write so a failed local save does not leave an orphan.
-            if (_keycloakAdmin.IsEnabled && !string.IsNullOrWhiteSpace(keycloakId))
-                await _keycloakAdmin.DeleteUserAsync(keycloakId);
-            throw;
-        }
+        await _db.SaveChangesAsync();
 
         // Audit log — CREATE
         await _audit.LogAsync(new AuditEntry
         {
             TableName = "AppUser",
-            RecordId  = keycloakId,
-            Action    = "CREATE",
+            RecordId = keycloakId,
+            Action = "CREATE",
             NewValues = System.Text.Json.JsonSerializer.Serialize(new
-                { user.Username, user.Email, user.IsActive, Roles = roleNames }),
-            UserId    = createdBy,
-            Username  = createdBy
+            { user.Username, user.Email, user.IsActive, Roles = roleNames }),
+            UserId = createdBy,
+            Username = createdBy,
+            IpAddress = ipAddress
         });
 
         return Result<UserDTO>.Success(new UserDTO
         {
-            Id        = user.Id,
-            Username  = user.Username,
+            Id = user.Id,
+            Username = user.Username,
             FirstName = user.FirstName,
-            LastName  = user.LastName,
-            Email     = user.Email,
-            IsActive  = user.IsActive,
-            Roles     = roleNames
+            LastName = user.LastName,
+            Email = user.Email,
+            IsActive = user.IsActive,
+            Roles = roleNames,
+            EffectivePermissions = user.IsActive ? (await _db.RolePermissions
+                .Where(mapping => mapping.Role.IsActive && mapping.Permission.IsActive && roleNames.Contains(mapping.Role.Name))
+                .Select(mapping => mapping.Permission.Code).ToListAsync())
+                .Concat(RolePermissionMatrix.PermissionsByRole[ApplicationAccessRoles.Guest]).Distinct(StringComparer.Ordinal).ToList() : []
         });
     }
 }

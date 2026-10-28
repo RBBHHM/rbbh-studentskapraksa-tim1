@@ -1,0 +1,49 @@
+@inject NavigationManager Navigation
+@inject RBI.Authorization.IRbiPermissionService Permissions
+@inject IProfileApi Profile
+@inject AuthenticationStateProvider AuthenticationState
+
+<div class="app-nav">
+    <div class="app-nav__areas">
+        <div class="app-nav__area">
+            <p class="app-nav__eyebrow">@T["nav.area.work"]</p>
+            <nav class="app-nav__list" aria-label="@T["nav.area.work"]">
+                <NavEntry Label="@T["nav.home"]" Href="/app" Icon="RbiIconName.Gauge" Active="@(IsActive("app") || IsActive(""))" />
+                @if (_legal) { <NavEntry Label="@T["legal.title"]" Href="/app/legal-persons" Icon="RbiIconName.Building2" Active="@IsActive("app/legal-persons")" /> }
+                @if (_physical) { <NavEntry Label="@T["person.title"]" Href="/app/physical-persons" Icon="RbiIconName.UserRound" Active="@IsActive("app/physical-persons")" /> }
+                @if (_limits) { <NavEntry Label="@T["limit.title"]" Href="/app/limits" Glyph="AppIconName.Scale" Active="@IsActive("app/limits")" /> }
+                @if (_capital) { <NavEntry Label="@T["capital.title"]" Href="/app/capital" Glyph="AppIconName.Landmark" Active="@IsActive("app/capital")" /> }
+                @if (_reports) { <NavEntry Label="@T["reports.title"]" Href="/app/reports" Glyph="AppIconName.FileChartColumn" Active="@IsActive("app/reports")" /> }
+                @if (_capital) { <NavEntry Label="@T["notifications.title"]" Href="/app/notifications" Icon="RbiIconName.Bell" Active="@IsActive("app/notifications")" /> }
+            </nav>
+        </div>
+        @if (_admin)
+        {
+            <div class="app-nav__area">
+                <p class="app-nav__eyebrow">@T["nav.area.administration"]</p>
+                <nav class="app-nav__list" aria-label="@T["nav.area.administration"]">
+                    <NavEntry Label="@T["users.title"]" Href="/app/admin/users" Icon="RbiIconName.Users" Active="@IsActive("app/admin/users")" />
+                    <NavEntry Label="@T["period.title"]" Href="/app/admin/period" Glyph="AppIconName.CalendarClock" Active="@IsActive("app/admin/period")" />
+                    <NavEntry Label="@T["codes.title"]" Href="/app/admin/code-lists" Glyph="AppIconName.BookOpen" Active="@IsActive("app/admin/code-lists")" />
+                    <NavEntry Label="@T["audit.title"]" Href="/app/admin/audit" Glyph="AppIconName.ScrollText" Active="@IsActive("app/admin/audit")" />
+                </nav>
+            </div>
+        }
+    </div>
+    <AuthorizeView><Authorized>
+        <nav class="app-nav__footer" aria-label="@T["guide.title"]">
+            <NavEntry Label="@T["guide.title"]" Href="/app/guide" Glyph="AppIconName.BookOpenCheck" Active="@IsActive("app/guide")" />
+        </nav>
+    </Authorized></AuthorizeView>
+</div>
+
+@code {
+    private bool _physical, _legal, _limits, _capital, _admin, _reports;
+    protected override async Task OnInitializedAsync()
+    {
+        if ((await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated != true) return;
+        try { _admin = ApplicationAccess.IsAdministrator(await Profile.GetAsync()); _reports = await Permissions.HasPermissionAsync("reports.read"); _physical = await Permissions.HasPermissionAsync("fl.read"); _legal = await Permissions.HasPermissionAsync("pl.read"); _limits = await Permissions.HasPermissionAsync("limiti.read"); _capital = await Permissions.HasPermissionAsync("kapital.read"); }
+        catch (RegistryApiException) { _physical = _legal = _limits = _capital = _admin = _reports = false; }
+    }
+    private bool IsActive(string path) => Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].Trim('/') == path;
+}

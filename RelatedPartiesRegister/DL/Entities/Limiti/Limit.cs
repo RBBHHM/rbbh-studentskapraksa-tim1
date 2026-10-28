@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace RBBH.ConnectedParties.DL.Entities.Limiti;
 
 /// <summary>
-/// Limit (regulatorni/interni) — npr. limiti izloženosti prema kapitalu banke.
+/// Limit (regulatorni/interni) izloženosti prema konkretnom pravnom licu.
 /// Tabela: Limiti.
 /// </summary>
 public class Limit
@@ -12,50 +12,32 @@ public class Limit
     [Key]
     public int Id { get; set; }
 
-    /// <summary>Naziv limita — obavezan, maksimalno 100 karaktera.</summary>
+    /// <summary>Pravno lice na koje se limit odnosi.</summary>
     [Required]
-    [StringLength(100)]
-    public string Naziv { get; set; } = string.Empty;
+    public Guid LegalEntityId { get; set; }
 
-    /// <summary>Tip/vrsta limita — obavezan (npr. vrijednost iz šifarnika VrstaLimita).</summary>
+    /// <summary>Navigacijska veza prema pravnom licu.</summary>
+    public LegalEntity.LegalEntity LegalEntity { get; set; } = null!;
+
+    /// <summary>Tip/vrsta limita — obavezan, vrijednost iz šifarnika VrstaLimita.</summary>
     [Required]
     [StringLength(100)]
     public string TipLimita { get; set; } = string.Empty;
-    
-        /// <summary>Odobreni iznos limita.</summary>
-    [Required]
-    [Column(TypeName = "decimal(18,2)")]
-    public decimal IznosLimita { get; set; }
 
-    /// <summary>Iskorišteni dio limita.</summary>
-    [Required]
+    /// <summary>Odobreni iznos limita — neobavezno, dostavlja se ručno (buduća SATA integracija).</summary>
     [Column(TypeName = "decimal(18,2)")]
-    public decimal Utilizacija { get; set; }
+    public decimal? OdobreniLimit { get; set; }
 
-    /// <summary>Korigovani limit — opcionalan. Ako je popunjen, koristi se za obračun raspoloživog limita.</summary>
+    /// <summary>Maksimalna očekivana utilizacija — neobavezno.</summary>
     [Column(TypeName = "decimal(18,2)")]
-    public decimal? KorigovaniLimit { get; set; }
+    public decimal? MaksimalnaOcekivanaUtilizacija { get; set; }
 
-    /// <summary>Automatski obračunat raspoloživi limit.</summary>
-    [Column(TypeName = "decimal(18,2)")]
-    public decimal RaspoloziviLimit { get; set; }
-
-    /// <summary>Rok max očekivane utilizacije — datum, neobavezno.</summary>
-    public DateTime? RokUtilizacije { get; set; }
+    /// <summary>Rok očekivane utilizacije — datum, neobavezno.</summary>
+    public DateTime? RokOcekivaneUtilizacije { get; set; }
 
     /// <summary>Komentar — slobodan tekst, neobavezno.</summary>
     [StringLength(1000)]
     public string? Komentar { get; set; }
-    
-    /// <summary>Regulatorni kapital — obavezan broj.</summary>
-    [Required]
-    [Column(TypeName = "decimal(18,2)")]
-    public decimal RegulatorniKapital { get; set; }
-
-    /// <summary>Osnovni kapital — obavezan broj.</summary>
-    [Required]
-    [Column(TypeName = "decimal(18,2)")]
-    public decimal OsnovniKapital { get; set; }
 
     // ─── Audit polja ────────────────────────────────────────────────────────
 

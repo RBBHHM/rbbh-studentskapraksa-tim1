@@ -37,7 +37,7 @@ namespace UnitTests.Controllers
         public void GetModules_ForMultipleAccesses_EnablesExactlySelectedModules()
         {
             // Arrange
-            var controller = CreateControllerForRoles("physical-persons", "limits");
+            var controller = CreateControllerForRoles("FL", "limiti");
 
             // Act
             var modules = GetModules(controller);
@@ -53,7 +53,7 @@ namespace UnitTests.Controllers
         public void GetModules_ForReportingAccess_EnablesOnlyReporting()
         {
             // Arrange
-            var controller = CreateControllerForRoles("regulatory-reporting");
+            var controller = CreateControllerForRoles("kapital");
 
             // Act
             var modules = GetModules(controller);
@@ -77,11 +77,21 @@ namespace UnitTests.Controllers
             modules.Should().OnlyContain(m => m.IsEnabled == false);
         }
 
+        [Theory]
+        [InlineData("admin")]
+        [InlineData("gost")]
+        public void GetModules_ForGlobalReadRole_EnablesAllModules(string role)
+        {
+            var modules = GetModules(CreateControllerForRoles(role));
+
+            modules.Should().OnlyContain(module => module.IsEnabled);
+        }
+
         [Fact]
         public void GetModules_AlwaysReturnsAllModuleDefinitions()
         {
             // Arrange
-            var controller = CreateControllerForRoles("physical-persons");
+            var controller = CreateControllerForRoles("FL");
 
             // Act
             var modules = GetModules(controller);

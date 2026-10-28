@@ -113,14 +113,6 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("GccName")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("GccNumber")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -196,14 +188,14 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<decimal>("IznosLimita")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<string>("Komentar")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
-                    b.Property<decimal?>("KorigovaniLimit")
+                    b.Property<Guid>("LegalEntityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("MaksimalnaOcekivanaUtilizacija")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("ModifiedAt")
@@ -213,21 +205,10 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("Naziv")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<decimal>("OsnovniKapital")
+                    b.Property<decimal?>("OdobreniLimit")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("RaspoloziviLimit")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("RegulatorniKapital")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime?>("RokUtilizacije")
+                    b.Property<DateTime?>("RokOcekivaneUtilizacije")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("TipLimita")
@@ -235,12 +216,9 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<decimal>("Utilizacija")
-                        .HasColumnType("decimal(18,2)");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("Naziv");
+                    b.HasIndex("LegalEntityId");
 
                     b.HasIndex("TipLimita");
 
@@ -428,11 +406,6 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<Guid>("RelatedPersonId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("RelationshipType")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
                     b.Property<string>("Residency")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -479,22 +452,10 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("FamilyRelationshipType")
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("GCCName")
-                        .HasMaxLength(250)
-                        .HasColumnType("nvarchar(250)");
-
-                    b.Property<string>("GCCNumber")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -584,11 +545,58 @@ namespace RBBH.ConnectedParties.Migrations
                     b.ToTable("RelatedPersons");
                 });
 
+            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Report.Capital", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CapitalDate")
+                        .HasColumnType("date");
+
+                    b.Property<decimal>("CoreCapital")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("RegulatoryCapital")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("SupplementaryCapital")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Capitals");
+                });
+
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Report.ClientLimit", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CapitalDate")
+                        .HasColumnType("date");
 
                     b.Property<decimal>("CoreCapital")
                         .HasPrecision(18, 2)
@@ -632,6 +640,10 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<decimal>("RegulatoryCapital")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("SupplementaryCapital")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
@@ -694,6 +706,38 @@ namespace RBBH.ConnectedParties.Migrations
                     b.ToTable("Reports");
                 });
 
+            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Role.Permission", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Module")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("Permissions");
+                });
+
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Role.Role", b =>
                 {
                     b.Property<Guid>("Id")
@@ -727,6 +771,21 @@ namespace RBBH.ConnectedParties.Migrations
                         .IsUnique();
 
                     b.ToTable("Roles");
+                });
+
+            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Role.RolePermission", b =>
+                {
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PermissionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("RoleId", "PermissionId");
+
+                    b.HasIndex("PermissionId");
+
+                    b.ToTable("RolePermissions");
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Role.UserRole", b =>
@@ -887,6 +946,12 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<bool>("KeycloakSubjectConfirmed")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("KeycloakSubjectLinkedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -916,6 +981,17 @@ namespace RBBH.ConnectedParties.Migrations
                         .IsUnique();
 
                     b.ToTable("AppUsers");
+                });
+
+            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Limiti.Limit", b =>
+                {
+                    b.HasOne("RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntity", "LegalEntity")
+                        .WithMany()
+                        .HasForeignKey("LegalEntityId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("LegalEntity");
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.RelatedPersons.FamilyMember", b =>
@@ -957,6 +1033,25 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Navigation("LegalEntity");
                 });
 
+            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Role.RolePermission", b =>
+                {
+                    b.HasOne("RBBH.ConnectedParties.DL.Entities.Role.Permission", "Permission")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("PermissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RBBH.ConnectedParties.DL.Entities.Role.Role", "Role")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Permission");
+
+                    b.Navigation("Role");
+                });
+
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Role.UserRole", b =>
                 {
                     b.HasOne("RBBH.ConnectedParties.DL.Entities.Role.Role", "Role")
@@ -980,8 +1075,15 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Navigation("RelatedFamilyMembers");
                 });
 
+            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Role.Permission", b =>
+                {
+                    b.Navigation("RolePermissions");
+                });
+
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Role.Role", b =>
                 {
+                    b.Navigation("RolePermissions");
+
                     b.Navigation("UserRoles");
                 });
 #pragma warning restore 612, 618

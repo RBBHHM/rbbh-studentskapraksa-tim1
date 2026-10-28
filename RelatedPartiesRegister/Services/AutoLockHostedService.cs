@@ -1,3 +1,4 @@
+using System.Text.Json;
 using RBBH.ConnectedParties.BL.ServiceInterfaces;
 using RBBH.ConnectedParties.DL.Entities.PeriodLock;
 
@@ -104,6 +105,48 @@ public class AutoLockHostedService : BackgroundService
             month,
             year
         );
+
+        var auditService = scope.ServiceProvider.GetRequiredService<IAuditService>();
+        await auditService.LogAsync(new AuditEntry
+        {
+            TableName = "PeriodLock",
+            RecordId = $"{year}-{month:D2}",
+            Action = "PERIOD_LOCK",
+            NewValues = JsonSerializer.Serialize(new { year, month, lockedBy = "system" }),
+            UserId = "system",
+            Username = "system"
+        });
+
+        await NotifyAllUsersAsync(scope.ServiceProvider, year, month);
+    }
+
+    private async Task NotifyAllUsersAsync(IServiceProvider services, int year, int month)
+    {
+        try
+        {
+            var emailService = services.GetRequiredService<IEmailService>();
+            var appUserService = services.GetRequiredService<IAppUserService>();
+
+            var usersResult = await appUserService.GetUsersAsync(1, 500, null, null);
+            if (!usersResult.IsSuccessful)
+                return;
+
+            var emails = usersResult.Value.Users
+                .Where(u => u.IsActive && !string.IsNullOrWhiteSpace(u.Email))
+                .Select(u => u.Email)
+                .ToList();
+
+            if (emails.Count == 0)
+                return;
+
+            await emailService.SendPeriodLockedBroadcastAsync(emails, "system", year, month);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "AutoLock: slanje broadcast obavijesti za period {Year}-{Month} nije uspjelo.",
+                year, month);
+        }
     }
 
     private static TimeSpan GetDelayUntilNextEightOClock()
@@ -117,16 +160,6 @@ public class AutoLockHostedService : BackgroundService
         return nextRun - now;
     }
 
-    private static bool IsLastWorkingDayOfMonth(DateTime date)
-    {
-        var lastDay = new DateTime(date.Year, date.Month, DateTime.DaysInMonth(date.Year, date.Month));
-
-        while (lastDay.DayOfWeek == DayOfWeek.Saturday ||
-               lastDay.DayOfWeek == DayOfWeek.Sunday)
-        {
-            lastDay = lastDay.AddDays(-1);
-        }
-
-        return date.Date == lastDay.Date;
-    }
+    private static bool IsLastWorkingDayOfMonth(DateTime date) =>
+        date.Date == AutoLockHelper.GetLastWorkingDay(date.Year, date.Month).Date;
 }

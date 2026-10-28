@@ -1,0 +1,278 @@
+@page "/app/physical-persons"
+@using RBBH.RelatedPartiesRegister.Web.Components.Registry
+@using RBI.DesignSystem.Components.Forms
+@using Microsoft.JSInterop
+@implements IDisposable
+@inject AuthenticationStateProvider AuthenticationState
+@inject IProfileApi Profile
+@inject IRelatedPersonsApi Api
+@inject IPeriodApi Period
+@inject FileDelivery Files
+
+<PageTitle>@T["person.title"]</PageTitle>
+<HeroBar Title="@T["person.title"]" Description="@T["person.subtitle"]" Eyebrow="@T["nav.area.work"]">
+    <Actions>
+        @if (_authenticated && _canRead && !_loading && _error is null)
+        {
+
+            @if (_canCreate) { <label class="registry-file-button registry-file-button--secondary"><RbiIcon Name="RbiIconName.FileUp" /><span>@T["common.import"]</span><InputFile @key="_fileKey" id="physical-import" accept=".xlsx" OnChange="ChooseImport" disabled="@(_busy || _openingEditor || _refreshing || _periodLocked)" /></label> }
+            <RbiButton Disabled="@(_busy || _openingEditor || _refreshing)" OnClick="ExportAsync" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.Download" />@T["common.export"]</RbiButton>
+            @if (_canCreate) { <RbiButton Disabled="@(_busy || _refreshing || _periodLocked)" Loading="_openingEditor" LoadingLabel="@T["state.loading"]" OnClick="() => Edit(null)"><RbiIcon Name="RbiIconName.Plus" />@T["common.new"]</RbiButton> }
+        }
+    </Actions>
+</HeroBar>
+@if (!_authenticated && !_loading) { <IdentityNotice /> }
+else if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
+else if (_error is not null)
+{
+    <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_error]" Announcement="RbiAlertAnnouncement.Assertive" />
+    <RbiButton OnClick="LoadAsync">@T["state.retry"]</RbiButton>
+}
+else if (!_canRead) { <RbiAlert Title="@T["errors.forbidden"]" /> }
+else
+{
+    @if ((_canCreate || _canEdit || _canDelete) && _periodLocked) { <RbiAlert Title="@T[_periodError ?? "errors.locked"]" /> }
+    @if (!_delete && _action is null && _actionError is not null) { <div role="alert" class="app-toast app-toast--danger"><RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_actionError]" /></div> }
+    @if (_notice is not null) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@T.Format(_notice, _noticeCount)" /></div> }
+    <div class="registry-controls"><RegistrySearch Id="physical-search" @bind-Value="_search" /></div>
+    <div class="registry-surface">
+    @if (!Filtered.Any()) { <RegistryEmpty Body="@T[string.IsNullOrWhiteSpace(_search) ? "state.empty-body" : "state.no-match"]" /> }
+    else
+    {
+        <RbiTable AccessibleLabel="@T["person.title"]" Class="registry-table registry-persons-table">
+            <thead><tr><th scope="col" class="registry-center">@T["person.type"]</th><th scope="col">@T["person.first-name"]</th><th scope="col">@T["person.last-name"]</th><th scope="col" class="registry-center">@T["person.residency"]</th><th scope="col">@T["person.jmbg"]</th><th scope="col">@T["person.passport"]</th><th scope="col">@T["person.basis"]</th><th scope="col" class="registry-center">@T["common.status"]</th>@if (_canEdit || _canDelete) { <th scope="col" class="registry-center registry-actions-cell">@T["common.actions"]</th> }</tr></thead>
+            <tbody>
+                @foreach (var person in Filtered)
+                {
+                    <tr @key="person.Id">
+                        <td class="registry-center"><Indicator Kind="@(person.RelatedToPersonId.HasValue ? "family" : person.IsIdentifiedStaff ? "employee" : "related")" Label="@T[person.RelatedToPersonId.HasValue ? "person.family" : person.IsIdentifiedStaff ? "person.employee" : "person.related"]" /></td>
+                        <td>@person.FirstName</td><td>@person.LastName</td>
+                        <td class="registry-center"><Indicator Kind="@(person.Residency == 1 ? "resident" : "nonresident")" Label="@T[person.Residency == 1 ? "person.resident" : "person.nonresident"]" /></td>
+                        <td>@Dash(person.Jmbg)</td><td>@Dash(person.PassportNumber)</td><td>@Dash(person.RelationBasis)</td>
+                        <td class="registry-center"><Indicator Kind="@person.StatusLabel.ToLowerInvariant()" Label="@T[$"status.{person.StatusLabel.ToLowerInvariant()}"]" /></td>
+                        @if (_canEdit || _canDelete)
+                        {
+                            <td class="registry-actions-cell"><div class="registry-row-actions">
+                                @if (_canEdit)
+                                {
+                                    @if (person.Status != 3) { <RbiButton Disabled="@(_busy || _openingEditor || _refreshing || _periodLocked)" OnClick="() => Confirm(person, false)" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["common.verify"]" title="@T["common.verify"]"><RbiIcon Name="RbiIconName.CheckCircle2" /></RbiButton> }
+                                    <RbiButton Disabled="@(_busy || _refreshing || _periodLocked)" Loading="_openingEditor" LoadingLabel="@T["state.loading"]" OnClick="() => Edit(person)" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["common.edit"]" title="@T["common.edit"]"><RbiIcon Name="RbiIconName.Pencil" /></RbiButton>
+                                }
+                                @if (_canDelete) { <RbiButton Disabled="@(_busy || _openingEditor || _refreshing || _periodLocked)" OnClick="() => Confirm(person, true)" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["common.deactivate"]" title="@T["common.deactivate"]" Class="registry-danger-icon"><RbiIcon Name="RbiIconName.Trash2" /></RbiButton> }
+                            </div></td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </RbiTable>
+    }
+    </div>
+    <section class="registry-family" aria-labelledby="family-heading">
+        <div class="registry-family__intro">
+            <RbiIcon Name="RbiIconName.Network" Class="registry-family__icon" />
+            <div>
+                <RbiHeading Level="2" VisualLevel="3" id="family-heading" Class="registry-family__title">@T["family.title"]</RbiHeading>
+                <RbiText Tone="RbiTextTone.Secondary" Class="registry-family__description">@T["family.description"]</RbiText>
+            </div>
+        </div>
+        <label for="family-person" class="registry-family__label">@T["family.person"]</label>
+        <div class="registry-family__select"><RbiSelect TValue="Guid?" Id="family-person" @bind-Value="_treePerson" @bind-Value:after="LoadTreeAsync" Placeholder="@T["family.placeholder"]">
+            @foreach (var person in _people) { <option value="@person.Id">@person.FirstName @person.LastName — @T[person.RelatedToPersonId.HasValue ? "person.family" : person.IsIdentifiedStaff ? "person.employee" : "person.related"]</option> }
+        </RbiSelect></div>
+        <div class="registry-family__panel">
+        @if (_treePerson is null) { <RbiText Tone="RbiTextTone.Secondary">@T["family.prompt"]</RbiText> }
+        else if (_treeLoading) { <div role="status">@T["state.loading"]</div> }
+        else if (_treeError)
+        {
+            <RbiAlert Tone="RbiAlertTone.Danger" Title="@T["family.unavailable"]" />
+            <RbiButton OnClick="LoadTreeAsync">@T["state.retry"]</RbiButton>
+        }
+        else if (_tree.Count == 0) { <RbiText Tone="RbiTextTone.Secondary">@T["family.empty"]</RbiText> }
+        else { <PersonTree Nodes="_tree" /> }
+        </div>
+    </section>
+}
+
+@if (_draft is { } draft)
+{
+    <RbiDialog Open Class="app-form-dialog" Title="@T[_editingId.HasValue ? "common.edit" : "common.new"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseEditor">
+        <DialogBody>
+            @if (_fallback) { <RbiAlert Title="@T["person.fallback"]" /> }
+            <PhysicalPersonForm MutationBlocked="_periodLocked" @key="draft" Model="draft" Id="_editingId" People="_people" Bases="_bases" SpecialBases="_special" Save="SaveAsync" Cancel="() => CloseEditor(false)" />
+        </DialogBody>
+    </RbiDialog>
+}
+<RbiAlertDialog Open="@(_action is not null && _delete)" OpenChanged="CloseAction" Title="@T[_delete ? "person.delete-title" : "person.verify-title"]"
+                Description="@T[_delete ? "person.delete-description" : "person.verify-description"]" CancelLabel="@T["common.cancel"]" ConfirmLabel="@T["common.delete"]"
+                ConfirmLoadingLabel="@T["common.saving"]" Confirming="_busy" OnConfirm="RunActionAsync">
+    @if (_actionError is not null) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_actionError]" /> }
+</RbiAlertDialog>
+<RbiDialog Open="@(_importResult is not null || _importError is not null)" OpenChanged="CloseImport" Class="app-result-dialog" Title="@T["import.result-title"]" Description="@(_importResult is { } summary ? T.Format("import.result", summary.Imported, summary.Failed) : null)" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)">
+    <DialogBody>
+        @if (_importError is not null) { <div class="app-result app-result--danger" role="alert">@T[_importError]</div> }
+        else if (_importResult is { } result)
+        {
+            @if (result.Errors.Count > 0)
+            {
+                <div class="app-result app-result--danger" role="status"><p><strong>@T["import.fix-title"]</strong></p><ol>@foreach (var error in result.Errors) { <li>@SafeImportError(error)</li> }</ol></div>
+            }
+            else { <div class="app-result app-result--success" role="status">@T["import.success"]</div> }
+        }
+    </DialogBody>
+    <DialogFooter><RbiButton OnClick="() => CloseImport(false)" Disabled="_busy">@T["common.close"]</RbiButton></DialogFooter>
+</RbiDialog>
+
+@code {
+    private readonly CancellationTokenSource _lifetime = new();
+    private readonly CancellationToken _token;
+    private bool _disposed;
+    public PhysicalPersons() => _token = _lifetime.Token;
+    private CancellationTokenSource? _treeRequest;
+    private IReadOnlyList<RelatedPerson> _people = [];
+    private IReadOnlyList<PersonTreeNode> _tree = [];
+    private IReadOnlyList<ReferenceOption> _bases = [], _special = [];
+    private PhysicalPersonDraft? _draft;
+    private Guid? _editingId, _treePerson;
+    private RelatedPerson? _action;
+    private IBrowserFile? _importFile;
+    private Guid _fileKey = Guid.NewGuid();
+    private ImportResult? _importResult;
+    private int _noticeCount;
+    private string? _search, _error, _notice, _actionError, _importError;
+    private string? _periodError;
+    private bool _periodLocked = true;
+    private bool _authenticated, _loading = true, _busy, _canRead, _canCreate, _canEdit, _canDelete, _treeLoading, _treeError, _delete, _importOpen, _fallback;
+    private bool _loaded, _refreshing, _openingEditor;
+    private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+    private IEnumerable<RelatedPerson> Filtered => _people.Where(person => person.Matches(_search));
+    protected override Task OnInitializedAsync() => LoadAsync();
+    private async Task LoadAsync()
+    {
+        if (_disposed) return;
+        _loading = !_loaded; _refreshing = true; _error = null;
+        try
+        {
+            _authenticated = (await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true;
+            if (!_authenticated) return;
+            var profile = await Profile.GetAsync(_token);
+            _canRead = profile.Permissions.Contains("FL_VIEW"); _canCreate = profile.Permissions.Contains("FL_CREATE");
+            _canEdit = profile.Permissions.Contains("FL_EDIT"); _canDelete = profile.Permissions.Contains("FL_DELETE");
+            if (!_canRead) return;
+            try { _periodLocked = (await Period.CurrentAsync(_token)).IsLocked; _periodError = null; }
+            catch (RegistryApiException) { _periodLocked = true; _periodError = "period.state-unavailable"; }
+            _people = await Api.ListAsync(_token);
+            _loaded = true;
+            if (_treePerson is { } selected && !_people.Any(person => person.Id == selected)) _treePerson = null;
+            await LoadTreeAsync();
+        }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        catch (RegistryApiException exception) { _error = exception.MessageKey; }
+        finally { _loading = false; _refreshing = false; }
+    }
+    private async Task Edit(RelatedPerson? person)
+    {
+        if (_periodLocked || _busy || _openingEditor || _refreshing || _disposed || !_authenticated || (person is null ? !_canCreate : !_canEdit)) return;
+        // Keep the launching button focusable while loading codebooks: disabling
+        // it would erase the modal's return-focus target before the modal opens.
+        _openingEditor = true;
+        try
+        {
+            _editingId = person?.Id;
+            _bases = PhysicalPersonOptions.Bases(T); _special = PhysicalPersonOptions.Special(T); _fallback = false;
+            try
+            {
+                var bases = await Api.OptionsAsync("OsnovPovezanosti", _token);
+                var special = await Api.OptionsAsync("OsnovPosebnogOdnosa", _token);
+                if (bases.Count > 0) _bases = bases.Select(item => item with { Opis = item.Opis ?? _bases.FirstOrDefault(fallback => fallback.Kod == item.Kod)?.Opis }).ToArray(); else _fallback = true;
+                if (special.Count > 0) _special = special; else _fallback = true;
+            }
+            catch (RegistryApiException) { _fallback = true; }
+            catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { return; }
+            if (person?.RelationBasis is { } basis && !_bases.Any(option => option.Kod == basis)) _bases = [.. _bases, new(basis, basis, person.RelationDescription)];
+            if (person?.SpecialRelationBasis is { } specialBasis && !_special.Any(option => option.Kod == specialBasis)) _special = [.. _special, new(specialBasis, specialBasis, null)];
+            _draft = person is null ? new() : PhysicalPersonDraft.From(person);
+        }
+        finally { _openingEditor = false; }
+    }
+    private void CloseEditor(bool open) { if (!open && !_busy) _draft = null; }
+    private async Task SaveAsync(PersonRequest request)
+    {
+        if (!_authenticated || (_editingId.HasValue ? !_canEdit : !_canCreate)) throw new RegistryApiException(System.Net.HttpStatusCode.Forbidden);
+        if (_periodLocked) throw new RegistryApiException((System.Net.HttpStatusCode)423);
+        if (_busy) return;
+        _busy = true;
+        try { await Api.SaveAsync(_editingId, request, _token); _notice = "toast.saved"; await LoadAsync(); }
+        catch (RegistryApiException exception) when ((int?)exception.StatusCode == 423) { _periodLocked = true; await InvokeAsync(StateHasChanged); throw; }
+        finally { _busy = false; }
+        _draft = null;
+    }
+    private async Task Confirm(RelatedPerson person, bool delete) { if (!_authenticated || _periodLocked || (delete ? !_canDelete : !_canEdit) || _openingEditor || _refreshing || _busy) return; _action = person; _delete = delete; _actionError = null; if (!delete) await RunActionAsync(); }
+    private void CloseAction(bool open) { if (!open && !_busy) _action = null; }
+    private async Task RunActionAsync()
+    {
+        if (!_authenticated || (_delete ? !_canDelete : !_canEdit) || _busy || _action is null) return;
+        if (_periodLocked) { _actionError = "errors.locked"; return; }
+        _busy = true;
+        try
+        {
+            if (_delete) await Api.DeleteAsync(_action.Id, _token); else await Api.VerifyAsync(_action.Id, _token);
+            _notice = _delete ? "toast.deleted" : "toast.verified"; _action = null; await LoadAsync();
+        }
+        catch (RegistryApiException exception) { if ((int?)exception.StatusCode == 423) _periodLocked = true; _actionError = exception.MessageKey; if (!_delete) _action = null; }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally { _busy = false; }
+    }
+    private async Task ExportAsync()
+    {
+        if (!_authenticated || !_canRead || _busy) return; _busy = true;
+        try { await Files.DownloadAsync(await Api.ExportAsync(_token), _token); }
+        catch (RegistryApiException exception) { _error = exception.MessageKey; }
+        catch (JSDisconnectedException) { }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally { _busy = false; }
+    }
+    private async Task LoadTreeAsync()
+    {
+        if (!_authenticated || !_canRead || _disposed) return;
+        _treeRequest?.Cancel(); _treeRequest?.Dispose(); _treeRequest = CancellationTokenSource.CreateLinkedTokenSource(_token);
+        var token = _treeRequest.Token;
+        _tree = []; _treeError = false; _treeLoading = _treePerson.HasValue;
+        if (_treePerson is not { } id) return;
+        try { var result = await Api.TreeAsync(id, token); token.ThrowIfCancellationRequested(); _tree = result; }
+        catch (RegistryApiException) { if (!token.IsCancellationRequested) _treeError = true; }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        finally { if (!token.IsCancellationRequested) _treeLoading = false; }
+    }
+    private void CloseImport(bool open) { if (!_busy) { _importOpen = open; if (!open) { _importFile = null; _importResult = null; _importError = null; _fileKey = Guid.NewGuid(); } } }
+    private async Task ChooseImport(InputFileChangeEventArgs args)
+    {
+        _importFile = null; _importResult = null; _importError = null;
+        if (!_authenticated || !_canCreate) { _importError = "errors.forbidden"; return; }
+        var file = args.File;
+        if (file.Size is <= 0 or > 10485760 || !file.Name.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase)) { _importError = "import.invalid-file"; return; }
+        _importFile = file;
+        await ImportAsync();
+    }
+    private async Task ImportAsync()
+    {
+        if (!_authenticated || !_canCreate) { _importError = "errors.forbidden"; return; }
+        if (_periodLocked) { _importError = "errors.locked"; return; }
+        if (_busy || _importFile is null) return; _busy = true; _importError = null;
+        try
+        {
+            await using var stream = _importFile.OpenReadStream(10485760, _token);
+            _importResult = await Api.ImportAsync(stream, _importFile.Name, _token); if (_importResult.Failed == 0) { _notice = "toast.import"; _noticeCount = _importResult.Imported; } _importFile = null;
+            await LoadAsync();
+        }
+        catch (RegistryApiException exception) { _importError = exception.StatusCode == System.Net.HttpStatusCode.BadRequest ? "import.invalid-workbook" : exception.MessageKey; }
+        catch (IOException) { _importError = "import.invalid-file"; }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally { _busy = false; }
+    }
+    private string SafeImportError(string error)
+    {
+        string[] columns = ["person.first-name", "person.last-name", "person.residency", "person.jmbg", "person.passport", "person.fba", "person.basis", "person.special-basis", "person.from", "person.to", "person.no-family", "person.connected-bank", "person.special-bank", "person.contract", "person.malus"];
+        return ImportFeedback.Format(error, T, columns);
+    }
+    public void Dispose() { _disposed = true; _lifetime.Cancel(); _treeRequest?.Cancel(); _treeRequest?.Dispose(); _lifetime.Dispose(); }
+}

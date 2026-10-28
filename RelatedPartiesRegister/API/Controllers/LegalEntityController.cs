@@ -7,15 +7,17 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using RBBH.ConnectedParties.Helpers.Excel;
+using RBBH.ConnectedParties.Helpers.Constants;
 
 namespace RBBH.ConnectedParties.API.Controllers;
 
 /// <summary>
 /// Controller za upravljanje registrom povezanih pravnih lica.
 /// </summary>
+[RBBH.ConnectedParties.Helpers.RequireActorEmail]
 [ApiController]
 [Route("api/legal-entities")]
-[Authorize(Roles = "legal-persons")]
+[Authorize]
 [Produces("application/json")]
 public class LegalEntityController : ControllerBase
 {
@@ -29,9 +31,7 @@ public class LegalEntityController : ControllerBase
     }
 
     private string CurrentUser() =>
-        User.FindFirst(ClaimTypes.Name)?.Value
-        ?? User.FindFirst("preferred_username")?.Value
-        ?? "system";
+        RBBH.ConnectedParties.Helpers.AuthenticatedActor.Email(User);
 
     /// <summary>
     /// Vraća paginiranu listu svih aktivnih pravnih lica.
@@ -40,6 +40,7 @@ public class LegalEntityController : ControllerBase
     /// <param name="pageSize">Broj rezultata po stranici (10, 25, 50).</param>
     /// <param name="search">Pretraga po nazivu, poreznom broju ili FBA ID-u (case-insensitive).</param>
     [HttpGet]
+    [Authorize(Policy = ApplicationPolicies.LegalPersonsRead)]
     [ProducesResponseType(typeof(LegalEntityListDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetAll(
@@ -52,14 +53,15 @@ public class LegalEntityController : ControllerBase
     }
 
     [HttpGet("export")]
+    [Authorize(Policy = ApplicationPolicies.LegalPersonsRead)]
     public async Task<IActionResult> Export()
     {
         var items = await _legalEntityService.GetAllForExportAsync();
         var bytes = RegistryExcelExporter.Create(
             "Pravna lica",
-            ["Naziv", "Rezidentnost", "Porezni broj", "Matični broj", "FBA ID", "GCC broj", "GCC naziv", "Osnov povezanosti", "Opis povezanosti", "Povezano s bankom", "Datum od", "Datum do", "Status"],
+            ["Naziv", "Rezidentnost", "Porezni broj", "Matični broj", "FBA ID", "Osnov povezanosti", "Opis povezanosti", "Povezano s bankom", "Datum od", "Datum do", "Status"],
             items.Select(item => (IReadOnlyList<object?>)
-            [item.Name, item.IsResident ? "Rezident" : "Nerezident", item.TaxNumber, item.MaticniBroj, item.FbaId, item.GccNumber, item.GccName, item.BasisOfConnection, item.ConnectionDescription, item.ConnectedWithBank, item.DateFrom, item.DateTo, item.Status]));
+            [item.Name, item.IsResident ? "Rezident" : "Nerezident", item.TaxNumber, item.MaticniBroj, item.FbaId, item.BasisOfConnection, item.ConnectionDescription, item.ConnectedWithBank, item.DateFrom, item.DateTo, item.Status]));
         return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"pravna-lica-{DateTime.UtcNow:yyyyMMdd-HHmm}.xlsx");
     }
 
@@ -68,6 +70,7 @@ public class LegalEntityController : ControllerBase
     /// </summary>
     /// <param name="id">ID pravnog lica.</param>
     [HttpGet("{id:guid}")]
+    [Authorize(Policy = ApplicationPolicies.LegalPersonsRead)]
     [ProducesResponseType(typeof(LegalEntityDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -80,12 +83,13 @@ public class LegalEntityController : ControllerBase
 
         return Ok(entity);
     }
-        /// <summary>
+    /// <summary>
     /// Pretražuje pravna lica za potrebe forme Limita.
     /// Pretraga se vrši po nazivu i matičnom broju.
     /// </summary>
     /// <param name="search">Tekst pretrage — naziv ili matični broj.</param>
     [HttpGet("limits/search")]
+    [Authorize(Policy = ApplicationPolicies.LimitsRead)]
     [ProducesResponseType(typeof(List<LegalEntityLookupDTO>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> SearchForLimits([FromQuery] string? search = null)
@@ -99,6 +103,7 @@ public class LegalEntityController : ControllerBase
     /// </summary>
     /// <param name="id">ID pravnog lica.</param>
     [HttpGet("{id:guid}/limit-form-data")]
+    [Authorize(Policy = ApplicationPolicies.LimitsRead)]
     [ProducesResponseType(typeof(LegalEntityLimitFormDataDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -119,6 +124,7 @@ public class LegalEntityController : ControllerBase
     /// </summary>
     /// <param name="dto">Podaci novog pravnog lica.</param>
     [HttpPost]
+    [Authorize(Policy = ApplicationPolicies.LegalPersonsCreate)]
     [ProducesResponseType(typeof(LegalEntityDTO), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -157,6 +163,7 @@ public class LegalEntityController : ControllerBase
     /// <param name="id">ID pravnog lica.</param>
     /// <param name="dto">Novi podaci.</param>
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = ApplicationPolicies.LegalPersonsEdit)]
     [ProducesResponseType(typeof(LegalEntityDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -192,6 +199,7 @@ public class LegalEntityController : ControllerBase
     /// </summary>
     /// <param name="id">ID pravnog lica.</param>
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = ApplicationPolicies.LegalPersonsDelete)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -216,11 +224,12 @@ public class LegalEntityController : ControllerBase
 
     /// <summary>
     /// Uvozi pravna lica iz Excel fajla (.xlsx).
-    /// Kolone: Naziv, Tip (Rezident/Nerezident), Porezni broj, FBA ID, GCC broj, GCC naziv,
+    /// Kolone: Naziv, Tip (Rezident/Nerezident), Porezni broj, FBA ID,
     /// Matbroj, Osnov povezanosti, Opis povezanosti, Pov. lice sa Bankom (DA/NE), Datum od, Datum do.
     /// Red 1 je zaglavlje i preskače se.
     /// </summary>
     [HttpPost("import")]
+    [Authorize(Policy = ApplicationPolicies.LegalPersonsCreate)]
     [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(ImportResultDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

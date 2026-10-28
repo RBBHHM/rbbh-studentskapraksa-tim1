@@ -1,6 +1,6 @@
 using FluentAssertions;
 using RBBH.ConnectedParties.BL.Services;
-using RBBH.ConnectedParties.DL.Entities.Limiti;
+using RBBH.ConnectedParties.DL.Entities.LegalEntity;
 using RBBH.ConnectedParties.DL.Entities.Report;
 using RBBH.ConnectedParties.DL.Persistence;
 using Microsoft.Extensions.Logging;
@@ -14,10 +14,10 @@ namespace UnitTests.Services.ReportServiceTests
     /// Ovaj fajl: Dnevni i mjesečni izvještaji (ReportService generisanje + liste + paginacija).
     /// Koristi EF Core InMemory bazu; ILogger se mockira (Moq).
     ///
-    /// Izvor podataka za izvještaj je tabela Limiti; agregati:
-    ///   TotalClients = broj različitih naziva (Distinct Naziv)
-    ///   ClientsWithBreachedLimit = broj limita gdje je RaspoloziviLimit < 0
-    ///   TotalExposure = suma Utilizacija
+    /// Izvor podataka za izvještaj je tabela ClientLimits (Kapital modul, 1:1 sa LegalEntity); agregati:
+    ///   TotalClients = broj ClientLimit zapisa
+    ///   ClientsWithBreachedLimit = broj zapisa gdje je IsLimitBreached true
+    ///   TotalExposure = suma CurrentExposure
     /// </summary>
     public class ReportGenerationTests
     {
@@ -28,16 +28,25 @@ namespace UnitTests.Services.ReportServiceTests
             return new ReportService(ctx, logger.Object);
         }
 
-        private static Limit NewLimit(string naziv, decimal utilizacija, decimal raspolozivi,
-            string tip = "Izloženost") => new()
+        private static LegalEntity NewLegalEntity(string name) => new()
         {
-            Naziv = naziv,
-            TipLimita = tip,
-            IznosLimita = 1000m,
-            Utilizacija = utilizacija,
-            RaspoloziviLimit = raspolozivi,
-            RegulatorniKapital = 5000m,
-            OsnovniKapital = 4000m,
+            IsResident = true,
+            TaxNumber = Guid.NewGuid().ToString("N")[..13],
+            Name = name,
+            BasisOfConnection = "Test osnov",
+            Status = "VERIFIED",
+            CreatedBy = "seed"
+        };
+
+        private static ClientLimit NewClientLimit(Guid legalEntityId, decimal currentExposure, bool breached = false) => new()
+        {
+            LegalEntityId = legalEntityId,
+            RegulatoryCapital = 5000m,
+            CoreCapital = 4000m,
+            ExposureLimit = 1000m,
+            CurrentExposure = currentExposure,
+            Currency = "BAM",
+            IsLimitBreached = breached,
             CreatedBy = "seed",
             CreatedAt = DateTime.UtcNow
         };
@@ -62,10 +71,12 @@ namespace UnitTests.Services.ReportServiceTests
         {
             // Arrange
             var service = NewService(out var ctx);
-            ctx.Limiti.AddRange(
-                NewLimit("ACME", utilizacija: 200m, raspolozivi: 100m),
-                NewLimit("ACME", utilizacija: 100m, raspolozivi: 20m, tip: "Interni"), // isti klijent, drugi tip
-                NewLimit("BETA", utilizacija: 300m, raspolozivi: -50m)                  // prekoračen
+            var acme = NewLegalEntity("ACME");
+            var beta = NewLegalEntity("BETA");
+            ctx.LegalEntities.AddRange(acme, beta);
+            ctx.ClientLimits.AddRange(
+                NewClientLimit(acme.Id, currentExposure: 300m),
+                NewClientLimit(beta.Id, currentExposure: 300m, breached: true) // prekoračen
             );
             await ctx.SaveChangesAsync();
 
@@ -76,8 +87,8 @@ namespace UnitTests.Services.ReportServiceTests
             report.ReportType.Should().Be("DAILY");
             report.ReportDate.Should().Be(DateTime.UtcNow.Date);
             report.TotalClients.Should().Be(2, "ACME i BETA su 2 različita klijenta");
-            report.ClientsWithBreachedLimit.Should().Be(1, "samo BETA ima RaspoloziviLimit < 0");
-            report.TotalExposure.Should().Be(600m, "200 + 100 + 300");
+            report.ClientsWithBreachedLimit.Should().Be(1, "samo BETA ima IsLimitBreached = true");
+            report.TotalExposure.Should().Be(600m, "300 + 300");
             ctx.Reports.Should().ContainSingle(r => r.ReportType == "DAILY");
         }
 
@@ -97,16 +108,20 @@ namespace UnitTests.Services.ReportServiceTests
             report.TotalExposure.Should().Be(0m);
         }
 
-        // Dnevni izvještaj - prekoračenje se broji samo kad je raspoloživi limit negativan
+        // Dnevni izvještaj - prekoračenje se broji samo kad je IsLimitBreached true
         [Fact]
-        public async Task GenerateDailyReportAsync_CountsBreachedOnlyWhenRaspoloziviNegative()
+        public async Task GenerateDailyReportAsync_CountsBreachedOnlyWhenIsLimitBreachedTrue()
         {
             // Arrange
             var service = NewService(out var ctx);
-            ctx.Limiti.AddRange(
-                NewLimit("A", 10m, raspolozivi: 0m),    // 0 nije prekoračenje
-                NewLimit("B", 10m, raspolozivi: -1m),   // prekoračen
-                NewLimit("C", 10m, raspolozivi: -999m)  // prekoračen
+            var a = NewLegalEntity("A");
+            var b = NewLegalEntity("B");
+            var c = NewLegalEntity("C");
+            ctx.LegalEntities.AddRange(a, b, c);
+            ctx.ClientLimits.AddRange(
+                NewClientLimit(a.Id, 10m, breached: false),
+                NewClientLimit(b.Id, 10m, breached: true),
+                NewClientLimit(c.Id, 10m, breached: true)
             );
             await ctx.SaveChangesAsync();
 
@@ -125,7 +140,9 @@ namespace UnitTests.Services.ReportServiceTests
         {
             // Arrange
             var service = NewService(out var ctx);
-            ctx.Limiti.Add(NewLimit("ACME", 200m, 100m));
+            var acme = NewLegalEntity("ACME");
+            ctx.LegalEntities.Add(acme);
+            ctx.ClientLimits.Add(NewClientLimit(acme.Id, 200m));
             await ctx.SaveChangesAsync();
 
             // Act

@@ -28,16 +28,27 @@ public static class DevelopmentDataSeeder
         var physicalRole = new AppRole { Name = ApplicationAccessRoles.PhysicalPersons, CreatedBy = "seed" };
         var legalRole = new AppRole { Name = ApplicationAccessRoles.LegalPersons, CreatedBy = "seed" };
         var limitsRole = new AppRole { Name = ApplicationAccessRoles.Limits, CreatedBy = "seed" };
-        var reportingRole = new AppRole { Name = ApplicationAccessRoles.RegulatoryReporting, CreatedBy = "seed" };
-        db.Roles.AddRange(physicalRole, legalRole, limitsRole, reportingRole);
+        var capitalRole = new AppRole { Name = ApplicationAccessRoles.Capital, CreatedBy = "seed" };
+        var adminRole = new AppRole { Name = ApplicationAccessRoles.Administrator, CreatedBy = "seed" };
+        var guestRole = new AppRole { Name = ApplicationAccessRoles.Guest, CreatedBy = "seed" };
+        db.Roles.AddRange(physicalRole, legalRole, limitsRole, capitalRole, adminRole, guestRole);
 
         db.CodeLists.AddRange(
             Code("TipLica", "FL", "Fizičko lice", 1, now),
             Code("TipLica", "PL", "Pravno lice", 2, now),
             Code("OsnovPovezanosti", "VL", "Vlasništvo", 1, now),
             Code("OsnovPovezanosti", "UP", "Upravljačka povezanost", 2, now),
-            Code("VrstaLimita", "REG", "Regulatorni limit", 1, now),
-            Code("VrstaLimita", "INT", "Interni limit", 2, now),
+            Code("VrstaLimita", "MM", "MM", 1, now, "Izvor: manuelna evidencija."),
+            Code("VrstaLimita", "SATAFXs", "SATA FX spot", 2, now, "Izvor: SATA. Iskorištenost FXs limita se po FBA ponderiše sa 1% — planirana i stvarna iskorištenost prikazuju se u ponderisanom iznosu od 1%."),
+            Code("VrstaLimita", "SATAFXD", "SATA FX derivati", 3, now, "Izvor: SATA."),
+            Code("VrstaLimita", "SATAOVL", "SATA overnight limit", 4, now, "Izvor: SATA."),
+            Code("VrstaLimita", "OVL_CUSTODY", "OVL Custody", 5, now, "Izvor: manuelna evidencija."),
+            Code("VrstaLimita", "SFL_NET", "SFL Net", 6, now, "Izvor: manuelna evidencija."),
+            Code("VrstaLimita", "LG", "LG", 7, now, "Izvor: manuelna evidencija."),
+            Code("VrstaLimita", "LT", "LT", 8, now, "Izvor: manuelna evidencija."),
+            Code("VrstaLimita", "ST", "ST", 9, now, "Izvor: manuelna evidencija."),
+            Code("VrstaLimita", "SPRL", "SPRL", 10, now, "Izvor: manuelna evidencija."),
+            Code("VrstaLimita", "LEASING", "Leasing", 11, now, "Izvor: manuelna evidencija."),
             Code("Status", "DRAFT", "Nacrt", 1, now),
             Code("Status", "VERIFIED", "Verificirano", 2, now),
             Code("Status", "REJECTED", "Odbijeno", 3, now),
@@ -64,30 +75,31 @@ public static class DevelopmentDataSeeder
             Code("OsnovPosebnogOdnosa", "B1", "B1", 5, now),
             Code("OsnovPosebnogOdnosa", "UZA_PORODICA", "Član uže porodice povezanog lica", 6, now));
 
-        db.Limiti.AddRange(
-            new Limit { Naziv = "Ukupna izloženost", TipLimita = "REG", IznosLimita = 1_000_000, Utilizacija = 425_000, RaspoloziviLimit = 575_000, RegulatorniKapital = 5_000_000, OsnovniKapital = 4_000_000, CreatedBy = "seed" },
-            new Limit { Naziv = "Interni operativni limit", TipLimita = "INT", IznosLimita = 500_000, Utilizacija = 125_000, RaspoloziviLimit = 375_000, RegulatorniKapital = 5_000_000, OsnovniKapital = 4_000_000, CreatedBy = "seed" });
-
-        var resident = new RelatedPerson { FirstName = "Amina", LastName = "Hadžić", Residency = ResidencyType.Resident, JMBG = "0101990170003", GCCNumber = "1001", GCCName = "RBI GCC", RelationBasis = "ZOB-2-V-5", RelationDescription = "Član uprave banke i članovi uže porodice.", SpecialRelationBasis = "UPRAVA", IsIdentifiedStaff = true, DeclarationNoFamilyMembers = false, ConnectedWithBank = true, SpecialRelationshipWithBank = true, SpecialContract = false, MalusClawback = true, DateFrom = now.Date.AddYears(-2), DateTo = now.Date.AddYears(1), Status = RelatedPersonStatus.Verified, CreatedBy = "seed" };
-        var nonResident = new RelatedPerson { FirstName = "Marko", LastName = "Kovač", Residency = ResidencyType.NonResident, PassportNumber = "P-DEMO-2026", FBAId = "1002", GCCNumber = "1002", GCCName = "Međunarodni GCC", RelationBasis = "ZOB-2-V-8", RelationDescription = "Lice sa značajnim uticajem ili mogućim sukobom interesa.", SpecialRelationBasis = "PROKURISTA", IsIdentifiedStaff = true, DeclarationNoFamilyMembers = false, ConnectedWithBank = false, SpecialRelationshipWithBank = true, SpecialContract = true, MalusClawback = false, DateFrom = now.Date.AddYears(-1), DateTo = now.Date.AddYears(1), Status = RelatedPersonStatus.Draft, CreatedBy = "seed" };
-        var rejected = new RelatedPerson { FirstName = "Lejla", LastName = "Testić", Residency = ResidencyType.NonResident, PassportNumber = "P-REJECT-01", FBAId = "1003", GCCNumber = "1003", GCCName = "Test GCC", RelationBasis = "ZOB-2-V-7", RelationDescription = "Član organa upravljanja člana bankarske grupe.", SpecialRelationBasis = "NKF", IsIdentifiedStaff = true, DeclarationNoFamilyMembers = false, ConnectedWithBank = false, SpecialRelationshipWithBank = false, SpecialContract = false, MalusClawback = false, DateFrom = now.Date.AddMonths(-6), DateTo = now.Date.AddMonths(6), Status = RelatedPersonStatus.Rejected, CreatedBy = "seed" };
-        var spouse = new RelatedPerson { FirstName = "Emir", LastName = "Hadžić", Residency = ResidencyType.Resident, JMBG = "0202990170004", GCCNumber = "1001", GCCName = "RBI GCC", RelationBasis = "ZOB-2-V-5", RelationDescription = "Član uže porodice povezanog lica.", SpecialRelationBasis = "UZA_PORODICA", IsIdentifiedStaff = false, DeclarationNoFamilyMembers = true, ConnectedWithBank = true, SpecialRelationshipWithBank = false, SpecialContract = false, MalusClawback = false, DateFrom = now.Date.AddYears(-2), DateTo = now.Date.AddYears(1), RelatedToPersonId = resident.Id, FamilyRelationshipType = FamilyRelationshipType.Spouse, Status = RelatedPersonStatus.Verified, CreatedBy = "seed" };
-        var child = new RelatedPerson { FirstName = "Ana", LastName = "Kovač", Residency = ResidencyType.NonResident, PassportNumber = "P-FAMILY-01", FBAId = "1004", GCCNumber = "1002", GCCName = "Međunarodni GCC", RelationBasis = "ZOB-2-V-5", RelationDescription = "Član uže porodice povezanog lica.", SpecialRelationBasis = "UZA_PORODICA", IsIdentifiedStaff = false, DeclarationNoFamilyMembers = true, ConnectedWithBank = true, SpecialRelationshipWithBank = false, SpecialContract = false, MalusClawback = false, DateFrom = now.Date.AddYears(-1), DateTo = now.Date.AddYears(1), RelatedToPersonId = nonResident.Id, FamilyRelationshipType = FamilyRelationshipType.Child, Status = RelatedPersonStatus.Draft, CreatedBy = "seed" };
+        var resident = new RelatedPerson { FirstName = "Amina", LastName = "Hadžić", Residency = ResidencyType.Resident, JMBG = "0101990170003", RelationBasis = "ZOB-2-V-5", RelationDescription = "Član uprave banke i članovi uže porodice.", SpecialRelationBasis = "UPRAVA", IsIdentifiedStaff = true, DeclarationNoFamilyMembers = false, ConnectedWithBank = true, SpecialRelationshipWithBank = true, SpecialContract = false, MalusClawback = true, DateFrom = now.Date.AddYears(-2), DateTo = now.Date.AddYears(1), Status = RelatedPersonStatus.Verified, CreatedBy = "seed" };
+        var nonResident = new RelatedPerson { FirstName = "Marko", LastName = "Kovač", Residency = ResidencyType.NonResident, PassportNumber = "P-DEMO-2026", FBAId = "1002", RelationBasis = "ZOB-2-V-8", RelationDescription = "Lice sa značajnim uticajem ili mogućim sukobom interesa.", SpecialRelationBasis = "PROKURISTA", IsIdentifiedStaff = true, DeclarationNoFamilyMembers = false, ConnectedWithBank = false, SpecialRelationshipWithBank = true, SpecialContract = true, MalusClawback = false, DateFrom = now.Date.AddYears(-1), DateTo = now.Date.AddYears(1), Status = RelatedPersonStatus.Draft, CreatedBy = "seed" };
+        var rejected = new RelatedPerson { FirstName = "Lejla", LastName = "Testić", Residency = ResidencyType.NonResident, PassportNumber = "P-REJECT-01", FBAId = "1003", RelationBasis = "ZOB-2-V-7", RelationDescription = "Član organa upravljanja člana bankarske grupe.", SpecialRelationBasis = "NKF", IsIdentifiedStaff = true, DeclarationNoFamilyMembers = false, ConnectedWithBank = false, SpecialRelationshipWithBank = false, SpecialContract = false, MalusClawback = false, DateFrom = now.Date.AddMonths(-6), DateTo = now.Date.AddMonths(6), Status = RelatedPersonStatus.Rejected, CreatedBy = "seed" };
+        var spouse = new RelatedPerson { FirstName = "Emir", LastName = "Hadžić", Residency = ResidencyType.Resident, JMBG = "0202990170004", RelationBasis = "ZOB-2-V-5", RelationDescription = "Član uže porodice povezanog lica.", SpecialRelationBasis = "UZA_PORODICA", IsIdentifiedStaff = false, DeclarationNoFamilyMembers = true, ConnectedWithBank = true, SpecialRelationshipWithBank = false, SpecialContract = false, MalusClawback = false, DateFrom = now.Date.AddYears(-2), DateTo = now.Date.AddYears(1), RelatedToPersonId = resident.Id, Status = RelatedPersonStatus.Verified, CreatedBy = "seed" };
+        var child = new RelatedPerson { FirstName = "Ana", LastName = "Kovač", Residency = ResidencyType.NonResident, PassportNumber = "P-FAMILY-01", FBAId = "1004", RelationBasis = "ZOB-2-V-5", RelationDescription = "Član uže porodice povezanog lica.", SpecialRelationBasis = "UZA_PORODICA", IsIdentifiedStaff = false, DeclarationNoFamilyMembers = true, ConnectedWithBank = true, SpecialRelationshipWithBank = false, SpecialContract = false, MalusClawback = false, DateFrom = now.Date.AddYears(-1), DateTo = now.Date.AddYears(1), RelatedToPersonId = nonResident.Id, Status = RelatedPersonStatus.Draft, CreatedBy = "seed" };
         db.RelatedPersons.AddRange(resident, nonResident, rejected, spouse, child);
 
-        var legalResident = new LegalEntity { IsResident = true, TaxNumber = "4200000000001", Name = "RBI Poslovni partner d.o.o.", GccNumber = "2001", GccName = "RBI GCC", BasisOfConnection = "Član 4. stav (1) tačka a) ZOB", ConnectionDescription = "Član 4. stav (1) tačka a) ZOB", ConnectedWithBank = true, DateFrom = now.Date.AddYears(-3), Status = "VERIFIED", CreatedBy = "seed", VerifiedBy = "demo.verifier", VerifiedAt = now.AddDays(-2) };
-        var legalForeign = new LegalEntity { IsResident = false, FbaId = "2002", Name = "International Partner GmbH", GccNumber = "2002", GccName = "International GCC", BasisOfConnection = "Član 4. stav (1) tačka b) ZOB", ConnectionDescription = "Član 4. stav (1) tačka b) ZOB", ConnectedWithBank = false, DateFrom = now.Date.AddMonths(-8), Status = "DRAFT", CreatedBy = "seed" };
+        var legalResident = new LegalEntity { IsResident = true, TaxNumber = "4200000000001", Name = "RBI Poslovni partner d.o.o.", BasisOfConnection = "Član 4. stav (1) tačka a) ZOB", ConnectionDescription = "Član 4. stav (1) tačka a) ZOB", ConnectedWithBank = true, DateFrom = now.Date.AddYears(-3), Status = "VERIFIED", CreatedBy = "seed", VerifiedBy = "demo.verifier", VerifiedAt = now.AddDays(-2) };
+        var legalForeign = new LegalEntity { IsResident = false, FbaId = "2002", Name = "International Partner GmbH", BasisOfConnection = "Član 4. stav (1) tačka b) ZOB", ConnectionDescription = "Član 4. stav (1) tačka b) ZOB", ConnectedWithBank = false, DateFrom = now.Date.AddMonths(-8), Status = "DRAFT", CreatedBy = "seed" };
         db.Set<LegalEntity>().AddRange(legalResident, legalForeign);
 
-        var admin = new AppUser { KeycloakId = "local-admin", Username = "admin1", FirstName = "Lokalni", LastName = "Korisnik", Email = "admin@localhost", CreatedBy = "seed" };
-        var verifier = new AppUser { KeycloakId = "local-multi-access", Username = "user1", FirstName = "Vera", LastName = "Korisnik", Email = "user@localhost", CreatedBy = "seed" };
-        var inactive = new AppUser { KeycloakId = "local-inactive", Username = "inactive1", FirstName = "Neaktivni", LastName = "Korisnik", Email = "inactive@localhost", IsActive = false, CreatedBy = "seed" };
+        db.Limiti.AddRange(
+            new Limit { LegalEntityId = legalResident.Id, TipLimita = "MM", OdobreniLimit = 1_000_000, MaksimalnaOcekivanaUtilizacija = 750_000, RokOcekivaneUtilizacije = now.Date.AddMonths(6), Komentar = "Testni limit za rezidentno pravno lice.", CreatedBy = "seed" },
+            new Limit { LegalEntityId = legalForeign.Id, TipLimita = "SATAFXS", OdobreniLimit = 500_000, MaksimalnaOcekivanaUtilizacija = 300_000, RokOcekivaneUtilizacije = now.Date.AddMonths(3), Komentar = "Testni limit za nerezidentno pravno lice.", CreatedBy = "seed" });
+
+        var admin = new AppUser { KeycloakSubjectConfirmed = true, KeycloakId = "local-admin", Username = "admin1", FirstName = "Lokalni", LastName = "Korisnik", Email = "admin@localhost", CreatedBy = "seed" };
+        var verifier = new AppUser { KeycloakSubjectConfirmed = true, KeycloakId = "local-multi-access", Username = "user1", FirstName = "Vera", LastName = "Korisnik", Email = "user@localhost", CreatedBy = "seed" };
+        var inactive = new AppUser { KeycloakSubjectConfirmed = true, KeycloakId = "local-inactive", Username = "inactive1", FirstName = "Neaktivni", LastName = "Korisnik", Email = "inactive@localhost", IsActive = false, CreatedBy = "seed" };
         db.AppUsers.AddRange(admin, verifier, inactive);
         db.UserRoles.AddRange(
             new UserRole { UserId = admin.Id, RoleId = physicalRole.Id, CreatedBy = "seed" },
             new UserRole { UserId = admin.Id, RoleId = legalRole.Id, CreatedBy = "seed" },
             new UserRole { UserId = admin.Id, RoleId = limitsRole.Id, CreatedBy = "seed" },
-            new UserRole { UserId = admin.Id, RoleId = reportingRole.Id, CreatedBy = "seed" },
+            new UserRole { UserId = admin.Id, RoleId = capitalRole.Id, CreatedBy = "seed" },
+            new UserRole { UserId = admin.Id, RoleId = adminRole.Id, CreatedBy = "seed" },
             new UserRole { UserId = verifier.Id, RoleId = legalRole.Id, CreatedBy = "seed" },
             new UserRole { UserId = verifier.Id, RoleId = limitsRole.Id, CreatedBy = "seed" });
 
@@ -102,8 +114,11 @@ public static class DevelopmentDataSeeder
             new Report { ReportType = "DAILY", ReportDate = now.Date, TotalClients = 4, ClientsWithBreachedLimit = 1, TotalExposure = 550000, CreatedBy = "seed" },
             new Report { ReportType = "MONTHLY", ReportDate = new DateTime(now.Year, now.Month, 1), TotalClients = 4, ClientsWithBreachedLimit = 1, TotalExposure = 550000, CreatedBy = "seed" });
         db.ClientLimits.AddRange(
-            new ClientLimit { LegalEntityId = legalResident.Id, RegulatoryCapital = 5000000, CoreCapital = 4000000, ExposureLimit = 1000000, CurrentExposure = 425000, Currency = "BAM", CreatedBy = "seed" },
-            new ClientLimit { LegalEntityId = legalForeign.Id, RegulatoryCapital = 5000000, CoreCapital = 4000000, ExposureLimit = 100000, CurrentExposure = 125000, Currency = "EUR", IsLimitBreached = true, CreatedBy = "seed" });
+            new ClientLimit { LegalEntityId = legalResident.Id, RegulatoryCapital = 5000000, CoreCapital = 4000000, SupplementaryCapital = 500000, CapitalDate = now.Date, ExposureLimit = 1000000, CurrentExposure = 425000, Currency = "BAM", CreatedBy = "seed" },
+            new ClientLimit { LegalEntityId = legalForeign.Id, RegulatoryCapital = 5000000, CoreCapital = 4000000, SupplementaryCapital = 500000, CapitalDate = now.Date, ExposureLimit = 100000, CurrentExposure = 125000, Currency = "EUR", IsLimitBreached = true, CreatedBy = "seed" });
+
+        db.Capitals.Add(
+            new Capital { RegulatoryCapital = 5000000, CoreCapital = 4000000, SupplementaryCapital = 500000, CapitalDate = now.Date, CreatedBy = "seed" });
 
         db.AuditLogs.AddRange(
             new AuditLog { TableName = "RelatedPerson", RecordId = resident.Id.ToString(), Action = "VERIFY", NewValues = "{\"status\":\"Verified\",\"verifiedBy\":\"demo.verifier\"}", UserId = verifier.Username, Username = verifier.Username, IpAddress = "127.0.0.1", Timestamp = now.AddHours(-2) },
@@ -111,17 +126,28 @@ public static class DevelopmentDataSeeder
             new AuditLog { TableName = "PeriodLock", RecordId = $"{now.Year}-{now.Month}", Action = "PERIOD_UNLOCK", NewValues = "{\"isLocked\":false}", UserId = admin.Username, Username = admin.Username, IpAddress = "127.0.0.1", Timestamp = now.AddDays(-2) });
 
         await db.SaveChangesAsync(ct);
+        await EnsureApplicationRolesAsync(db, ct);
     }
 
     private static CodeList Code(string category, string code, string name, int order, DateTime now, string? description = null) =>
-        new() { Kategorija = category, Kod = code, Naziv = name, Opis = description, RedoslijedPrikaza = order, Aktivan = true, KreiranDatum = now, KreiraoKorisnik = "seed" };
+        new() { Kategorija = category, Kod = code.Trim().ToUpper(), Naziv = name, Opis = description, RedoslijedPrikaza = order, Aktivan = true, KreiranDatum = now, KreiraoKorisnik = "seed" };
 
     private static async Task EnsureReferenceCodeListsAsync(ConnectedPartiesDbContext db, CancellationToken ct)
     {
         var now = DateTime.UtcNow;
         var required = new[]
         {
-            Code("VrstaLimita", "REG", "Regulatorni limit", 1, now), Code("VrstaLimita", "INT", "Interni limit", 2, now),
+            Code("VrstaLimita", "MM", "MM", 1, now, "Izvor: manuelna evidencija."),
+            Code("VrstaLimita", "SATAFXs", "SATA FX spot", 2, now, "Izvor: SATA. Iskorištenost FXs limita se po FBA ponderiše sa 1% — planirana i stvarna iskorištenost prikazuju se u ponderisanom iznosu od 1%."),
+            Code("VrstaLimita", "SATAFXD", "SATA FX derivati", 3, now, "Izvor: SATA."),
+            Code("VrstaLimita", "SATAOVL", "SATA overnight limit", 4, now, "Izvor: SATA."),
+            Code("VrstaLimita", "OVL_CUSTODY", "OVL Custody", 5, now, "Izvor: manuelna evidencija."),
+            Code("VrstaLimita", "SFL_NET", "SFL Net", 6, now, "Izvor: manuelna evidencija."),
+            Code("VrstaLimita", "LG", "LG", 7, now, "Izvor: manuelna evidencija."),
+            Code("VrstaLimita", "LT", "LT", 8, now, "Izvor: manuelna evidencija."),
+            Code("VrstaLimita", "ST", "ST", 9, now, "Izvor: manuelna evidencija."),
+            Code("VrstaLimita", "SPRL", "SPRL", 10, now, "Izvor: manuelna evidencija."),
+            Code("VrstaLimita", "LEASING", "Leasing", 11, now, "Izvor: manuelna evidencija."),
             Code("Srodstvo", "1", "Bračni partner", 1, now), Code("Srodstvo", "2", "Partner", 2, now), Code("Srodstvo", "3", "Roditelj", 3, now),
             Code("Srodstvo", "4", "Dijete", 4, now), Code("Srodstvo", "5", "Brat ili sestra", 5, now), Code("Srodstvo", "6", "Očuh ili maćeha", 6, now),
             Code("Srodstvo", "7", "Pastorak", 7, now), Code("Srodstvo", "8", "Staratelj", 8, now), Code("Srodstvo", "99", "Drugo", 9, now),
@@ -142,9 +168,19 @@ public static class DevelopmentDataSeeder
         await db.SaveChangesAsync(ct);
     }
 
-    private static async Task EnsureApplicationRolesAsync(ConnectedPartiesDbContext db, CancellationToken ct)
+    public static async Task EnsureApplicationRolesAsync(ConnectedPartiesDbContext db, CancellationToken ct = default)
     {
         var roles = await db.Roles.AsTracking().ToListAsync(ct);
+        var legacyNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["physical-persons"] = ApplicationAccessRoles.PhysicalPersons,
+            ["legal-persons"] = ApplicationAccessRoles.LegalPersons,
+            ["limits"] = ApplicationAccessRoles.Limits,
+            ["regulatory-reporting"] = ApplicationAccessRoles.Capital
+        };
+        foreach (var role in roles.Where(role => legacyNames.ContainsKey(role.Name)))
+            role.Name = legacyNames[role.Name];
+
         foreach (var role in roles.Where(role => !ApplicationAccessRoles.All.Contains(role.Name)))
             role.IsActive = false;
         foreach (var name in ApplicationAccessRoles.All.Where(name => roles.All(role => !role.Name.Equals(name, StringComparison.OrdinalIgnoreCase))))
@@ -159,7 +195,7 @@ public static class DevelopmentDataSeeder
             var assignments = await db.UserRoles.AsTracking()
                 .Where(item => item.UserId == localAdmin.Id)
                 .ToListAsync(ct);
-            foreach (var role in roles.Where(role => ApplicationAccessRoles.All.Contains(role.Name)))
+            foreach (var role in roles.Where(role => role.Name == ApplicationAccessRoles.Administrator))
             {
                 var existing = assignments.FirstOrDefault(item => item.RoleId == role.Id);
                 if (existing is null)
@@ -168,6 +204,70 @@ public static class DevelopmentDataSeeder
                     existing.IsActive = true;
             }
         }
+
+        var moduleRoleIds = roles
+            .Where(role => ApplicationAccessRoles.BusinessModules.Contains(role.Name))
+            .Select(role => role.Id)
+            .ToArray();
+        var adminRole = roles.First(role => role.Name == ApplicationAccessRoles.Administrator);
+        var legacyAdministrators = await db.UserRoles
+            .Where(userRole => userRole.IsActive && moduleRoleIds.Contains(userRole.RoleId))
+            .GroupBy(userRole => userRole.UserId)
+            .Where(group => group.Select(userRole => userRole.RoleId).Distinct().Count() == moduleRoleIds.Length)
+            .Select(group => group.Key)
+            .ToListAsync(ct);
+        var assignedAdminIds = await db.UserRoles
+            .Where(userRole => userRole.RoleId == adminRole.Id)
+            .Select(userRole => userRole.UserId)
+            .ToListAsync(ct);
+        foreach (var userId in legacyAdministrators.Where(userId => !assignedAdminIds.Contains(userId)))
+            db.UserRoles.Add(new UserRole { UserId = userId, RoleId = adminRole.Id, CreatedBy = "role-migration" });
+
+        await db.SaveChangesAsync(ct);
+
+        var permissions = await db.Permissions.AsTracking().ToListAsync(ct);
+        foreach (var code in ApplicationPermissions.All)
+        {
+            var permission = permissions.FirstOrDefault(item =>
+                item.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            if (permission is null)
+            {
+                permission = new Permission
+                {
+                    Code = code,
+                    Module = code[..code.LastIndexOf('_')],
+                    Description = code.Replace('_', ' ')
+                };
+                db.Permissions.Add(permission);
+                permissions.Add(permission);
+            }
+            else
+                permission.IsActive = true;
+        }
+
+        foreach (var permission in permissions.Where(item => !ApplicationPermissions.All.Contains(item.Code)))
+            permission.IsActive = false;
+
+        var existingMappings = await db.RolePermissions.AsTracking().ToListAsync(ct);
+        var expectedMappings = RolePermissionMatrix.PermissionsByRole
+            .SelectMany(pair => pair.Value.Select(permissionCode => new
+            {
+                RoleId = roles.Single(role => role.Name.Equals(pair.Key, StringComparison.OrdinalIgnoreCase)).Id,
+                PermissionId = permissions.Single(permission => permission.Code.Equals(permissionCode, StringComparison.OrdinalIgnoreCase)).Id
+            }))
+            .ToArray();
+
+        foreach (var mapping in expectedMappings.Where(mapping => existingMappings.All(existing =>
+                     existing.RoleId != mapping.RoleId || existing.PermissionId != mapping.PermissionId)))
+            db.RolePermissions.Add(new RolePermission
+            {
+                RoleId = mapping.RoleId,
+                PermissionId = mapping.PermissionId
+            });
+
+        db.RolePermissions.RemoveRange(existingMappings.Where(existing => expectedMappings.All(expected =>
+            expected.RoleId != existing.RoleId || expected.PermissionId != existing.PermissionId)));
+
         await db.SaveChangesAsync(ct);
     }
 }

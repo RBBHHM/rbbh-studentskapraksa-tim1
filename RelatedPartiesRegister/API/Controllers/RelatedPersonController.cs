@@ -5,6 +5,7 @@ using RBBH.ConnectedParties.DL.DTO.RelatedPersons;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RBBH.ConnectedParties.Helpers.Excel;
+using RBBH.ConnectedParties.Helpers.Constants;
 
 namespace RBBH.ConnectedParties.API.Controllers;
 
@@ -19,9 +20,10 @@ namespace RBBH.ConnectedParties.API.Controllers;
 /// članova porodice (DeclarationNoFamilyMembers = true), unos novih članova nije dozvoljen.
 /// Endpoint /family-tree vraća hijerarhijski prikaz porodice.
 /// </summary>
+[RBBH.ConnectedParties.Helpers.RequireActorEmail]
 [ApiController]
 [Route("api/related-persons")]
-[Authorize(Roles = "physical-persons")]
+[Authorize(Policy = ApplicationPolicies.PhysicalPersonsRead)]
 public class RelatedPersonController(
     IRelatedPersonService relatedPersonService,
     IAuditService auditService) : BaseResuItController
@@ -81,9 +83,9 @@ public class RelatedPersonController(
         if (!result.IsSuccessful) return HTTPExceptiontFromResult(result).Result!;
         var bytes = RegistryExcelExporter.Create(
             "Fizička lica",
-            ["Tip", "Ime", "Prezime", "Rezidentnost", "JMBG", "Pasoš", "FBA ID", "GCC broj", "GCC naziv", "Osnov povezanosti", "Osnov posebnog odnosa", "Povezano lice", "Porodični odnos", "Datum od", "Datum do", "Status"],
+            ["Tip", "Ime", "Prezime", "Rezidentnost", "JMBG", "Pasoš", "FBA ID", "Osnov povezanosti", "Osnov posebnog odnosa", "Povezano lice", "Datum od", "Datum do", "Status"],
             result.Value.Select(item => (IReadOnlyList<object?>)
-            [item.PersonTypeLabel, item.FirstName, item.LastName, item.ResidencyLabel, item.JMBG, item.PassportNumber, item.FBAId, item.GCCNumber, item.GCCName, item.RelationBasis, item.SpecialRelationBasis, item.RelatedToPersonName, item.FamilyRelationshipTypeLabel, item.DateFrom, item.DateTo, item.StatusLabel]));
+            [item.PersonTypeLabel, item.FirstName, item.LastName, item.ResidencyLabel, item.JMBG, item.PassportNumber, item.FBAId, item.RelationBasis, item.SpecialRelationBasis, item.RelatedToPersonName, item.DateFrom, item.DateTo, item.StatusLabel]));
         return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"fizicka-lica-{DateTime.UtcNow:yyyyMMdd-HHmm}.xlsx");
     }
 
@@ -93,6 +95,7 @@ public class RelatedPersonController(
     /// Kreira novo povezano fizičko lice. Novi zapis se uvijek čuva u statusu Draft.
     /// </summary>
     [HttpPost]
+    [Authorize(Policy = ApplicationPolicies.PhysicalPersonsCreate)]
     [ProducesResponseType(typeof(RelatedPersonResponseDTO), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<RelatedPersonResponseDTO>> Create([FromBody] CreateRelatedPersonDTO dto)
@@ -101,13 +104,31 @@ public class RelatedPersonController(
         var result = await _relatedPersonService.Create(dto, korisnik);
 
         if (result.IsSuccessful)
+        {
+            await _auditService.LogAsync(new AuditEntry
+            {
+                TableName = "RelatedPerson",
+                RecordId = result.Value.Id.ToString(),
+                Action = "INSERT",
+                NewValues = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    firstName = result.Value.FirstName,
+                    lastName = result.Value.LastName,
+                    status = result.Value.StatusLabel
+                }),
+                UserId = korisnik,
+                Username = korisnik,
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+            });
             return Created($"{Request.Path}/{result.Value.Id}", result.Value);
+        }
 
         return HTTPExceptiontFromResult(result);
     }
 
     /// <summary>Ažurira postojeće povezano fizičko lice.</summary>
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = ApplicationPolicies.PhysicalPersonsEdit)]
     [ProducesResponseType(typeof(RelatedPersonResponseDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -115,11 +136,32 @@ public class RelatedPersonController(
     {
         var korisnik = GetKorisnik();
         var result = await _relatedPersonService.Update(id, dto, korisnik);
+
+        if (result.IsSuccessful)
+        {
+            await _auditService.LogAsync(new AuditEntry
+            {
+                TableName = "RelatedPerson",
+                RecordId = id.ToString(),
+                Action = "UPDATE",
+                NewValues = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    firstName = result.Value.FirstName,
+                    lastName = result.Value.LastName,
+                    status = result.Value.StatusLabel
+                }),
+                UserId = korisnik,
+                Username = korisnik,
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+            });
+        }
+
         return HandleResult(result);
     }
 
     /// <summary>Soft-delete povezanog fizičkog lica (i svih njegovih aktivnih članova porodice).</summary>
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = ApplicationPolicies.PhysicalPersonsDelete)]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<ActionResult> Delete([FromRoute] Guid id)
@@ -128,7 +170,20 @@ public class RelatedPersonController(
         var result = await _relatedPersonService.Delete(id, korisnik);
 
         if (result.IsSuccessful)
+        {
+            await _auditService.LogAsync(new AuditEntry
+            {
+                TableName = "RelatedPerson",
+                RecordId = id.ToString(),
+                Action = "DELETE",
+                OldValues = System.Text.Json.JsonSerializer.Serialize(new { isActive = true }),
+                NewValues = System.Text.Json.JsonSerializer.Serialize(new { isActive = false }),
+                UserId = korisnik,
+                Username = korisnik,
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+            });
             return Ok(new { message = "Povezano fizičko lice je uspješno obrisano." });
+        }
 
         return HTTPExceptiontFromResult(result).Result!;
     }
@@ -174,6 +229,7 @@ public class RelatedPersonController(
     /// Vraća HTTP 400 ako matično lice ima postavljenu izjavu o nepostojanju članova porodice.
     /// </summary>
     [HttpPost("{id:guid}/family-members")]
+    [Authorize(Policy = ApplicationPolicies.PhysicalPersonsCreate)]
     [ProducesResponseType(typeof(FamilyMemberResponseDTO), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -183,13 +239,31 @@ public class RelatedPersonController(
         var result = await _relatedPersonService.AddFamilyMember(id, dto, korisnik);
 
         if (result.IsSuccessful)
+        {
+            await _auditService.LogAsync(new AuditEntry
+            {
+                TableName = "FamilyMember",
+                RecordId = result.Value.Id.ToString(),
+                Action = "INSERT",
+                NewValues = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    relatedPersonId = id,
+                    firstName = result.Value.FirstName,
+                    lastName = result.Value.LastName
+                }),
+                UserId = korisnik,
+                Username = korisnik,
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+            });
             return Created($"{Request.Path}/{result.Value.Id}", result.Value);
+        }
 
         return HTTPExceptiontFromResult(result);
     }
 
     /// <summary>Ažurira podatke postojećeg člana porodice.</summary>
     [HttpPut("{id:guid}/family-members/{familyMemberId:guid}")]
+    [Authorize(Policy = ApplicationPolicies.PhysicalPersonsEdit)]
     [ProducesResponseType(typeof(FamilyMemberResponseDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -200,11 +274,32 @@ public class RelatedPersonController(
     {
         var korisnik = GetKorisnik();
         var result = await _relatedPersonService.UpdateFamilyMember(id, familyMemberId, dto, korisnik);
+
+        if (result.IsSuccessful)
+        {
+            await _auditService.LogAsync(new AuditEntry
+            {
+                TableName = "FamilyMember",
+                RecordId = familyMemberId.ToString(),
+                Action = "UPDATE",
+                NewValues = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    relatedPersonId = id,
+                    firstName = result.Value.FirstName,
+                    lastName = result.Value.LastName
+                }),
+                UserId = korisnik,
+                Username = korisnik,
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+            });
+        }
+
         return HandleResult(result);
     }
 
     /// <summary>Soft-delete člana porodice.</summary>
     [HttpDelete("{id:guid}/family-members/{familyMemberId:guid}")]
+    [Authorize(Policy = ApplicationPolicies.PhysicalPersonsDelete)]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -214,7 +309,20 @@ public class RelatedPersonController(
         var result = await _relatedPersonService.DeleteFamilyMember(id, familyMemberId, korisnik);
 
         if (result.IsSuccessful)
+        {
+            await _auditService.LogAsync(new AuditEntry
+            {
+                TableName = "FamilyMember",
+                RecordId = familyMemberId.ToString(),
+                Action = "DELETE",
+                OldValues = System.Text.Json.JsonSerializer.Serialize(new { isActive = true, relatedPersonId = id }),
+                NewValues = System.Text.Json.JsonSerializer.Serialize(new { isActive = false }),
+                UserId = korisnik,
+                Username = korisnik,
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+            });
             return Ok(new { message = "Član porodice je uspješno obrisan." });
+        }
 
         return HTTPExceptiontFromResult(result).Result!;
     }
@@ -223,13 +331,14 @@ public class RelatedPersonController(
 
     /// <summary>
     /// Uvozi fizička lica iz Excel fajla (.xlsx).
-    /// Kolone: Ime, Prezime, Rezidentnost, JMBG, Broj pasoša, FBA ID, GCC broj, GCC naziv,
+    /// Kolone: Ime, Prezime, Rezidentnost, JMBG, Broj pasoša, FBA ID,
     /// Osnov povezanosti, Osnov posebnog odnosa, Datum od, Datum do,
     /// Izjava bez clanova porodice (DA/NE), Pov. lice sa Bankom (DA/NE),
     /// Lice u posebnom odnosu (DA/NE), Poseban ugovor (DA/NE), Malus &amp; Clawback (DA/NE).
     /// Red 1 je zaglavlje i preskače se.
     /// </summary>
     [HttpPost("import")]
+    [Authorize(Policy = ApplicationPolicies.PhysicalPersonsCreate)]
     [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(ImportResultDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
@@ -269,13 +378,10 @@ public class RelatedPersonController(
     // ─── Helper ───────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Čita korisničko ime iz JWT claimova, ili fallback na host name.
+    /// Uses the authenticated email claim; no fabricated actor fallback.
     /// </summary>
     private string GetKorisnik()
     {
-        return User.Identity?.Name
-            ?? User.Claims.FirstOrDefault(c => c.Type == "preferred_username")?.Value
-            ?? User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value
-            ?? Environment.MachineName;
+        return RBBH.ConnectedParties.Helpers.AuthenticatedActor.Email(User);
     }
 }

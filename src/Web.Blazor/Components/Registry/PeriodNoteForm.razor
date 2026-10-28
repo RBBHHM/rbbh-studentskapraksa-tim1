@@ -1,0 +1,48 @@
+@using RBI.DesignSystem.Components.Forms
+@using RBI.Forms
+@implements IDisposable
+
+<EditForm EditContext="_context" OnSubmit="SubmitAsync" FormName="@_id" class="registry-period-form" novalidate>
+    <fieldset disabled="@_submission.IsSubmitting">
+        <legend class="app-visually-hidden">@T[LabelKey]</legend>
+        @if (ShowCancel) { <p class="registry-period-dialog__help">@T["period.dialog-help"]</p> }
+        <RbiField TValue="string" Id="@_id" Label="@T[LabelKey]" Required For="@(() => Model.Text)">
+            <RbiTextArea Id="@_id" @bind-Value="Model.Text" @oninput="InputChanged" Rows="4" placeholder="@(ShowCancel ? T["period.placeholder"] : null)" minlength="10" maxlength="@Model.Maximum" aria-describedby="@(_id + "-help")" />
+        </RbiField>
+        <p class="app-visually-hidden" id="@(_id + "-help")">@T[Model.Kind == PeriodNoteKind.Response ? "period.response-range" : "period.note-range"]</p>
+        @if (Model.Kind != PeriodNoteKind.RequestUnlock) { <p class="app-visually-hidden">@T.Format("period.count", Model.Text.Length, Model.Maximum)</p> }
+        @if (ShowCancel) { <p class="registry-period-dialog__count" aria-hidden="true">@T.Format("period.min-count", Model.Text.Trim().Length)</p> }
+    <div role="alert" tabindex="-1" @ref="_summary"><ValidationSummary /></div>
+        <div class="registry-toolbar">
+            @if (ShowCancel) { <RbiButton OnClick="Cancel" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton> }
+            <RbiButton Type="RbiButtonType.Submit" Disabled="@(ShowCancel && Model.Text.Trim().Length < 10)">@T[SubmitKey]</RbiButton>
+        </div>
+    </fieldset>
+</EditForm>
+@code {
+    [Parameter, EditorRequired] public PeriodNoteDraft Model { get; set; } = null!;
+    [Parameter] public string LabelKey { get; set; } = "period.note";
+    [Parameter] public string SubmitKey { get; set; } = "period.confirm";
+    [Parameter] public bool ShowCancel { get; set; } = true;
+    [Parameter] public EventCallback<string> Save { get; set; }
+    [Parameter] public EventCallback Cancel { get; set; }
+    private readonly string _id = "period-note-" + Guid.NewGuid().ToString("N");
+    private EditContext _context = null!;
+    private RbiServerValidation _validation = null!;
+    private readonly RbiFormSubmissionState _submission = new();
+    private ElementReference _summary;
+    private bool _focusErrors;
+    protected override void OnInitialized() { _context = new(Model); _validation = new(_context); }
+    private void InputChanged(ChangeEventArgs args) { Model.Text = args.Value?.ToString() ?? ""; _context.NotifyFieldChanged(new(Model, nameof(Model.Text))); }
+    protected override async Task OnAfterRenderAsync(bool firstRender) { if (_focusErrors) { _focusErrors = false; await _summary.FocusAsync(); } }
+    private async Task SubmitAsync() => await _submission.SubmitAsync(async () =>
+    {
+        var parsed = _context.Validate();
+        _validation.DisplayErrors(Model.ErrorKey is { } error ? new Dictionary<string, string[]> { [nameof(Model.Text)] = [T[error]] } : []);
+        if (!parsed || Model.ErrorKey is not null) { _focusErrors = true; return; }
+        try { await Save.InvokeAsync(Model.Text.Trim()); }
+        catch (RegistryApiException exception) { _validation.DisplayFormError(T[exception.StatusCode is null || (int)exception.StatusCode >= 500 ? "period.uncertain" : exception.MessageKey]); _focusErrors = true; }
+        catch (OperationCanceledException) { }
+    });
+    public void Dispose() => _validation.Dispose();
+}

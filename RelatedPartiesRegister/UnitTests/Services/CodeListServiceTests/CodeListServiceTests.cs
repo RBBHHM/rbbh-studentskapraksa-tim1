@@ -239,11 +239,21 @@ namespace UnitTests.Services.CodeListServiceTests
             using var ctx = InMemoryContextFactory.Create();
             var definition = new CodeListDefinition { Name = Kategorija, CreatedBy = "seed" };
             var value = NewEntity("A", "Vrijednost u upotrebi");
+            var legalEntity = new RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntity
+            {
+                IsResident = true,
+                TaxNumber = "4200000000098",
+                Name = "Testno pravno lice",
+                BasisOfConnection = "Test osnov",
+                Status = "VERIFIED",
+                CreatedBy = "seed"
+            };
             ctx.CodeListDefinitions.Add(definition);
             ctx.CodeLists.Add(value);
+            ctx.LegalEntities.Add(legalEntity);
             ctx.Limiti.Add(new Limit
             {
-                Naziv = "Testni limit",
+                LegalEntityId = legalEntity.Id,
                 TipLimita = value.Kod,
                 CreatedBy = "seed"
             });

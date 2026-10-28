@@ -38,8 +38,17 @@ ScaffoldingReadMe.txt
 
 # dotenv environment variables file
 .env
+**/.env.*
+!**/.env.example
+**/secrets.json
+**/appsettings.*.local.json
+**/*.pfx
+**/*.p12
+**/*.key
+**/*.pem
 .runtime/
 dist/
+# Retired React workstation caches: preserve local data without shipping it.
 src/Web/artifacts/
 src/Web/.runtime/
 src/Web/dist/

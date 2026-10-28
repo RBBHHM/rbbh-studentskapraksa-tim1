@@ -6,36 +6,66 @@ using System.Text.Json.Serialization;
 using RBBH.ConnectedParties.BL.ServiceInterfaces;
 using RBBH.ConnectedParties.DL.Entities.PeriodLock;
 using RBBH.ConnectedParties.Helpers;
+using RBBH.ConnectedParties.Helpers.Constants;
 
 namespace RBBH.ConnectedParties.API.Controllers;
 
+[RBBH.ConnectedParties.Helpers.RequireActorEmail]
 [ApiController]
 [Route("api/period-lock")]
-[Authorize(Roles = "regulatory-reporting")]
+[Authorize(Policy = ApplicationPolicies.CapitalRead)]
 public class PeriodLockController(
     IPeriodLockRepository periodLockRepository,
     IUnlockRequestRepository unlockRequestRepository,
     IPeriodLockService periodLockService,
     IAuditService auditService,
     IEmailService emailService,
-    IConfiguration configuration) : ControllerBase
+    IConfiguration configuration,
+    IAppUserService appUserService,
+    ILogger<PeriodLockController> logger) : ControllerBase
 {
     private string CurrentUser() =>
-        User.FindFirst(ClaimTypes.Name)?.Value
-        ?? User.FindFirst("preferred_username")?.Value
-        ?? "system";
+        RBBH.ConnectedParties.Helpers.AuthenticatedActor.Email(User);
 
-    // Functional access is assigned directly to users and is intentionally
-    // independent of their organizational unit.
-    private static string? CurrentDepartment() => null;
+    /// <summary>
+    /// Obavještava sve aktivne korisnike aplikacije (email + email-log zapis) da je period
+    /// zaključan/otključan. Greške u slanju ne smiju rušiti lock/unlock transakciju.
+    /// </summary>
+    private async Task NotifyAllUsersAsync(bool locked, string actedBy, int year, int month)
+    {
+        try
+        {
+            var usersResult = await appUserService.GetUsersAsync(1, 500, null, null);
+            if (!usersResult.IsSuccessful)
+                return;
+
+            var emails = usersResult.Value.Users
+                .Where(u => u.IsActive && !string.IsNullOrWhiteSpace(u.Email))
+                .Select(u => u.Email)
+                .ToList();
+
+            if (emails.Count == 0)
+                return;
+
+            if (locked)
+                await emailService.SendPeriodLockedBroadcastAsync(emails, actedBy, year, month);
+            else
+                await emailService.SendPeriodUnlockedBroadcastAsync(emails, actedBy, year, month);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "Slanje broadcast obavijesti za period {Year}-{Month} (locked={Locked}) nije uspjelo.",
+                year, month, locked);
+        }
+    }
 
     [HttpGet("current")]
-    public async Task<IActionResult> GetCurrentState([FromQuery] string? department = null)
+    public async Task<IActionResult> GetCurrentState()
     {
         var now = DateTime.UtcNow;
-        var dept = CurrentDepartment();
-        var currentLock = await periodLockRepository.GetCurrentAsync(dept);
-        var isLocked = await periodLockRepository.IsCurrentPeriodLockedAsync(dept);
+        var currentLock = await periodLockRepository.GetCurrentAsync();
+        var isLocked = await periodLockRepository.IsCurrentPeriodLockedAsync();
 
         return Ok(new
         {
@@ -44,21 +74,19 @@ public class PeriodLockController(
             monthDisplay = periodLockService.GetMonthDisplayName(now.Year, now.Month),
             isLocked,
             lockedBy = currentLock?.LockedBy,
-            lockedAt = currentLock?.LockedAt,
-            department = dept
+            lockedAt = currentLock?.LockedAt
         });
     }
 
     [HttpGet("status")]
     public async Task<IActionResult> GetPeriodStatus(
-        [FromQuery] int year, [FromQuery] int month, [FromQuery] string? department = null)
+        [FromQuery] int year, [FromQuery] int month)
     {
         if (month < 1 || month > 12 || year < 2020)
             return BadRequest(Err("Nevažeći period."));
 
-        var dept = CurrentDepartment();
-        var isLocked = await periodLockRepository.IsPeriodLockedAsync(year, month, dept);
-        var periodLock = await periodLockRepository.GetByPeriodAsync(year, month, dept);
+        var isLocked = await periodLockRepository.IsPeriodLockedAsync(year, month);
+        var periodLock = await periodLockRepository.GetByPeriodAsync(year, month);
 
         return Ok(new
         {
@@ -67,20 +95,19 @@ public class PeriodLockController(
             monthDisplay = periodLockService.GetMonthDisplayName(year, month),
             isLocked,
             lockedBy = periodLock?.LockedBy,
-            lockedAt = periodLock?.LockedAt,
-            department = dept
+            lockedAt = periodLock?.LockedAt
         });
     }
 
     [HttpPost("lock")]
+    [Authorize(Policy = ApplicationPolicies.CapitalWrite)]
     public async Task<IActionResult> LockPeriod([FromBody] PeriodTargetDto? dto = null)
     {
         var now = DateTime.UtcNow;
         int year = dto?.Year ?? now.Year;
         int month = dto?.Month ?? now.Month;
-        var dept = CurrentDepartment();
 
-        var periodLock = await periodLockRepository.GetByPeriodAsync(year, month, dept);
+        var periodLock = await periodLockRepository.GetByPeriodAsync(year, month);
 
         if (periodLock != null && periodLock.IsLocked)
             return BadRequest(Err("Period je već zaključan."));
@@ -91,10 +118,14 @@ public class PeriodLockController(
         {
             periodLock = new PeriodLock
             {
-                Year = year, Month = month, IsLocked = true,
-                Department = dept,
-                LockedBy = username, LockedAt = now,
-                CreatedBy = username, CreatedAt = now, IsActive = true
+                Year = year,
+                Month = month,
+                IsLocked = true,
+                LockedBy = username,
+                LockedAt = now,
+                CreatedBy = username,
+                CreatedAt = now,
+                IsActive = true
             };
             await periodLockRepository.CreateAsync(periodLock);
         }
@@ -109,26 +140,29 @@ public class PeriodLockController(
 
         await auditService.LogAsync(new AuditEntry
         {
-            TableName = "PeriodLock", RecordId = $"{year}-{month:D2}",
+            TableName = "PeriodLock",
+            RecordId = $"{year}-{month:D2}",
             Action = "PERIOD_LOCK",
-            NewValues = JsonSerializer.Serialize(new { year, month, department = dept, lockedBy = username }),
-            UserId = username, Username = username,
+            NewValues = JsonSerializer.Serialize(new { year, month, lockedBy = username }),
+            UserId = username,
+            Username = username,
             IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
         });
 
-        var deptLabel = dept is not null ? $" ({dept})" : "";
-        return Ok(new { message = $"Period {periodLockService.GetMonthDisplayName(year, month)}{deptLabel} uspješno zaključan." });
+        await NotifyAllUsersAsync(locked: true, username, year, month);
+
+        return Ok(new { message = $"Period {periodLockService.GetMonthDisplayName(year, month)} uspješno zaključan." });
     }
 
     [HttpPost("unlock")]
+    [Authorize(Policy = ApplicationPolicies.CapitalWrite)]
     public async Task<IActionResult> UnlockPeriod([FromBody] PeriodTargetDto? dto = null)
     {
         var now = DateTime.UtcNow;
         int year = dto?.Year ?? now.Year;
         int month = dto?.Month ?? now.Month;
-        var dept = CurrentDepartment();
 
-        var periodLock = await periodLockRepository.GetByPeriodAsync(year, month, dept);
+        var periodLock = await periodLockRepository.GetByPeriodAsync(year, month);
         bool isPast = year < now.Year || (year == now.Year && month < now.Month);
 
         if (periodLock == null && isPast)
@@ -136,10 +170,14 @@ public class PeriodLockController(
             var username = CurrentUser();
             periodLock = new PeriodLock
             {
-                Year = year, Month = month, IsLocked = false,
-                Department = dept,
-                UnlockedBy = username, UnlockedAt = now,
-                CreatedBy = username, CreatedAt = now, IsActive = true
+                Year = year,
+                Month = month,
+                IsLocked = false,
+                UnlockedBy = username,
+                UnlockedAt = now,
+                CreatedBy = username,
+                CreatedAt = now,
+                IsActive = true
             };
             await periodLockRepository.CreateAsync(periodLock);
 
@@ -147,15 +185,18 @@ public class PeriodLockController(
 
             await auditService.LogAsync(new AuditEntry
             {
-                TableName = "PeriodLock", RecordId = $"{year}-{month:D2}",
+                TableName = "PeriodLock",
+                RecordId = $"{year}-{month:D2}",
                 Action = "PERIOD_UNLOCK",
-                NewValues = JsonSerializer.Serialize(new { isLocked = false, department = dept, unlockedBy = username }),
-                UserId = username, Username = username,
+                NewValues = JsonSerializer.Serialize(new { isLocked = false, unlockedBy = username }),
+                UserId = username,
+                Username = username,
                 IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
             });
 
-            var label1 = dept is not null ? $" ({dept})" : "";
-            return Ok(new { message = $"Period {periodLockService.GetMonthDisplayName(year, month)}{label1} uspješno otključan." });
+            await NotifyAllUsersAsync(locked: false, username, year, month);
+
+            return Ok(new { message = $"Period {periodLockService.GetMonthDisplayName(year, month)} uspješno otključan." });
         }
 
         if (periodLock == null || !periodLock.IsLocked)
@@ -176,20 +217,24 @@ public class PeriodLockController(
 
             await auditService.LogAsync(new AuditEntry
             {
-                TableName = "PeriodLock", RecordId = $"{year}-{month:D2}",
+                TableName = "PeriodLock",
+                RecordId = $"{year}-{month:D2}",
                 Action = "PERIOD_UNLOCK",
                 OldValues = JsonSerializer.Serialize(new { isLocked = true, lockedBy = periodLock.LockedBy }),
-                NewValues = JsonSerializer.Serialize(new { isLocked = false, department = dept, unlockedBy = username }),
-                UserId = username, Username = username,
+                NewValues = JsonSerializer.Serialize(new { isLocked = false, unlockedBy = username }),
+                UserId = username,
+                Username = username,
                 IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
             });
 
-            var label2 = dept is not null ? $" ({dept})" : "";
-            return Ok(new { message = $"Period {periodLockService.GetMonthDisplayName(year, month)}{label2} uspješno otključan." });
+            await NotifyAllUsersAsync(locked: false, username, year, month);
+
+            return Ok(new { message = $"Period {periodLockService.GetMonthDisplayName(year, month)} uspješno otključan." });
         }
     }
 
     [HttpPost("request-unlock")]
+    [Authorize(Policy = ApplicationPolicies.CapitalWrite)]
     public async Task<IActionResult> RequestUnlock([FromBody] RequestUnlockDto dto)
     {
         if (dto == null || string.IsNullOrWhiteSpace(dto.Reason) || dto.Reason.Length < 10 || dto.Reason.Length > 500)
@@ -203,32 +248,43 @@ public class PeriodLockController(
             return BadRequest(Err("Nevažeći period."));
 
         var username = CurrentUser();
-        var email = User.FindFirst(ClaimTypes.Email)?.Value ?? "korisnik@raiffeisenbank.ba";
+        var email = AuthenticatedActor.Email(User);
+        var adminEmail = configuration["Email:AdminEmail"];
+        if (string.IsNullOrWhiteSpace(adminEmail))
+            return StatusCode(503, Err("Obavijesti nisu konfigurisane. Zahtjev nije snimljen."));
 
         var request = new UnlockRequest
         {
-            RequestedBy = username, RequestedByEmail = email,
-            Year = year, Month = month,
-            Reason = dto.Reason, Status = "PENDING",
-            CreatedBy = username, CreatedAt = now, IsActive = true
+            RequestedBy = username,
+            RequestedByEmail = email,
+            Year = year,
+            Month = month,
+            Reason = dto.Reason,
+            Status = "PENDING",
+            CreatedBy = username,
+            CreatedAt = now,
+            IsActive = true
         };
 
         await unlockRequestRepository.CreateAsync(request);
 
         await auditService.LogAsync(new AuditEntry
         {
-            TableName = "PeriodLock", RecordId = $"{year}-{month:D2}",
+            TableName = "PeriodLock",
+            RecordId = $"{year}-{month:D2}",
             Action = "UNLOCK_REQUEST",
             NewValues = JsonSerializer.Serialize(new
             {
-                requestedBy = username, year, month,
+                requestedBy = username,
+                year,
+                month,
                 reason = dto.Reason[..Math.Min(dto.Reason.Length, 100)]
             }),
-            UserId = username, Username = username,
+            UserId = username,
+            Username = username,
             IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
         });
 
-        var adminEmail = configuration["Email:AdminEmail"] ?? "admin@raiffeisenbank.ba";
         await emailService.SendUnlockRequestAsync(adminEmail, username, year, month, dto.Reason);
 
         return Ok(new { message = "Zahtjev uspješno poslan administratoru." });
@@ -264,6 +320,7 @@ public class PeriodLockController(
     }
 
     [HttpPost("unlock-requests/{id:guid}/reject")]
+    [Authorize(Policy = ApplicationPolicies.CapitalWrite)]
     public async Task<IActionResult> RejectRequest(
         [FromRoute] Guid id,
         [FromBody] AdminActionDto dto)
@@ -272,17 +329,19 @@ public class PeriodLockController(
             return BadRequest(Err("Razlog odbijanja je obavezan (min. 10 karaktera).", "note"));
 
         var username = CurrentUser();
-        var success  = await unlockRequestRepository.RejectAsync(id, dto.Note.Trim(), username);
+        var success = await unlockRequestRepository.RejectAsync(id, dto.Note.Trim(), username);
 
         if (!success)
             return NotFound(Err("Zahtjev nije pronađen ili nije u statusu Na čekanju."));
 
         await auditService.LogAsync(new AuditEntry
         {
-            TableName = "PeriodLock", RecordId = id.ToString(),
-            Action    = "UNLOCK_REQUEST_REJECTED",
+            TableName = "PeriodLock",
+            RecordId = id.ToString(),
+            Action = "UNLOCK_REQUEST_REJECTED",
             NewValues = System.Text.Json.JsonSerializer.Serialize(new { id, note = dto.Note, rejectedBy = username }),
-            UserId = username, Username = username,
+            UserId = username,
+            Username = username,
             IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
         });
 
@@ -290,6 +349,7 @@ public class PeriodLockController(
     }
 
     [HttpPost("unlock-requests/{id:guid}/request-info")]
+    [Authorize(Policy = ApplicationPolicies.CapitalWrite)]
     public async Task<IActionResult> RequestMoreInfo(
         [FromRoute] Guid id,
         [FromBody] AdminActionDto dto)
@@ -298,19 +358,21 @@ public class PeriodLockController(
             return BadRequest(Err("Poruka korisniku je obavezna (min. 10 karaktera).", "note"));
 
         // Dohvati zahtjev PRIJE update-a — potreban email i podaci korisnika
-        var request  = await unlockRequestRepository.GetByIdAsync(id);
+        var request = await unlockRequestRepository.GetByIdAsync(id);
         var username = CurrentUser();
-        var success  = await unlockRequestRepository.RequestMoreInfoAsync(id, dto.Note.Trim(), username);
+        var success = await unlockRequestRepository.RequestMoreInfoAsync(id, dto.Note.Trim(), username);
 
         if (!success)
             return NotFound(Err("Zahtjev nije pronađen ili nije u statusu Na čekanju."));
 
         await auditService.LogAsync(new AuditEntry
         {
-            TableName = "PeriodLock", RecordId = id.ToString(),
-            Action    = "UNLOCK_REQUEST_NEEDS_INFO",
+            TableName = "PeriodLock",
+            RecordId = id.ToString(),
+            Action = "UNLOCK_REQUEST_NEEDS_INFO",
             NewValues = System.Text.Json.JsonSerializer.Serialize(new { id, note = dto.Note, askedBy = username }),
-            UserId = username, Username = username,
+            UserId = username,
+            Username = username,
             IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
         });
 
@@ -326,52 +388,62 @@ public class PeriodLockController(
     }
 
     [HttpPost("unlock-requests/{id:guid}/respond")]
+    [Authorize(Policy = ApplicationPolicies.CapitalWrite)]
     public async Task<IActionResult> RespondToRequest(
         [FromRoute] Guid id,
         [FromBody] RespondDto dto)
     {
-        if (dto is null || string.IsNullOrWhiteSpace(dto.Message) || dto.Message.Length < 10)
-            return BadRequest(Err("Odgovor je obavezan (min. 10 karaktera).", "message"));
+        // Keep the existing ten-character prefix and nvarchar(500) storage.
+        // Reject excess input, never truncate it to make persistence succeed.
+        if (dto is null || string.IsNullOrWhiteSpace(dto.Message)
+            || dto.Message.Length > 490 || dto.Message.Trim().Length < 10)
+            return BadRequest(Err("Dopuna mora sadržavati od 10 do 490 znakova.", "message"));
 
         var original = await unlockRequestRepository.GetByIdAsync(id);
         if (original is null)
             return NotFound(Err("Zahtjev nije pronađen."));
 
-        var now      = DateTime.UtcNow;
+        var now = DateTime.UtcNow;
         var username = CurrentUser();
-        var email    = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
-                       ?? original.RequestedByEmail;
+        var email = AuthenticatedActor.Email(User);
+        var adminEmail = configuration["Email:AdminEmail"];
+        if (string.IsNullOrWhiteSpace(adminEmail))
+            return StatusCode(503, Err("Obavijesti nisu konfigurisane. Dopuna nije snimljena."));
 
         // Kreiraj novi PENDING zahtjev s korisnikovim odgovorom
         var response = new UnlockRequest
         {
-            RequestedBy      = username,
+            RequestedBy = username,
             RequestedByEmail = email,
-            Year             = original.Year,
-            Month            = original.Month,
-            Reason           = $"[ODGOVOR] {dto.Message.Trim()}",
-            Status           = "PENDING",
-            CreatedBy        = username,
-            CreatedAt        = now,
-            IsActive         = true
+            Year = original.Year,
+            Month = original.Month,
+            Reason = $"[ODGOVOR] {dto.Message.Trim()}",
+            Status = "PENDING",
+            CreatedBy = username,
+            CreatedAt = now,
+            IsActive = true
         };
         await unlockRequestRepository.CreateAsync(response);
 
         await auditService.LogAsync(new AuditEntry
         {
-            TableName = "PeriodLock", RecordId = id.ToString(),
-            Action    = "UNLOCK_REQUEST",
+            TableName = "PeriodLock",
+            RecordId = id.ToString(),
+            Action = "UNLOCK_REQUEST",
             NewValues = System.Text.Json.JsonSerializer.Serialize(new
             {
-                type = "user_response", originalRequestId = id,
-                requestedBy = username, year = original.Year, month = original.Month
+                type = "user_response",
+                originalRequestId = id,
+                requestedBy = username,
+                year = original.Year,
+                month = original.Month
             }),
-            UserId = username, Username = username,
+            UserId = username,
+            Username = username,
             IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
         });
 
         // Email adminu s korisnikovim odgovorom
-        var adminEmail = configuration["Email:AdminEmail"] ?? "admin@raiffeisenbank.ba";
         await emailService.SendUserResponseAsync(
                 adminEmail, username, original.Year, original.Month, dto.Message.Trim());
 

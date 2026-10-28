@@ -1,0 +1,12 @@
+@page "/not-found"
+@using RBI.Localization
+@inject IRbiLocalizer L
+
+<PageTitle>@Title</PageTitle>
+
+<HeroBar Title="@Title" Description="@Description" />
+
+@code {
+    private string Title => L["errors.not-found.title"];
+    private string Description => L["errors.not-found.description"];
+}

@@ -1,10 +1,10 @@
 using ClosedXML.Excel;
 using RBBH.ConnectedParties.BL.ServiceInterfaces;
 using RBBH.ConnectedParties.DL.DTO.Report;
-using RBBH.ConnectedParties.DL.Entities.Limiti;
 using RBBH.ConnectedParties.DL.Entities.Report;
 using RBBH.ConnectedParties.DL.Persistence;
 using RBBH.ConnectedParties.Exceptions;
+using RBBH.ConnectedParties.Helpers.Excel;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
@@ -24,21 +24,16 @@ public class ReportService : IReportService
     public async Task<ReportDTO> GenerateDailyReportAsync(string createdBy)
     {
         var today = DateTime.UtcNow.Date;
-        var limits = await _context.Limiti.AsNoTracking().ToListAsync();
+        var snapshot = await BuildExposureSnapshotAsync();
 
         var report = new Report
         {
             ReportType = "DAILY",
             ReportDate = today,
-            TotalClients = limits.Select(l => l.Naziv).Distinct().Count(),
-            ClientsWithBreachedLimit = limits.Count(l => l.RaspoloziviLimit < 0),
-            TotalExposure = limits.Sum(l => l.Utilizacija),
-            DataSnapshot = JsonSerializer.Serialize(limits.Select(l => new
-            {
-                l.Id, l.Naziv, l.TipLimita,
-                l.IznosLimita, l.Utilizacija,
-                l.RaspoloziviLimit, l.RegulatorniKapital, l.OsnovniKapital
-            })),
+            TotalClients = snapshot.Count,
+            ClientsWithBreachedLimit = snapshot.Count(s => s.IsLimitBreached),
+            TotalExposure = snapshot.Sum(s => s.CurrentExposure),
+            DataSnapshot = JsonSerializer.Serialize(snapshot),
             CreatedBy = createdBy,
             CreatedAt = DateTime.UtcNow,
             IsActive = true
@@ -53,21 +48,16 @@ public class ReportService : IReportService
     public async Task<ReportDTO> GenerateMonthlyReportAsync(int year, int month, string createdBy)
     {
         var reportDate = new DateTime(year, month, 1);
-        var limits = await _context.Limiti.AsNoTracking().ToListAsync();
+        var snapshot = await BuildExposureSnapshotAsync();
 
         var report = new Report
         {
             ReportType = "MONTHLY",
             ReportDate = reportDate,
-            TotalClients = limits.Select(l => l.Naziv).Distinct().Count(),
-            ClientsWithBreachedLimit = limits.Count(l => l.RaspoloziviLimit < 0),
-            TotalExposure = limits.Sum(l => l.Utilizacija),
-            DataSnapshot = JsonSerializer.Serialize(limits.Select(l => new
-            {
-                l.Id, l.Naziv, l.TipLimita,
-                l.IznosLimita, l.Utilizacija,
-                l.RaspoloziviLimit, l.RegulatorniKapital, l.OsnovniKapital
-            })),
+            TotalClients = snapshot.Count,
+            ClientsWithBreachedLimit = snapshot.Count(s => s.IsLimitBreached),
+            TotalExposure = snapshot.Sum(s => s.CurrentExposure),
+            DataSnapshot = JsonSerializer.Serialize(snapshot),
             CreatedBy = createdBy,
             CreatedAt = DateTime.UtcNow,
             IsActive = true
@@ -129,58 +119,91 @@ public class ReportService : IReportService
             throw new ValidationException("identifier",
                 $"Pravno lice s identifikatorom '{identifier.Trim()}' nije pronađeno.");
 
-        var clientLimits = await _context.ClientLimits.AsNoTracking()
-            .Where(l => l.LegalEntityId == legalEntity.Id && l.IsActive)
-            .ToListAsync();
-        var limits = clientLimits.Select(l => new Limit
-        {
-            Naziv = legalEntity.Name,
-            TipLimita = "REG",
-            IznosLimita = l.ExposureLimit,
-            Utilizacija = l.CurrentExposure,
-            RaspoloziviLimit = l.ExposureLimit - l.CurrentExposure,
-            RegulatorniKapital = l.RegulatoryCapital,
-            OsnovniKapital = l.CoreCapital,
-            CreatedBy = l.CreatedBy
-        }).ToList();
+        var rows = await GetLimitExportRowsAsync(legalEntity.Id);
 
-        // Kompatibilnost sa postojećim podacima: prije uvođenja ClientLimits
-        // limiti su bili vezani poslovnim nazivom klijenta.
-        if (limits.Count == 0)
-        {
-            limits = await _context.Limiti.AsNoTracking()
-                .Where(limit => limit.Naziv.ToLower() == legalEntity.Name.ToLower())
-                .OrderBy(limit => limit.TipLimita)
-                .ToListAsync();
-        }
-
-        if (limits.Count == 0)
+        if (rows.Count == 0)
             throw new ValidationException("identifier",
                 $"Klijent '{legalEntity.Name}' nema definisanih limita.");
 
-        return GenerateExcel(limits, $"Klijent — {legalEntity.Name}");
+        return BuildLimitsExcel(rows);
     }
 
     public async Task<byte[]> ExportAllClientsWithLimitsAsync()
     {
-        var limits = await _context.Limiti.AsNoTracking()
-            .OrderBy(l => l.Naziv)
-            .ToListAsync();
-
-        return GenerateExcel(limits, "Svi klijenti s limitima");
+        var rows = await GetLimitExportRowsAsync(legalEntityId: null);
+        return BuildLimitsExcel(rows);
     }
 
     public async Task<byte[]> ExportGeneratedReportAsync(Guid reportId)
     {
         var report = await _context.Reports.AsNoTracking().FirstOrDefaultAsync(item => item.Id == reportId && item.IsActive)
             ?? throw new ValidationException("reportId", "Izvještaj nije pronađen.");
-        var limits = string.IsNullOrWhiteSpace(report.DataSnapshot)
+        var snapshot = string.IsNullOrWhiteSpace(report.DataSnapshot)
             ? []
-            : JsonSerializer.Deserialize<List<Limit>>(report.DataSnapshot) ?? [];
-        return GenerateExcel(limits, $"{(report.ReportType == "DAILY" ? "Dnevni" : "Mjesečni")} izvještaj — {report.ReportDate:dd.MM.yyyy}");
+            : JsonSerializer.Deserialize<List<ExposureSnapshotRow>>(report.DataSnapshot) ?? [];
+        return GenerateExposureExcel(snapshot, $"{(report.ReportType == "DAILY" ? "Dnevni" : "Mjesečni")} izvještaj — {report.ReportDate:dd.MM.yyyy}");
     }
 
-    private static byte[] GenerateExcel(List<Limit> limits, string sheetTitle)
+    // ─── Privatne metode ────────────────────────────────────────────────────
+
+    private async Task<List<ExposureSnapshotRow>> BuildExposureSnapshotAsync() =>
+        await (from capital in _context.ClientLimits.AsNoTracking()
+               join entity in _context.LegalEntities.AsNoTracking() on capital.LegalEntityId equals entity.Id
+               orderby entity.Name
+               select new ExposureSnapshotRow
+               {
+                   Naziv = entity.Name,
+                   ExposureLimit = capital.ExposureLimit,
+                   CurrentExposure = capital.CurrentExposure,
+                   Currency = capital.Currency,
+                   IsLimitBreached = capital.IsLimitBreached,
+                   RegulatoryCapital = capital.RegulatoryCapital,
+                   CoreCapital = capital.CoreCapital,
+                   CreatedBy = capital.CreatedBy
+               })
+              .ToListAsync();
+
+    private async Task<List<LimitExportRow>> GetLimitExportRowsAsync(Guid? legalEntityId)
+    {
+        var baseQuery =
+            from limit in _context.Limiti.AsNoTracking()
+            join entity in _context.LegalEntities.AsNoTracking() on limit.LegalEntityId equals entity.Id
+            join capital in _context.ClientLimits.AsNoTracking() on limit.LegalEntityId equals capital.LegalEntityId into capitalGroup
+            from capital in capitalGroup.DefaultIfEmpty()
+            select new { limit, entity, capital };
+
+        if (legalEntityId.HasValue)
+            baseQuery = baseQuery.Where(x => x.limit.LegalEntityId == legalEntityId.Value);
+
+        return await baseQuery
+            .OrderBy(x => x.entity.Name)
+            .Select(x => new LimitExportRow
+            {
+                Naziv = x.entity.Name,
+                IsResident = x.entity.IsResident,
+                FbaId = x.entity.FbaId,
+                TaxNumber = x.entity.TaxNumber,
+                MaticniBroj = x.entity.MaticniBroj,
+                Matbroj = x.entity.Matbroj,
+                TipLimita = x.limit.TipLimita,
+                OdobreniLimit = x.limit.OdobreniLimit,
+                MaksimalnaOcekivanaUtilizacija = x.limit.MaksimalnaOcekivanaUtilizacija,
+                RokOcekivaneUtilizacije = x.limit.RokOcekivaneUtilizacije,
+                Komentar = x.limit.Komentar,
+                RegulatorniKapital = x.capital != null ? x.capital.RegulatoryCapital : (decimal?)null,
+                OsnovniKapital = x.capital != null ? x.capital.CoreCapital : (decimal?)null,
+            })
+            .ToListAsync();
+    }
+
+    private static byte[] BuildLimitsExcel(List<LimitExportRow> rows) =>
+        RegistryExcelExporter.Create(
+            "Limiti",
+            ["Naziv", "Rezidentnost", "FBA ID", "Porezni broj", "Matični broj", "Matbroj", "Tip limita", "Odobreni limit", "Maksimalna očekivana utilizacija", "Rok očekivane utilizacije", "Komentar", "Regulatorni kapital", "Osnovni kapital"],
+            rows.Select(r => (IReadOnlyList<object?>)
+            [r.Naziv, r.IsResident ? "Rezident" : "Nerezident", r.FbaId, r.TaxNumber, r.MaticniBroj, r.Matbroj, r.TipLimita, r.OdobreniLimit, r.MaksimalnaOcekivanaUtilizacija, r.RokOcekivaneUtilizacije, r.Komentar, r.RegulatorniKapital, r.OsnovniKapital]));
+
+    private static byte[] GenerateExposureExcel(List<ExposureSnapshotRow> rows, string sheetTitle)
     {
         using var workbook = new XLWorkbook();
         var ws = workbook.Worksheets.Add("Izvještaj");
@@ -192,18 +215,17 @@ public class ReportService : IReportService
         ws.Cell(1, 1).Style.Font.FontColor = XLColor.FromArgb(0x18, 0x18, 0x18);
         ws.Cell(1, 1).Style.Fill.BackgroundColor = XLColor.FromArgb(0xFF, 0xE6, 0x00);
         ws.Row(1).Height = 34;
-        ws.Range(1, 1, 1, 9).Merge();
+        ws.Range(1, 1, 1, 7).Merge();
 
         ws.Cell(2, 1).Value = $"Generisano: {DateTime.Now:dd.MM.yyyy HH:mm}";
         ws.Cell(2, 1).Style.Font.Italic = true;
         ws.Cell(2, 1).Style.Font.FontName = "Amalia";
         ws.Cell(2, 1).Style.Font.FontColor = XLColor.FromArgb(0x55, 0x55, 0x55);
-        ws.Range(2, 1, 2, 9).Merge();
+        ws.Range(2, 1, 2, 7).Merge();
 
         string[] headers =
         [
-            "Naziv", "Tip limita", "Iznos limita", "Utilizacija",
-            "Korigovani limit", "Raspoloživi limit",
+            "Naziv", "Limit izloženosti", "Trenutna izloženost", "Valuta",
             "Regulatorni kapital", "Osnovni kapital", "Kreirao"
         ];
 
@@ -219,40 +241,37 @@ public class ReportService : IReportService
         }
         ws.Row(3).Height = 26;
 
-        for (int i = 0; i < limits.Count; i++)
+        for (int i = 0; i < rows.Count; i++)
         {
-            var l = limits[i];
+            var r = rows[i];
             var row = 4 + i;
             var bg = i % 2 == 0 ? XLColor.White : XLColor.FromArgb(0xF5, 0xF5, 0xF5);
             var breachedBg = XLColor.FromArgb(0xFF, 0xEB, 0xEB);
-            bool breached = l.RaspoloziviLimit < 0;
+            var rowBg = r.IsLimitBreached ? breachedBg : bg;
 
-            ws.Cell(row, 1).Value = l.Naziv;
-            ws.Cell(row, 2).Value = l.TipLimita;
-            SetNum(ws.Cell(row, 3), l.IznosLimita, breached ? breachedBg : bg);
-            SetNum(ws.Cell(row, 4), l.Utilizacija, breached ? breachedBg : bg);
-            SetNum(ws.Cell(row, 5), l.KorigovaniLimit ?? 0, bg);
-            SetNum(ws.Cell(row, 6), l.RaspoloziviLimit, breached ? breachedBg : bg);
-            SetNum(ws.Cell(row, 7), l.RegulatorniKapital, bg);
-            SetNum(ws.Cell(row, 8), l.OsnovniKapital, bg);
-            ws.Cell(row, 9).Value = l.CreatedBy;
+            ws.Cell(row, 1).Value = r.Naziv;
+            SetNum(ws.Cell(row, 2), r.ExposureLimit, rowBg);
+            SetNum(ws.Cell(row, 3), r.CurrentExposure, rowBg);
+            ws.Cell(row, 4).Value = r.Currency;
+            SetNum(ws.Cell(row, 5), r.RegulatoryCapital, rowBg);
+            SetNum(ws.Cell(row, 6), r.CoreCapital, rowBg);
+            ws.Cell(row, 7).Value = r.CreatedBy;
 
-            for (int c = 1; c <= 9; c++)
+            for (int c = 1; c <= 7; c++)
             {
                 ws.Cell(row, c).Style.Font.FontName = "Amalia";
-                ws.Cell(row, c).Style.Fill.BackgroundColor = c is >= 3 and <= 8
-                    ? ws.Cell(row, c).Style.Fill.BackgroundColor
-                    : (breached ? breachedBg : bg);
+                if (c is not (2 or 3 or 5 or 6))
+                    ws.Cell(row, c).Style.Fill.BackgroundColor = rowBg;
             }
         }
 
-        var tableRange = ws.Range(3, 1, Math.Max(3, 3 + limits.Count), 9);
+        var tableRange = ws.Range(3, 1, Math.Max(3, 3 + rows.Count), 7);
         tableRange.Style.Border.InsideBorder = XLBorderStyleValues.Hair;
         tableRange.Style.Border.InsideBorderColor = XLColor.FromArgb(0xDD, 0xDD, 0xDD);
         tableRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
         tableRange.SetAutoFilter();
         ws.Columns().AdjustToContents();
-        ws.Columns(1, 9).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+        ws.Columns(1, 7).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
         ws.Column(1).Width = Math.Max(ws.Column(1).Width, 28);
         ws.SheetView.FreezeRows(3);
 
@@ -279,4 +298,35 @@ public class ReportService : IReportService
         CreatedBy = r.CreatedBy,
         CreatedAt = r.CreatedAt
     };
+
+    /// <summary>Snapshot reda izloženosti/kapitala klijenta — koristi se za DataSnapshot izvještaja (Kapital modul).</summary>
+    private sealed class ExposureSnapshotRow
+    {
+        public string Naziv { get; set; } = string.Empty;
+        public decimal ExposureLimit { get; set; }
+        public decimal CurrentExposure { get; set; }
+        public string Currency { get; set; } = "BAM";
+        public bool IsLimitBreached { get; set; }
+        public decimal RegulatoryCapital { get; set; }
+        public decimal CoreCapital { get; set; }
+        public string CreatedBy { get; set; } = string.Empty;
+    }
+
+    /// <summary>Red za Excel export limita (po vrsti limita, jedan klijent ili svi klijenti).</summary>
+    private sealed class LimitExportRow
+    {
+        public string Naziv { get; set; } = string.Empty;
+        public bool IsResident { get; set; }
+        public string? FbaId { get; set; }
+        public string? TaxNumber { get; set; }
+        public string? MaticniBroj { get; set; }
+        public string? Matbroj { get; set; }
+        public string TipLimita { get; set; } = string.Empty;
+        public decimal? OdobreniLimit { get; set; }
+        public decimal? MaksimalnaOcekivanaUtilizacija { get; set; }
+        public DateTime? RokOcekivaneUtilizacije { get; set; }
+        public string? Komentar { get; set; }
+        public decimal? RegulatorniKapital { get; set; }
+        public decimal? OsnovniKapital { get; set; }
+    }
 }

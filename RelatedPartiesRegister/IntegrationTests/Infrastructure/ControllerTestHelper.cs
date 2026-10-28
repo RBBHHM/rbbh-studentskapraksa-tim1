@@ -14,7 +14,7 @@ namespace IntegrationTests.Infrastructure
             where T : ControllerBase
         {
             var identity = new ClaimsIdentity(
-                new[] { new Claim(ClaimTypes.Name, userName) }, "TestAuth");
+                new[] { new Claim(ClaimTypes.Name, userName), new Claim(ClaimTypes.Email, userName) }, "TestAuth");
 
             var httpContext = new DefaultHttpContext
             {

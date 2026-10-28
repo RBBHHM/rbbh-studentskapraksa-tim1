@@ -24,8 +24,6 @@ public class LegalEntityService : ILegalEntityService
         new("Tip / Type", "Tip", "Type", "Rezidentnost", "Residency"),
         new("Porezni broj / Tax number", "Porezni broj", "Tax number"),
         new("FBA ID", "FBA ID"),
-        new("GCC broj / GCC number", "GCC broj", "GCC number"),
-        new("GCC naziv / GCC name", "GCC naziv", "GCC name"),
         new("Matični broj / Registration number", "Matbroj", "Matični broj", "Registration number"),
         new("Osnov povezanosti / Connection basis", "Osnov povezanosti", "Connection basis"),
         new("Opis povezanosti / Connection description", "Opis povezanosti", "Connection description"),
@@ -116,8 +114,6 @@ public class LegalEntityService : ILegalEntityService
             FbaId = !dto.IsResident ? dto.FbaId?.Trim() : null,
             Name = dto.Name.Trim(),
             Matbroj = string.IsNullOrWhiteSpace(dto.Matbroj) ? null : dto.Matbroj.Trim(),
-            GccNumber = dto.GccNumber?.Trim(),
-            GccName = dto.GccName?.Trim(),
             BasisOfConnection = dto.BasisOfConnection.Trim(),
             ConnectionDescription = dto.ConnectionDescription?.Trim(),
             ConnectedWithBank = dto.ConnectedWithBank,
@@ -161,8 +157,6 @@ public class LegalEntityService : ILegalEntityService
         entity.Name = dto.Name.Trim();
         entity.MaticniBroj = string.IsNullOrWhiteSpace(dto.MaticniBroj) ? null : dto.MaticniBroj.Trim();
         entity.Matbroj = string.IsNullOrWhiteSpace(dto.Matbroj) ? null : dto.Matbroj.Trim();
-        entity.GccNumber = dto.GccNumber?.Trim();
-        entity.GccName = dto.GccName?.Trim();
         entity.BasisOfConnection = dto.BasisOfConnection.Trim();
         entity.ConnectionDescription = dto.ConnectionDescription?.Trim();
         entity.ConnectedWithBank = dto.ConnectedWithBank;
@@ -262,21 +256,29 @@ public class LegalEntityService : ILegalEntityService
     /// <inheritdoc />
     public async Task<LegalEntityLimitFormDataDTO?> GetLimitFormDataAsync(Guid legalEntityId)
     {
-        return await _context.LegalEntities
-            .AsNoTracking()
-            .Where(e => e.Id == legalEntityId && e.IsActive)
-            .Select(e => new LegalEntityLimitFormDataDTO
+        var result = await _context.LegalEntities.AsNoTracking()
+            .Where(entity => entity.Id == legalEntityId && entity.IsActive)
+            .Select(entity => new LegalEntityLimitFormDataDTO
             {
-                Id = e.Id,
-                IsResident = e.IsResident,
-                FbaId = e.FbaId,
-                TaxNumber = e.TaxNumber,
-                MaticniBroj = e.MaticniBroj,
-                Name = e.Name,
-                GccNumber = e.GccNumber,
-                GccName = e.GccName
+                Id = entity.Id,
+                IsResident = entity.IsResident,
+                FbaId = entity.FbaId,
+                TaxNumber = entity.TaxNumber,
+                MaticniBroj = entity.MaticniBroj,
+                Matbroj = entity.Matbroj,
+                Name = entity.Name,
             })
             .FirstOrDefaultAsync();
+
+        if (result is null)
+            return null;
+
+        // Kapital je jedan globalni zapis (nije po pravnom licu) — čita se odvojeno.
+        var capital = await _context.Capitals.AsNoTracking().FirstOrDefaultAsync();
+        result.RegulatoryCapital = capital?.RegulatoryCapital;
+        result.CoreCapital = capital?.CoreCapital;
+
+        return result;
     }
 
     // ── Privatni pomoćni metodi ───────────────────────────────────────────────
@@ -305,7 +307,7 @@ public class LegalEntityService : ILegalEntityService
         if (string.IsNullOrWhiteSpace(dto.BasisOfConnection))
             throw new ValidationException("basisOfConnection", "Osnov povezanosti je obavezan.");
 
-        ValidateRequiredBusinessFields(dto.GccNumber, dto.GccName, dto.ConnectionDescription, dto.DateFrom);
+        ValidateRequiredBusinessFields(dto.ConnectionDescription, dto.DateFrom);
 
         if (dto.DateFrom.HasValue && dto.DateTo.HasValue && dto.DateTo < dto.DateFrom)
             throw new ValidationException("dateTo", "Datum do mora biti nakon datuma od.");
@@ -330,18 +332,13 @@ public class LegalEntityService : ILegalEntityService
             throw new ValidationException("name", "Naziv je obavezan.");
         if (string.IsNullOrWhiteSpace(dto.BasisOfConnection))
             throw new ValidationException("basisOfConnection", "Osnov povezanosti je obavezan.");
-        ValidateRequiredBusinessFields(dto.GccNumber, dto.GccName, dto.ConnectionDescription, dto.DateFrom);
+        ValidateRequiredBusinessFields(dto.ConnectionDescription, dto.DateFrom);
         if (dto.DateFrom.HasValue && dto.DateTo.HasValue && dto.DateTo < dto.DateFrom)
             throw new ValidationException("dateTo", "Datum do mora biti nakon datuma od.");
     }
 
-    private static void ValidateRequiredBusinessFields(string? gccNumber, string? gccName,
-        string? connectionDescription, DateTime? dateFrom)
+    private static void ValidateRequiredBusinessFields(string? connectionDescription, DateTime? dateFrom)
     {
-        if (string.IsNullOrWhiteSpace(gccNumber) || !gccNumber.All(char.IsDigit))
-            throw new ValidationException("gccNumber", "GCC broj je obavezan i mora sadržavati samo cifre.");
-        if (string.IsNullOrWhiteSpace(gccName))
-            throw new ValidationException("gccName", "GCC naziv je obavezan.");
         if (string.IsNullOrWhiteSpace(connectionDescription))
             throw new ValidationException("connectionDescription", "Opis osnova povezanosti je obavezan.");
         if (!dateFrom.HasValue)
@@ -402,14 +399,12 @@ public class LegalEntityService : ILegalEntityService
                 var tipStr         = ws.Cell(row, 2).GetString().Trim();
                 var taxNumber      = ws.Cell(row, 3).GetString().Trim();
                 var fbaId          = ws.Cell(row, 4).GetString().Trim();
-                var gccNumber      = ws.Cell(row, 5).GetString().Trim();
-                var gccName        = ws.Cell(row, 6).GetString().Trim();
-                var matbroj        = ws.Cell(row, 7).GetString().Trim();
-                var basisOfConn    = ws.Cell(row, 8).GetString().Trim();
-                var connDesc       = ws.Cell(row, 9).GetString().Trim();
-                var connBankStr    = ws.Cell(row, 10).GetString().Trim();
-                var dateFromStr    = ws.Cell(row, 11).GetString().Trim();
-                var dateToStr      = ws.Cell(row, 12).GetString().Trim();
+                var matbroj        = ws.Cell(row, 5).GetString().Trim();
+                var basisOfConn    = ws.Cell(row, 6).GetString().Trim();
+                var connDesc       = ws.Cell(row, 7).GetString().Trim();
+                var connBankStr    = ws.Cell(row, 8).GetString().Trim();
+                var dateFromStr    = ws.Cell(row, 9).GetString().Trim();
+                var dateToStr      = ws.Cell(row, 10).GetString().Trim();
 
                 if (string.IsNullOrWhiteSpace(name))
                     continue; // prazan red — preskoči bez greške
@@ -443,8 +438,6 @@ public class LegalEntityService : ILegalEntityService
                     TaxNumber          = isResident && !string.IsNullOrWhiteSpace(taxNumber) ? taxNumber : null,
                     FbaId              = !isResident && !string.IsNullOrWhiteSpace(fbaId) ? fbaId : null,
                     Name               = name,
-                    GccNumber          = string.IsNullOrWhiteSpace(gccNumber) ? null : gccNumber,
-                    GccName            = string.IsNullOrWhiteSpace(gccName) ? null : gccName,
                     Matbroj            = string.IsNullOrWhiteSpace(matbroj) ? null : matbroj,
                     BasisOfConnection  = basisOfConn,
                     ConnectionDescription = string.IsNullOrWhiteSpace(connDesc) ? null : connDesc,
@@ -468,8 +461,6 @@ public class LegalEntityService : ILegalEntityService
                     TaxNumber = dto.IsResident ? dto.TaxNumber : null,
                     FbaId = dto.IsResident ? null : dto.FbaId,
                     Name = dto.Name,
-                    GccNumber = dto.GccNumber,
-                    GccName = dto.GccName,
                     Matbroj = dto.Matbroj,
                     BasisOfConnection = dto.BasisOfConnection,
                     ConnectionDescription = dto.ConnectionDescription,
@@ -516,8 +507,6 @@ public class LegalEntityService : ILegalEntityService
         FbaId = e.FbaId,
         Name = e.Name,
         Matbroj = e.Matbroj,
-        GccNumber = e.GccNumber,
-        GccName = e.GccName,
         BasisOfConnection = e.BasisOfConnection,
         ConnectionDescription = e.ConnectionDescription,
         ConnectedWithBank = e.ConnectedWithBank,

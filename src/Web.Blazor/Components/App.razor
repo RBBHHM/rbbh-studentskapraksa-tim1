@@ -1,0 +1,22 @@
+@using System.Globalization
+
+<!DOCTYPE html>
+<html lang="@CultureInfo.CurrentUICulture.Name" data-theme="light" data-theme-preference="system">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <base href="/" />
+    <script src="_content/RBI.DesignSystem/rbi-theme.js"></script>
+    <link rel="stylesheet" href="_content/RBI.DesignSystem/rbi-design-system.css" />
+    <link rel="stylesheet" href="app.css" />
+    <HeadOutlet @rendermode="InteractiveServer" />
+</head>
+
+<body>
+    <Routes @rendermode="InteractiveServer" />
+    <script src="app.js"></script>
+    <script src="_framework/blazor.web.js"></script>
+</body>
+
+</html>

@@ -66,6 +66,24 @@ public sealed class SmtpEmailService(
             EmailTemplates.HrPhysicalPersonExpired(personName, updatedBy, relationBasis, dateTo, AppBaseUrl));
     }
 
+    public async Task SendPeriodLockedBroadcastAsync(
+        IEnumerable<string> recipientEmails, string lockedBy, int year, int month)
+    {
+        var subject = $"Period zaključan — {EmailTemplates.MonthDisplay(year, month)}";
+        var html    = EmailTemplates.PeriodLocked(lockedBy, year, month, AppBaseUrl);
+        foreach (var to in recipientEmails.Distinct(StringComparer.OrdinalIgnoreCase))
+            await SendAsync(to, subject, html);
+    }
+
+    public async Task SendPeriodUnlockedBroadcastAsync(
+        IEnumerable<string> recipientEmails, string unlockedBy, int year, int month)
+    {
+        var subject = $"Period otključan — {EmailTemplates.MonthDisplay(year, month)}";
+        var html    = EmailTemplates.PeriodUnlocked(unlockedBy, year, month, AppBaseUrl);
+        foreach (var to in recipientEmails.Distinct(StringComparer.OrdinalIgnoreCase))
+            await SendAsync(to, subject, html);
+    }
+
     private async Task SendAsync(string to, string subject, string htmlBody)
     {
         var smtp = options.Value.Smtp;

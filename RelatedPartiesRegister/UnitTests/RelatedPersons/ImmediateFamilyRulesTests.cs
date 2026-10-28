@@ -22,22 +22,9 @@ public class ImmediateFamilyRulesTests
         var dto = ValidDto();
         dto.SpecialRelationBasis = "UZA_PORODICA";
         dto.RelatedToPersonId = null;
-        dto.FamilyRelationshipType = FamilyRelationshipType.Spouse;
 
         RelatedPersonValidator.Validate(dto)
             .Should().Be("Za člana uže porodice odaberite fizičko lice s kojim je povezan.");
-    }
-
-    [Fact]
-    public void Validate_ClanUzePorodiceBezVrsteOdnosa_VracaJasnuGresku()
-    {
-        var dto = ValidDto();
-        dto.SpecialRelationBasis = "UZA_PORODICA";
-        dto.RelatedToPersonId = Guid.NewGuid();
-        dto.FamilyRelationshipType = null;
-
-        RelatedPersonValidator.Validate(dto)
-            .Should().Be("Za člana uže porodice odaberite vrstu porodičnog odnosa.");
     }
 
     [Fact]
@@ -55,7 +42,6 @@ public class ImmediateFamilyRulesTests
         var dto = ValidDto();
         dto.SpecialRelationBasis = "UZA_PORODICA";
         dto.RelatedToPersonId = Guid.NewGuid();
-        dto.FamilyRelationshipType = FamilyRelationshipType.Child;
         dto.IsIdentifiedStaff = true;
         dto.ConnectedWithBank = false;
         dto.SpecialRelationshipWithBank = true;
@@ -72,7 +58,6 @@ public class ImmediateFamilyRulesTests
         dto.MalusClawback.Should().BeFalse();
         dto.DeclarationNoFamilyMembers.Should().BeTrue();
         dto.RelatedToPersonId.Should().NotBeNull();
-        dto.FamilyRelationshipType.Should().Be(FamilyRelationshipType.Child);
     }
 
     [Fact]
@@ -80,12 +65,10 @@ public class ImmediateFamilyRulesTests
     {
         var dto = ValidDto();
         dto.RelatedToPersonId = Guid.NewGuid();
-        dto.FamilyRelationshipType = FamilyRelationshipType.Spouse;
 
         ImmediateFamilyPolicy.Apply(dto);
 
         dto.RelatedToPersonId.Should().BeNull();
-        dto.FamilyRelationshipType.Should().BeNull();
     }
 
     private static CreateRelatedPersonDTO ValidDto() => new()
@@ -94,8 +77,6 @@ public class ImmediateFamilyRulesTests
         LastName = "Mahmutović",
         Residency = ResidencyType.Resident,
         JMBG = "2801984175000",
-        GCCNumber = "1001",
-        GCCName = "RBI GCC",
         RelationBasis = "ZOB-2-V-5",
         RelationDescription = "Povezano fizičko lice",
         SpecialRelationBasis = "UPRAVA",

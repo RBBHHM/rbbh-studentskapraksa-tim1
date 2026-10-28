@@ -5,39 +5,55 @@ using RBBH.ConnectedParties.DL.DTO.Report;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using RBBH.ConnectedParties.Helpers.Constants;
 
 namespace RBBH.ConnectedParties.API.Controllers;
 
 /// <summary>
 /// Endpointi za pregled izvještaja i Excel export podataka o pravnim licima.
 /// </summary>
+[RBBH.ConnectedParties.Helpers.RequireActorEmail]
 [ApiController]
 [Route("api/reports")]
-[Authorize(Roles = "regulatory-reporting")]
+[Authorize(Policy = ApplicationPolicies.ReportsRead)]
 [Produces("application/json")]
 public class ReportController : ControllerBase
 {
     private readonly IReportService _reportService;
+    private readonly IAuditService _auditService;
 
-    public ReportController(IReportService reportService)
+    public ReportController(IReportService reportService, IAuditService auditService)
     {
         _reportService = reportService;
+        _auditService = auditService;
     }
 
     private string CurrentUser() =>
-        User.FindFirst(ClaimTypes.Name)?.Value
-        ?? User.FindFirst("preferred_username")?.Value
-        ?? "system";
+        RBBH.ConnectedParties.Helpers.AuthenticatedActor.Email(User);
 
     // ── Dnevni izvještaji ─────────────────────────────────────────────────────
 
     /// <summary>Kreira dnevni izvještaj za trenutni datum.</summary>
     [HttpPost("daily")]
+    [Authorize(Policy = ApplicationPolicies.ReportsGenerate)]
     [ProducesResponseType(typeof(ReportDTO), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GenerateDailyReport()
     {
-        var report = await _reportService.GenerateDailyReportAsync(CurrentUser());
+        var currentUser = CurrentUser();
+        var report = await _reportService.GenerateDailyReportAsync(currentUser);
+
+        await _auditService.LogAsync(new AuditEntry
+        {
+            TableName = "Report",
+            RecordId = report.Id.ToString(),
+            Action = "GENERATE",
+            NewValues = System.Text.Json.JsonSerializer.Serialize(new { type = "daily" }),
+            UserId = currentUser,
+            Username = currentUser,
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+        });
+
         return CreatedAtAction(nameof(GetDailyReports), report);
     }
 
@@ -63,6 +79,7 @@ public class ReportController : ControllerBase
     /// <param name="year">Godina (npr. 2026).</param>
     /// <param name="month">Mjesec (1-12).</param>
     [HttpPost("monthly/{year:int}/{month:int}")]
+    [Authorize(Policy = ApplicationPolicies.ReportsGenerate)]
     [ProducesResponseType(typeof(ReportDTO), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -74,7 +91,20 @@ public class ReportController : ControllerBase
         if (year < 2000 || year > DateTime.UtcNow.Year)
             return BadRequest(new { errors = new[] { new { field = "year", message = "Godina nije ispravna." } } });
 
-        var report = await _reportService.GenerateMonthlyReportAsync(year, month, CurrentUser());
+        var currentUser = CurrentUser();
+        var report = await _reportService.GenerateMonthlyReportAsync(year, month, currentUser);
+
+        await _auditService.LogAsync(new AuditEntry
+        {
+            TableName = "Report",
+            RecordId = report.Id.ToString(),
+            Action = "GENERATE",
+            NewValues = System.Text.Json.JsonSerializer.Serialize(new { type = "monthly", year, month }),
+            UserId = currentUser,
+            Username = currentUser,
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+        });
+
         return CreatedAtAction(nameof(GetMonthlyReports), report);
     }
 
@@ -105,6 +135,19 @@ public class ReportController : ControllerBase
     {
         var bytes = await _reportService.ExportClientByIdAsync(identifier);
         var fileName = $"klijent_{identifier}_{DateTime.Now:yyyyMMdd}.xlsx";
+
+        var currentUser = CurrentUser();
+        await _auditService.LogAsync(new AuditEntry
+        {
+            TableName = "Report",
+            RecordId = identifier,
+            Action = "EXPORT",
+            NewValues = System.Text.Json.JsonSerializer.Serialize(new { type = "client", identifier }),
+            UserId = currentUser,
+            Username = currentUser,
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+        });
+
         return File(bytes,
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             fileName);
@@ -121,6 +164,19 @@ public class ReportController : ControllerBase
     {
         var bytes = await _reportService.ExportAllClientsWithLimitsAsync();
         var fileName = $"svi_klijenti_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+
+        var currentUser = CurrentUser();
+        await _auditService.LogAsync(new AuditEntry
+        {
+            TableName = "Report",
+            RecordId = "-",
+            Action = "EXPORT",
+            NewValues = System.Text.Json.JsonSerializer.Serialize(new { type = "all-clients" }),
+            UserId = currentUser,
+            Username = currentUser,
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+        });
+
         return File(bytes,
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             fileName);
@@ -131,6 +187,19 @@ public class ReportController : ControllerBase
     public async Task<IActionResult> ExportGenerated(Guid reportId)
     {
         var bytes = await _reportService.ExportGeneratedReportAsync(reportId);
+
+        var currentUser = CurrentUser();
+        await _auditService.LogAsync(new AuditEntry
+        {
+            TableName = "Report",
+            RecordId = reportId.ToString(),
+            Action = "EXPORT",
+            NewValues = System.Text.Json.JsonSerializer.Serialize(new { type = "generated" }),
+            UserId = currentUser,
+            Username = currentUser,
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+        });
+
         return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"izvjestaj_{reportId:N}.xlsx");
     }
 }

@@ -1,0 +1,46 @@
+@page "/"
+@page "/app"
+@inject RBI.Authorization.IRbiPermissionService Permissions
+@inject IProfileApi Profile
+@inject AuthenticationStateProvider AuthenticationState
+<PageTitle>@T["app.title"]</PageTitle>
+<AuthorizeView>
+    <Authorized>
+        <section class="app-hero" data-surface="brand" aria-labelledby="app-hero-title">
+            <div class="app-hero__hatch" aria-hidden="true"></div>
+            <div class="app-hero__content">
+                <RbiText Tone="RbiTextTone.Secondary" Class="app-hero__eyebrow">@T["dashboard.eyebrow"]</RbiText>
+                <RbiDisplay Element="RbiDisplayElement.Heading1" Size="RbiDisplaySize.XLarge" Class="app-hero__title" id="app-hero-title">@T["dashboard.title"]</RbiDisplay>
+                <RbiText Size="RbiTextSize.XLarge" Class="app-hero__lead">@T["dashboard.description"]</RbiText>
+                <div class="app-hero__proof">
+                    <span class="app-hero__proof-item"><RbiIcon Name="RbiIconName.CheckCircle2" />@T["dashboard.proof.access"]</span>
+                    <span>@T["dashboard.proof.tracking"]</span>
+                    <span>@T["dashboard.proof.period"]</span>
+                </div>
+            </div>
+        </section>
+        <div class="app-areas-heading">
+            <RbiEyebrow Class="app-areas-heading__eyebrow">@T["dashboard.areas.eyebrow"]</RbiEyebrow>
+            <RbiHeading Level="2" VisualLevel="3" Class="app-areas-heading__title">@T["dashboard.areas.title"]</RbiHeading>
+        </div>
+        <RbiBentoGrid Class="app-areas" Density="RbiBentoDensity.Tall" Gap="RbiGridGap.Loose">
+            @if (_legal) { <HomeCard Title="@T["legal.title"]" Description="@T["legal.subtitle"]" Href="/app/legal-persons" Icon="RbiIconName.Building2" /> }
+            @if (_physical) { <HomeCard Title="@T["person.title"]" Description="@T["person.subtitle"]" Href="/app/physical-persons" Icon="RbiIconName.UserRound" /> }
+            @if (_limits) { <HomeCard Title="@T["limit.title"]" Description="@T["limit.subtitle"]" Href="/app/limits" Icon="RbiIconName.TrendingUp" /> }
+            @if (_capital) { <HomeCard Title="@T["capital.title"]" Description="@T["capital.subtitle"]" Href="/app/capital" Icon="RbiIconName.Wallet" /> }
+            @if (_reports) { <HomeCard Title="@T["reports.title"]" Description="@T["reports.subtitle"]" Href="/app/reports" Icon="RbiIconName.FileText" /> }
+            @if (_capital) { <HomeCard Title="@T["notifications.title"]" Description="@T["notifications.subtitle"]" Href="/app/notifications" Icon="RbiIconName.Bell" /> }
+        </RbiBentoGrid>
+    </Authorized>
+    <NotAuthorized><HeroBar Title="@T["app.title"]" Description="@T["app.welcome"]" /><IdentityNotice /></NotAuthorized>
+</AuthorizeView>
+@code {
+    private bool _physical, _legal, _limits, _capital, _admin, _reports;
+    protected override async Task OnInitializedAsync()
+    {
+        if ((await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated != true) return;
+        try { _admin = ApplicationAccess.IsAdministrator(await Profile.GetAsync()); _reports = await Permissions.HasPermissionAsync("reports.read"); _physical = await Permissions.HasPermissionAsync("fl.read"); _legal = await Permissions.HasPermissionAsync("pl.read"); _limits = await Permissions.HasPermissionAsync("limiti.read"); _capital = await Permissions.HasPermissionAsync("kapital.read"); }
+        catch (RegistryApiException) { _physical = _legal = _limits = _capital = _admin = _reports = false; }
+    }
+}
+

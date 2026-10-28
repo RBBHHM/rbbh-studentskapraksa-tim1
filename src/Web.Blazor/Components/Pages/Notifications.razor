@@ -1,0 +1,60 @@
+@page "/app/notifications"
+@using RBI.DesignSystem.Components.Forms
+@implements IDisposable
+@inject AuthenticationStateProvider AuthenticationState
+@inject IProfileApi Profile
+@inject INotificationsApi Api
+
+<PageTitle>@T["notifications.title"]</PageTitle>
+<HeroBar Title="@T["notifications.title"]" Description="@T["notifications.subtitle"]" Eyebrow="@T["nav.area.work"]">
+</HeroBar>
+@if (!_authenticated && !_loading) { <IdentityNotice /> }
+else if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
+else if (_error is not null)
+{
+    <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_error]" />
+    <RbiButton OnClick="LoadAsync">@T["state.retry"]</RbiButton>
+}
+else if (!_canRead) { <RbiAlert Title="@T["errors.forbidden"]" /> }
+else
+{
+    @if (_log.Provider.Equals("smtp", StringComparison.OrdinalIgnoreCase)) { <p class="app-visually-hidden" role="status">@T["notifications.smtp"]</p> }
+    <div class="registry-controls"><RegistrySearch Id="notification-search" @bind-Value="_search" /></div>
+    @if (!Filtered.Any()) { <div class="registry-surface"><RegistryEmpty Body="@T[string.IsNullOrWhiteSpace(_search) ? "state.empty-body" : "state.no-match"]" /></div> }
+    else
+    {
+        <RbiTable AccessibleLabel="@T["notifications.title"]" Class="registry-table registry-notifications-table">
+            <thead><tr><th scope="col">@T["notifications.purpose"]</th><th scope="col">@T["notifications.to"]</th><th scope="col">@T["notifications.subject"]</th><th scope="col">@T["notifications.status"]</th><th scope="col">@T["notifications.time"]</th></tr></thead>
+            <tbody>@foreach (var entry in Filtered)
+            {
+                <tr @key="entry.Id"><td>@entry.Purpose</td><td>@entry.To</td><td>@entry.Subject</td><td>@entry.DeliveryStatus</td><td>@AppFormat.Timestamp(entry.SentAt)</td></tr>
+            }</tbody>
+        </RbiTable>
+    }
+}
+@code {
+    private readonly CancellationTokenSource _lifetime = new();
+    private readonly CancellationToken _token;
+    public Notifications() => _token = _lifetime.Token;
+    private NotificationLog _log = new("", []);
+    private string? _search, _error;
+    private bool _disposed, _authenticated, _canRead, _loading = true, _refreshing, _loaded;
+    private IEnumerable<RecordedNotification> Filtered => _log.Emails.Where(entry => entry.Matches(_search));
+    protected override Task OnInitializedAsync() => LoadAsync();
+    private async Task LoadAsync()
+    {
+        if (_disposed || _refreshing) return; _loading = !_loaded; _refreshing = true; _error = null;
+        try
+        {
+            _authenticated = (await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true;
+            if (!_authenticated) return;
+            _canRead = (await Profile.GetAsync(_token)).Permissions.Contains("KAPITAL_VIEW");
+            if (!_canRead) return;
+            _log = await Api.GetAsync(_token); _loaded = true;
+        }
+        catch (RegistryApiException exception) { _error = exception.MessageKey; }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally { _loading = false; _refreshing = false; }
+    }
+    public void Dispose() { _disposed = true; _lifetime.Cancel(); _lifetime.Dispose(); }
+}

@@ -1,0 +1,46 @@
+@using RBI.DesignSystem.Components.Forms
+@using RBI.Forms
+@implements IDisposable
+
+<EditForm EditContext="_context" OnSubmit="SubmitAsync" FormName="code-list-editor" class="registry-codes-form" novalidate>
+    <fieldset disabled="@_submission.IsSubmitting">
+        <legend class="app-visually-hidden">@T[Model.Definition ? "codes.definition-create" : Model.Id is null ? "codes.create" : "codes.edit"]</legend>
+        <div class="registry-form-grid">
+        <RbiField Class="app-span-2" TValue="string" Id="code-name" Label="@T[Model.Definition ? "codes.definition-name" : "codes.name"]" Required For="@(() => Model.Name)"><RbiInput Id="code-name" @bind-Value="Model.Name" maxlength="@(Model.Definition ? 100 : 200)" /></RbiField>
+        @if (!Model.Definition)
+        {
+            <RbiField TValue="string" Id="code-key" Label="@T["codes.code"]" Required For="@(() => Model.Code)"><RbiInput Id="code-key" @bind-Value="Model.Code" Disabled="@(Model.Id is not null)" maxlength="50" /></RbiField>
+
+            <RbiField TValue="string" Id="code-order" Label="@T["codes.order"]" For="@(() => Model.Order)"><RbiInput Id="code-order" @bind-Value="Model.Order" inputmode="numeric" /></RbiField>
+        }
+        <RbiField TValue="string" Id="code-description" Label="@T[Model.Definition ? "codes.purpose" : "codes.description"]" For="@(() => Model.Description)"><RbiTextArea Id="code-description" @bind-Value="Model.Description" maxlength="500" /></RbiField>
+        @if (!Model.Definition) { <RbiCheckbox @bind-Value="Model.Active">@T["codes.active"]</RbiCheckbox> }
+        </div>
+        @if (!Model.Definition) { <p class="app-visually-hidden">@T["codes.immutable"]</p> }
+    <div role="alert" tabindex="-1" @ref="_summary"><ValidationSummary /></div>
+        <div class="registry-toolbar"><RbiButton OnClick="Cancel" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton><RbiButton Type="RbiButtonType.Submit">@T[Model.Definition ? "codes.create-submit" : "common.save"]</RbiButton></div>
+    </fieldset>
+</EditForm>
+@code {
+    [Parameter, EditorRequired] public CodeListDraft Model { get; set; } = null!;
+    [Parameter] public EventCallback<CodeListDraft> Save { get; set; }
+    [Parameter] public EventCallback Cancel { get; set; }
+    private EditContext _context = null!;
+    private RbiServerValidation _validation = null!;
+    private readonly RbiFormSubmissionState _submission = new();
+    private ElementReference _summary;
+    private bool _focusErrors;
+    protected override void OnInitialized() { _context = new(Model); _validation = new(_context); }
+    protected override async Task OnAfterRenderAsync(bool firstRender) { if (_focusErrors) { _focusErrors = false; await _summary.FocusAsync(); } }
+    private async Task SubmitAsync() => await _submission.SubmitAsync(async () =>
+    {
+        if (!Model.Definition && Model.Id is null) Model.Code = Model.Code.ToUpperInvariant();
+        var parsed = _context.Validate(); var errors = Model.Validate();
+        _validation.DisplayErrors(errors.ToDictionary(item => item.Key, item => item.Value.Select(key => T[key]).ToArray()));
+        if (!parsed || errors.Count > 0) { _focusErrors = true; return; }
+        try { await Save.InvokeAsync(Model); }
+        catch (RegistryApiException exception) { _validation.DisplayFormError(T[exception.StatusCode is null || (int)exception.StatusCode >= 500 ? "period.uncertain" : exception.MessageKey]); _focusErrors = true; }
+        catch (OperationCanceledException) { }
+    });
+    public void Dispose() => _validation.Dispose();
+}

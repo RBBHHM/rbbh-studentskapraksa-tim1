@@ -14,10 +14,10 @@ Database__Password=<OCP Secret>
 Za lokalni SSMS/Windows identitet koristite npr. `localhost\SQLEXPRESS`, naziv
 `RPR_Local` i `Database__IntegratedSecurity=true`; tada User/Password nisu
 potrebni. Ako su i ServerName i Name prazni, Development koristi seedovanu
-InMemory bazu. Ako su vrijednosti unesene, ali SQL nije dostupan zbog mreže,
-lokalni Development nakon kratke provjere ispisuje upozorenje i prelazi na
-InMemory. Djelimična konfiguracija se odbija jasnom greškom, a UAT/Production
-nikada ne koriste fallback i bez SQL konfiguracije ne startaju. `Encrypt=true` je uvijek uključen;
+InMemory bazu. Startup provjerava obaveznu konfiguraciju, ali ne otvara SQL vezu niti primjenjuje migracije.
+Ako konfigurisani SQL nije dostupan ili odbije login, `/health/ready` vraća 503;
+`/health/live` ostaje nezavisan od SQL-a. Djelimična konfiguracija se odbija jasnom
+greškom, a UAT/Production bez SQL konfiguracije ne startaju. `Encrypt=true` je uvijek uključen;
 `TrustServerCertificate=true` dozvoljen je automatski samo u Developmentu.
 
 ## Promjena modela
@@ -34,11 +34,11 @@ dotnet ef migrations add NazivPromjene `
   --startup-project RelatedPartiesRegister/RelatedPartiesRegister.csproj
 ```
 
-U Development režimu backend primjenjuje samo još neprimijenjene migracije.
-UAT i produkcija imaju `Database__ApplyMigrations=false` i ne izvršavaju DDL iz
-aplikacijskog procesa. Ako baza kasni za kodom, servis prekida startup jasnom
-porukom umjesto da radi nad nekompatibilnom shemom. Odobreni idempotentni SQL
+Backend ne primjenjuje migracije, ne kreira shemu i ne izvršava seed ni u jednom
+okruženju. Developer lokalno eksplicitno primjenjuje pregledanu migraciju naredbom
+`dotnet ef database update`, a odobreni idempotentni SQL za UAT i produkciju
 izvršava se kroz centralni DB repozitorij prema
 [DB change workflowu](DB-CHANGE-WORKFLOW.md). Historija ostaje u
-`__EFMigrationsHistory`. Demo seed se izvršava samo nad Development InMemory
-bazom; produkcijski podaci se unose kroz aplikaciju ili kontrolisani DB proces.
+`__EFMigrationsHistory`. Eventualni jednokratni seed izvršava se samo eksplicitnim
+developerskim ili kontrolisanim DB procesom; aplikacijski startup nikada ne mijenja
+podatke radi inicijalizacije.

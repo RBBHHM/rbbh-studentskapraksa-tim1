@@ -6,6 +6,7 @@ using RBBH.ConnectedParties.DL.Entities.PeriodLock;
 using IntegrationTests.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace IntegrationTests.Tests.PeriodLock
@@ -31,13 +32,18 @@ namespace IntegrationTests.Tests.PeriodLock
             var auditService = new AuditService(ctx);
             var emailService = new Mock<IEmailService>();
             var configuration = new Mock<IConfiguration>();
+            configuration.Setup(item => item["Email:AdminEmail"]).Returns("admin@example.test");
+            var appUserService = new Mock<IAppUserService>();
+            var logger = new Mock<ILogger<PeriodLockController>>();
             return new PeriodLockController(
                 new PeriodLockRepository(ctx),
                 new UnlockRequestRepository(ctx),
                 new PeriodLockService(),
                 auditService,
                 emailService.Object,
-                configuration.Object
+                configuration.Object,
+                appUserService.Object,
+                logger.Object
             ).WithHttpContext(AdminUser);
         }
 
@@ -47,13 +53,18 @@ namespace IntegrationTests.Tests.PeriodLock
             var auditService = new AuditService(ctx);
             var emailService = new Mock<IEmailService>();
             var configuration = new Mock<IConfiguration>();
+            configuration.Setup(item => item["Email:AdminEmail"]).Returns("admin@example.test");
+            var appUserService = new Mock<IAppUserService>();
+            var logger = new Mock<ILogger<PeriodLockController>>();
             return new PeriodLockController(
                 new PeriodLockRepository(ctx),
                 new UnlockRequestRepository(ctx),
                 new PeriodLockService(),
                 auditService,
                 emailService.Object,
-                configuration.Object
+                configuration.Object,
+                appUserService.Object,
+                logger.Object
             ).WithHttpContext(RegularUser);
         }
 
@@ -229,7 +240,7 @@ namespace IntegrationTests.Tests.PeriodLock
                 .FirstOrDefault();
 
             authorizeAttr.Should().NotBeNull("upravljanje periodom zahtijeva autentificiran funkcionalni pristup");
-            authorizeAttr!.Roles.Should().Be("regulatory-reporting");
+            authorizeAttr!.Policy.Should().Be(RBBH.ConnectedParties.Helpers.Constants.ApplicationPolicies.CapitalRead);
         }
 
         [Fact]

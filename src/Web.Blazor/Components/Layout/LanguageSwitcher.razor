@@ -1,0 +1,37 @@
+@using System.Globalization
+@using Microsoft.JSInterop
+@using RBI.Localization
+@using RBI.DesignSystem.Components.Forms
+@inject RbiCultureCatalog Cultures
+@inject NavigationManager Navigation
+@inject IJSRuntime Js
+
+<form action="@Action" method="post" data-enhance="false" class="app-language" id="@(Id)-form">
+    <AntiforgeryToken />
+    <RbiIcon Name="RbiIconName.Languages" Class="app-language__icon" />
+    <label for="@Id" class="app-visually-hidden">@T["common.language"]</label>
+    <RbiSelect TValue="string" id="@Id" Value="_culture" ValueChanged="CultureChanged" ValueExpression="@(() => _culture)">
+        @foreach (var culture in Cultures.SupportedCultures)
+        {
+            <option value="@culture">@LanguageName(culture)</option>
+        }
+    </RbiSelect>
+</form>
+
+@code {
+    [Parameter] public string Id { get; set; } = "app-culture";
+    private static string LanguageName(string culture) { var info = CultureInfo.GetCultureInfo(culture); return info.TextInfo.ToTitleCase(info.NativeName); }
+    private string _culture = CultureInfo.CurrentUICulture.Name;
+    private bool _submit;
+    private string Action => $"/rbi-localization/culture/{Uri.EscapeDataString(_culture)}?returnUrl={Uri.EscapeDataString("/" + Navigation.ToBaseRelativePath(Navigation.Uri))}";
+
+    // The language applies as soon as it is chosen, like the reference product; the form post keeps the antiforgery-protected culture endpoint.
+    private void CultureChanged(string culture) { _culture = culture; _submit = true; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_submit) return;
+        _submit = false;
+        await Js.InvokeVoidAsync("appLanguage.submit", $"{Id}-form");
+    }
+}

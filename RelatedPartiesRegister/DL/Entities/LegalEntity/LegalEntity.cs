@@ -39,16 +39,6 @@ public class LegalEntity
     [StringLength(200)]
     public string Name { get; set; } = string.Empty;
 
-    // ── GCC podaci ────────────────────────────────────────────────────────────
-
-    /// <summary>GCC broj.</summary>
-    [StringLength(100)]
-    public string? GccNumber { get; set; }
-
-    /// <summary>GCC naziv.</summary>
-    [StringLength(200)]
-    public string? GccName { get; set; }
-
     // ── Matbroj ───────────────────────────────────────────────────────────────
 
     /// <summary>Matični broj — neobavezno, numerički string; izvor: kod.dbo.komitent.matbroj.</summary>

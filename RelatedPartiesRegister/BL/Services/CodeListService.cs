@@ -247,8 +247,6 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
                 await _dbContext.RelatedPersons.AsNoTracking().AnyAsync(person => person.SpecialRelationBasis == kod),
             "VrstaLimita" =>
                 await _dbContext.Limiti.AsNoTracking().AnyAsync(limit => limit.TipLimita == kod),
-            "Srodstvo" when int.TryParse(kod, out var relationshipType) =>
-                await _dbContext.FamilyMembers.AsNoTracking().AnyAsync(member => (int)member.RelationshipType == relationshipType),
             _ => false
         };
     }
@@ -273,8 +271,6 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
                     person.SpecialRelationBasis != null && codes.Contains(person.SpecialRelationBasis)),
             "VrstaLimita" =>
                 await _dbContext.Limiti.AsNoTracking().AnyAsync(limit => codes.Contains(limit.TipLimita)),
-            "Srodstvo" =>
-                await _dbContext.FamilyMembers.AsNoTracking().AnyAsync(member => codes.Contains(((int)member.RelationshipType).ToString())),
             _ => false
         };
     }

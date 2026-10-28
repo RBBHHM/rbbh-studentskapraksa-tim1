@@ -31,9 +31,6 @@ public class CreateFamilyMemberDTO
     [StringLength(50)]
     public string? FBAId { get; set; }
 
-    [Required(ErrorMessage = "Vrsta odnosa je obavezna.")]
-    public FamilyRelationshipType RelationshipType { get; set; }
-
     /// <summary>
     /// Opciono: ID drugog člana porodice unutar iste porodice, kroz kojeg je ovaj
     /// član posredno povezan sa matičnim licem.
@@ -69,9 +66,6 @@ public class UpdateFamilyMemberDTO
     [StringLength(50)]
     public string? FBAId { get; set; }
 
-    [Required(ErrorMessage = "Vrsta odnosa je obavezna.")]
-    public FamilyRelationshipType RelationshipType { get; set; }
-
     public Guid? ParentFamilyMemberId { get; set; }
 }
 
@@ -95,9 +89,6 @@ public class FamilyMemberResponseDTO
     public string? JMBG { get; set; }
     public string? PassportNumber { get; set; }
     public string? FBAId { get; set; }
-
-    public FamilyRelationshipType RelationshipType { get; set; }
-    public string RelationshipTypeLabel => RelationshipType.ToString();
 
     /// <summary>
     /// null = direktno dijete matičnog lica.

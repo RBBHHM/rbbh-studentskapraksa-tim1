@@ -59,10 +59,6 @@ public class FamilyMember
 
     #region Odnos i porodično stablo
 
-    /// <summary>Vrsta odnosa ovog člana prema matičnom licu (<see cref="RelatedPerson"/>) odn. prema referentnom članu (<see cref="ParentFamilyMember"/>), ako je postavljen.</summary>
-    [Required]
-    public FamilyRelationshipType RelationshipType { get; set; }
-
     /// <summary>
     /// Opciona referenca na drugog člana porodice unutar iste porodice, kroz kojeg je
     /// ovaj član povezan sa matičnim licem (npr. dijete bračnog partnera).

@@ -1,12 +1,13 @@
 using RBBH.ConnectedParties.BL.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RBBH.ConnectedParties.Helpers.Constants;
 
 namespace RBBH.ConnectedParties.API.Controllers;
 
 [ApiController]
 [Route("api/email-log")]
-[Authorize(Roles = "regulatory-reporting")]
+[Authorize(Policy = ApplicationPolicies.CapitalRead)]
 public class EmailLogController(
     EmailLogStore store,
     IConfiguration configuration) : ControllerBase
@@ -40,6 +41,7 @@ public class EmailLogController(
                 {
                     "administrators" => english ? "Administrator notice about a request or period change" : "Obavijest administratorima o zahtjevu ili promjeni perioda",
                     "requester" => english ? "Response to the request submitter" : "Povratna informacija podnosiocu zahtjeva",
+                    "broadcast" => english ? "Period lock/unlock notice to all users" : "Obavijest svim korisnicima o zaključavanju/otključavanju perioda",
                     _ => english ? "Business notification" : "Poslovna obavijest"
                 },
                 deliveryStatus = english ? "Recorded" : "Evidentirano",

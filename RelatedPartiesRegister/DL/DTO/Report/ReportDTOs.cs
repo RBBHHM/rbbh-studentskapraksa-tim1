@@ -48,29 +48,21 @@ public class ExcelExportRowDTO
     public decimal CoreCapital { get; set; }
 }
 
-/// <summary>DTO za limit jednog klijenta.</summary>
-public class ClientLimitDTO
+/// <summary>DTO za globalni (jedinstveni) zapis kapitala — modul Kapital.</summary>
+public class CapitalDTO
 {
     public Guid Id { get; set; }
-    public Guid LegalEntityId { get; set; }
-    public string LegalEntityName { get; set; } = string.Empty;
-    public string? TaxNumber { get; set; }
-    public string? FbaId { get; set; }
     public decimal RegulatoryCapital { get; set; }
     public decimal CoreCapital { get; set; }
-    public decimal ExposureLimit { get; set; }
-    public decimal CurrentExposure { get; set; }
-    public string Currency { get; set; } = "BAM";
-    public bool IsLimitBreached { get; set; }
+    public decimal SupplementaryCapital { get; set; }
+    public DateTime CapitalDate { get; set; }
 }
 
-/// <summary>Request za kreiranje/ažuriranje limita klijenta.</summary>
-public class CreateClientLimitDTO
+/// <summary>Request za ažuriranje kapitala (Regulatorni/Osnovni/Dopunski + datum) — modul Kapital.</summary>
+public class UpdateCapitalDTO
 {
-    public Guid LegalEntityId { get; set; }
-    public decimal RegulatoryCapital { get; set; }
-    public decimal CoreCapital { get; set; }
-    public decimal ExposureLimit { get; set; }
-    public decimal CurrentExposure { get; set; }
-    public string Currency { get; set; } = "BAM";
+    public decimal? RegulatoryCapital { get; set; }
+    public decimal? CoreCapital { get; set; }
+    public decimal? SupplementaryCapital { get; set; }
+    public DateTime? CapitalDate { get; set; }
 }

@@ -1,0 +1,13 @@
+﻿<a class="app-nav__link" href="@Href" aria-current="@(Active ? "page" : null)" data-active="@(Active ? "true" : "false")">
+    @if (Glyph is { } glyph) { <AppIcon Name="glyph" Class="app-nav__icon" /> } else { <RbiIcon Name="Icon" Class="app-nav__icon" /> }
+    <span>@Label</span>
+</a>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Href { get; set; } = string.Empty;
+    [Parameter] public RbiIconName Icon { get; set; }
+    /// <summary>Used instead of <see cref="Icon"/> when RBI.DesignSystem has no matching glyph.</summary>
+    [Parameter] public AppIconName? Glyph { get; set; }
+    [Parameter] public bool Active { get; set; }
+}
