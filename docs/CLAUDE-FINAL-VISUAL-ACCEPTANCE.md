@@ -58,3 +58,5 @@ Legal delete result and read-only/locked variants of every form at 375px, code-l
 
 ### Verification
 Unit 210/210. Browser, workers=1, retries=0, six full suites on the final code: admin 77, FL 37, PL 35, kapital 40, limiti 31, gost 27 = 247 passed. Release build of Web.Blazor: 0 warnings, 0 errors. `git diff --check` clean.
+## Fourth pass (after d687011)
+Capital empty state is now a header-only table with the reference message row; invalid code-list upload errors are danger toasts (no layout shift, no retry button). Compared and classified: period-locked state (React shows no indication and leaves actions enabled; native shows the lock notice and disables mutations — INTENTIONAL_SECURITY_DIFFERENCE, period-lock guard), identity-service outage (React replaces the whole app with a bilingual sign-in-unavailable page; native keeps the shell with an inline retry — INTENTIONAL graceful-degradation difference), code-list XLSX preview of a valid file. Verification on this code: unit 210/210; six full suites admin 77, FL 37, PL 35, kapital 40, limiti 31, gost 27 (247) with workers=1, retries=0; Release build 0 warnings; git diff --check clean.

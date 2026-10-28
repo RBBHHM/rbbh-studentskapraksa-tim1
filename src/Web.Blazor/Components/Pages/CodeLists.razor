@@ -29,6 +29,7 @@ else
     @if (_error is not null) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_error]" /><RbiButton Disabled="_busy" OnClick="LoadAsync">@T["state.retry"]</RbiButton> }
     @if (_canRead)
     {
+        @if (_toastError is not null) { <div role="alert" class="app-toast app-toast--danger"><RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_toastError]" /></div> }
         @if (_notice is not null) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@_notice" /></div> }
         <fieldset disabled="@(_busy || _refreshing)" class="registry-category"><legend class="app-visually-hidden">@T["codes.category"]</legend>
             <div class="registry-field registry-field--category"><label for="code-category">@T["codes.category"]</label>
@@ -89,7 +90,7 @@ else
     private IReadOnlyList<string> _categories = [];
     private IReadOnlyList<CodeValue> _values = [];
     private string _category = "", _pendingCategory = "", _fileName = "";
-    private string? _error, _notice, _deleteCategory;
+    private string? _error, _notice, _toastError, _deleteCategory;
     private CodeValue? _deleteValue;
     private CodeListDraft? _draft;
     private CodeImportPreview? _preview;
@@ -152,18 +153,18 @@ else
     private async Task PreviewAsync(InputFileChangeEventArgs args)
     {
         if (!_canWrite || _busy || _refreshing || _category.Length == 0) return;
-        _busy = true; _error = _notice = null; _fileBytes = null; _preview = null;
+        _busy = true; _error = _notice = _toastError = null; _fileBytes = null; _preview = null;
         try
         {
             var file = args.File;
-            if (file.Size is <= 0 or > 10 * 1024 * 1024 || !file.Name.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase)) { _error = "codes.file-invalid"; return; }
+            if (file.Size is <= 0 or > 10 * 1024 * 1024 || !file.Name.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase)) { _toastError = "codes.file-invalid"; return; }
             _pendingCategory = _category; _fileName = Path.GetFileName(file.Name);
             await using var stream = file.OpenReadStream(10 * 1024 * 1024, _token); using var buffer = new MemoryStream();
             await stream.CopyToAsync(buffer, _token); _fileBytes = buffer.ToArray();
             _preview = await Api.ImportAsync(_pendingCategory, new MemoryStream(_fileBytes, writable: false), _fileName, true, _token);
         }
-        catch (RegistryApiException exception) { _error = (int?)exception.StatusCode == 400 ? "codes.workbook-invalid" : exception.MessageKey; _fileBytes = null; }
-        catch (IOException) { _error = "codes.file-invalid"; _fileBytes = null; }
+        catch (RegistryApiException exception) { if ((int?)exception.StatusCode == 400) _toastError = "codes.workbook-invalid"; else _error = exception.MessageKey; _fileBytes = null; }
+        catch (IOException) { _toastError = "codes.file-invalid"; _fileBytes = null; }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         finally { _fileKey++; _busy = false; }
     }
