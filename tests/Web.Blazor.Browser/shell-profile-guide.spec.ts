@@ -79,3 +79,14 @@ test("BS/EN resources, culture cookie and backend language remain consistent acr
   expect((await (await request.get("/__fixtures/culture", { headers })).json()).language).toBe("en");
   await page.getByRole("link", { name: "Overview", exact: true }).click(); await expect(page.getByRole("main").getByRole("link", { name: "Open Individuals", exact: true })).toBeVisible();
 });
+
+test("dark guide retains WCAG AA contrast at desktop and375px", async ({ page }) => {
+  for (const width of [1440, 375]) {
+    await page.setViewportSize({ width, height: width === 375 ? 812 : 900 });
+    await visit(page, "/app/guide");
+    await page.getByRole("button", { name: "Tamna", exact: true }).click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
+  }
+});

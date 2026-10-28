@@ -335,6 +335,7 @@ h1[tabindex="-1"]:focus, h1:focus-visible { outline: none; }
 .app-required-legend::after { content: " *"; }
 .registry-users-table td:not(:nth-child(4)), .registry-codes-table td:not(:nth-child(3)), .registry-period-table td:not(:nth-child(3)):not(:nth-child(5)), .registry-capital-table td, .registry-reports-table td { white-space: nowrap; overflow-wrap: normal; }
 :root[data-theme="dark"] .registry-form-grid .rbi-control { background: var(--surface-muted); }
+:root[data-theme="dark"] .guide-hero__eyebrow { color: var(--text-primary); }
 .registry-form-grid .rbi-radio-group__options { background: transparent; }
 .registry-persons-table th { white-space: normal; }
 .registry-number { width: 6.5rem; }
