@@ -39,6 +39,9 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
             if (!enabled || string.IsNullOrWhiteSpace(issuer) ||
                 string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(clientSecret))
             {
+                if (!environment.IsDevelopment())
+                    throw new InvalidOperationException(
+                        "KeycloakSettings must enable and fully configure application authentication outside Development.");
                 services.AddAuthentication(DevelopmentAuthenticationHandler.SchemeName)
                     .AddScheme<DevelopmentAuthenticationOptions, DevelopmentAuthenticationHandler>(
                         DevelopmentAuthenticationHandler.SchemeName,
@@ -148,6 +151,11 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
                     options.TokenValidationParameters.NameClaimType = "name";
                     options.TokenValidationParameters.RoleClaimType = ClaimTypes.Role;
                 });
+
+            // Resolve framework post-configuration at host startup, so invalid
+            // authority/HTTPS options fail before the first protected request.
+            services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme).ValidateOnStart();
+            services.AddOptions<OpenIdConnectOptions>("KeycloakOidc").ValidateOnStart();
 
             // Application policies consume only current database-owned grants.
             AddApplicationAuthorization(services);

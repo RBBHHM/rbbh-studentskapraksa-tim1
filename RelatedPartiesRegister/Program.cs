@@ -15,19 +15,7 @@ DotEnv.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
-builder.Services.Configure<ForwardedHeadersOptions>(options =>
-{
-    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor |
-        ForwardedHeaders.XForwardedHost |
-        ForwardedHeaders.XForwardedProto;
-    // IIS -> OCP Route/HAProxy -> app: 2 reverse-proxy hops. IIS proxies this app's own
-    // login/API traffic straight to the OCP Route; 3scale is reserved for external API
-    // consumers and is never on the path between IIS and this backend.
-    options.ForwardLimit = 2;
-    // OCP/IIS/3scale proxy addresses are dynamic and controlled by the hosting network.
-    options.KnownIPNetworks.Clear();
-    options.KnownProxies.Clear();
-});
+builder.Services.AddApplicationForwardedHeaders(builder.Configuration, builder.Environment);
 
 // Dependency Injection
 builder.Services.AddServicesExtensions(builder.Configuration, builder.Environment, builder.Host);

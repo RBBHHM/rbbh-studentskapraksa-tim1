@@ -16,6 +16,9 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Databases
             ArgumentNullException.ThrowIfNull(configuration);
 
             var configured = ConnectionHelper.IsConfigured(configuration);
+            if (!configured && !environment.IsDevelopment())
+                throw new InvalidOperationException(
+                    "SQL Server nije konfigurisan. Postavite Database__ServerName i Database__Name.");
             var connectionString = configured
                 ? ConnectionHelper.BuildConnection(configuration)
                 : null;
