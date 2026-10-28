@@ -18,5 +18,6 @@
   </ItemGroup>
   <ItemGroup>
     <Content Update="Localization/**/*.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Update="NuGet.config" CopyToPublishDirectory="Never" />
   </ItemGroup>
 </Project>

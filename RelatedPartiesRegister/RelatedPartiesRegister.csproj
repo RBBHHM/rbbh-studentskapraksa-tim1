@@ -43,6 +43,7 @@
   
   <ItemGroup>
     <InternalsVisibleTo Include="IntegrationTests" />
+    <Content Update="nuget.config" CopyToPublishDirectory="Never" />
   </ItemGroup>
 
 </Project>

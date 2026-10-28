@@ -42,6 +42,9 @@ jobs:
       OCP_PROJECT: ${{ vars.OCP_PROJECT_NAME }}
       OCP_TOKEN: ${{ secrets.OCP_TOKEN }}
       PULL_SECRET: ${{ vars.OCP_PULL_SECRET }}
+      WEB_HEALTH_HOST: ${{ vars.WEB_HEALTH_HOST }}
+      API_HEALTH_HOST: ${{ vars.API_HEALTH_HOST }}
+      KUBECONFIG: ${{ runner.temp }}/rbbh-ocp-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.component }}.config
     steps:
       - name: Validate immutable target and environment
         shell: bash
@@ -58,10 +61,14 @@ jobs:
           [[ "$OCP_PROJECT" =~ ^[a-z0-9]+([-a-z0-9]*[a-z0-9])?$ ]]
           [[ "$OCP_SERVER" =~ ^https:// ]]
           test -n "$OCP_TOKEN"
-          case "$COMPONENT" in web) name="$WEB_IMAGE";; api) name="$API_IMAGE";; *) exit 1;; esac
+          case "$COMPONENT" in web) name="$WEB_IMAGE"; health_host="$WEB_HEALTH_HOST";; api) name="$API_IMAGE"; health_host="$API_HEALTH_HOST";; *) exit 1;; esac
+          # Kubelet otherwise sends the dynamic pod IP as Host, which a bounded
+          # application AllowedHosts policy must reject. Owner supplies an allowed host.
+          [[ "$health_host" =~ ^[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?$ ]]
           case "$TARGET_ENVIRONMENT" in PROD) runtime=Production;; UAT) runtime=UAT;; *) exit 1;; esac
           echo "APP_NAME=$name" >> "$GITHUB_ENV"
           echo "RUNTIME_ENVIRONMENT=$runtime" >> "$GITHUB_ENV"
+          echo "HEALTH_HOST=$health_host" >> "$GITHUB_ENV"
       - name: Verify cluster prerequisites
         shell: bash
         run: |
@@ -78,8 +85,8 @@ jobs:
         run: |
           set -euo pipefail
           # Full commit tag is retained for traceability; digest is authoritative.
-          readiness='httpGet: { path: /health/ready, port: http }'
-          liveness='httpGet: { path: /health/live, port: http }'
+          readiness="httpGet: { path: /health/ready, port: http, httpHeaders: [{ name: Host, value: \"${HEALTH_HOST}\" }] }"
+          liveness="httpGet: { path: /health/live, port: http, httpHeaders: [{ name: Host, value: \"${HEALTH_HOST}\" }] }"
           oc apply -f - <<EOF
           apiVersion: apps/v1
           kind: Deployment
@@ -111,7 +118,7 @@ jobs:
                       - configMapRef: { name: "${APP_NAME}-config" }
                       - secretRef: { name: "${APP_NAME}-secrets" }
                     startupProbe:
-                      ${readiness}
+                      ${liveness}
                       periodSeconds: 5
                       failureThreshold: 60
                     readinessProbe:
@@ -140,3 +147,7 @@ jobs:
               - { name: http, port: 8080, targetPort: http }
           EOF
           oc rollout status "deployment/${APP_NAME}" --timeout=5m
+      - name: Remove job-scoped cluster credentials
+        if: always()
+        shell: bash
+        run: rm -f -- "$KUBECONFIG"
