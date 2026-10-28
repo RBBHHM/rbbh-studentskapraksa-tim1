@@ -14,8 +14,9 @@ Database__Password=<OCP Secret>
 Za lokalni SSMS/Windows identitet koristite npr. `localhost\SQLEXPRESS`, naziv
 `RPR_Local` i `Database__IntegratedSecurity=true`; tada User/Password nisu
 potrebni. Ako su i ServerName i Name prazni, Development koristi seedovanu
-InMemory bazu. Ako su vrijednosti unesene, ali SQL nije dostupan ili odbije
-login, startup se prekida SQL greškom. Djelimična konfiguracija se odbija jasnom
+InMemory bazu. Startup provjerava obaveznu konfiguraciju, ali ne otvara SQL vezu niti primjenjuje migracije.
+Ako konfigurisani SQL nije dostupan ili odbije login, `/health/ready` vraća 503;
+`/health/live` ostaje nezavisan od SQL-a. Djelimična konfiguracija se odbija jasnom
 greškom, a UAT/Production bez SQL konfiguracije ne startaju. `Encrypt=true` je uvijek uključen;
 `TrustServerCertificate=true` dozvoljen je automatski samo u Developmentu.
 
