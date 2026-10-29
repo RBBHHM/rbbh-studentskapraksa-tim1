@@ -3,7 +3,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.3" />
     <PackageReference Include="Moq" Version="4.20.72" />
-    <ProjectReference Include="../../src/Web.Blazor/RBBH.RelatedPartiesRegister.Web.csproj" />
-    <ProjectReference Include="../../RelatedPartiesRegister/RelatedPartiesRegister.csproj" />
+    <ProjectReference Include="../../Frontend/RBBH.RelatedPartiesRegister.Web.csproj" />
+    <ProjectReference Include="../../Backend/RelatedPartiesRegister.csproj" />
   </ItemGroup>
 </Project>

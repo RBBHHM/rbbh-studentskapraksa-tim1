@@ -13,7 +13,7 @@ Database__Password=<OCP Secret>
 
 Za lokalni SSMS/Windows identitet koristite npr. `localhost\SQLEXPRESS`, naziv
 `RPR_Local` i `Database__IntegratedSecurity=true`; tada User/Password nisu
-potrebni. Ako su i ServerName i Name prazni, Development koristi seedovanu
+potrebni. Ako su i ServerName i Name prazni, Development koristi praznu
 InMemory bazu. Startup provjerava obaveznu konfiguraciju, ali ne otvara SQL vezu niti primjenjuje migracije.
 Ako konfigurisani SQL nije dostupan ili odbije login, `/health/ready` vraća 503;
 `/health/live` ostaje nezavisan od SQL-a. Djelimična konfiguracija se odbija jasnom
@@ -30,8 +30,8 @@ $env:Database__ServerName='localhost\SQLEXPRESS'
 $env:Database__Name='RPR_Local'
 $env:Database__IntegratedSecurity='true'
 dotnet ef migrations add NazivPromjene `
-  --project RelatedPartiesRegister/RelatedPartiesRegister.csproj `
-  --startup-project RelatedPartiesRegister/RelatedPartiesRegister.csproj
+  --project Backend/RelatedPartiesRegister.csproj `
+  --startup-project Backend/RelatedPartiesRegister.csproj
 ```
 
 Backend ne primjenjuje migracije, ne kreira shemu i ne izvršava seed ni u jednom

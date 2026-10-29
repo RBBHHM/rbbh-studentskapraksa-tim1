@@ -1,0 +1,14 @@
+@using RBI.DesignSystem.Components.Icons
+
+<button type="button" class="@($"rbi-sidebar-action {(Group ? "rbi-sidebar-action--group" : "rbi-sidebar-action--menu")} {(ShowOnHover ? "rbi-sidebar-action--hover" : null)} {Class}".TrimEnd())" aria-label="@AccessibleLabel" disabled="@Disabled" @onclick="OnClick"><RbiIcon Name="Icon" /></button>
+
+@code {
+    [Parameter, EditorRequired] public string AccessibleLabel { get; set; } = string.Empty;
+    [Parameter] public RbiIconName Icon { get; set; } = RbiIconName.MoreHorizontal;
+    [Parameter] public bool Group { get; set; }
+    [Parameter] public bool ShowOnHover { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+    [Parameter] public string? Class { get; set; }
+    protected override void OnParametersSet() { if (string.IsNullOrWhiteSpace(AccessibleLabel)) throw new ArgumentException("A localized sidebar action name is required."); if (!Enum.IsDefined(Icon)) throw new ArgumentOutOfRangeException(nameof(Icon)); }
+}

@@ -15,7 +15,7 @@ public sealed class LocalHostTests
             while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "RelatedPartiesRegister.slnx")))
                 directory = directory.Parent;
             if (directory is null) throw new InvalidOperationException("Migration solution not found.");
-            builder.UseContentRoot(Path.Combine(directory.FullName, "src", "Web.Blazor"));
+            builder.UseContentRoot(Path.Combine(directory.FullName, "Frontend"));
             builder.UseEnvironment("Development");
             builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(
                 new Dictionary<string, string?>

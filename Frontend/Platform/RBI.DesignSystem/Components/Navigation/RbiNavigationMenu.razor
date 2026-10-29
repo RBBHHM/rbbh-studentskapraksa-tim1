@@ -1,0 +1,66 @@
+@using RBI.DesignSystem.Components.Forms
+@using RBI.DesignSystem.Components.Icons
+@using RBI.DesignSystem.Components.Overlay
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject IJSRuntime JavaScript
+
+<nav class="@($"rbi-navigation-menu {Class}".TrimEnd())" aria-label="@AccessibleLabel" @ref="_root">
+    <ul class="rbi-navigation-menu__list" data-rbi-navigation-list>
+        @foreach (var item in Items)
+        {
+            <li @key="item.Id">
+                @if (item.Content is not null)
+                {
+                    <button type="button" class="rbi-navigation-menu__trigger" disabled="@item.Disabled" data-rbi-navigation-trigger="@item.Id" aria-controls="@(_id + "-viewport")" aria-expanded="@(EffectiveActive == item.Id ? "true" : "false")">@item.Label<RbiIcon Name="RbiIconName.ChevronDown" /></button>
+                }
+                else
+                {
+                    <a class="rbi-navigation-menu__link" href="@(item.Disabled ? null : item.Href)" aria-disabled="@(item.Disabled ? "true" : null)" aria-current="@(item.Current ? "page" : null)" tabindex="@(item.Disabled ? -1 : 0)">@item.Label</a>
+                }
+            </li>
+        }
+    </ul>
+    <div id="@(_id + "-viewport")" class="rbi-anchored-surface rbi-navigation-menu__viewport" role="region" aria-label="@(ActiveItem?.Label ?? AccessibleLabel)" popover="manual" data-rbi-anchored-surface data-rbi-open="@(EffectiveActive is not null ? "true" : "false")">
+        @if (ActiveItem is { } active) { <div class="rbi-navigation-menu__content">@active.Content</div> }
+    </div>
+    <span class="rbi-navigation-menu__indicator" aria-hidden="true" data-rbi-navigation-indicator hidden="@(EffectiveActive is null)"><span></span></span>
+</nav>
+
+@code {
+    private readonly string _id = RbiFormUtilities.Id("navigation-menu");
+    private ElementReference _root;
+    private RbiAnchoredOverlayInterop? _interop;
+    private bool _disposed, _initialized;
+    private string? _nativeActive, _lastActive;
+    [Parameter, EditorRequired] public string AccessibleLabel { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public IReadOnlyList<RbiNavigationMenuItem> Items { get; set; } = Array.Empty<RbiNavigationMenuItem>();
+    [Parameter] public string? ActiveId { get; set; }
+    [Parameter] public EventCallback<string?> ActiveIdChanged { get; set; }
+    [Parameter] public string? Class { get; set; }
+    private string? RequestedActive => ActiveIdChanged.HasDelegate ? ActiveId : _nativeActive;
+    private string? EffectiveActive => ActiveItem?.Id;
+    private RbiNavigationMenuItem? ActiveItem => Items.FirstOrDefault(item => item.Id == RequestedActive && !item.Disabled && item.Content is not null);
+    protected override void OnParametersSet()
+    {
+        ArgumentNullException.ThrowIfNull(Items);
+        if (string.IsNullOrWhiteSpace(AccessibleLabel) || Items.Select(item => item.Id).Distinct(StringComparer.Ordinal).Count() != Items.Count || Items.Any(item => string.IsNullOrWhiteSpace(item.Id) || item.Id.Any(char.IsWhiteSpace) || string.IsNullOrWhiteSpace(item.Label) || item.Content is null && string.IsNullOrWhiteSpace(item.Href))) throw new ArgumentException("Named navigation items require unique identities and a destination or content.");
+        if (!_initialized || ActiveId != _lastActive) _nativeActive = ActiveId;
+        _lastActive = ActiveId; _initialized = true;
+        if (!ActiveIdChanged.HasDelegate && ActiveItem is null) _nativeActive = null;
+    }
+    [JSInvokable] public async Task NativeNavigationChanged(string? id)
+    {
+        if (_disposed || id is not null && !Items.Any(item => item.Id == id && !item.Disabled && item.Content is not null)) return;
+        if (!ActiveIdChanged.HasDelegate) _nativeActive = id;
+        await ActiveIdChanged.InvokeAsync(id);
+        if (!_disposed) StateHasChanged();
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_disposed) return;
+        _interop ??= new(JavaScript);
+        await _interop.SyncNavigationAsync(_root, this, ActiveItem?.Id);
+    }
+    public async ValueTask DisposeAsync() { _disposed = true; if (_interop is not null) await _interop.DisposeAsync(); }
+}

@@ -1,0 +1,13 @@
+@using RBI.DesignSystem.Components.Overlay
+
+<RbiDialog Open="@Open" OpenChanged="@OpenChanged" Title="@Title" CloseLabel="@CloseLabel" Class="rbi-command-dialog">
+    <DialogBody>@ChildContent</DialogBody>
+</RbiDialog>
+
+@code {
+    [Parameter] public bool Open { get; set; }
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string CloseLabel { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public RenderFragment? ChildContent { get; set; }
+}

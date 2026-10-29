@@ -1,6 +1,6 @@
 # Final visual acceptance — native Blazor vs React reference
 
-Base: `1147e97`. React reference: historical commit `ccca8c5` (worktree, `src/Web` still present; **not** restored into this branch).
+Base: `1147e97`. React reference: historical commit `ccca8c5` (worktree, `the retired React reference tree` still present; **not** restored into this branch).
 Both apps were run side by side on the same seeded backend (Kestrel fixture host, port 5100; React dev server proxying to it; Blazor on 5273) and compared by rendered screenshots at 1440x900 and 375x812, light and dark. Screenshots are local evidence only (not committed).
 
 ## Resolved from the previous pass

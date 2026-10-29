@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>RBI.Authentication</PackageId>
+    <Description>Optional confidential OIDC authentication and user-token propagation for Blazor applications.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.12" />
+    <ProjectReference Include="..\RBI.ApiCore\RBI.ApiCore.csproj" />
+  </ItemGroup>
+</Project>

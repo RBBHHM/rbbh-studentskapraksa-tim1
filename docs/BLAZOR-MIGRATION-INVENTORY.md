@@ -7,7 +7,7 @@ Guest virtual; it adds explicit durable-subject confirmation metadata. See the
 [identity/period runbook](IDENTITY-AND-PERIOD-HARDENING-2026-10-26.md).
 
 Inspected baseline: `68d3e7f5c580e8da307a87ef017cb8a0099f5ec8`
-(`release-v1.0.6`), 2026-10-22. React remains the reference under `src/Web`;
+(`release-v1.0.6`), 2026-10-22. React remains the reference under `the retired React reference tree`;
 the existing API/BL/DL backend remains authoritative. This inventory is not a
 parity certificate. Track implementation/evidence in BLAZOR-MIGRATION-PARITY.md.
 
@@ -19,7 +19,7 @@ parity certificate. Track implementation/evidence in BLAZOR-MIGRATION-PARITY.md.
 | Backend tests | 208 unit + 52 integration = 260 PASS; no skips |
 | React localization validation | PASS (three inherited catalogs validated, not a German product commitment) |
 | React lint / TypeScript | PASS |
-| React production build | PASS, two existing webpack size warnings |
+| React production build | PASS, two existing retired bundler size warnings |
 | React Node tests | 13 PASS; no failures/skips |
 
 Receipts live in ignored `artifacts/migration-baseline/`. Corporate NuGet DNS
@@ -50,7 +50,7 @@ or actual production data was exercised by the local baseline.
 
 ## Routes, components and state coverage to preserve
 
-`src/Web/src/routes` contains root redirect, root error/not-found, `/app` shell
+`the retired React reference tree/src/routes` contains root redirect, root error/not-found, `/app` shell
 and the following leaf routes. `app.index` is the dashboard; there is no separate
 React family-detail route. All routes must also be directly navigable.
 
@@ -86,7 +86,7 @@ the narrower existing route guard pending a separately reviewed policy change.
 ## Screen/action → actual HTTP contracts
 
 Paths below are backend-relative. JSON uses the backend's camelCase serializer.
-DTO names refer to the existing `RelatedPartiesRegister/DL/DTO` source, not shared
+DTO names refer to the existing `Backend/DL/DTO` source, not shared
 backend assembly references for the new frontend. Implement narrow wire records.
 `BaseResuItController.HandleResult` returns raw `result.Value` (not an envelope).
 Some infrastructure errors use an envelope; other failures use ProblemDetails,
@@ -183,7 +183,7 @@ not silently extend its scope or treat read/download as a mutation grant.
 
 ## Business localization inventory
 
-Business keys are in `src/Web/src/localization/source/{bs,en}/registry.json`
+Business keys are in `the retired React reference tree/src/localization/source/{bs,en}/registry.json`
 plus registry component inline BS/EN strings (forms, confirmations, failures,
 help, guide, statuses, imports, currency/date display). Supporting validation
 catalogs are also referenced. Product minimum is BS/EN with BS default.
@@ -199,7 +199,7 @@ RBI.Localization.Sifrarnik merely because both are called šifrarnici.
 
 Keep current React/IIS and backend/OCP workflows until the replacement publish,
 startup, accessibility, responsive and full E2E parity gates are proven. The new
-frontend is a separate server-hosted Blazor app under `src/Web.Blazor`; API URL
+frontend is a separate server-hosted Blazor app under `Frontend`; API URL
 is centrally configured. It must not reference EF/backend implementation or
 contain DB/SMTP/Keycloak-admin credentials. No production migration, deletion,
 reseed, realm-role reassignment or frontend cutover is authorized by inventory.

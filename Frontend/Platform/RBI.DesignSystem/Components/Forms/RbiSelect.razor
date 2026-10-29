@@ -1,0 +1,58 @@
+@typeparam TValue
+@inherits InputBase<TValue>
+@using System.Globalization
+
+<select @attributes="SafeAttributes"
+        id="@ResolvedId"
+        class="@ControlClass"
+        @bind="CurrentValueAsString"
+        disabled="@EffectiveDisabled"
+        required="@EffectiveRequired"
+        aria-invalid="@AriaInvalid"
+        aria-describedby="@DescribedBy">
+    @if (!string.IsNullOrWhiteSpace(Placeholder))
+    {
+        <option value="" disabled="@EffectiveRequired">@Placeholder</option>
+    }
+    @ChildContent
+</select>
+
+@code {
+    private readonly string _generatedId = RbiFormUtilities.Id("select");
+
+    [CascadingParameter] private RbiFieldContext? Field { get; set; }
+    [Parameter] public string? Id { get; set; }
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool Required { get; set; }
+    [Parameter] public bool Invalid { get; set; }
+    [Parameter] public string? ParsingErrorMessage { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private bool EffectiveDisabled => Disabled || Field?.Disabled == true;
+    private bool EffectiveRequired => Required || Field?.Required == true;
+    private bool ValidationInvalid => EditContext?.GetValidationMessages(FieldIdentifier).Any() == true;
+    private bool EffectiveInvalid => Invalid || Field?.Invalid == true || ValidationInvalid;
+    private string ResolvedId => Id ?? RbiFormUtilities.Attribute(AdditionalAttributes, "id") ?? Field?.ControlId ?? _generatedId;
+    private string ControlClass => string.Join(' ', new[] { "rbi-control", "rbi-select", CssClass, EffectiveInvalid ? "rbi-control--invalid" : null }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private string? AriaInvalid => EffectiveInvalid ? "true" : RbiFormUtilities.Attribute(AdditionalAttributes, "aria-invalid");
+    private string? DescribedBy => RbiFormUtilities.JoinIds(Field?.DescribedBy, RbiFormUtilities.Attribute(AdditionalAttributes, "aria-describedby"));
+    private IReadOnlyDictionary<string, object>? SafeAttributes => RbiFormUtilities.SafeAttributes(AdditionalAttributes, "id", "class", "value", "disabled", "required", "aria-invalid", "aria-describedby");
+
+    protected override bool TryParseValueFromString(string? value, out TValue result, out string validationErrorMessage)
+    {
+        if (BindConverter.TryConvertTo<TValue>(value, CultureInfo.CurrentCulture, out var parsedValue))
+        {
+            result = parsedValue!;
+            validationErrorMessage = string.Empty;
+            return true;
+        }
+
+        result = default!;
+        var fieldName = DisplayName ?? FieldIdentifier.FieldName;
+        validationErrorMessage = string.IsNullOrWhiteSpace(ParsingErrorMessage)
+            ? fieldName
+            : string.Format(CultureInfo.CurrentCulture, ParsingErrorMessage, fieldName);
+        return false;
+    }
+}

@@ -1,0 +1,69 @@
+@using System.Globalization
+@using RBI.DesignSystem.Components.Icons
+@using RBI.DesignSystem.Components.Overlay
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject IJSRuntime JavaScript
+
+<div class="@($"rbi-resizable rbi-resizable--{Orientation.ToString().ToLowerInvariant()} {Class}".TrimEnd())" @ref="_root" data-rbi-resizable-vertical="@(Orientation == RbiOrientation.Vertical ? "true" : "false")">
+    @for (var index = 0; index < Panels.Count; index++)
+    {
+        var panel = Panels[index];
+        <div id="@(_id + "-" + panel.Id)" class="rbi-resizable__panel" role="group" aria-label="@panel.AccessibleLabel" data-rbi-resizable-panel data-rbi-min="@Number(panel.MinSize)" data-rbi-max="@Number(panel.MaxSize)" style="@($"flex:{Number(EffectiveSizes[index])} 1 0px")">@panel.Content</div>
+        @if (index < Panels.Count - 1)
+        {
+            var pair = EffectiveSizes[index] + EffectiveSizes[index + 1];
+            <div class="rbi-resizable__handle" role="separator" tabindex="0" aria-label="@HandleLabel" aria-orientation="@(Orientation == RbiOrientation.Horizontal ? "vertical" : "horizontal")" aria-controls="@(_id + "-" + panel.Id)" aria-valuemin="@Number(Math.Max(panel.MinSize, pair - Panels[index + 1].MaxSize))" aria-valuemax="@Number(Math.Min(panel.MaxSize, pair - Panels[index + 1].MinSize))" aria-valuenow="@Number(EffectiveSizes[index])" data-rbi-resizable-handle="@index">
+                @if (WithHandle) { <span class="rbi-resizable__grip"><RbiIcon Name="RbiIconName.GripVertical" /></span> }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private readonly string _id = RBI.DesignSystem.Components.Forms.RbiFormUtilities.Id("resize");
+    private ElementReference _root;
+    private RbiAnchoredOverlayInterop? _interop;
+    private double[] _nativeSizes = [], _lastSizes = [];
+    private string[] _lastIds = [];
+    private bool _disposed;
+    [Parameter, EditorRequired] public IReadOnlyList<RbiResizablePanel> Panels { get; set; } = Array.Empty<RbiResizablePanel>();
+    [Parameter, EditorRequired] public string HandleLabel { get; set; } = string.Empty;
+    [Parameter] public RbiOrientation Orientation { get; set; }
+    [Parameter] public IReadOnlyList<double>? Sizes { get; set; }
+    [Parameter] public EventCallback<IReadOnlyList<double>> SizesChanged { get; set; }
+    [Parameter] public bool WithHandle { get; set; }
+    [Parameter] public string? Class { get; set; }
+    private IReadOnlyList<double> EffectiveSizes => SizesChanged.HasDelegate && Sizes is not null ? Sizes : _nativeSizes;
+    private static string Number(double value) => value.ToString("R", CultureInfo.InvariantCulture);
+    protected override void OnParametersSet()
+    {
+        ArgumentNullException.ThrowIfNull(Panels);
+        if (Panels.Count < 2 || string.IsNullOrWhiteSpace(HandleLabel) || !Enum.IsDefined(Orientation) || Panels.Select(panel => panel.Id).Distinct(StringComparer.Ordinal).Count() != Panels.Count) throw new ArgumentException("A named resize group requires at least two uniquely identified panels.");
+        foreach (var panel in Panels)
+            if (string.IsNullOrWhiteSpace(panel.Id) || panel.Id.Any(char.IsWhiteSpace) || string.IsNullOrWhiteSpace(panel.AccessibleLabel) || panel.Content is null || !double.IsFinite(panel.InitialSize) || panel.InitialSize <= 0 || !double.IsFinite(panel.MinSize) || !double.IsFinite(panel.MaxSize) || panel.MinSize < 0 || panel.MaxSize > 100 || panel.MinSize > panel.MaxSize) throw new ArgumentException("Panel metadata/constraints are invalid.");
+        if (Sizes is not null && !Valid(Sizes)) throw new ArgumentException("Bound sizes must sum to 100 and respect panel constraints.", nameof(Sizes));
+        if (!_lastIds.SequenceEqual(Panels.Select(panel => panel.Id)) || Sizes is not null && !_lastSizes.SequenceEqual(Sizes))
+        {
+            var sum = Panels.Sum(panel => panel.InitialSize);
+            _nativeSizes = Sizes?.ToArray() ?? Panels.Select(panel => panel.InitialSize / sum * 100).ToArray();
+            if (!Valid(_nativeSizes)) throw new ArgumentException("Initial shares cannot satisfy the panel constraints.");
+        }
+        _lastIds = Panels.Select(panel => panel.Id).ToArray(); _lastSizes = Sizes?.ToArray() ?? [];
+    }
+    private bool Valid(IReadOnlyList<double> sizes) => sizes.Count == Panels.Count && Math.Abs(sizes.Sum() - 100) < .000001 && sizes.Select((value, index) => double.IsFinite(value) && value >= Panels[index].MinSize - .000001 && value <= Panels[index].MaxSize + .000001).All(value => value);
+    [JSInvokable] public async Task NativeResize(double[] sizes)
+    {
+        if (_disposed || !Valid(sizes)) return;
+        if (!SizesChanged.HasDelegate) _nativeSizes = sizes.ToArray();
+        await SizesChanged.InvokeAsync(Array.AsReadOnly(sizes.ToArray()));
+        if (!_disposed) StateHasChanged();
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_disposed) return;
+        _interop ??= new(JavaScript, "./_content/RBI.DesignSystem/js/rbi-extended-controls.js");
+        await _interop.SyncControlsAsync(_root, this, "resize", new { sizes = EffectiveSizes, vertical = Orientation == RbiOrientation.Vertical });
+    }
+    public async ValueTask DisposeAsync() { _disposed = true; if (_interop is not null) await _interop.DisposeAsync(); }
+}

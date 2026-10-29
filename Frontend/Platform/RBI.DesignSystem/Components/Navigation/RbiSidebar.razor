@@ -1,0 +1,77 @@
+@using RBI.DesignSystem.Components.Overlay
+@using RBI.DesignSystem.Components.Forms
+@implements IAsyncDisposable
+@inject IJSRuntime JavaScript
+
+<CascadingValue Value="_context">
+<div @ref="_root" @attributes="SafeAttributes" class="@($"rbi-sidebar-layout {Class}".TrimEnd())" data-rbi-sidebar-state="@(Collapsed ? "collapsed" : "expanded")" data-rbi-sidebar-side="@Side.ToString().ToLowerInvariant()" data-rbi-sidebar-variant="@Variant.ToString().ToLowerInvariant()" data-rbi-sidebar-collapse="@Collapse.ToString().ToLowerInvariant()" data-rbi-sidebar-mobile="@(_mobile ? "true" : "false")">
+    @if (_mobile && Collapse != RbiSidebarCollapse.None)
+    {
+        <RbiSheet Open="_mobileOpen" OpenChanged="SetMobileOpen" Title="@AccessibleLabel" Description="@MobileDescription" CloseLabel="@ToggleLabel" Side="@(Side == RbiSidebarSide.Left ? RbiSheetSide.Left : RbiSheetSide.Right)" Class="rbi-sidebar-mobile">
+            <SheetBody><aside id="@_panelId" class="rbi-sidebar-panel__content" aria-label="@AccessibleLabel">@ChildContent</aside></SheetBody>
+        </RbiSheet>
+    }
+    else
+    {
+        <div class="rbi-sidebar-gap" aria-hidden="true"></div>
+        <aside id="@_panelId" class="rbi-sidebar-panel" aria-label="@AccessibleLabel"><div class="rbi-sidebar-panel__content">@ChildContent</div></aside>
+    }
+    @if (MainContent is not null) { <div class="rbi-sidebar-inset">@MainContent</div> }
+</div>
+</CascadingValue>
+
+@code {
+    [Parameter, EditorRequired] public string AccessibleLabel { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string ToggleLabel { get; set; } = string.Empty;
+    [Parameter] public string? MobileDescription { get; set; }
+    [Parameter] public bool Open { get; set; } = true;
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+    [Parameter] public RbiSidebarSide Side { get; set; }
+    [Parameter] public RbiSidebarVariant Variant { get; set; }
+    [Parameter] public RbiSidebarCollapse Collapse { get; set; }
+    [Parameter] public string? StateCookieName { get; set; } = "sidebar_state";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? MainContent { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+    private readonly string _panelId = RbiFormUtilities.Id("sidebar");
+    private RbiSidebarState? _context;
+    private ElementReference _root;
+    private RbiAnchoredOverlayInterop? _interop;
+    private bool _nativeOpen = true, _lastOpen, _initialized, _mobile, _mobileOpen, _disposed;
+    private bool EffectiveOpen => OpenChanged.HasDelegate ? Open : _nativeOpen;
+    private bool Collapsed => Collapse != RbiSidebarCollapse.None && !EffectiveOpen;
+    private IReadOnlyDictionary<string, object>? SafeAttributes => RbiFormUtilities.SafeAttributes(AdditionalAttributes, "class", "data-rbi-sidebar-state", "data-rbi-sidebar-side", "data-rbi-sidebar-variant", "data-rbi-sidebar-collapse", "data-rbi-sidebar-mobile");
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(AccessibleLabel) || string.IsNullOrWhiteSpace(ToggleLabel)) throw new ArgumentException("Localized sidebar and toggle names are required.");
+        if (!Enum.IsDefined(Side) || !Enum.IsDefined(Variant) || !Enum.IsDefined(Collapse)) throw new ArgumentOutOfRangeException(nameof(Side));
+        if (StateCookieName is not null && (StateCookieName.Length is 0 or > 64 || StateCookieName.Any(character => !char.IsAsciiLetterOrDigit(character) && character is not '_' and not '-'))) throw new ArgumentException("Cookie name must be a short ASCII token, or null to opt out.", nameof(StateCookieName));
+        if (!_initialized || Open != _lastOpen) _nativeOpen = Open;
+        _lastOpen = Open; _initialized = true; RefreshContext();
+    }
+    private void RefreshContext() => _context = new(Collapsed && !_mobile, _mobile, _mobile && Collapse != RbiSidebarCollapse.None ? _mobileOpen : !Collapsed, _panelId, ToggleLabel, EventCallback.Factory.Create(this, ToggleAsync));
+    private Task SetMobileOpen(bool value) { if (_disposed) return Task.CompletedTask; _mobileOpen = value; RefreshContext(); StateHasChanged(); return Task.CompletedTask; }
+    [JSInvokable] public async Task NativeSidebarToggle() => await ToggleAsync();
+    private async Task ToggleAsync()
+    {
+        if (_disposed || Collapse == RbiSidebarCollapse.None) return;
+        if (_mobile) { await SetMobileOpen(!_mobileOpen); return; }
+        var value = !EffectiveOpen;
+        if (!OpenChanged.HasDelegate) _nativeOpen = value;
+        await OpenChanged.InvokeAsync(value);
+        if (!_disposed) { RefreshContext(); StateHasChanged(); }
+    }
+    [JSInvokable] public void NativeSidebarViewport(bool mobile)
+    {
+        if (_disposed || _mobile == mobile) return;
+        _mobile = mobile; _mobileOpen = false; RefreshContext(); StateHasChanged();
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_disposed) return;
+        _interop ??= new(JavaScript, "./_content/RBI.DesignSystem/js/rbi-extended-controls.js");
+        await _interop.SyncControlsAsync(_root, this, "sidebar", new { open = EffectiveOpen, cookieName = StateCookieName });
+    }
+    public async ValueTask DisposeAsync() { _disposed = true; if (_interop is not null) await _interop.DisposeAsync(); }
+}

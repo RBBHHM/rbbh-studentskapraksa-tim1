@@ -1,0 +1,63 @@
+@inject IJSRuntime JavaScript
+
+<div @attributes="AdditionalAttributes" class="@CssClass" role="group" aria-label="@Label">
+    @foreach (var option in Options)
+    {
+        <button type="button"
+                class="rbi-theme-picker__button"
+                aria-label="@option.Label"
+                aria-pressed="@Pressed(option.Value)"
+                title="@option.Label"
+                @onclick="() => SetPreferenceAsync(option.Value)">
+            @RBI.DesignSystem.Components.RbiControlIcon.Render(option.Icon)
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string LightLabel { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string DarkLabel { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string SystemLabel { get; set; } = string.Empty;
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string _preference = "system";
+    private string CssClass => string.Join(' ', new[] { "rbi-theme-picker", Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
+
+    private ThemeOption[] Options =>
+    [
+        new("light", LightLabel, "sun"),
+        new("dark", DarkLabel, "moon"),
+        new("system", SystemLabel, "system"),
+    ];
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(Label) ||
+            string.IsNullOrWhiteSpace(LightLabel) ||
+            string.IsNullOrWhiteSpace(DarkLabel) ||
+            string.IsNullOrWhiteSpace(SystemLabel))
+        {
+            throw new InvalidOperationException("Theme picker labels are required.");
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        _preference = await JavaScript.InvokeAsync<string>("RbiTheme.getPreference");
+        StateHasChanged();
+    }
+
+    private async Task SetPreferenceAsync(string preference)
+    {
+        _preference = preference;
+        await JavaScript.InvokeVoidAsync("RbiTheme.setPreference", preference);
+    }
+
+    private string Pressed(string preference) =>
+        (_preference == preference).ToString().ToLowerInvariant();
+
+    private sealed record ThemeOption(string Value, string Label, string Icon);
+}

@@ -1,0 +1,48 @@
+<section @attributes="SafeAttributes" class="@CssClass">
+    <h3 class="rbi-accordion__heading">
+        <button @ref="_trigger"
+                type="button"
+                class="rbi-accordion__trigger"
+                disabled="@Disabled"
+                aria-expanded="@(Expanded ? "true" : "false")"
+                aria-controls="@_panelId"
+                id="@_triggerId"
+                @onclick="ToggleAsync"
+                @onkeydown="HandleKeyAsync">
+            @Header
+            <span class="rbi-disclosure__chevron" aria-hidden="true">@RBI.DesignSystem.Components.RbiControlIcon.Render("down")</span>
+        </button>
+    </h3>
+    <div id="@_panelId" role="region" aria-labelledby="@_triggerId" class="rbi-accordion__content" hidden="@(!Expanded)">
+        @ChildContent
+    </div>
+</section>
+
+@code {
+    private readonly string _baseId = RBI.DesignSystem.Components.Forms.RbiFormUtilities.Id("accordion");
+    private ElementReference _trigger;
+
+    [CascadingParameter] private RbiAccordionContext Accordion { get; set; } = default!;
+    [Parameter, EditorRequired] public string Value { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public RenderFragment? Header { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string _triggerId => $"{_baseId}-trigger";
+    private string _panelId => $"{_baseId}-panel";
+    private bool Expanded => Accordion.IsExpanded(Value);
+    private string CssClass => string.Join(' ', new[] { "rbi-accordion__item", Expanded ? "rbi-accordion__item--expanded" : null, Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private IReadOnlyDictionary<string, object>? SafeAttributes => RBI.DesignSystem.Components.Forms.RbiFormUtilities.SafeAttributes(AdditionalAttributes, "class");
+
+    protected override void OnParametersSet()
+    {
+        if (Accordion is null) throw new InvalidOperationException($"{nameof(RbiAccordionItem)} must be placed inside {nameof(RbiAccordion)}.");
+        if (string.IsNullOrWhiteSpace(Value)) throw new InvalidOperationException($"{nameof(Value)} is required.");
+    }
+
+    protected override void OnAfterRender(bool firstRender) => Accordion.Register(Value, Disabled, () => _trigger.FocusAsync());
+    private Task ToggleAsync() => Accordion.ToggleAsync(Value, Disabled);
+    private Task HandleKeyAsync(KeyboardEventArgs args) => Accordion.HandleKeyAsync(Value, args.Key);
+}

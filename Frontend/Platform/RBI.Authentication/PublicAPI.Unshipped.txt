@@ -1,0 +1,15 @@
+#nullable enable
+RBI.Authentication.RbiAuthenticatedApiClientBuilderExtensions
+RBI.Authentication.RbiAuthenticationEndpointRouteBuilderExtensions
+RBI.Authentication.RbiAuthenticationOptions
+RBI.Authentication.RbiAuthenticationOptions.Authority.get -> string!
+RBI.Authentication.RbiAuthenticationOptions.Authority.set -> void
+RBI.Authentication.RbiAuthenticationOptions.ClientId.get -> string!
+RBI.Authentication.RbiAuthenticationOptions.ClientId.set -> void
+RBI.Authentication.RbiAuthenticationOptions.ClientSecret.get -> string!
+RBI.Authentication.RbiAuthenticationOptions.ClientSecret.set -> void
+RBI.Authentication.RbiAuthenticationOptions.RbiAuthenticationOptions() -> void
+RBI.Authentication.RbiAuthenticationServiceCollectionExtensions
+static RBI.Authentication.RbiAuthenticatedApiClientBuilderExtensions.AddRbiUserAccessToken(this Microsoft.Extensions.DependencyInjection.IHttpClientBuilder! builder) -> Microsoft.Extensions.DependencyInjection.IHttpClientBuilder!
+static RBI.Authentication.RbiAuthenticationEndpointRouteBuilderExtensions.MapRbiAuthenticationEndpoints(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints) -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
+static RBI.Authentication.RbiAuthenticationServiceCollectionExtensions.AddRbiAuthentication(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration, System.Action<RBI.Authentication.RbiAuthenticationOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

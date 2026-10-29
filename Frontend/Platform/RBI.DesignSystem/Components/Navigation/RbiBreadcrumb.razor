@@ -1,0 +1,47 @@
+<nav @attributes="SafeAttributes" class="@CssClass" aria-label="@AccessibleLabel">
+    <ol class="rbi-breadcrumb__list">
+        @for (var index = 0; index < Items.Count; index++)
+        {
+            var item = Items[index];
+            var current = item.Current || (index == Items.Count - 1 && !Items.Any(entry => entry.Current));
+            <li class="rbi-breadcrumb__item">
+                @if (item.Ellipsis)
+                {
+                    <span class="rbi-breadcrumb__ellipsis">@RBI.DesignSystem.Components.RbiControlIcon.Render("ellipsis")<span class="rbi-visually-hidden">@item.Label</span></span>
+                }
+                else if (current)
+                {
+                    <span class="rbi-breadcrumb__current" aria-current="page">@item.Label</span>
+                }
+                else
+                {
+                    <a class="rbi-breadcrumb__link" href="@item.Href">@item.Label</a>
+                }
+            </li>
+            @if (index < Items.Count - 1)
+            {
+                <li class="rbi-breadcrumb__separator" aria-hidden="true">@(Separator ?? RBI.DesignSystem.Components.RbiControlIcon.Render("next"))</li>
+            }
+        }
+    </ol>
+</nav>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<RbiBreadcrumbEntry> Items { get; set; } = [];
+    [Parameter, EditorRequired] public string AccessibleLabel { get; set; } = string.Empty;
+    /// <summary>Optional separator content shown between items; the default is a chevron.</summary>
+    [Parameter] public RenderFragment? Separator { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CssClass => string.Join(' ', new[] { "rbi-breadcrumb", Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private IReadOnlyDictionary<string, object>? SafeAttributes => RBI.DesignSystem.Components.Forms.RbiFormUtilities.SafeAttributes(AdditionalAttributes, "class", "aria-label");
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(AccessibleLabel)) throw new InvalidOperationException($"{nameof(AccessibleLabel)} is required.");
+        if (Items.Count(entry => entry.Current) > 1) throw new InvalidOperationException("Only one breadcrumb item may be current.");
+        if (Items.Take(Math.Max(0, Items.Count - 1)).Any(entry => !entry.Current && !entry.Ellipsis && string.IsNullOrWhiteSpace(entry.Href)))
+            throw new InvalidOperationException("Non-current breadcrumb items require an href.");
+    }
+}

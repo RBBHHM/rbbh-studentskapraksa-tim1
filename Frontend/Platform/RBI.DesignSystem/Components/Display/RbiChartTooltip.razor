@@ -1,0 +1,56 @@
+@using System.Globalization
+@using RBI.DesignSystem.Components.Icons
+
+@if (Open && _entries.Length > 0)
+{
+    <div id="@Context!.TooltipId" class="@($"rbi-chart__tooltip rbi-chart__tooltip--{Indicator.ToString().ToLowerInvariant()} {(_nestLabel ? "rbi-chart__tooltip--nested" : "")} {(X > 50 ? "rbi-chart__tooltip--left" : "")} {(Y > 50 ? "rbi-chart__tooltip--above" : "")} {Class}".TrimEnd())" role="tooltip" style="@($"left:{X.ToString("R", CultureInfo.InvariantCulture)}%;top:{Y.ToString("R", CultureInfo.InvariantCulture)}%")">
+        @if (!_nestLabel && !HideLabel && (LabelContent is not null || !string.IsNullOrEmpty(Label))) { <div class="rbi-chart__tooltip-label">@if (LabelContent is not null) { @LabelContent } else { @Label }</div> }
+        <div class="rbi-chart__tooltip-entries">
+        @foreach (var entry in _entries)
+        {
+            var series = Context.GetSeries(entry.SeriesKey);
+            <div class="rbi-chart__tooltip-entry">
+                @if (EntryTemplate is not null) { @EntryTemplate(entry) }
+                else
+                {
+                    @if (series?.Icon is { } icon) { <RbiIcon Name="icon" /> }
+                    else if (!HideIndicator) { <span class="rbi-chart__tooltip-indicator" aria-hidden="true" style="@($"--color-bg:{entry.Color ?? Context.GetColor(entry.SeriesKey)};--color-border:{entry.Color ?? Context.GetColor(entry.SeriesKey)}")"></span> }
+                    <div class="rbi-chart__tooltip-row">
+                        <div class="rbi-chart__tooltip-name">
+                            @if (_nestLabel && !HideLabel && (LabelContent is not null || !string.IsNullOrEmpty(Label))) { <div class="rbi-chart__tooltip-label">@if (LabelContent is not null) { @LabelContent } else { @Label }</div> }
+                            <span>@if (entry.Label is null && series?.LabelContent is not null) { @series.LabelContent } else { @(entry.Label ?? series?.Label ?? entry.SeriesKey) }</span>
+                        </div>
+                        @if (entry.ValueText is not null) { <span class="rbi-chart__tooltip-value">@entry.ValueText</span> }
+                    </div>
+                }
+            </div>
+        }
+        </div>
+    </div>
+}
+
+@code {
+    [CascadingParameter] private RbiChartContext? Context { get; set; }
+    [Parameter] public bool Open { get; set; }
+    [Parameter] public IReadOnlyList<RbiChartTooltipEntry> Entries { get; set; } = Array.Empty<RbiChartTooltipEntry>();
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public RenderFragment? LabelContent { get; set; }
+    [Parameter] public bool HideLabel { get; set; }
+    [Parameter] public bool HideIndicator { get; set; }
+    [Parameter] public RbiChartIndicator Indicator { get; set; }
+    [Parameter] public RenderFragment<RbiChartTooltipEntry>? EntryTemplate { get; set; }
+    [Parameter] public double X { get; set; }
+    [Parameter] public double Y { get; set; }
+    [Parameter] public string? Class { get; set; }
+    private RbiChartTooltipEntry[] _entries = [];
+    private bool _nestLabel;
+    protected override void OnParametersSet()
+    {
+        if (Context is null) throw new InvalidOperationException("Chart tooltip requires an RbiChart context.");
+        ArgumentNullException.ThrowIfNull(Entries);
+        if (!Enum.IsDefined(Indicator) || !double.IsFinite(X) || !double.IsFinite(Y) || X is < 0 or > 100 || Y is < 0 or > 100) throw new ArgumentOutOfRangeException(nameof(X));
+        foreach (var entry in Entries) { RbiChartPresentation.ValidateKey(entry.SeriesKey); RbiChartPresentation.ValidateColor(entry.Color); }
+        _entries = Entries.Where(entry => !entry.Hidden).ToArray();
+        _nestLabel = Entries.Count == 1 && Indicator != RbiChartIndicator.Dot;
+    }
+}

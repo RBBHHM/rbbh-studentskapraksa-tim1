@@ -1,0 +1,45 @@
+@typeparam TValue
+
+<button @ref="_element"
+        @attributes="SafeAttributes"
+        type="button"
+        role="tab"
+        id="@Registration.TabId"
+        class="@CssClass"
+        disabled="@Disabled"
+        aria-selected="@SelectedValue"
+        aria-controls="@Registration.PanelId"
+        tabindex="@TabIndex"
+        @onclick="SelectAsync"
+        @onkeydown="HandleKeyAsync">
+    @ChildContent
+</button>
+
+@code {
+    private ElementReference _element;
+    private RbiTabRegistration<TValue>? _registration;
+
+    [CascadingParameter] private RbiTabsContext<TValue> Tabs { get; set; } = default!;
+    [Parameter, EditorRequired] public TValue Value { get; set; } = default!;
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private RbiTabRegistration<TValue> Registration => _registration ??= Tabs.Register(Value, Disabled);
+    private bool Selected => Tabs.IsSelected(Value);
+    private string SelectedValue => Selected ? "true" : "false";
+    private int TabIndex => Tabs.IsFocusable(Value) ? 0 : -1;
+    private string CssClass => string.Join(' ', new[] { "rbi-tab", Selected ? "rbi-tab--selected" : null, Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private IReadOnlyDictionary<string, object>? SafeAttributes => RBI.DesignSystem.Components.Forms.RbiFormUtilities.SafeAttributes(AdditionalAttributes, "class", "type", "role", "id", "disabled", "aria-selected", "aria-controls", "tabindex");
+
+    protected override void OnParametersSet()
+    {
+        if (Tabs is null) throw new InvalidOperationException($"{nameof(RbiTab<TValue>)} must be placed inside {nameof(RbiTabs<TValue>)}.");
+        _registration = Tabs.Register(Value, Disabled);
+    }
+
+    protected override void OnAfterRender(bool firstRender) => Registration.FocusAsync = () => _element.FocusAsync();
+    private Task SelectAsync() => Disabled ? Task.CompletedTask : Tabs.SelectAsync(Value);
+    private Task HandleKeyAsync(KeyboardEventArgs args) => Disabled ? Task.CompletedTask : Tabs.HandleKeyAsync(Value, args.Key);
+}

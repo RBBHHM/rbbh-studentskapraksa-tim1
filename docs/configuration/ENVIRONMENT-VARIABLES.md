@@ -1,48 +1,51 @@
-# Konfiguracija okruženja
+# Environment configuration
 
-Lokalno kopirajte `.env.example` u `.env`. Fajl `.env` je gitignored, a
-`scripts/dev-api.cmd` ga učitava prije pokretanja backenda. Stvarne lozinke ne
-upisujte u `appsettings.json`, dokumentaciju ni primjer konfiguracije.
+Use `__` for nested environment keys. Keep secrets outside Git. Backend dotenv is
+loaded from its working directory: the optional local example is `.env.example`;
+copy it to `Backend/.env` for `dotnet run --project Backend/RelatedPartiesRegister.csproj`.
+The Blazor frontend does not load that file. Prefer its existing user-secrets ID
+for local identity credentials. See root README for seeded demo versus real app modes.
 
-`pnpm dev:api` koristi SQL Server kada su njegove vrijednosti unesene. Ako
-konfigurisana veza nije ispravna ili SQL Server nije dostupan, startup se
-prekida jasnom greškom. Seedovana InMemory baza koristi se samo kada SQL
-postavke nisu unesene u lokalnom Development režimu.
+## Backend
 
-## Backend/OCP
+| Variable | Purpose |
+| --- | --- |
+| `ASPNETCORE_ENVIRONMENT` | `Development` allows explicit local fallbacks; Production fails closed. |
+| `Database__ServerName`, `Database__Name` | SQL target. Leave both blank only for Development InMemory. |
+| `Database__IntegratedSecurity`, `Database__User`, `Database__Password` | Integrated identity or SQL login. Use least privilege and trusted TLS. |
+| `Database__ApplyMigrations` | Defaults false; startup does not migrate or seed production data. |
+| `KeycloakSettings__Enabled` | May be false only in Development; not an authenticated demo mode. |
+| `KeycloakSettings__Issuer`, `KeycloakSettings__Audience` | Approved HTTPS issuer and API audience. Audience is mandatory outside Development. |
+| `KeycloakSettings__ClientId`, `KeycloakSettings__ClientSecret` | Backend confidential client. Required with enabled production authentication. |
+| `KeycloakSettings__PublicIssuer` | Optional approved public issuer when metadata addressing differs. |
+| `KeycloakSettings__AdminClientId`, `KeycloakSettings__AdminClientSecret` | Configure only where the existing Keycloak administration integration requires them. |
+| `Email__Provider` | `demo` for isolated local work; configure approved HTTP API or SMTP for real delivery. |
+| `Email__AdminEmail`, `Email__HrEmail`, `Email__From`, `Email__AppBaseUrl` | Approved recipients, sender and links; do not test with real mail inadvertently. |
+| `Email__SendEmailWithHtmlBodyUrl` | Existing HTTP mail endpoint when that provider is selected. |
+| `Email__Smtp__Host`, `Email__Smtp__Port`, `Email__Smtp__EnableSsl`, `Email__Smtp__Username`, `Email__Smtp__Password`, `Email__Smtp__FromAddress`, `Email__Smtp__FromName` | SMTP provider configuration. |
+| `ReverseProxy__KnownProxies__0`, `ReverseProxy__KnownNetworks__0`, `ReverseProxy__ForwardLimit` | Actual trusted peers/CIDRs and positive hop limit. Production rejects missing trust or unrestricted networks. |
+| `AllowedHosts` | Explicit application hosts; Production rejects wildcard trust. Probe Host must match. |
+| `Cors__AllowedOrigins__0` | Approved browser origins only; no automatic broadening. |
+| `IdentityBinding__AllowVerifiedEmailFirstLink` | Approval-gated initial identity linkage; keep false pending production reconciliation. |
 
-| Varijabla | Obavezna | Svrha |
-|---|---:|---|
-| `ASPNETCORE_ENVIRONMENT` | da | `Development`, `Staging` ili `Production`. |
-| `Database__ServerName` | produkcija | SQL Server/instance; port ide u istoj vrijednosti. |
-| `Database__Name` | produkcija | Naziv baze, npr. `RPR`; nije zakucan u kodu. |
-| `Database__IntegratedSecurity` | ne | `true` za Windows identitet, inače `false`. |
-| `Database__User` / `Database__Password` | SQL auth | OCP Secret; ne koriste se uz integrated security. |
-| `KeycloakSettings__Enabled` | produkcija | Uključuje JWT validaciju. |
-| `KeycloakSettings__Issuer` | uz Keycloak | Authority/issuer, npr. `https://id/realms/rbbh`. Iz njega se izvode realm i admin base URL. |
-| `KeycloakSettings__PublicIssuer` | samo split URL | Dodatni javni issuer ako backend i browser vide Keycloak pod različitim adresama. |
-| `KeycloakSettings__Audience` | uz Keycloak | Očekivani API audience. Obavezan izvan Development okruženja; aplikacija se ne pokreće bez njega. U Development okruženju, ako nije postavljen, audience se ne provjerava (samo lokalni razvoj). |
-| `KeycloakSettings__ClientId` / `ClientSecret` | uz Keycloak | Serverski OIDC client; secret ide samo u OCP Secret. |
-| `KeycloakSettings__AdminClientId` / `AdminClientSecret` | samo upravljanje korisnicima | Povjerljivi service account sa minimalnim realm-management pravima. |
-| `Cors__AllowedOrigins__N` | samo cross-origin | IIS origin kada browser direktno zove OCP; nije potreban uz IIS ARR same-origin proxy. |
+## Frontend Blazor
 
-## Frontend/IIS
+| Variable | Purpose |
+| --- | --- |
+| `ASPNETCORE_ENVIRONMENT` | Local Development permits signed-out startup; Production requires authentication. |
+| `Apis__BaseUrl` | Real backend origin. A blank value gives unavailable clients, not a working register. |
+| `Authentication__Authority` | Approved HTTPS Keycloak realm. |
+| `Authentication__ClientId`, `Authentication__ClientSecret` | Confidential frontend client, configured together with Authority. |
+| `AllowedHosts` | Approved frontend hosts, consistent with ingress/probe requests. |
 
-Frontend koristi Webpack runtime `app-config.js`; **ne koristi Vite niti VITE
-varijable**. `API_BASE_URL` ostavite prazan uz preporučeni IIS ARR proxy. Ako
-browser mora direktno zvati OCP, postavite javni API URL i odgovarajući CORS.
+Production authentication requires an approved registered shared `IDistributedCache`
+and persisted/protected Data Protection keys. Environment variables alone do not
+register that infrastructure. Local Development cache is not the production solution.
+Frontend proxy trust must also be approved and integrated for the real ingress.
 
-Frontend nema Keycloak postavke. Browser koristi relativne `/authentication`
-i `/api` putanje kroz IIS ARR, dok backend obavlja OIDC code exchange i čuva
-tokene u HttpOnly cookie sesiji. `LOCALIZATION_MANIFEST_URL` i
-`APP_ENVIRONMENT` ostaju javne runtime postavke.
+## Production boundary
 
-```text
-Browser → IIS (HTML/CSS/JS + app-config.js)
-        → /authentication i /api preko IIS ARR → OCP backend
-OCP backend → Keycloak confidential-client tok → SQL Server
-```
-
-GitHub workflow varijable `PROJECT_PATH=RelatedPartiesRegister` i
-`SOLUTION_PATH=RelatedPartiesRegister.csproj` služe samo build putanjama; nisu
-application settings. Tajne pripadaju GitHub/OCP Secretima, ne repozitoriju.
+Production requires real SQL, Keycloak audience/claims/redirects, `email_verified`,
+subject-link backfill approval, trusted CA chains and mail delivery verification.
+Do not enable first-link fallback or relax validation to bypass those checks.
+Deployment prerequisites remain in [production readiness](../PRODUCTION-READINESS.md).

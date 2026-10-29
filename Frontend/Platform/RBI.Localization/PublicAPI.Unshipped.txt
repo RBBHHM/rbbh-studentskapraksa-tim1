@@ -1,0 +1,16 @@
+#nullable enable
+RBI.Localization.IRbiLocalizer
+RBI.Localization.IRbiLocalizer.this[string! key, params object?[]! arguments].get -> string!
+RBI.Localization.IRbiLocalizer.this[string! key].get -> string!
+RBI.Localization.RbiCultureCatalog
+RBI.Localization.RbiCultureCatalog.DefaultCulture.get -> string!
+RBI.Localization.RbiCultureCatalog.SupportedCultures.get -> System.Collections.Generic.IReadOnlyList<string!>!
+RBI.Localization.RbiLocalizationExtensions
+RBI.Localization.RbiLocalizationOptions
+RBI.Localization.RbiLocalizationOptions.RbiLocalizationOptions() -> void
+RBI.Localization.RbiLocalizationOptions.DefaultCulture.get -> string!
+RBI.Localization.RbiLocalizationOptions.DefaultCulture.set -> void
+static RBI.Localization.RbiLocalizationExtensions.AddRbiLocalization(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static RBI.Localization.RbiLocalizationExtensions.AddRbiLocalization(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<RBI.Localization.RbiLocalizationOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static RBI.Localization.RbiLocalizationExtensions.MapRbiLocalizationEndpoints(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints) -> Microsoft.AspNetCore.Builder.IEndpointConventionBuilder!
+static RBI.Localization.RbiLocalizationExtensions.UseRbiLocalization(this Microsoft.AspNetCore.Builder.IApplicationBuilder! app) -> Microsoft.AspNetCore.Builder.IApplicationBuilder!

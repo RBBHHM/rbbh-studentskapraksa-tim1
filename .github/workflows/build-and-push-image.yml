@@ -33,7 +33,7 @@ jobs:
         env:
           SQL_PASSWORD: ${{ secrets.TEST_SQL_SA_PASSWORD }}
         run: test -n "$SQL_PASSWORD"
-      - run: dotnet restore RelatedPartiesRegister.slnx --configfile src/Web.Blazor/NuGet.config
+      - run: dotnet restore RelatedPartiesRegister.slnx --configfile NuGet.config
       - run: dotnet build RelatedPartiesRegister.slnx -c Release --no-restore -p:RunAnalyzers=true
       - run: dotnet test RelatedPartiesRegister.slnx -c Release --no-build --no-restore --logger trx --results-directory artifacts/ci-tests
       - name: Reject skipped tests
@@ -64,7 +64,7 @@ jobs:
         with: { dotnet-version: "10.0.x" }
       - uses: actions/setup-node@v4
         with: { node-version: "22" }
-      - run: dotnet restore tests/Web.Blazor.BrowserHost/Web.Blazor.BrowserHost.csproj --configfile src/Web.Blazor/NuGet.config
+      - run: dotnet restore tests/Web.Blazor.BrowserHost/Web.Blazor.BrowserHost.csproj --configfile NuGet.config
       - run: dotnet build tests/Web.Blazor.BrowserHost/Web.Blazor.BrowserHost.csproj --no-restore
       - run: npm ci
         working-directory: tests/Web.Blazor.Browser
@@ -108,9 +108,9 @@ jobs:
           [[ "$API_IMAGE" =~ ^[a-z0-9]+([-a-z0-9]*[a-z0-9])?$ ]]
           test "$WEB_IMAGE" != "$API_IMAGE"
           if [ "$COMPONENT" = web ]; then
-            name="$WEB_IMAGE"; context=src/Web.Blazor; dockerfile=src/Web.Blazor/Dockerfile
+            name="$WEB_IMAGE"; context=.; dockerfile=Frontend/Dockerfile
           else
-            name="$API_IMAGE"; context=.; dockerfile=RelatedPartiesRegister/Dockerfile
+            name="$API_IMAGE"; context=.; dockerfile=Backend/Dockerfile
           fi
           echo "tag=$REGISTRY/$REPOSITORY/$name:sha-$GITHUB_SHA" >> "$GITHUB_OUTPUT"
           echo "context=$context" >> "$GITHUB_OUTPUT"

@@ -1,0 +1,116 @@
+@inherits InputBase<bool>
+@implements IAsyncDisposable
+@inject IJSRuntime JavaScript
+@using RBI.DesignSystem.Components.Icons
+@using Microsoft.AspNetCore.Components.Rendering
+
+<label class="@WrapperClass">
+    @InputControl
+    <span class="rbi-checkbox__control" aria-hidden="true">@if (Indeterminate) { <RbiIcon Name="RbiIconName.Minus" /> }</span>
+    <span class="rbi-choice__content">
+        <span class="rbi-choice__label">@ChildContent</span>
+        @if (!string.IsNullOrWhiteSpace(Description))
+        {
+            <span id="@DescriptionId" class="rbi-choice__description">@Description</span>
+        }
+    </span>
+</label>
+
+@code {
+    private readonly string _generatedId = RbiFormUtilities.Id("checkbox");
+    private ElementReference _input;
+    private RenderFragment? _inputControl;
+    private IJSObjectReference? _module;
+    private Task<IJSObjectReference>? _moduleImport;
+    private bool _hadIndeterminate, _disposed;
+
+    [CascadingParameter] private RbiFieldContext? Field { get; set; }
+    [Parameter] public string? Id { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Description { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool Required { get; set; }
+    [Parameter] public bool Invalid { get; set; }
+    /// <summary>Mixed aggregate-selection presentation, separate from the bound boolean value.</summary>
+    [Parameter] public bool Indeterminate { get; set; }
+    /// <summary>Proposes clearing mixed presentation after activation; the parent remains authoritative.</summary>
+    [Parameter] public EventCallback<bool> IndeterminateChanged { get; set; }
+
+    private bool EffectiveDisabled => Disabled || Field?.Disabled == true;
+    private bool EffectiveRequired => Required || Field?.Required == true;
+    private bool ValidationInvalid => EditContext?.GetValidationMessages(FieldIdentifier).Any() == true;
+    private bool EffectiveInvalid => Invalid || Field?.Invalid == true || ValidationInvalid;
+    private string ResolvedId => Id ?? RbiFormUtilities.Attribute(AdditionalAttributes, "id") ?? Field?.ControlId ?? _generatedId;
+    private string DescriptionId => $"{ResolvedId}-description";
+    private string WrapperClass => string.Join(' ', new[] { "rbi-choice", "rbi-checkbox", EffectiveDisabled ? "rbi-choice--disabled" : null, EffectiveInvalid ? "rbi-choice--invalid" : null, CssClass }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private string? AriaInvalid => EffectiveInvalid ? "true" : RbiFormUtilities.Attribute(AdditionalAttributes, "aria-invalid");
+    private string? DescribedBy => RbiFormUtilities.JoinIds(Field?.DescribedBy, string.IsNullOrWhiteSpace(Description) ? null : DescriptionId, RbiFormUtilities.Attribute(AdditionalAttributes, "aria-describedby"));
+    private IReadOnlyDictionary<string, object>? SafeAttributes => RbiFormUtilities.SafeAttributes(AdditionalAttributes, "id", "class", "type", "checked", "disabled", "required", "aria-invalid", "aria-describedby", "aria-checked");
+
+    private async Task ChangeValue(ChangeEventArgs args)
+    {
+        if (EffectiveDisabled) return;
+        if (Indeterminate) await IndeterminateChanged.InvokeAsync(false);
+        CurrentValue = args.Value is bool value && value;
+    }
+
+    private RenderFragment InputControl => _inputControl ??= BuildControl;
+    private void BuildControl(RenderTreeBuilder builder)
+    {
+        builder.OpenElement(0, "input");
+        builder.AddMultipleAttributes(1, SafeAttributes);
+        builder.AddAttribute(2, "id", ResolvedId);
+        builder.AddAttribute(3, "class", "rbi-choice__input");
+        builder.AddAttribute(4, "type", "checkbox");
+        builder.AddAttribute(5, "checked", CurrentValue && !Indeterminate);
+        builder.AddAttribute(6, "disabled", EffectiveDisabled);
+        builder.AddAttribute(7, "required", EffectiveRequired);
+        builder.AddAttribute(8, "aria-invalid", AriaInvalid);
+        builder.AddAttribute(9, "aria-describedby", DescribedBy);
+        builder.AddAttribute(10, "aria-checked", Indeterminate ? "mixed" : null);
+        builder.AddAttribute(11, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, ChangeValue));
+        builder.SetUpdatesAttributeName("checked");
+        builder.AddElementReferenceCapture(12, element => _input = element);
+        builder.CloseElement();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_disposed || (!Indeterminate && !_hadIndeterminate)) return;
+        try
+        {
+            _moduleImport ??= JavaScript.InvokeAsync<IJSObjectReference>("import", "./_content/RBI.DesignSystem/js/rbi-native-controls.js").AsTask();
+            var module = await _moduleImport;
+            if (_disposed) return;
+            _module = module;
+            await module.InvokeVoidAsync("syncCheckbox", _input, Indeterminate);
+            _hadIndeterminate = Indeterminate;
+        }
+        catch (JSDisconnectedException) when (_disposed) { }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        // Detach validation immediately, including while a module import is still pending.
+        ((IDisposable)this).Dispose();
+        try
+        {
+            if (_moduleImport is not null) await (await _moduleImport).DisposeAsync();
+            else if (_module is not null) await _module.DisposeAsync();
+        }
+        catch (JSDisconnectedException) { }
+        finally
+        {
+            _module = null;
+            _moduleImport = null;
+        }
+    }
+    protected override bool TryParseValueFromString(string? value, out bool result, out string validationErrorMessage)
+    {
+        result = string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
+        validationErrorMessage = string.Empty;
+        return true;
+    }
+}

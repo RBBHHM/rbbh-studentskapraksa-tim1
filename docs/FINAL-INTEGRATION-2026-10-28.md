@@ -93,7 +93,7 @@ The first additional matrix run had two dark-Guide failures (50/52); this eviden
 
 - Sole canonical solution: `RelatedPartiesRegister.slnx`.
 - Exactly `.github/workflows/build-and-push-image.yml`, `codeql.yml`, `deploy-to-ocp.yml`; no nested workflows.
-- No tracked legacy React source, React/pnpm product build, retired root wrappers or migration-only tooling were reintroduced. Node remains limited to native browser tests.
+- No tracked legacy React source, React/retired JS package tooling product build, retired root wrappers or migration-only tooling were reintroduced. Node remains limited to native browser tests.
 - No package, schema, backfill, production infrastructure values or mass formatting changes. Existing unrelated style debt remains separate. Pkcs 9.0.21 and warning behavior are unchanged.
 - Existing untracked `tests/Web.Blazor.BrowserHost/Properties/launchSettings.json` was never staged/edited. SHA-256 before/after: **07DAA11FF2D5D953B78D8FE4C7209AF625C3D76F2FBEC747986EB6F8DF39EC93**.
 

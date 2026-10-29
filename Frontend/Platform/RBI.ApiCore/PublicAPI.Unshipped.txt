@@ -1,0 +1,69 @@
+#nullable enable
+RBI.ApiCore.IRbiApiFileTransport
+RBI.ApiCore.IRbiApiFileTransport.DownloadAsync(string! requestUri, int maxBytes = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<RBI.ApiCore.RbiApiResult<RBI.ApiCore.RbiApiFile!>!>!
+RBI.ApiCore.IRbiApiFileTransport.PostMultipartAsync<TResponse>(string! requestUri, System.Net.Http.MultipartFormDataContent! content, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<RBI.ApiCore.RbiApiResult<TResponse>!>!
+RBI.ApiCore.RbiApiFile
+RBI.ApiCore.RbiApiFile.Content.get -> byte[]!
+RBI.ApiCore.RbiApiFile.ContentType.get -> string?
+RBI.ApiCore.RbiApiFile.FileName.get -> string!
+RBI.ApiCore.IRbiApiTransport
+RBI.ApiCore.IRbiApiTransport.GetAsync<TResponse>(string! requestUri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<RBI.ApiCore.RbiApiResult<TResponse>!>!
+RBI.ApiCore.IRbiApiTransport.SendAsync(System.Net.Http.HttpMethod! method, string! requestUri, object? jsonBody = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<RBI.ApiCore.RbiApiResult!>!
+RBI.ApiCore.IRbiApiTransport.SendAsync<TResponse>(System.Net.Http.HttpMethod! method, string! requestUri, object? jsonBody = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<RBI.ApiCore.RbiApiResult<TResponse>!>!
+RBI.ApiCore.RbiApiClientOptions
+RBI.ApiCore.RbiApiClientOptions.BaseUrl.get -> System.Uri?
+RBI.ApiCore.RbiApiClientOptions.BaseUrl.set -> void
+RBI.ApiCore.RbiApiClientOptions.RbiApiClientOptions() -> void
+RBI.ApiCore.RbiApiClientOptions.ResilienceProfile.get -> RBI.ApiCore.RbiApiResilienceProfile
+RBI.ApiCore.RbiApiClientOptions.ResilienceProfile.set -> void
+RBI.ApiCore.RbiApiClientOptions.Timeout.get -> System.TimeSpan
+RBI.ApiCore.RbiApiClientOptions.Timeout.set -> void
+RBI.ApiCore.RbiApiError
+RBI.ApiCore.RbiApiError.<Clone>$() -> RBI.ApiCore.RbiApiError!
+RBI.ApiCore.RbiApiError.Deconstruct(out RBI.ApiCore.RbiApiErrorKind Kind, out System.Net.HttpStatusCode? StatusCode, out string! Title, out string? Detail, out string? TraceId) -> void
+RBI.ApiCore.RbiApiError.Detail.get -> string?
+RBI.ApiCore.RbiApiError.Detail.init -> void
+RBI.ApiCore.RbiApiError.Equals(RBI.ApiCore.RbiApiError? other) -> bool
+RBI.ApiCore.RbiApiError.Kind.get -> RBI.ApiCore.RbiApiErrorKind
+RBI.ApiCore.RbiApiError.Kind.init -> void
+RBI.ApiCore.RbiApiError.RbiApiError(RBI.ApiCore.RbiApiErrorKind Kind, System.Net.HttpStatusCode? StatusCode, string! Title, string? Detail = null, string? TraceId = null) -> void
+RBI.ApiCore.RbiApiError.StatusCode.get -> System.Net.HttpStatusCode?
+RBI.ApiCore.RbiApiError.StatusCode.init -> void
+RBI.ApiCore.RbiApiError.Title.get -> string!
+RBI.ApiCore.RbiApiError.Title.init -> void
+RBI.ApiCore.RbiApiError.TraceId.get -> string?
+RBI.ApiCore.RbiApiError.TraceId.init -> void
+RBI.ApiCore.RbiApiErrorKind
+RBI.ApiCore.RbiApiErrorKind.Cancellation = 9 -> RBI.ApiCore.RbiApiErrorKind
+RBI.ApiCore.RbiApiErrorKind.Conflict = 4 -> RBI.ApiCore.RbiApiErrorKind
+RBI.ApiCore.RbiApiErrorKind.Forbidden = 2 -> RBI.ApiCore.RbiApiErrorKind
+RBI.ApiCore.RbiApiErrorKind.Network = 8 -> RBI.ApiCore.RbiApiErrorKind
+RBI.ApiCore.RbiApiErrorKind.NotFound = 3 -> RBI.ApiCore.RbiApiErrorKind
+RBI.ApiCore.RbiApiErrorKind.RateLimited = 5 -> RBI.ApiCore.RbiApiErrorKind
+RBI.ApiCore.RbiApiErrorKind.Server = 6 -> RBI.ApiCore.RbiApiErrorKind
+RBI.ApiCore.RbiApiErrorKind.Timeout = 7 -> RBI.ApiCore.RbiApiErrorKind
+RBI.ApiCore.RbiApiErrorKind.Unauthorized = 1 -> RBI.ApiCore.RbiApiErrorKind
+RBI.ApiCore.RbiApiErrorKind.Unavailable = 10 -> RBI.ApiCore.RbiApiErrorKind
+RBI.ApiCore.RbiApiErrorKind.Unknown = 11 -> RBI.ApiCore.RbiApiErrorKind
+RBI.ApiCore.RbiApiErrorKind.Validation = 0 -> RBI.ApiCore.RbiApiErrorKind
+RBI.ApiCore.RbiApiResilienceProfile
+RBI.ApiCore.RbiApiResilienceProfile.None = 0 -> RBI.ApiCore.RbiApiResilienceProfile
+RBI.ApiCore.RbiApiResilienceProfile.Standard = 1 -> RBI.ApiCore.RbiApiResilienceProfile
+RBI.ApiCore.RbiApiResult
+RBI.ApiCore.RbiApiResult.Error.get -> RBI.ApiCore.RbiApiError?
+RBI.ApiCore.RbiApiResult.IsSuccess.get -> bool
+RBI.ApiCore.RbiApiResult<T>
+RBI.ApiCore.RbiApiResult<T>.Error.get -> RBI.ApiCore.RbiApiError?
+RBI.ApiCore.RbiApiResult<T>.IsSuccess.get -> bool
+RBI.ApiCore.RbiApiResult<T>.Value.get -> T
+RBI.ApiCore.RbiApiServiceCollectionExtensions
+override RBI.ApiCore.RbiApiError.Equals(object? obj) -> bool
+override RBI.ApiCore.RbiApiError.GetHashCode() -> int
+override RBI.ApiCore.RbiApiError.ToString() -> string!
+static RBI.ApiCore.RbiApiError.operator !=(RBI.ApiCore.RbiApiError? left, RBI.ApiCore.RbiApiError? right) -> bool
+static RBI.ApiCore.RbiApiError.operator ==(RBI.ApiCore.RbiApiError? left, RBI.ApiCore.RbiApiError? right) -> bool
+static RBI.ApiCore.RbiApiResult.Failure(RBI.ApiCore.RbiApiError! error) -> RBI.ApiCore.RbiApiResult!
+static RBI.ApiCore.RbiApiResult.Success() -> RBI.ApiCore.RbiApiResult!
+static RBI.ApiCore.RbiApiResult<T>.Failure(RBI.ApiCore.RbiApiError! error) -> RBI.ApiCore.RbiApiResult<T>!
+static RBI.ApiCore.RbiApiResult<T>.Success(T value) -> RBI.ApiCore.RbiApiResult<T>!
+static RBI.ApiCore.RbiApiServiceCollectionExtensions.AddRbiApiClient<TClient, TImplementation>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! name, System.Action<RBI.ApiCore.RbiApiClientOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IHttpClientBuilder!

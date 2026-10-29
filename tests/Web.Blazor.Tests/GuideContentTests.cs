@@ -32,7 +32,7 @@ public sealed class GuideContentTests
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "RelatedPartiesRegister.slnx"))) directory = directory.Parent;
         Assert.NotNull(directory);
-        using var document = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory.FullName, "src", "Web.Blazor", "Localization", culture + ".json")));
+        using var document = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory.FullName, "Frontend", "Localization", culture + ".json")));
         var resource = document.RootElement.GetProperty("translations");
         var all = GuideContent.Visible(new("u", null, null, null, ["admin"], ["FL_VIEW", "PL_VIEW", "LIMITI_VIEW", "KAPITAL_VIEW", "ADMINISTRATION_MANAGE"]));
         Assert.Equal(5, all.Count);

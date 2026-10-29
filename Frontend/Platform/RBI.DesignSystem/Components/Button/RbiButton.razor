@@ -1,0 +1,101 @@
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Components.Rendering
+@using RBI.DesignSystem.Components.Icons
+
+@ButtonControl
+
+@code {
+    private bool _activationInProgress;
+    private RenderFragment? _buttonControl;
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RbiButtonVariant Variant { get; set; } = RbiButtonVariant.Primary;
+    [Parameter] public RbiButtonSize Size { get; set; } = RbiButtonSize.Medium;
+    [Parameter] public RbiButtonType Type { get; set; } = RbiButtonType.Button;
+    /// <summary>Optional native navigation destination; null keeps button semantics.</summary>
+    [Parameter] public string? Href { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool Loading { get; set; }
+    [Parameter] public bool FullWidth { get; set; }
+    [Parameter] public bool IconOnly { get; set; }
+    [Parameter] public string? AccessibleLabel { get; set; }
+    [Parameter] public string LoadingLabel { get; set; } = string.Empty;
+    [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (!Enum.IsDefined(Variant)) throw new ArgumentOutOfRangeException(nameof(Variant));
+        if (!Enum.IsDefined(Size)) throw new ArgumentOutOfRangeException(nameof(Size));
+        if (!Enum.IsDefined(Type)) throw new ArgumentOutOfRangeException(nameof(Type));
+        if (Href is not null && string.IsNullOrWhiteSpace(Href)) throw new ArgumentException("A destination cannot be blank.", nameof(Href));
+        if (Href is not null && Type != RbiButtonType.Button) throw new InvalidOperationException("Navigation links cannot submit or reset a form.");
+        if (IconOnly && string.IsNullOrWhiteSpace(AccessibleLabel))
+            throw new InvalidOperationException($"{nameof(AccessibleLabel)} is required when {nameof(IconOnly)} is true.");
+        if (Loading && string.IsNullOrWhiteSpace(LoadingLabel))
+            throw new InvalidOperationException($"{nameof(LoadingLabel)} is required when {nameof(Loading)} is true.");
+    }
+
+    private string CssClass => string.Join(' ', new[]
+    {
+        "rbi-button",
+        $"rbi-button--{Variant.ToString().ToLowerInvariant()}",
+        $"rbi-button--{Size.ToString().ToLowerInvariant()}",
+        FullWidth ? "rbi-button--full-width" : null,
+        IconOnly ? "rbi-button--icon-only" : null,
+        Loading ? "rbi-button--loading" : null,
+        Class,
+    }.Where(value => !string.IsNullOrWhiteSpace(value)));
+
+    private string ButtonType => Type.ToString().ToLowerInvariant();
+    private bool? DisabledAttribute => Href is null && (Disabled || (Loading && Type != RbiButtonType.Button)) ? true : null;
+    private string? AriaDisabled => Loading || (Href is not null && Disabled) ? "true" : null;
+    private string? AriaBusy => Loading ? "true" : null;
+    private string? ResolvedAccessibleLabel => IconOnly ? AccessibleLabel : null;
+
+    private RenderFragment ButtonControl => _buttonControl ??= BuildControl;
+    private void BuildControl(RenderTreeBuilder builder)
+    {
+        builder.OpenElement(0, Href is null ? "button" : "a");
+        builder.AddMultipleAttributes(1, AdditionalAttributes);
+        builder.AddAttribute(2, "type", Href is null ? ButtonType : null);
+        builder.AddAttribute(3, "href", Href);
+        builder.AddAttribute(4, "class", CssClass);
+        builder.AddAttribute(5, "disabled", DisabledAttribute);
+        builder.AddAttribute(6, "aria-disabled", AriaDisabled);
+        builder.AddAttribute(7, "aria-busy", AriaBusy);
+        builder.AddAttribute(8, "aria-label", ResolvedAccessibleLabel);
+        builder.AddAttribute(9, "onclick", EventCallback.Factory.Create<MouseEventArgs>(this, HandleClickAsync));
+        builder.AddEventPreventDefaultAttribute(10, "onclick", Href is not null && (Disabled || Loading));
+        if (Loading)
+        {
+            builder.OpenComponent<RbiIcon>(11);
+            builder.AddAttribute(12, nameof(RbiIcon.Name), RbiIconName.Loader2);
+            builder.AddAttribute(13, nameof(RbiIcon.Class), "rbi-button__spinner");
+            builder.CloseComponent();
+            builder.OpenElement(14, "span");
+            builder.AddAttribute(15, "class", "rbi-visually-hidden");
+            builder.AddContent(16, LoadingLabel);
+            builder.CloseElement();
+        }
+        builder.AddContent(17, ChildContent);
+        builder.CloseElement();
+    }
+
+    private async Task HandleClickAsync(MouseEventArgs eventArgs)
+    {
+        if (Disabled || Loading || _activationInProgress || !OnClick.HasDelegate) return;
+
+        _activationInProgress = true;
+        try
+        {
+            await OnClick.InvokeAsync(eventArgs);
+        }
+        finally
+        {
+            _activationInProgress = false;
+        }
+    }
+}

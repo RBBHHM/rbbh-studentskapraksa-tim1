@@ -1,0 +1,87 @@
+@using System.Globalization
+@using RBI.DesignSystem.Components.Icons
+@using RBI.DesignSystem.Components.Button
+@implements IAsyncDisposable
+
+<div @attributes="_safeAttributes" class="@($"rbi-calendar {Class}".TrimEnd())" role="group" aria-label="@AccessibleLabel" @ref="_root">
+    <div class="rbi-calendar__months">
+    @foreach (var view in _months)
+    {
+        var captionId = _id + "-" + view.Month.ToString("yyyy-MM");
+        <div class="rbi-calendar__month">
+        <div class="rbi-calendar__caption">
+            @if (view == _months[0])
+            {
+                <RbiButton Class="rbi-calendar__nav" Variant="NavigationButtonVariant" Size="RbiButtonSize.Small" IconOnly AccessibleLabel="@PreviousMonthLabel" Disabled="@(Disabled || !CanChangeMonth(-1))" OnClick="() => ChangeMonthAsync(-1)"><RbiIcon Name="RbiIconName.ChevronLeft" /></RbiButton>
+            }
+            else { <span class="rbi-calendar__nav-spacer"></span> }
+            <div id="@captionId" class="rbi-calendar__caption-content" aria-live="polite">
+                @if (CaptionLayout is RbiCalendarCaptionLayout.Dropdown or RbiCalendarCaptionLayout.MonthDropdown)
+                {
+                    <label class="rbi-calendar__dropdown">
+                        <span aria-hidden="true">@Culture.DateTimeFormat.GetAbbreviatedMonthName(view.Month.Month)<RbiIcon Name="RbiIconName.ChevronDown" /></span>
+                        <select aria-label="@MonthDropdownLabel" disabled="@Disabled" value="@view.Month.Month" @onchange="args => ChangeCaptionAsync(args, view.Month, false)">
+                            @for (var month = 1; month <= 12; month++) { <option value="@month" disabled="@IsMonthUnavailable(new DateOnly(view.Month.Year, month, 1))">@Culture.DateTimeFormat.GetMonthName(month)</option> }
+                        </select>
+                    </label>
+                }
+                else if (CaptionLayout != RbiCalendarCaptionLayout.Label) { <span>@Culture.DateTimeFormat.GetMonthName(view.Month.Month)</span> }
+                @if (CaptionLayout is RbiCalendarCaptionLayout.Dropdown or RbiCalendarCaptionLayout.YearDropdown)
+                {
+                    <label class="rbi-calendar__dropdown">
+                        <span aria-hidden="true">@view.Month.Year<RbiIcon Name="RbiIconName.ChevronDown" /></span>
+                        <select aria-label="@YearDropdownLabel" disabled="@Disabled" value="@view.Month.Year" @onchange="args => ChangeCaptionAsync(args, view.Month, true)">
+                            @for (var year = FirstYear; year <= LastYear; year++) { <option value="@year">@year</option> }
+                        </select>
+                    </label>
+                }
+                else if (CaptionLayout != RbiCalendarCaptionLayout.Label) { <span>@view.Month.Year</span> }
+                @if (CaptionLayout == RbiCalendarCaptionLayout.Label) { <span class="rbi-calendar__label">@view.Month.ToDateTime(TimeOnly.MinValue).ToString("Y", Culture)</span> }
+            </div>
+            @if (view == _months[^1])
+            {
+                <RbiButton Class="rbi-calendar__nav" Variant="NavigationButtonVariant" Size="RbiButtonSize.Small" IconOnly AccessibleLabel="@NextMonthLabel" Disabled="@(Disabled || !CanChangeMonth(1))" OnClick="() => ChangeMonthAsync(1)"><RbiIcon Name="RbiIconName.ChevronRight" /></RbiButton>
+            }
+            else { <span class="rbi-calendar__nav-spacer"></span> }
+        </div>
+        <table role="grid" aria-labelledby="@captionId" aria-multiselectable="@(Mode != RbiCalendarSelectionMode.Single ? "true" : null)">
+            <thead><tr>
+                @if (ShowWeekNumbers) { <th scope="col" aria-label="@WeekNumberLabel"></th> }
+                @for (var column = 0; column < 7; column++)
+                {
+                    var weekday = (DayOfWeek)(((int)WeekStartsOn + column) % 7);
+                    <th scope="col" aria-label="@Culture.DateTimeFormat.GetDayName(weekday)">@WeekdayLabel(weekday)</th>
+                }
+            </tr></thead>
+            <tbody>
+                @for (var row = 0; row < view.Weeks; row++)
+                {
+                    <tr>
+                        @if (ShowWeekNumbers) { <th scope="row" class="rbi-calendar__week-number"><div>@WeekNumber(view.FirstDayNumber + row * 7)</div></th> }
+                        @for (var column = 0; column < 7; column++)
+                        {
+                            var number = view.FirstDayNumber + row * 7 + column;
+                            if (number < DateOnly.MinValue.DayNumber || number > DateOnly.MaxValue.DayNumber) { <td></td> }
+                            else
+                            {
+                                var day = DateOnly.FromDayNumber(number);
+                                var outside = StartOfMonth(day) != view.Month;
+                                var selected = IsSelected(day);
+                                <td role="gridcell" aria-selected="@(selected ? "true" : "false")" class="@CellClass(day, view.Month)" data-range-start="@(IsRangeStart(day) ? "true" : null)" data-range-end="@(IsRangeEnd(day) ? "true" : null)">
+                                    @if (ShowOutsideDays || !outside)
+                                    {
+                                        <button type="button" data-rbi-calendar-day="@day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" class="rbi-calendar__day" tabindex="@(day == _focusDay && !outside ? 0 : -1)" disabled="@IsUnavailable(day)" aria-label="@day.ToDateTime(TimeOnly.MinValue).ToString("D", Culture)" aria-current="@(day == Today ? "date" : null)" data-selected-single="@(selected && Mode != RbiCalendarSelectionMode.Range ? "true" : null)" data-range-start="@(IsRangeStart(day) ? "true" : null)" data-range-end="@(IsRangeEnd(day) ? "true" : null)" data-range-middle="@(selected && Mode == RbiCalendarSelectionMode.Range && !IsRangeStart(day) && !IsRangeEnd(day) ? "true" : null)" @onclick="() => SelectDayAsync(day)">
+                                            @if (DayContent is null) { @day.Day } else { @DayContent(day) }
+                                        </button>
+                                    }
+                                </td>
+                            }
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+        </div>
+    }
+    </div>
+</div>

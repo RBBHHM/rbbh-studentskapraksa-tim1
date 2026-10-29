@@ -1,0 +1,12 @@
+#nullable enable
+RBI.Forms.RbiFormSubmissionState
+RBI.Forms.RbiFormSubmissionState.IsSubmitting.get -> bool
+RBI.Forms.RbiFormSubmissionState.RbiFormSubmissionState() -> void
+RBI.Forms.RbiFormSubmissionState.SubmitAsync(System.Func<System.Threading.Tasks.Task!>! submission) -> System.Threading.Tasks.Task<bool>!
+RBI.Forms.RbiServerValidation
+RBI.Forms.RbiServerValidation.Clear() -> void
+RBI.Forms.RbiServerValidation.Clear(string! fieldName) -> void
+RBI.Forms.RbiServerValidation.DisplayErrors(System.Collections.Generic.IReadOnlyDictionary<string!, string![]!>! errors) -> void
+RBI.Forms.RbiServerValidation.DisplayFormError(string! error) -> void
+RBI.Forms.RbiServerValidation.Dispose() -> void
+RBI.Forms.RbiServerValidation.RbiServerValidation(Microsoft.AspNetCore.Components.Forms.EditContext! editContext) -> void

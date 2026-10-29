@@ -7,10 +7,10 @@ access internal. The owner approved a narrow platform extension on2026-10-22.
 Platform commit `a38b94c` on `codex/api-file-transport` adds
 `IRbiApiFileTransport` (multipart POST / bounded binary GET) without changing
 the existing JSON interface or authentication production code. Its full .NET
-regression passed1291 tests. The app consumes packed ApiCore/Authentication
-`0.1.1-migration.1`, not platform source references. Corporate publication and
-deployment approval are not implied by local packing. The ten platform forensic
-files remained byte-identical and untracked.
+regression passed1291 tests. The current app builds the approved transport
+extension from tracked source in Frontend/Platform/RBI.ApiCore. Authentication
+remains a source project with the existing server-side token session. Deployment
+approval remains separate. The ten platform forensic files were not imported.
 
 ## RbiSelect boolean conversion — separate platform finding
 

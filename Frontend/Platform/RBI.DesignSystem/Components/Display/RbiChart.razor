@@ -1,0 +1,48 @@
+@using System.Globalization
+@using RBI.DesignSystem.Components.Forms
+
+<CascadingValue Value="_context">
+    <figure class="@($"rbi-chart {Class}".TrimEnd())" data-rbi-chart="@_id">
+        @if (_colorRules.Length > 0) { <style>@((MarkupString)_colorRules)</style> }
+        <svg class="rbi-chart__svg" viewBox="@ViewBox" role="group" aria-labelledby="@(_id + "-title")" aria-describedby="@(_id + "-description")">
+            <title id="@(_id + "-title")">@AccessibleLabel</title>
+            <desc id="@(_id + "-description")">@Description</desc>
+            @Plot
+        </svg>
+        @Legend
+        @Tooltip
+        @if (DataDescription is not null) { <figcaption class="rbi-visually-hidden">@DataDescription</figcaption> }
+    </figure>
+</CascadingValue>
+
+@code {
+    private readonly string _id = RbiFormUtilities.Id("chart");
+    private RbiChartContext? _context;
+    private string _colorRules = string.Empty;
+    [Parameter, EditorRequired] public string AccessibleLabel { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Description { get; set; } = string.Empty;
+    [Parameter] public IReadOnlyList<RbiChartSeries> Series { get; set; } = Array.Empty<RbiChartSeries>();
+    [Parameter, EditorRequired] public RenderFragment Plot { get; set; } = default!;
+    [Parameter] public string? TooltipId { get; set; }
+    [Parameter] public RenderFragment? Legend { get; set; }
+    [Parameter] public RenderFragment? Tooltip { get; set; }
+    [Parameter] public RenderFragment? DataDescription { get; set; }
+    [Parameter] public double ViewBoxWidth { get; set; } = 640;
+    [Parameter] public double ViewBoxHeight { get; set; } = 360;
+    [Parameter] public string? Class { get; set; }
+    private string ViewBox => $"0 0 {ViewBoxWidth.ToString("R", CultureInfo.InvariantCulture)} {ViewBoxHeight.ToString("R", CultureInfo.InvariantCulture)}";
+    protected override void OnParametersSet()
+    {
+        ArgumentNullException.ThrowIfNull(Series); ArgumentNullException.ThrowIfNull(Plot);
+        if (string.IsNullOrWhiteSpace(AccessibleLabel) || string.IsNullOrWhiteSpace(Description)) throw new ArgumentException("Chart naming and a data description are required.");
+        if (!double.IsFinite(ViewBoxWidth) || !double.IsFinite(ViewBoxHeight) || ViewBoxWidth <= 0 || ViewBoxHeight <= 0) throw new ArgumentOutOfRangeException(nameof(ViewBoxWidth));
+        if (Series.Select(item => item.Key).Distinct(StringComparer.Ordinal).Count() != Series.Count) throw new ArgumentException("Chart series keys must be unique.");
+        foreach (var item in Series)
+        {
+            RbiChartPresentation.ValidateKey(item.Key); RbiChartPresentation.ValidateColor(item.Color); RbiChartPresentation.ValidateColor(item.DarkColor);
+            if (item.Icon.HasValue && !Enum.IsDefined(item.Icon.Value)) throw new ArgumentOutOfRangeException(nameof(Series));
+        }
+        if (TooltipId is not null && (string.IsNullOrWhiteSpace(TooltipId) || TooltipId.Any(char.IsWhiteSpace))) throw new ArgumentException("Tooltip identity must be a nonempty HTML identity without whitespace.");
+        _context = new(_id, TooltipId ?? _id + "-tooltip", Series); _colorRules = _context.ColorRules();
+    }
+}

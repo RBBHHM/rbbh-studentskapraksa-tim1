@@ -1,0 +1,38 @@
+@namespace RBI.Authorization
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using RBI.Authorization.Internal
+@inject IAuthorizationService Authorization
+
+@if (_authorized)
+{
+    @ChildContent
+}
+else
+{
+    @NotAuthorized
+}
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+    [Parameter, EditorRequired] public string Permission { get; set; } = string.Empty;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? NotAuthorized { get; set; }
+
+    private bool _authorized;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var permission = RbiPermissionName.Normalize(Permission);
+        if (AuthenticationStateTask is null)
+            throw new InvalidOperationException($"{nameof(RbiAuthorize)} requires a cascading authentication state.");
+
+        _authorized = false;
+        var state = await AuthenticationStateTask;
+        var result = await Authorization.AuthorizeAsync(
+            state.User,
+            resource: null,
+            [new RbiPermissionRequirement(permission)]);
+        _authorized = result.Succeeded;
+    }
+}

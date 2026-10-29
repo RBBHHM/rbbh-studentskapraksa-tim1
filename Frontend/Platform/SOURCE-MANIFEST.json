@@ -1,0 +1,2122 @@
+[
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Badge/RbiBadge.razor",
+    "source": "DesignSystem/Components/Badge/RbiBadge.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "5f716872a3cb5de4c5701a0a00fe83572f026ed9b2fbcfe9b008b8b57e334663",
+    "upstream_sha256": "5f716872a3cb5de4c5701a0a00fe83572f026ed9b2fbcfe9b008b8b57e334663",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Badge/RbiBadgeOptions.cs",
+    "source": "DesignSystem/Components/Badge/RbiBadgeOptions.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "362563c116743a3fe63c1f04302d9617c326e104ed6546aeadbe03e5251384b2",
+    "upstream_sha256": "362563c116743a3fe63c1f04302d9617c326e104ed6546aeadbe03e5251384b2",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Brand/RbiAuthorSignature.cs",
+    "source": "DesignSystem/Components/Brand/RbiAuthorSignature.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "d52b984d9bb37846ed7dba3f7b855850e79bc864722fd1239cb62a7869af8c1b",
+    "upstream_sha256": "d52b984d9bb37846ed7dba3f7b855850e79bc864722fd1239cb62a7869af8c1b",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Brand/RbiBrandOptions.cs",
+    "source": "DesignSystem/Components/Brand/RbiBrandOptions.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "b23d8d64d8fa49e6e7dce432f475afc5cee72cc27fdc4df52cbc0ef00f06e8c2",
+    "upstream_sha256": "b23d8d64d8fa49e6e7dce432f475afc5cee72cc27fdc4df52cbc0ef00f06e8c2",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Brand/RbiLogo.razor",
+    "source": "DesignSystem/Components/Brand/RbiLogo.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "e90439111461a26bf3c6a06b24e653af336a237cd16dd599179be0e57ee195f2",
+    "upstream_sha256": "e90439111461a26bf3c6a06b24e653af336a237cd16dd599179be0e57ee195f2",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Brand/RbiSignatureAsset.cs",
+    "source": "DesignSystem/Components/Brand/RbiSignatureAsset.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "9173d4360480df2ef10bf03340bc380e06e4ccf59c4ae5d9ffdb03ac4c765e74",
+    "upstream_sha256": "9173d4360480df2ef10bf03340bc380e06e4ccf59c4ae5d9ffdb03ac4c765e74",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Brand/RbiSlogan.cs",
+    "source": "DesignSystem/Components/Brand/RbiSlogan.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "8112f12d975b9faccd567017839c63b0f9f2778c62ec4d92ddb885e3af95965b",
+    "upstream_sha256": "8112f12d975b9faccd567017839c63b0f9f2778c62ec4d92ddb885e3af95965b",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Button/RbiButton.razor",
+    "source": "DesignSystem/Components/Button/RbiButton.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "1c20c5cba6e34d87fd3aec3c4af6beabc722c5a33cfa0ecd3729e77f52689de4",
+    "upstream_sha256": "1c20c5cba6e34d87fd3aec3c4af6beabc722c5a33cfa0ecd3729e77f52689de4",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Button/RbiButtonOptions.cs",
+    "source": "DesignSystem/Components/Button/RbiButtonOptions.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "38eccea572742418060ea94b40975279aca51c47131d412b000ee7fc25ae1cd3",
+    "upstream_sha256": "38eccea572742418060ea94b40975279aca51c47131d412b000ee7fc25ae1cd3",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Card/RbiCard.razor",
+    "source": "DesignSystem/Components/Card/RbiCard.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "0b38371d2aca8f33848fdc83586f224d1c54d5ad80ed63509950eaea2a8c5a70",
+    "upstream_sha256": "0b38371d2aca8f33848fdc83586f224d1c54d5ad80ed63509950eaea2a8c5a70",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Card/RbiCardPadding.cs",
+    "source": "DesignSystem/Components/Card/RbiCardPadding.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "229dc2423b694dfdbfe0d9a05cb8f6609073b2c77a491915fb93b913972a3362",
+    "upstream_sha256": "229dc2423b694dfdbfe0d9a05cb8f6609073b2c77a491915fb93b913972a3362",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Disclosure/RbiAccordion.razor",
+    "source": "DesignSystem/Components/Disclosure/RbiAccordion.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "cd07be690fefae129ed82b9aae94a3a2b815984e83a6cc94a103753a1afca20b",
+    "upstream_sha256": "cd07be690fefae129ed82b9aae94a3a2b815984e83a6cc94a103753a1afca20b",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Disclosure/RbiAccordionContext.cs",
+    "source": "DesignSystem/Components/Disclosure/RbiAccordionContext.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "2ff769e8e129f513bd71381bac9d18d909f6935eff2a7fe722e492fa283cf5d0",
+    "upstream_sha256": "2ff769e8e129f513bd71381bac9d18d909f6935eff2a7fe722e492fa283cf5d0",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Disclosure/RbiAccordionItem.razor",
+    "source": "DesignSystem/Components/Disclosure/RbiAccordionItem.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "2bbdef0fb656da6aadc444fe2b1b5eb2da51ad3ece22dc2fcd4e6d26517c2eaa",
+    "upstream_sha256": "2bbdef0fb656da6aadc444fe2b1b5eb2da51ad3ece22dc2fcd4e6d26517c2eaa",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Disclosure/RbiAccordionOptions.cs",
+    "source": "DesignSystem/Components/Disclosure/RbiAccordionOptions.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "43693acc46f7219f65dad4e480efbc6422046a75d5a4a69b4768e7cb4fe782c0",
+    "upstream_sha256": "43693acc46f7219f65dad4e480efbc6422046a75d5a4a69b4768e7cb4fe782c0",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Disclosure/RbiCollapsible.razor",
+    "source": "DesignSystem/Components/Disclosure/RbiCollapsible.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "0b913000add218ccf6134404f9b2b70af2a62afc8d707cabf62ef31bfa78390b",
+    "upstream_sha256": "0b913000add218ccf6134404f9b2b70af2a62afc8d707cabf62ef31bfa78390b",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Display/RbiAvatar.razor",
+    "source": "DesignSystem/Components/Display/RbiAvatar.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "787b9748b989fb88d4f569ee8faa7458c3214a75390d4853e2892438acdfa718",
+    "upstream_sha256": "787b9748b989fb88d4f569ee8faa7458c3214a75390d4853e2892438acdfa718",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Display/RbiAvatarOptions.cs",
+    "source": "DesignSystem/Components/Display/RbiAvatarOptions.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "4895bcac75c8b1a0a7fd209abac2d4b2b872cdf166acdf95075ea5190e6b0859",
+    "upstream_sha256": "4895bcac75c8b1a0a7fd209abac2d4b2b872cdf166acdf95075ea5190e6b0859",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Display/RbiChart.razor",
+    "source": "DesignSystem/Components/Display/RbiChart.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "30299de61c13306aeaca04405199d1fbd99d3389a69cb02db437fc3f91998a85",
+    "upstream_sha256": "30299de61c13306aeaca04405199d1fbd99d3389a69cb02db437fc3f91998a85",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Display/RbiChartContext.cs",
+    "source": "DesignSystem/Components/Display/RbiChartContext.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "e514461643e19bcf817e546b5c633498c513b08217372c5754938430259f3e88",
+    "upstream_sha256": "e514461643e19bcf817e546b5c633498c513b08217372c5754938430259f3e88",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Display/RbiChartLegend.razor",
+    "source": "DesignSystem/Components/Display/RbiChartLegend.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "78b5b2952b9a9746f4e7d332dfa21720fd8ac8d5061e6710a474b1a0a1989afc",
+    "upstream_sha256": "78b5b2952b9a9746f4e7d332dfa21720fd8ac8d5061e6710a474b1a0a1989afc",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Display/RbiChartSeries.cs",
+    "source": "DesignSystem/Components/Display/RbiChartSeries.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "1d63bd7c1eb93621caadd1d0c5b137ce33f90dd1c37544d7b9670ddc2a180e30",
+    "upstream_sha256": "1d63bd7c1eb93621caadd1d0c5b137ce33f90dd1c37544d7b9670ddc2a180e30",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Display/RbiChartTooltip.razor",
+    "source": "DesignSystem/Components/Display/RbiChartTooltip.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "b730f8b021c3a2de536c3084831f88e1aa3c31412b300c50597ae729a17c8ff1",
+    "upstream_sha256": "b730f8b021c3a2de536c3084831f88e1aa3c31412b300c50597ae729a17c8ff1",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Display/RbiStat.razor",
+    "source": "DesignSystem/Components/Display/RbiStat.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "988dd096ddbd0997768def233eb7cf0e2fff917f660d48a31651a4f465c98929",
+    "upstream_sha256": "988dd096ddbd0997768def233eb7cf0e2fff917f660d48a31651a4f465c98929",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Display/RbiStatGroup.cs",
+    "source": "DesignSystem/Components/Display/RbiStatGroup.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "ce7f0dc6ff5c5b26f561a730786671153e81d183f6de4a49a0d27600ede78343",
+    "upstream_sha256": "8386d8f8dd4962e31eb3ed25bee10dab6ada1709035010e6ec531d1aaf7d9a27",
+    "adaptation": "trailing blank lines at EOF removed for git diff --check"
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Display/RbiStatOptions.cs",
+    "source": "DesignSystem/Components/Display/RbiStatOptions.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "026474cb708e9d06887b0b5af696f580ddace835485965615b94a37daee6c2b0",
+    "upstream_sha256": "026474cb708e9d06887b0b5af696f580ddace835485965615b94a37daee6c2b0",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Display/RbiTable.razor",
+    "source": "DesignSystem/Components/Display/RbiTable.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "5240b6e5954dd68ed0105b5fb1f000903ca22223bc036475cd127f55156d3ede",
+    "upstream_sha256": "5240b6e5954dd68ed0105b5fb1f000903ca22223bc036475cd127f55156d3ede",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Feedback/RbiAlert.razor",
+    "source": "DesignSystem/Components/Feedback/RbiAlert.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "870e36d8d2a2773fd9d0e31b2e206d844ac1c7b9702547f72d78dd17a35a2ef5",
+    "upstream_sha256": "870e36d8d2a2773fd9d0e31b2e206d844ac1c7b9702547f72d78dd17a35a2ef5",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Feedback/RbiAlertOptions.cs",
+    "source": "DesignSystem/Components/Feedback/RbiAlertOptions.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "4b572f2241d231a327a58018eded0dda603da4f80060a049dbf3c7d09ba4dcab",
+    "upstream_sha256": "4b572f2241d231a327a58018eded0dda603da4f80060a049dbf3c7d09ba4dcab",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Feedback/RbiCallout.cs",
+    "source": "DesignSystem/Components/Feedback/RbiCallout.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "217642ef6a23636a4d36585b04b0ca24b2379be7a60a8d42c1571219333a3f01",
+    "upstream_sha256": "217642ef6a23636a4d36585b04b0ca24b2379be7a60a8d42c1571219333a3f01",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Feedback/RbiProgress.razor",
+    "source": "DesignSystem/Components/Feedback/RbiProgress.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "5969cce0565cfe002c180552fe24e087cafa9a9b1da9a4da138c5dc6cee565b8",
+    "upstream_sha256": "5969cce0565cfe002c180552fe24e087cafa9a9b1da9a4da138c5dc6cee565b8",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Feedback/RbiSeparator.razor",
+    "source": "DesignSystem/Components/Feedback/RbiSeparator.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "dd18358f8d43a458b847317545d2c78e2de2a1e79ce590925b860e1126d45f8b",
+    "upstream_sha256": "dd18358f8d43a458b847317545d2c78e2de2a1e79ce590925b860e1126d45f8b",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Feedback/RbiSeparatorOptions.cs",
+    "source": "DesignSystem/Components/Feedback/RbiSeparatorOptions.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "fdd305e7e9b34fd1839de9938e89ceb5614ce3d50ae54d8d31d74eedaac2d57b",
+    "upstream_sha256": "fdd305e7e9b34fd1839de9938e89ceb5614ce3d50ae54d8d31d74eedaac2d57b",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Feedback/RbiSkeleton.razor",
+    "source": "DesignSystem/Components/Feedback/RbiSkeleton.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "9c2f0814816750e70b08685133e8d271480d5a3f8135221c9fb7974baf94013f",
+    "upstream_sha256": "9c2f0814816750e70b08685133e8d271480d5a3f8135221c9fb7974baf94013f",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Feedback/RbiSkeletonOptions.cs",
+    "source": "DesignSystem/Components/Feedback/RbiSkeletonOptions.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "a2c9848cf140ec0381728d61597c7c0c9949d07426a8862e6ede30af59ec056b",
+    "upstream_sha256": "a2c9848cf140ec0381728d61597c7c0c9949d07426a8862e6ede30af59ec056b",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Feedback/RbiToastQueue.cs",
+    "source": "DesignSystem/Components/Feedback/RbiToastQueue.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "01b85c35ee77fa21d2ec04a3f6fc60807a549298dbfa12b9103ea9a46abf8e60",
+    "upstream_sha256": "01b85c35ee77fa21d2ec04a3f6fc60807a549298dbfa12b9103ea9a46abf8e60",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Feedback/RbiToaster.razor",
+    "source": "DesignSystem/Components/Feedback/RbiToaster.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "ec8dc30896f793e7a8c2d2db1dadd2aba23dea4a5a7c691b86687a5a1bfa6d86",
+    "upstream_sha256": "ec8dc30896f793e7a8c2d2db1dadd2aba23dea4a5a7c691b86687a5a1bfa6d86",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Forms/RbiCalendar.razor",
+    "source": "DesignSystem/Components/Forms/RbiCalendar.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "92683607bd9c250b01b45fced77a20cb73ac024ebff9ee1fe5a1e9dce1fd9737",
+    "upstream_sha256": "92683607bd9c250b01b45fced77a20cb73ac024ebff9ee1fe5a1e9dce1fd9737",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Forms/RbiCalendar.razor.cs",
+    "source": "DesignSystem/Components/Forms/RbiCalendar.razor.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "ef15aa376150723b6c67f6faa6b9dbabc5c0262907091c23b79613fc0fde282b",
+    "upstream_sha256": "ef15aa376150723b6c67f6faa6b9dbabc5c0262907091c23b79613fc0fde282b",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Forms/RbiCalendarOptions.cs",
+    "source": "DesignSystem/Components/Forms/RbiCalendarOptions.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "5964f20a47d5d3879e660c162e0f03621e5c398a3943f75a8345912aa3885568",
+    "upstream_sha256": "5964f20a47d5d3879e660c162e0f03621e5c398a3943f75a8345912aa3885568",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Forms/RbiCheckbox.razor",
+    "source": "DesignSystem/Components/Forms/RbiCheckbox.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "49cb538dbeb09aa55a0b3986e89332fa16d93c8fbc20e6382610f9f92ffba2fe",
+    "upstream_sha256": "49cb538dbeb09aa55a0b3986e89332fa16d93c8fbc20e6382610f9f92ffba2fe",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Forms/RbiCommand.razor",
+    "source": "DesignSystem/Components/Forms/RbiCommand.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "234d2d4c3875409283eac338ca301522ad36291855297b7ddceddb034c5f477f",
+    "upstream_sha256": "234d2d4c3875409283eac338ca301522ad36291855297b7ddceddb034c5f477f",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Forms/RbiCommandDialog.razor",
+    "source": "DesignSystem/Components/Forms/RbiCommandDialog.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "5736f78ec3b1b966f751f7347ef44747e7818906d0f05539f0d672899c57aa48",
+    "upstream_sha256": "5736f78ec3b1b966f751f7347ef44747e7818906d0f05539f0d672899c57aa48",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Forms/RbiCommandOption.cs",
+    "source": "DesignSystem/Components/Forms/RbiCommandOption.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "b4a288d36566329323170d7e1b43a5666c06571ca6106a5a6eb880fca070a984",
+    "upstream_sha256": "b4a288d36566329323170d7e1b43a5666c06571ca6106a5a6eb880fca070a984",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Forms/RbiCommandScoring.cs",
+    "source": "DesignSystem/Components/Forms/RbiCommandScoring.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "13f297347659a20089118b4991b596426d9687900b5cbf8d7e12686ae4b3164e",
+    "upstream_sha256": "13f297347659a20089118b4991b596426d9687900b5cbf8d7e12686ae4b3164e",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Forms/RbiField.razor",
+    "source": "DesignSystem/Components/Forms/RbiField.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "bed89ba4f3aedd709eef8ee29fe83e8a0c3c774102316bc957d71636c65dd53c",
+    "upstream_sha256": "bed89ba4f3aedd709eef8ee29fe83e8a0c3c774102316bc957d71636c65dd53c",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Forms/RbiFieldContext.cs",
+    "source": "DesignSystem/Components/Forms/RbiFieldContext.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "d0056430255bc56367e45cf470d2886d53b4ad38100d2c4c8b1b4092be2f4425",
+    "upstream_sha256": "d0056430255bc56367e45cf470d2886d53b4ad38100d2c4c8b1b4092be2f4425",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Forms/RbiFormUtilities.cs",
+    "source": "DesignSystem/Components/Forms/RbiFormUtilities.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "25eaca4888e35088abffcdef60a92a2511051a1c6e5c1d280670f91a6ae68b13",
+    "upstream_sha256": "25eaca4888e35088abffcdef60a92a2511051a1c6e5c1d280670f91a6ae68b13",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Forms/RbiInput.razor",
+    "source": "DesignSystem/Components/Forms/RbiInput.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "27d3243ea7a8b5c14b6f11db520a0f3140c412a4be491f580ac375a737a6d5c5",
+    "upstream_sha256": "27d3243ea7a8b5c14b6f11db520a0f3140c412a4be491f580ac375a737a6d5c5",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Forms/RbiInputOptions.cs",
+    "source": "DesignSystem/Components/Forms/RbiInputOptions.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "887f47de8d82902b700c4b39fd9cff23079fe666111bfe2484ce5b5d9df0e948",
+    "upstream_sha256": "887f47de8d82902b700c4b39fd9cff23079fe666111bfe2484ce5b5d9df0e948",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Forms/RbiInputOtp.cs",
+    "source": "DesignSystem/Components/Forms/RbiInputOtp.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "b0a1f4e4d8709617453af5c6ae4cc3f442014f40e401c5f4973a5d0f6c36b333",
+    "upstream_sha256": "b0a1f4e4d8709617453af5c6ae4cc3f442014f40e401c5f4973a5d0f6c36b333",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Forms/RbiInputOtpGroup.cs",
+    "source": "DesignSystem/Components/Forms/RbiInputOtpGroup.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "d2e6000910e3cfee9f91703a82307bcd3cc050abdc91356f08d64b1810af3aad",
+    "upstream_sha256": "d2e6000910e3cfee9f91703a82307bcd3cc050abdc91356f08d64b1810af3aad",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Forms/RbiInputOtpSeparator.cs",
+    "source": "DesignSystem/Components/Forms/RbiInputOtpSeparator.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "b91f0b47efc3b315ec95b34e8f88dbf99d767ba93f587b83fe1c0d37e69fff56",
+    "upstream_sha256": "b91f0b47efc3b315ec95b34e8f88dbf99d767ba93f587b83fe1c0d37e69fff56",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Forms/RbiInputOtpSlot.cs",
+    "source": "DesignSystem/Components/Forms/RbiInputOtpSlot.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "05068cac3207b1fcca004a05486df22f89e6988a29d4bace08d2ec8873d667a2",
+    "upstream_sha256": "05068cac3207b1fcca004a05486df22f89e6988a29d4bace08d2ec8873d667a2",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Forms/RbiLabel.cs",
+    "source": "DesignSystem/Components/Forms/RbiLabel.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "cecb64a1fad31942a08529069f5f4fe71f72d9335b28b2649f892f3a8fe82b20",
+    "upstream_sha256": "cecb64a1fad31942a08529069f5f4fe71f72d9335b28b2649f892f3a8fe82b20",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Forms/RbiOtpOptions.cs",
+    "source": "DesignSystem/Components/Forms/RbiOtpOptions.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "baab72ac0fb2f8cb62c8c96cb9f9c65b91cd38518f5dfbaf0140308dedbb61ad",
+    "upstream_sha256": "baab72ac0fb2f8cb62c8c96cb9f9c65b91cd38518f5dfbaf0140308dedbb61ad",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Forms/RbiRadio.razor",
+    "source": "DesignSystem/Components/Forms/RbiRadio.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "fbcf4fc2079ccbcc2306c42e5c377b385d6a49d29eb8eaf3b4ec8ca924c04178",
+    "upstream_sha256": "fbcf4fc2079ccbcc2306c42e5c377b385d6a49d29eb8eaf3b4ec8ca924c04178",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Forms/RbiRadioGroup.razor",
+    "source": "DesignSystem/Components/Forms/RbiRadioGroup.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "94e003804bbb980cc1953cd70fabe190335d08140a1415eb041209981a4b462a",
+    "upstream_sha256": "94e003804bbb980cc1953cd70fabe190335d08140a1415eb041209981a4b462a",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Forms/RbiRadioGroupContext.cs",
+    "source": "DesignSystem/Components/Forms/RbiRadioGroupContext.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "5f1b97278456f6beddc7c6755b1ec66eea6503c73cf2b43624ecc422bfd9aaa8",
+    "upstream_sha256": "5f1b97278456f6beddc7c6755b1ec66eea6503c73cf2b43624ecc422bfd9aaa8",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Forms/RbiSelect.razor",
+    "source": "DesignSystem/Components/Forms/RbiSelect.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "65aee13b6acf6b68504fff154dac4489e767462f9b885ef83ca4e974bec7d44c",
+    "upstream_sha256": "65aee13b6acf6b68504fff154dac4489e767462f9b885ef83ca4e974bec7d44c",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Forms/RbiSlider.cs",
+    "source": "DesignSystem/Components/Forms/RbiSlider.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "ef5689402ab6a74588ca63f2029c899d596668433891c1d78d91739d3bfd3faa",
+    "upstream_sha256": "ef5689402ab6a74588ca63f2029c899d596668433891c1d78d91739d3bfd3faa",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Forms/RbiSwitch.razor",
+    "source": "DesignSystem/Components/Forms/RbiSwitch.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "9ab685096cc2a097ee83a522192f43c11e6cab806c9dce105d09059f4141c10b",
+    "upstream_sha256": "9ab685096cc2a097ee83a522192f43c11e6cab806c9dce105d09059f4141c10b",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Forms/RbiTextArea.razor",
+    "source": "DesignSystem/Components/Forms/RbiTextArea.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "8773a621018bef1d2a0d3584a962ff8171dfff07e4c7e952b35bd137411dd5c6",
+    "upstream_sha256": "8773a621018bef1d2a0d3584a962ff8171dfff07e4c7e952b35bd137411dd5c6",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Icons/RbiIcon.cs",
+    "source": "DesignSystem/Components/Icons/RbiIcon.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "9f6bbe7251f2e73468e2269c3d6e7edf9abc9a9127050c717d9d4de05394b6e1",
+    "upstream_sha256": "9f6bbe7251f2e73468e2269c3d6e7edf9abc9a9127050c717d9d4de05394b6e1",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Icons/RbiIconGeometry.cs",
+    "source": "DesignSystem/Components/Icons/RbiIconGeometry.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "cb19ee519aaf54b65fc5e02b8ff50de7d2c6c601e92b1572fc4c1edd9b53bfb2",
+    "upstream_sha256": "185c8daf0364d50d57ac3290ba74eb3bbf910fec90d3501660a9d73e2282ac34",
+    "adaptation": "trailing blank lines at EOF removed for git diff --check"
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Icons/RbiIconName.cs",
+    "source": "DesignSystem/Components/Icons/RbiIconName.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "170b9c3e1a2254a1c33811e4448ba2759b96c55ba343f4dd04fb4db500ffcb47",
+    "upstream_sha256": "fe08f153694439315d5f930f9421f9f1f08d0179afe5d83fee1d3df9d355d35a",
+    "adaptation": "trailing blank lines at EOF removed for git diff --check"
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Layout/RbiAspectRatio.cs",
+    "source": "DesignSystem/Components/Layout/RbiAspectRatio.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "50d96f883fc3bd219e89bfe59a1cfda1ece4a98c4b986898ecb6883b490e3cd0",
+    "upstream_sha256": "0965d7f7efce6ff8a610be1f68da1de0e9bc2608039fbdd74acedea1a7aca47b",
+    "adaptation": "trailing blank lines at EOF removed for git diff --check"
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Layout/RbiBentoCard.cs",
+    "source": "DesignSystem/Components/Layout/RbiBentoCard.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "d4f8a3ec2c8222f59a1f2c237a1687a2d332fe021edf32bd4b271744f054b2b0",
+    "upstream_sha256": "2816bdf222a955f76069b1cbe4333dbf8fe7fce4c023fc0ee8b6582ac8ce5605",
+    "adaptation": "trailing blank lines at EOF removed for git diff --check"
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Layout/RbiBentoCardBody.cs",
+    "source": "DesignSystem/Components/Layout/RbiBentoCardBody.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "39fe142029ca64ec9803149b3928ba7a1c85c7eaea2bd19b91e334cd046da277",
+    "upstream_sha256": "28efa6b516a515c884c0d22f4adb6b1335ffd12f3c5057695db990a8efbf2728",
+    "adaptation": "trailing blank lines at EOF removed for git diff --check"
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Layout/RbiBentoGrid.cs",
+    "source": "DesignSystem/Components/Layout/RbiBentoGrid.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "55ba2a6490fec2ed465f485e52feed7ab68d08e89601686381c1cd00414c746e",
+    "upstream_sha256": "c7d5e46937939b21bcb7c9eaf8c78cb0bc0e3cbb282650b8e1564f2fd80833ed",
+    "adaptation": "trailing blank lines at EOF removed for git diff --check"
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Layout/RbiContainer.razor",
+    "source": "DesignSystem/Components/Layout/RbiContainer.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "947c170bac92c8eaa96d02f1957625a6265b87ef4b609b67c3a2c29dc4b68975",
+    "upstream_sha256": "947c170bac92c8eaa96d02f1957625a6265b87ef4b609b67c3a2c29dc4b68975",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Layout/RbiContainerWidth.cs",
+    "source": "DesignSystem/Components/Layout/RbiContainerWidth.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "4b1e7cf7791cfff03a558479cbbb0f5ee9ee6ee3d09b33a941fa2e71f38b0708",
+    "upstream_sha256": "4b1e7cf7791cfff03a558479cbbb0f5ee9ee6ee3d09b33a941fa2e71f38b0708",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Layout/RbiGrid.cs",
+    "source": "DesignSystem/Components/Layout/RbiGrid.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "7faa8bb89de0541cf24b9d853797e09cae9337673936871cfe262a75e58b3563",
+    "upstream_sha256": "a7e8ebba5c8f2810753a447ae14fe13a43984d6d0cc431a5da88f84113d4607c",
+    "adaptation": "trailing blank lines at EOF removed for git diff --check"
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Layout/RbiGridOptions.cs",
+    "source": "DesignSystem/Components/Layout/RbiGridOptions.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "b749dc587f20c3252bca1f543ef10b019d738b95e4dbea4203d6e85785cc9c3e",
+    "upstream_sha256": "f3c495e531a942394d77ad235acdfa911789f7b07060e3595bdb8da58b7d43f7",
+    "adaptation": "trailing blank lines at EOF removed for git diff --check"
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Layout/RbiResizablePanel.cs",
+    "source": "DesignSystem/Components/Layout/RbiResizablePanel.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "eab5567851949544e8c49c24dd56df29439c86da6abb92312c3741bcd3f33399",
+    "upstream_sha256": "eab5567851949544e8c49c24dd56df29439c86da6abb92312c3741bcd3f33399",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Layout/RbiResizablePanelGroup.razor",
+    "source": "DesignSystem/Components/Layout/RbiResizablePanelGroup.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "cce59b5b8a97d4f0df4cd6b834f4820d9234adb453c1fef803df721c33e6d35f",
+    "upstream_sha256": "cce59b5b8a97d4f0df4cd6b834f4820d9234adb453c1fef803df721c33e6d35f",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Layout/RbiScrollArea.cs",
+    "source": "DesignSystem/Components/Layout/RbiScrollArea.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "0b90eee95bac12d73c2328d6e0c0a6178a8ebe5cc5f59edb700ae1a73d6a31fe",
+    "upstream_sha256": "0b90eee95bac12d73c2328d6e0c0a6178a8ebe5cc5f59edb700ae1a73d6a31fe",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Layout/RbiSection.razor",
+    "source": "DesignSystem/Components/Layout/RbiSection.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "ee64fc4014995762bd020c106bab90d1f8b9ee4a52fab32aaae63c178a2ef284",
+    "upstream_sha256": "ee64fc4014995762bd020c106bab90d1f8b9ee4a52fab32aaae63c178a2ef284",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Layout/RbiSectionOptions.cs",
+    "source": "DesignSystem/Components/Layout/RbiSectionOptions.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "188fbda8b08ecfaeab2564a1f1b43c6e2ae612ba00956ac0abd52bee2907e28d",
+    "upstream_sha256": "188fbda8b08ecfaeab2564a1f1b43c6e2ae612ba00956ac0abd52bee2907e28d",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Layout/RbiStack.razor",
+    "source": "DesignSystem/Components/Layout/RbiStack.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "2a8cf9cbb9203b6629bd136b2004d74d1d4a51381f2bd09baf09ec4e90d775f8",
+    "upstream_sha256": "2a8cf9cbb9203b6629bd136b2004d74d1d4a51381f2bd09baf09ec4e90d775f8",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Layout/RbiStackOptions.cs",
+    "source": "DesignSystem/Components/Layout/RbiStackOptions.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "4f7058382697d3c1a15d65a483b75c7f048136917f184ee64d8303777c369afa",
+    "upstream_sha256": "4f7058382697d3c1a15d65a483b75c7f048136917f184ee64d8303777c369afa",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Menu/RbiContextMenu.razor",
+    "source": "DesignSystem/Components/Menu/RbiContextMenu.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "bb0d9b7abf7b250cccd5839137cbf34dc3ec6c4730caa6e9d3ab1c170a21774e",
+    "upstream_sha256": "bb0d9b7abf7b250cccd5839137cbf34dc3ec6c4730caa6e9d3ab1c170a21774e",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Menu/RbiDropdownMenu.razor",
+    "source": "DesignSystem/Components/Menu/RbiDropdownMenu.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "be3a75f6dd5bb9e11025debcd1ede52403cd1d2f55121b319d6ad6e3015db7ef",
+    "upstream_sha256": "be3a75f6dd5bb9e11025debcd1ede52403cd1d2f55121b319d6ad6e3015db7ef",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Menu/RbiMenuCheckboxItem.cs",
+    "source": "DesignSystem/Components/Menu/RbiMenuCheckboxItem.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "9fb618fb6d398765c5013a6aac3f92cad99ce6bcae83cf534aed8c9822c2cbaf",
+    "upstream_sha256": "9fb618fb6d398765c5013a6aac3f92cad99ce6bcae83cf534aed8c9822c2cbaf",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Menu/RbiMenuContext.cs",
+    "source": "DesignSystem/Components/Menu/RbiMenuContext.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "4190561551ddd2d6e4928a4ba7794dba84227aedf41c1b0d590ea3a80a451a07",
+    "upstream_sha256": "4190561551ddd2d6e4928a4ba7794dba84227aedf41c1b0d590ea3a80a451a07",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Menu/RbiMenuGroup.razor",
+    "source": "DesignSystem/Components/Menu/RbiMenuGroup.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "041f7a9114ea928496ede03c6b2966b2ed44c7adc231f54650e10c724e5493e3",
+    "upstream_sha256": "041f7a9114ea928496ede03c6b2966b2ed44c7adc231f54650e10c724e5493e3",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Menu/RbiMenuItem.razor",
+    "source": "DesignSystem/Components/Menu/RbiMenuItem.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "bff7d76e60322ce0dfd14ac1c74d545f22f6acc709c9721737a11965552d4128",
+    "upstream_sha256": "bff7d76e60322ce0dfd14ac1c74d545f22f6acc709c9721737a11965552d4128",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Menu/RbiMenuOptions.cs",
+    "source": "DesignSystem/Components/Menu/RbiMenuOptions.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "eca1d0498f45160087cfcfd5b5cb2f1cc6500ba368e8e5c7f847dec33d1ebf6a",
+    "upstream_sha256": "eca1d0498f45160087cfcfd5b5cb2f1cc6500ba368e8e5c7f847dec33d1ebf6a",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Menu/RbiMenuRadioGroup.cs",
+    "source": "DesignSystem/Components/Menu/RbiMenuRadioGroup.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "eb6f0ed72e332bccc58e28791421dc241c5c9eeb2e6f88ede88e5c5f3659f39e",
+    "upstream_sha256": "eb6f0ed72e332bccc58e28791421dc241c5c9eeb2e6f88ede88e5c5f3659f39e",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Menu/RbiMenuRadioItem.cs",
+    "source": "DesignSystem/Components/Menu/RbiMenuRadioItem.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "f26e9c49bd3986da4e2b9d836a83a0cf62ed30477d7a70b735d4c57e0693fc10",
+    "upstream_sha256": "f26e9c49bd3986da4e2b9d836a83a0cf62ed30477d7a70b735d4c57e0693fc10",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Menu/RbiMenuSelectionRendering.cs",
+    "source": "DesignSystem/Components/Menu/RbiMenuSelectionRendering.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "20101a95fc1b1432f3dc91cb57fdd98f553aee016dca2c523decddf413ca7cc6",
+    "upstream_sha256": "20101a95fc1b1432f3dc91cb57fdd98f553aee016dca2c523decddf413ca7cc6",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Menu/RbiMenuSeparator.razor",
+    "source": "DesignSystem/Components/Menu/RbiMenuSeparator.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "a4ac03aba947a9b70992dad79ddde9dbe229c9540fd4c97f8b22402ba07d590e",
+    "upstream_sha256": "a4ac03aba947a9b70992dad79ddde9dbe229c9540fd4c97f8b22402ba07d590e",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Menu/RbiMenubar.cs",
+    "source": "DesignSystem/Components/Menu/RbiMenubar.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "5e87c69145400120bb323112646a0f4079f571671a36757615718a0ffbad4e69",
+    "upstream_sha256": "5e87c69145400120bb323112646a0f4079f571671a36757615718a0ffbad4e69",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Menu/RbiMenubarContext.cs",
+    "source": "DesignSystem/Components/Menu/RbiMenubarContext.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "bcb26be0afedfef194a7857e0dccba4a875e63aa61acfd11e13aadb391f5b45c",
+    "upstream_sha256": "bcb26be0afedfef194a7857e0dccba4a875e63aa61acfd11e13aadb391f5b45c",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Menu/RbiMenubarMenu.cs",
+    "source": "DesignSystem/Components/Menu/RbiMenubarMenu.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "4c727852fa449e77423330edc13feb44c0355ebde7fa0e922e7aed969c4de01e",
+    "upstream_sha256": "4c727852fa449e77423330edc13feb44c0355ebde7fa0e922e7aed969c4de01e",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Menu/RbiSubMenu.cs",
+    "source": "DesignSystem/Components/Menu/RbiSubMenu.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "e9db9cb81d925818a9868524e5d047ad4d7edc4b64e61e0c30fdb740b4e0d1a3",
+    "upstream_sha256": "e9db9cb81d925818a9868524e5d047ad4d7edc4b64e61e0c30fdb740b4e0d1a3",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Navigation/RbiBreadcrumb.razor",
+    "source": "DesignSystem/Components/Navigation/RbiBreadcrumb.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "1a07b5edd8be2abeb6dedc7dfc7d45b9042c35066e28063feaa14f0d5196db0e",
+    "upstream_sha256": "1a07b5edd8be2abeb6dedc7dfc7d45b9042c35066e28063feaa14f0d5196db0e",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Navigation/RbiBreadcrumbEntry.cs",
+    "source": "DesignSystem/Components/Navigation/RbiBreadcrumbEntry.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "9e07efdffe94b080dc9a7d11997dde3e34a77a14e2a7b95b2dfefd48ac03efcf",
+    "upstream_sha256": "9e07efdffe94b080dc9a7d11997dde3e34a77a14e2a7b95b2dfefd48ac03efcf",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Navigation/RbiCarousel.razor",
+    "source": "DesignSystem/Components/Navigation/RbiCarousel.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "bb1cca8610921ed6babff72fa00c83551090af4397cac5efbd3b7d1ff6d66ca8",
+    "upstream_sha256": "bb1cca8610921ed6babff72fa00c83551090af4397cac5efbd3b7d1ff6d66ca8",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Navigation/RbiDock.cs",
+    "source": "DesignSystem/Components/Navigation/RbiDock.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "47007a42338deda89762b6dd375def72f9a552408cfce49feff6c616c7ea05c3",
+    "upstream_sha256": "47007a42338deda89762b6dd375def72f9a552408cfce49feff6c616c7ea05c3",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Navigation/RbiDockItem.cs",
+    "source": "DesignSystem/Components/Navigation/RbiDockItem.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "7e366b03007797668bfad203111f5afe37248d9cc06cf02bf2329ee5ecc8fb57",
+    "upstream_sha256": "7e366b03007797668bfad203111f5afe37248d9cc06cf02bf2329ee5ecc8fb57",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Navigation/RbiNavigationMenu.razor",
+    "source": "DesignSystem/Components/Navigation/RbiNavigationMenu.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "9f0ec331b4b17a4199df5d713211af3ea0d171ba287527b0e092fae9fb93203b",
+    "upstream_sha256": "9f0ec331b4b17a4199df5d713211af3ea0d171ba287527b0e092fae9fb93203b",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Navigation/RbiNavigationMenuItem.cs",
+    "source": "DesignSystem/Components/Navigation/RbiNavigationMenuItem.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "625e02ce30d3eef9bd10cd2577f85cb7741d34b954f2a373c3f50974acd3e1d3",
+    "upstream_sha256": "625e02ce30d3eef9bd10cd2577f85cb7741d34b954f2a373c3f50974acd3e1d3",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Navigation/RbiPagination.razor",
+    "source": "DesignSystem/Components/Navigation/RbiPagination.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "4e9b54026f3f78c8b7ac1a0b8aaa2fb0a8f8315cfdba323f9aab90ee99e4e384",
+    "upstream_sha256": "4e9b54026f3f78c8b7ac1a0b8aaa2fb0a8f8315cfdba323f9aab90ee99e4e384",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Navigation/RbiSideNav.cs",
+    "source": "DesignSystem/Components/Navigation/RbiSideNav.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "d55d0c56dc5bf24a149644fb3f8c6d8913c9bf608f59363bf9d45a29a69b465b",
+    "upstream_sha256": "d55d0c56dc5bf24a149644fb3f8c6d8913c9bf608f59363bf9d45a29a69b465b",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Navigation/RbiSideNavModels.cs",
+    "source": "DesignSystem/Components/Navigation/RbiSideNavModels.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "9c13aece1bc196cc68f60cbed59e3d73851c49d27859bdf6dc51b9776a0750f5",
+    "upstream_sha256": "9c13aece1bc196cc68f60cbed59e3d73851c49d27859bdf6dc51b9776a0750f5",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Navigation/RbiSidebar.razor",
+    "source": "DesignSystem/Components/Navigation/RbiSidebar.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "ee98b834dca443308fca3c39a969fd455495df2e9c3b4406c69630c722a4c34e",
+    "upstream_sha256": "ee98b834dca443308fca3c39a969fd455495df2e9c3b4406c69630c722a4c34e",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Navigation/RbiSidebarAction.razor",
+    "source": "DesignSystem/Components/Navigation/RbiSidebarAction.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "9ced5bac69fb27ee78f3ed921ec0cf6291a742194722888b82dbccf6aaf5c5e9",
+    "upstream_sha256": "9ced5bac69fb27ee78f3ed921ec0cf6291a742194722888b82dbccf6aaf5c5e9",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Navigation/RbiSidebarInput.cs",
+    "source": "DesignSystem/Components/Navigation/RbiSidebarInput.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "ebfbfb1910022edd1a0b4a40c7b95014acafba3368d53ac43c48e2232ae9bba9",
+    "upstream_sha256": "ebfbfb1910022edd1a0b4a40c7b95014acafba3368d53ac43c48e2232ae9bba9",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Navigation/RbiSidebarItem.razor",
+    "source": "DesignSystem/Components/Navigation/RbiSidebarItem.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "8aaaa3617c586062112ba5b75b34b7e1df751e2c0b0363a46e29b3a5d9c5abc3",
+    "upstream_sha256": "8aaaa3617c586062112ba5b75b34b7e1df751e2c0b0363a46e29b3a5d9c5abc3",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Navigation/RbiSidebarModels.cs",
+    "source": "DesignSystem/Components/Navigation/RbiSidebarModels.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "8ee948e5ae148f82c05a9d2680fe8f6d649763b28df2a66204cfde86f9fe2ede",
+    "upstream_sha256": "8ee948e5ae148f82c05a9d2680fe8f6d649763b28df2a66204cfde86f9fe2ede",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Navigation/RbiSidebarPart.cs",
+    "source": "DesignSystem/Components/Navigation/RbiSidebarPart.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "5714c649862487e6f37dcfcd28cd1b93cd488b119ea6c68e4e35d065180103a0",
+    "upstream_sha256": "5714c649862487e6f37dcfcd28cd1b93cd488b119ea6c68e4e35d065180103a0",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Navigation/RbiSidebarSkeleton.razor",
+    "source": "DesignSystem/Components/Navigation/RbiSidebarSkeleton.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "c32a7411a94a40d706dc04244848e19d42fcd49883ec51386a47eb396b865e26",
+    "upstream_sha256": "c32a7411a94a40d706dc04244848e19d42fcd49883ec51386a47eb396b865e26",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Navigation/RbiSidebarToggle.razor",
+    "source": "DesignSystem/Components/Navigation/RbiSidebarToggle.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "0fa4b41599a2051720f4db350ac0a1ec563208092728c2a9d350f8f2a8ba1f84",
+    "upstream_sha256": "0fa4b41599a2051720f4db350ac0a1ec563208092728c2a9d350f8f2a8ba1f84",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Navigation/RbiTab.razor",
+    "source": "DesignSystem/Components/Navigation/RbiTab.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "b7b6254a8dad428a41c1ce965222efd614101f8bba1bc3e5c914d6ab2721032e",
+    "upstream_sha256": "b7b6254a8dad428a41c1ce965222efd614101f8bba1bc3e5c914d6ab2721032e",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Navigation/RbiTabPanel.razor",
+    "source": "DesignSystem/Components/Navigation/RbiTabPanel.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "6bc38ac8d305481877327cae02639c04a5deec7305e71d67647ac581fc0fe2c1",
+    "upstream_sha256": "6bc38ac8d305481877327cae02639c04a5deec7305e71d67647ac581fc0fe2c1",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Navigation/RbiTabs.razor",
+    "source": "DesignSystem/Components/Navigation/RbiTabs.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "540c81399d89a7b2dbbfbb909ed0d5e19617f9c82c6f93853f8fa860f34319d5",
+    "upstream_sha256": "540c81399d89a7b2dbbfbb909ed0d5e19617f9c82c6f93853f8fa860f34319d5",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Navigation/RbiTabsContext.cs",
+    "source": "DesignSystem/Components/Navigation/RbiTabsContext.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "ee2cc5816fd101c47dc3b12a8bf5ca8a3f3060d27b12fdf7029b28758ec83217",
+    "upstream_sha256": "ee2cc5816fd101c47dc3b12a8bf5ca8a3f3060d27b12fdf7029b28758ec83217",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Navigation/RbiTabsOptions.cs",
+    "source": "DesignSystem/Components/Navigation/RbiTabsOptions.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "b80e30eead660fcddafe08037f207ef71fdca4a89237419d29c6f2ad5ccca600",
+    "upstream_sha256": "b80e30eead660fcddafe08037f207ef71fdca4a89237419d29c6f2ad5ccca600",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Overlay/RbiAlertDialog.razor",
+    "source": "DesignSystem/Components/Overlay/RbiAlertDialog.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "a38581a30485f00fcc32d483d9df6e496dcda9564042c381c853b2ec0a958bc3",
+    "upstream_sha256": "a38581a30485f00fcc32d483d9df6e496dcda9564042c381c853b2ec0a958bc3",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Overlay/RbiAnchoredOverlayInterop.cs",
+    "source": "DesignSystem/Components/Overlay/RbiAnchoredOverlayInterop.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "f4abc1f4c8c2812bd7bd21db8f9082d7c2ed1c8a57741f7af26c09b93bd4ae8b",
+    "upstream_sha256": "f4abc1f4c8c2812bd7bd21db8f9082d7c2ed1c8a57741f7af26c09b93bd4ae8b",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Overlay/RbiAnchoredOverlayOptions.cs",
+    "source": "DesignSystem/Components/Overlay/RbiAnchoredOverlayOptions.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "eb8a5e0849f3e184fd3fcff4d29b4c331c6dce4c6e1fe38cef30727681ddedf5",
+    "upstream_sha256": "eb8a5e0849f3e184fd3fcff4d29b4c331c6dce4c6e1fe38cef30727681ddedf5",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Overlay/RbiDialog.razor",
+    "source": "DesignSystem/Components/Overlay/RbiDialog.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "575791765bc26ab6483eca840ea70511f5d6c5a44d497a33c88aaf02f34b188b",
+    "upstream_sha256": "575791765bc26ab6483eca840ea70511f5d6c5a44d497a33c88aaf02f34b188b",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Overlay/RbiDialogOptions.cs",
+    "source": "DesignSystem/Components/Overlay/RbiDialogOptions.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "641c8aae3be62b2a3375ac845b8df3becccc71fc5fa00990343dbc96e0a8c134",
+    "upstream_sha256": "641c8aae3be62b2a3375ac845b8df3becccc71fc5fa00990343dbc96e0a8c134",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Overlay/RbiDrawer.razor",
+    "source": "DesignSystem/Components/Overlay/RbiDrawer.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "df7901e3b25c3d0e73b1a73b3d65e4ec58028a57fd069a555ff566a099992649",
+    "upstream_sha256": "df7901e3b25c3d0e73b1a73b3d65e4ec58028a57fd069a555ff566a099992649",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Overlay/RbiHoverCard.cs",
+    "source": "DesignSystem/Components/Overlay/RbiHoverCard.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "9f9ac192a36a139de4e4fafaa4d914ba5307e6a7526f714bdb87c7128414ccd5",
+    "upstream_sha256": "9f9ac192a36a139de4e4fafaa4d914ba5307e6a7526f714bdb87c7128414ccd5",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Overlay/RbiHoverCardAlignment.cs",
+    "source": "DesignSystem/Components/Overlay/RbiHoverCardAlignment.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "20624a8d13bb334e74ffb4d46c63666e195d5445d9af06e72ecf8099194f13f2",
+    "upstream_sha256": "20624a8d13bb334e74ffb4d46c63666e195d5445d9af06e72ecf8099194f13f2",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Overlay/RbiModalInterop.cs",
+    "source": "DesignSystem/Components/Overlay/RbiModalInterop.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "557da0af75ec60be7de1b0ab2e12bcb6f896857c5c8645c65eef9d25e78e1f7b",
+    "upstream_sha256": "557da0af75ec60be7de1b0ab2e12bcb6f896857c5c8645c65eef9d25e78e1f7b",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Overlay/RbiPopover.razor",
+    "source": "DesignSystem/Components/Overlay/RbiPopover.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "9bdee3d99778843b512e6e50322c026c0e11f3c0cbbaf6650e106ec4f5b8a8c4",
+    "upstream_sha256": "9bdee3d99778843b512e6e50322c026c0e11f3c0cbbaf6650e106ec4f5b8a8c4",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Overlay/RbiSheet.razor",
+    "source": "DesignSystem/Components/Overlay/RbiSheet.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "1acbdaf1fba958578164005d915c24121756730ba9ec5e49122e632539527c24",
+    "upstream_sha256": "1acbdaf1fba958578164005d915c24121756730ba9ec5e49122e632539527c24",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Overlay/RbiSheetOptions.cs",
+    "source": "DesignSystem/Components/Overlay/RbiSheetOptions.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "1f6b482275b7a91b9a0e3177a7aab1def899fbed47fc3c514c0653c28b989d72",
+    "upstream_sha256": "1f6b482275b7a91b9a0e3177a7aab1def899fbed47fc3c514c0653c28b989d72",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Overlay/RbiTooltip.razor",
+    "source": "DesignSystem/Components/Overlay/RbiTooltip.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "4a49018792451e4e71ac079e69042f5951e5e9bdde6e5cbc9ac2e893bd86292c",
+    "upstream_sha256": "4a49018792451e4e71ac079e69042f5951e5e9bdde6e5cbc9ac2e893bd86292c",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/RbiControlIcon.cs",
+    "source": "DesignSystem/Components/RbiControlIcon.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "5b59010f3dd0209442322dee485d95a48612ccec44943004363583d06bcd5b67",
+    "upstream_sha256": "5b59010f3dd0209442322dee485d95a48612ccec44943004363583d06bcd5b67",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/RbiOrientation.cs",
+    "source": "DesignSystem/Components/RbiOrientation.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "ccce473db7f49ec5e93b00ae9f140fa1c51694ff3d1022d845117f7406264771",
+    "upstream_sha256": "ccce473db7f49ec5e93b00ae9f140fa1c51694ff3d1022d845117f7406264771",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Selection/RbiToggle.razor",
+    "source": "DesignSystem/Components/Selection/RbiToggle.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "40274861be7b0c5459e57e6b833e60d5aa528ed9f2234192b205857597c269a4",
+    "upstream_sha256": "40274861be7b0c5459e57e6b833e60d5aa528ed9f2234192b205857597c269a4",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Selection/RbiToggleGroup.razor",
+    "source": "DesignSystem/Components/Selection/RbiToggleGroup.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "c22c670bd452a0ea125891fdbedc80cf13fec5d815c93dc99a3d546bd1440244",
+    "upstream_sha256": "c22c670bd452a0ea125891fdbedc80cf13fec5d815c93dc99a3d546bd1440244",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Selection/RbiToggleGroupContext.cs",
+    "source": "DesignSystem/Components/Selection/RbiToggleGroupContext.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "56dc39e0ff750baff218655f25bc07aed762b24a01e6f1d815c675ce6fc5e749",
+    "upstream_sha256": "56dc39e0ff750baff218655f25bc07aed762b24a01e6f1d815c675ce6fc5e749",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Selection/RbiToggleGroupItem.razor",
+    "source": "DesignSystem/Components/Selection/RbiToggleGroupItem.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "60f79a0e094c60891955fce3eb13d4bceefe7188c7d7ecbc6e205d58ae2e7676",
+    "upstream_sha256": "60f79a0e094c60891955fce3eb13d4bceefe7188c7d7ecbc6e205d58ae2e7676",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Selection/RbiToggleOptions.cs",
+    "source": "DesignSystem/Components/Selection/RbiToggleOptions.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "73eb2d1e0f01050b62b25a315bbc5c6a7d4b7a27460d229da7179b542ada6abc",
+    "upstream_sha256": "73eb2d1e0f01050b62b25a315bbc5c6a7d4b7a27460d229da7179b542ada6abc",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Theme/RbiThemePicker.razor",
+    "source": "DesignSystem/Components/Theme/RbiThemePicker.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "041b194aa1139b450a1cc27bf9ab1031e02e9e8a136035bca101901267b8f6df",
+    "upstream_sha256": "041b194aa1139b450a1cc27bf9ab1031e02e9e8a136035bca101901267b8f6df",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Typography/RbiDisplay.cs",
+    "source": "DesignSystem/Components/Typography/RbiDisplay.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "ee34cbf165d13c83c13b4a15ed443478ccd0200e7d1b377f3976f719b237919d",
+    "upstream_sha256": "ee34cbf165d13c83c13b4a15ed443478ccd0200e7d1b377f3976f719b237919d",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Typography/RbiDisplayOptions.cs",
+    "source": "DesignSystem/Components/Typography/RbiDisplayOptions.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "86cba023757c97e832ccdaf95420c9c0f9948b44b7f00546bcba5b6f076fac13",
+    "upstream_sha256": "86cba023757c97e832ccdaf95420c9c0f9948b44b7f00546bcba5b6f076fac13",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Typography/RbiEyebrow.cs",
+    "source": "DesignSystem/Components/Typography/RbiEyebrow.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "fff20767489103072e389f953a5701fa55f1b02a91bc42e139304f76d544f75e",
+    "upstream_sha256": "4708618af88fd17c3415d75d8e6dc07bc8e49b8d2fef3c77fa30275bd445d9f2",
+    "adaptation": "trailing blank lines at EOF removed for git diff --check"
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Typography/RbiHeading.cs",
+    "source": "DesignSystem/Components/Typography/RbiHeading.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "1dc99cdef7b3648a240e3a8795d31a5dc90cbd20867a652462f9330df435a8a5",
+    "upstream_sha256": "1dc99cdef7b3648a240e3a8795d31a5dc90cbd20867a652462f9330df435a8a5",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Typography/RbiProse.cs",
+    "source": "DesignSystem/Components/Typography/RbiProse.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "e7102ff4d79f3b41c1e3022b4b8b3452be80e0980332918ed4a564a24bffef9d",
+    "upstream_sha256": "bff38a316af2bf7a5e7c3f6f2e8c2b6aaf3e5e54604b4ff2b83797bcbf97ddc3",
+    "adaptation": "trailing blank lines at EOF removed for git diff --check"
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Typography/RbiText.cs",
+    "source": "DesignSystem/Components/Typography/RbiText.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "4bed56a96b79be1e4a4b8a5d5c300e21bba4dcaf8e4eb606ddfb45272042ad06",
+    "upstream_sha256": "4bed56a96b79be1e4a4b8a5d5c300e21bba4dcaf8e4eb606ddfb45272042ad06",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Components/Typography/RbiTextOptions.cs",
+    "source": "DesignSystem/Components/Typography/RbiTextOptions.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "9ad5eae6b5e38122ca05c3e05be83a158ab816a9918d5cbf480492f52d8ca6b8",
+    "upstream_sha256": "9ad5eae6b5e38122ca05c3e05be83a158ab816a9918d5cbf480492f52d8ca6b8",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Properties/AssemblyInfo.cs",
+    "source": "DesignSystem/Properties/AssemblyInfo.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "0f369c8f11296a018b72f419fd733f5943d21e890a64939f54cedfdc47c8c0cf",
+    "upstream_sha256": "0f369c8f11296a018b72f419fd733f5943d21e890a64939f54cedfdc47c8c0cf",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/Properties/PublicApiGeneratedCodeSuppressions.cs",
+    "source": "DesignSystem/Properties/PublicApiGeneratedCodeSuppressions.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "a3cbc4733fdcf3901b8397600c58f9996ad5e6f4a417ea21ec44f53a91373e31",
+    "upstream_sha256": "a3cbc4733fdcf3901b8397600c58f9996ad5e6f4a417ea21ec44f53a91373e31",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/PublicAPI.Shipped.txt",
+    "source": "DesignSystem/PublicAPI.Shipped.txt",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "3c3b422dddb1efeb0fc5b228608fd8682452b2a9507d4031894bce3c4dedadbd",
+    "upstream_sha256": "3c3b422dddb1efeb0fc5b228608fd8682452b2a9507d4031894bce3c4dedadbd",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/PublicAPI.Unshipped.txt",
+    "source": "DesignSystem/PublicAPI.Unshipped.txt",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "2404288cfa886c0ac74f89286e75198f6e1100aacd68c48c0c4610fc0c52b67b",
+    "upstream_sha256": "2404288cfa886c0ac74f89286e75198f6e1100aacd68c48c0c4610fc0c52b67b",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/RBI.DesignSystem.csproj",
+    "source": "DesignSystem/RBI.DesignSystem.csproj",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "f6a038a7d7c52a5160be5431fc91935bd7c500d0507ab782374bf5132eec27ca",
+    "upstream_sha256": "f6a038a7d7c52a5160be5431fc91935bd7c500d0507ab782374bf5132eec27ca",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/README.md",
+    "source": "DesignSystem/README.md",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "5b9cf9ffc8a7c85c9eac8af2906516d37cf0f4c92e0815eed72c59f779deea74",
+    "upstream_sha256": "8b06e477889881037b309179c4abb96c10304b479a182b6f0e438c7e967229bd",
+    "adaptation": "project path/version or source-install documentation only"
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/THIRD-PARTY-NOTICES.txt",
+    "source": "DesignSystem/THIRD-PARTY-NOTICES.txt",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "cb4594b0f85776be4d1ae6cdce48d0246c2d64c1fe6534e35cca187dbaaa6f14",
+    "upstream_sha256": "cb4594b0f85776be4d1ae6cdce48d0246c2d64c1fe6534e35cca187dbaaa6f14",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/_Imports.razor",
+    "source": "DesignSystem/_Imports.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "68dde13f1cac555b549b0a40a9a276fe1d969c07b47797ede9ed057acbd3ea4c",
+    "upstream_sha256": "68dde13f1cac555b549b0a40a9a276fe1d969c07b47797ede9ed057acbd3ea4c",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/wwwroot/assets/fonts/Amalia-Black.woff2",
+    "source": "DesignSystem/wwwroot/assets/fonts/Amalia-Black.woff2",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "623ee3a0ce3ee3f99f328e33341a922151d9e70fc6fa53240af3b1a266806580",
+    "upstream_sha256": "623ee3a0ce3ee3f99f328e33341a922151d9e70fc6fa53240af3b1a266806580",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/wwwroot/assets/fonts/Amalia-Bold.woff2",
+    "source": "DesignSystem/wwwroot/assets/fonts/Amalia-Bold.woff2",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "824a70eef750d1700e1d35c9aec98cd4ee3ea1862bc999bc7cd90d2288fec9b4",
+    "upstream_sha256": "824a70eef750d1700e1d35c9aec98cd4ee3ea1862bc999bc7cd90d2288fec9b4",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/wwwroot/assets/fonts/Amalia-Italic.woff2",
+    "source": "DesignSystem/wwwroot/assets/fonts/Amalia-Italic.woff2",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "7915564717a6cc09d18a650e0ffc24890caec8191418018d595ff93759c3bc54",
+    "upstream_sha256": "7915564717a6cc09d18a650e0ffc24890caec8191418018d595ff93759c3bc54",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/wwwroot/assets/fonts/Amalia-Light.woff2",
+    "source": "DesignSystem/wwwroot/assets/fonts/Amalia-Light.woff2",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "c457cfab3d73ac12ba4b3b371bd742d5b4ad5666305acc0852b47ec3e1ec4500",
+    "upstream_sha256": "c457cfab3d73ac12ba4b3b371bd742d5b4ad5666305acc0852b47ec3e1ec4500",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/wwwroot/assets/fonts/Amalia-Medium.woff2",
+    "source": "DesignSystem/wwwroot/assets/fonts/Amalia-Medium.woff2",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "be9847ac4e6a67b4588f5e19dc0cb0aa0f47bd5be5225618e96a1973bd38610e",
+    "upstream_sha256": "be9847ac4e6a67b4588f5e19dc0cb0aa0f47bd5be5225618e96a1973bd38610e",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/wwwroot/assets/fonts/Amalia-Regular.woff2",
+    "source": "DesignSystem/wwwroot/assets/fonts/Amalia-Regular.woff2",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "86bb8cd0a128ebf4c82b08bd4fffad25fb12167fa29aea49afb394d32a10c229",
+    "upstream_sha256": "86bb8cd0a128ebf4c82b08bd4fffad25fb12167fa29aea49afb394d32a10c229",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/wwwroot/assets/fonts/Amalia-Thin.woff2",
+    "source": "DesignSystem/wwwroot/assets/fonts/Amalia-Thin.woff2",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "69ee068103b9c37d3cf7f9b07196d37796b11fcb3b747ff0eceb07876af17c91",
+    "upstream_sha256": "69ee068103b9c37d3cf7f9b07196d37796b11fcb3b747ff0eceb07876af17c91",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/wwwroot/assets/logos/rbi-bank-mono-pos.png",
+    "source": "DesignSystem/wwwroot/assets/logos/rbi-bank-mono-pos.png",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "ecfd7b15cb79296c0047a3e1eb0ccec2896ef87d71cea9fabee7104f0bbe7d0c",
+    "upstream_sha256": "ecfd7b15cb79296c0047a3e1eb0ccec2896ef87d71cea9fabee7104f0bbe7d0c",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/wwwroot/assets/logos/rbi-bank-squared-col.png",
+    "source": "DesignSystem/wwwroot/assets/logos/rbi-bank-squared-col.png",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "5c8ca6cd9c2f221af3b82c0542e914fe0ef1f402176cc4d7fd6595255a1fe8f5",
+    "upstream_sha256": "5c8ca6cd9c2f221af3b82c0542e914fe0ef1f402176cc4d7fd6595255a1fe8f5",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/wwwroot/assets/logos/rbi-bank-yellow-neg.png",
+    "source": "DesignSystem/wwwroot/assets/logos/rbi-bank-yellow-neg.png",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "089d12d650b52f8836e7242faf8637f9f720b790f16177efe13e830aea2b13af",
+    "upstream_sha256": "089d12d650b52f8836e7242faf8637f9f720b790f16177efe13e830aea2b13af",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/wwwroot/assets/logos/rbi-logo-col-neg.png",
+    "source": "DesignSystem/wwwroot/assets/logos/rbi-logo-col-neg.png",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "c28b7bfa02c13ccaa7354ec93c6fc63cad78f509039bf6d4579ac5fabd0a5b68",
+    "upstream_sha256": "c28b7bfa02c13ccaa7354ec93c6fc63cad78f509039bf6d4579ac5fabd0a5b68",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/wwwroot/assets/logos/rbi-logo-col-pos.png",
+    "source": "DesignSystem/wwwroot/assets/logos/rbi-logo-col-pos.png",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "2e0bdcb5cf64c07a865938c1d5b3f1272616b684bb829e1c3bc0d22628f7c0e8",
+    "upstream_sha256": "2e0bdcb5cf64c07a865938c1d5b3f1272616b684bb829e1c3bc0d22628f7c0e8",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/wwwroot/assets/logos/rbi-logo-mono-neg.png",
+    "source": "DesignSystem/wwwroot/assets/logos/rbi-logo-mono-neg.png",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "da53b8f60f3a7945eb9aed5ebe234ad15c579acd7a87cd66e55a642c9ab756c8",
+    "upstream_sha256": "da53b8f60f3a7945eb9aed5ebe234ad15c579acd7a87cd66e55a642c9ab756c8",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/wwwroot/assets/logos/rbi-logo-mono-pos.png",
+    "source": "DesignSystem/wwwroot/assets/logos/rbi-logo-mono-pos.png",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "6f82fa75ae62cd5bdd33ae2b4a8332f0215038ce944e77083f958d8bf1620af6",
+    "upstream_sha256": "6f82fa75ae62cd5bdd33ae2b4a8332f0215038ce944e77083f958d8bf1620af6",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/wwwroot/assets/logos/rbi-logo-yellow-neg.png",
+    "source": "DesignSystem/wwwroot/assets/logos/rbi-logo-yellow-neg.png",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "e98e25cee79f9f79e8f29dcc3997355cf806d8b1cb4cfc3561e4eefbc1652559",
+    "upstream_sha256": "e98e25cee79f9f79e8f29dcc3997355cf806d8b1cb4cfc3561e4eefbc1652559",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/wwwroot/js/rbi-anchored-overlay.js",
+    "source": "DesignSystem/wwwroot/js/rbi-anchored-overlay.js",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "a6588719ef59f32687bb7b384fc5d1ff7ba557677c2ee8198bc38667f1b053d7",
+    "upstream_sha256": "a6588719ef59f32687bb7b384fc5d1ff7ba557677c2ee8198bc38667f1b053d7",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/wwwroot/js/rbi-calendar.js",
+    "source": "DesignSystem/wwwroot/js/rbi-calendar.js",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "7afa1a5cd1d925e559a5e558cb0a65127a67adc7885e5ebf90b8b30235524dab",
+    "upstream_sha256": "7afa1a5cd1d925e559a5e558cb0a65127a67adc7885e5ebf90b8b30235524dab",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/wwwroot/js/rbi-dialog.js",
+    "source": "DesignSystem/wwwroot/js/rbi-dialog.js",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "b3a23666c667d3376967c7252c1ece0c1ad5dd2b6e425b9151320cd38b32595c",
+    "upstream_sha256": "b3a23666c667d3376967c7252c1ece0c1ad5dd2b6e425b9151320cd38b32595c",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/wwwroot/js/rbi-extended-controls.js",
+    "source": "DesignSystem/wwwroot/js/rbi-extended-controls.js",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "221bcfae6360dcac0293a7f8a7e081afdb9f5d76b1be747076c795e1e70ae2b3",
+    "upstream_sha256": "221bcfae6360dcac0293a7f8a7e081afdb9f5d76b1be747076c795e1e70ae2b3",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/wwwroot/js/rbi-native-controls.js",
+    "source": "DesignSystem/wwwroot/js/rbi-native-controls.js",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "e593e61efd4920f11d9ac0f896ae5eda2b506228421866726b682e352a18ebd2",
+    "upstream_sha256": "e593e61efd4920f11d9ac0f896ae5eda2b506228421866726b682e352a18ebd2",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/wwwroot/js/rbi-toggle-group.js",
+    "source": "DesignSystem/wwwroot/js/rbi-toggle-group.js",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "c9d077968256c49df9469b1b86f4a4a4e70f66e938b796f93490c3fdb32940d6",
+    "upstream_sha256": "c9d077968256c49df9469b1b86f4a4a4e70f66e938b796f93490c3fdb32940d6",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/wwwroot/rbi-design-system.css",
+    "source": "DesignSystem/wwwroot/rbi-design-system.css",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "8189d6b0a06b15c190ae246bd2290a9b00930c0228b0d0c3262a6a0ce6e268a8",
+    "upstream_sha256": "8189d6b0a06b15c190ae246bd2290a9b00930c0228b0d0c3262a6a0ce6e268a8",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.DesignSystem/wwwroot/rbi-theme.js",
+    "source": "DesignSystem/wwwroot/rbi-theme.js",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "154efa2ab6c82469a5a9f126a1ea82e690941d44226cff5118fbc0fdf55ef3b9",
+    "upstream_sha256": "154efa2ab6c82469a5a9f126a1ea82e690941d44226cff5118fbc0fdf55ef3b9",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Hosting/PublicAPI.Shipped.txt",
+    "source": "Hosting/PublicAPI.Shipped.txt",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "3c3b422dddb1efeb0fc5b228608fd8682452b2a9507d4031894bce3c4dedadbd",
+    "upstream_sha256": "3c3b422dddb1efeb0fc5b228608fd8682452b2a9507d4031894bce3c4dedadbd",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Hosting/PublicAPI.Unshipped.txt",
+    "source": "Hosting/PublicAPI.Unshipped.txt",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "bcd4a2374a7fed0d578b5963ff9806ea611829e793bccbcb8b7c368e1aae831c",
+    "upstream_sha256": "bcd4a2374a7fed0d578b5963ff9806ea611829e793bccbcb8b7c368e1aae831c",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Hosting/RBI.Hosting.csproj",
+    "source": "Hosting/RBI.Hosting.csproj",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "84bd5de4bc2d1676d2492e0e99a43171f684220452cedb5ef373360d72b90cb4",
+    "upstream_sha256": "84bd5de4bc2d1676d2492e0e99a43171f684220452cedb5ef373360d72b90cb4",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Hosting/README.md",
+    "source": "Hosting/README.md",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "5d2ad984239597fdd8cc53280f42f7aad35e8ee901a27bed9e8dd6e48caa4251",
+    "upstream_sha256": "cc31d5fae36ad2138b47baf0897ec8ae3105a0fe98749b08d32bd867117c7f87",
+    "adaptation": "project path/version or source-install documentation only"
+  },
+  {
+    "path": "Frontend/Platform/RBI.Hosting/RbiHealthCheckTags.cs",
+    "source": "Hosting/RbiHealthCheckTags.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "618dcbcc1a4e123fd43ab331fee6f285d3a24806f93a9d1013ebcb9a362a0719",
+    "upstream_sha256": "618dcbcc1a4e123fd43ab331fee6f285d3a24806f93a9d1013ebcb9a362a0719",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Hosting/RbiHostingExtensions.cs",
+    "source": "Hosting/RbiHostingExtensions.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "ab789d566b5874be925942a1fefd7234e65b8c3676c0a5b9fdf6d4d66d8f8546",
+    "upstream_sha256": "ab789d566b5874be925942a1fefd7234e65b8c3676c0a5b9fdf6d4d66d8f8546",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Forms/PublicAPI.Shipped.txt",
+    "source": "Forms/PublicAPI.Shipped.txt",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "3c3b422dddb1efeb0fc5b228608fd8682452b2a9507d4031894bce3c4dedadbd",
+    "upstream_sha256": "3c3b422dddb1efeb0fc5b228608fd8682452b2a9507d4031894bce3c4dedadbd",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Forms/PublicAPI.Unshipped.txt",
+    "source": "Forms/PublicAPI.Unshipped.txt",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "cb347e9538865d567cd5acb02a93beb3fb8d0fdb9830d87415188f7df7a812e1",
+    "upstream_sha256": "cb347e9538865d567cd5acb02a93beb3fb8d0fdb9830d87415188f7df7a812e1",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Forms/RBI.Forms.csproj",
+    "source": "Forms/RBI.Forms.csproj",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "a9906f9edada4f7fb27773f9409379c0457f57d1d448c0dfffdc31088ce05b9f",
+    "upstream_sha256": "a9906f9edada4f7fb27773f9409379c0457f57d1d448c0dfffdc31088ce05b9f",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Forms/README.md",
+    "source": "Forms/README.md",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "c241c950ad32745827d132b21738b1884b56757b63ae755e860e86c3a24fb441",
+    "upstream_sha256": "b290a6285fee9f962816e000170a1506b6eed6efa632b06a7ee7d010ae9898b4",
+    "adaptation": "project path/version or source-install documentation only"
+  },
+  {
+    "path": "Frontend/Platform/RBI.Forms/RbiFormSubmissionState.cs",
+    "source": "Forms/RbiFormSubmissionState.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "3d745f1195e94ad00fe63214e47582ebc175885bcffa5678b376bdc3d83da5dd",
+    "upstream_sha256": "3d745f1195e94ad00fe63214e47582ebc175885bcffa5678b376bdc3d83da5dd",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Forms/RbiServerValidation.cs",
+    "source": "Forms/RbiServerValidation.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "7e10194ec2aa0ff504ec162de148bada638ac271342566e7ef377de14cdf426b",
+    "upstream_sha256": "7e10194ec2aa0ff504ec162de148bada638ac271342566e7ef377de14cdf426b",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authorization/AuthorizationOptions.cs",
+    "source": "Auth/Authorization/AuthorizationOptions.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "cb5f89e0d46c530f84b25a0e9e5f9f36b2a51b8372361ff4895db696f07e4eae",
+    "upstream_sha256": "cb5f89e0d46c530f84b25a0e9e5f9f36b2a51b8372361ff4895db696f07e4eae",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authorization/Components/RbiAuthorize.razor",
+    "source": "Auth/Authorization/Components/RbiAuthorize.razor",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "acef048287a88135bdbe7cfd356463aa806486851789ea7e5e75e76d87fb6ad3",
+    "upstream_sha256": "acef048287a88135bdbe7cfd356463aa806486851789ea7e5e75e76d87fb6ad3",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authorization/Internal/RbiPermissionAuthorizationHandler.cs",
+    "source": "Auth/Authorization/Internal/RbiPermissionAuthorizationHandler.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "067b15366b51456b1c776a11879165d890ef5d3dd23a09d8eea4b19d55bc44d5",
+    "upstream_sha256": "067b15366b51456b1c776a11879165d890ef5d3dd23a09d8eea4b19d55bc44d5",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authorization/Internal/RbiPermissionMap.cs",
+    "source": "Auth/Authorization/Internal/RbiPermissionMap.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "bbdbccbb61a3e9d9e54051a552c19a85ac9fe8b4a3ac9f1f7658b4d5d2a009af",
+    "upstream_sha256": "bbdbccbb61a3e9d9e54051a552c19a85ac9fe8b4a3ac9f1f7658b4d5d2a009af",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authorization/Internal/RbiPermissionName.cs",
+    "source": "Auth/Authorization/Internal/RbiPermissionName.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "163be9af6ea9cdd4ea38f28ecf8759e2441186895724e1a15889af97e28d02e4",
+    "upstream_sha256": "163be9af6ea9cdd4ea38f28ecf8759e2441186895724e1a15889af97e28d02e4",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authorization/Internal/RbiPermissionRequirement.cs",
+    "source": "Auth/Authorization/Internal/RbiPermissionRequirement.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "3adadaced9f5bfbf36cd5357b597e3d5a95b347108f6764e72df787ce167baea",
+    "upstream_sha256": "3adadaced9f5bfbf36cd5357b597e3d5a95b347108f6764e72df787ce167baea",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authorization/Internal/RbiRolePermissionSource.cs",
+    "source": "Auth/Authorization/Internal/RbiRolePermissionSource.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "43a8a6f099d5dd8a43cc052ff7e475294989bc549fa285896d1f6baf24014db2",
+    "upstream_sha256": "43a8a6f099d5dd8a43cc052ff7e475294989bc549fa285896d1f6baf24014db2",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authorization/IoC/Authorization.cs",
+    "source": "Auth/Authorization/IoC/Authorization.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "854a767a5e0fb4e70963ec781d5e11d6e4b1d923573fed29603712ed2e8efe60",
+    "upstream_sha256": "854a767a5e0fb4e70963ec781d5e11d6e4b1d923573fed29603712ed2e8efe60",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authorization/IoC/AuthorizationEndpoints.cs",
+    "source": "Auth/Authorization/IoC/AuthorizationEndpoints.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "6fb5db4fe4c6da32acf8d40987977a899f7c9db481a070e8016e438c79dbbee7",
+    "upstream_sha256": "6fb5db4fe4c6da32acf8d40987977a899f7c9db481a070e8016e438c79dbbee7",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authorization/Properties/AssemblyInfo.cs",
+    "source": "Auth/Authorization/Properties/AssemblyInfo.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "062abfd988d21e84dd7e2a6a7376c3966f1e4a9a8e3d07c05e13ed2c011b3743",
+    "upstream_sha256": "062abfd988d21e84dd7e2a6a7376c3966f1e4a9a8e3d07c05e13ed2c011b3743",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authorization/Properties/PublicApiGeneratedCodeSuppressions.cs",
+    "source": "Auth/Authorization/Properties/PublicApiGeneratedCodeSuppressions.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "337af6e4be614bdb19f9f4b7c2e4141692516f591f03408bb967b7a23f83a296",
+    "upstream_sha256": "337af6e4be614bdb19f9f4b7c2e4141692516f591f03408bb967b7a23f83a296",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authorization/PublicAPI.Shipped.txt",
+    "source": "Auth/Authorization/PublicAPI.Shipped.txt",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "3c3b422dddb1efeb0fc5b228608fd8682452b2a9507d4031894bce3c4dedadbd",
+    "upstream_sha256": "3c3b422dddb1efeb0fc5b228608fd8682452b2a9507d4031894bce3c4dedadbd",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authorization/PublicAPI.Unshipped.txt",
+    "source": "Auth/Authorization/PublicAPI.Unshipped.txt",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "192e8caa5c8326907ea57fdc39ae97b1aa15c274f689ec91c65c6fa83e200968",
+    "upstream_sha256": "192e8caa5c8326907ea57fdc39ae97b1aa15c274f689ec91c65c6fa83e200968",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authorization/RBI.Authorization.csproj",
+    "source": "Auth/Authorization/RBI.Authorization.csproj",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "5fdcf8c04dae2d86ab56a7291af4632a6e78dafb521a45aee5afa373d51dd954",
+    "upstream_sha256": "5fdcf8c04dae2d86ab56a7291af4632a6e78dafb521a45aee5afa373d51dd954",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authorization/README.md",
+    "source": "Auth/Authorization/README.md",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "5457ca21efe08aee324c243eeb8d4a1f06c68a124b98d232a8f3841c583f118f",
+    "upstream_sha256": "a664a0757907731de1c159ebda3b711a4be8ae897b711ca898f96d1a11f4a2d5",
+    "adaptation": "project path/version or source-install documentation only"
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authorization/Services/IRbiPermissionService.cs",
+    "source": "Auth/Authorization/Services/IRbiPermissionService.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "2fb9dc9fec2a58a83a88ec3b44e1af68fd548ba1f3f6d870e36df688daf728fa",
+    "upstream_sha256": "2fb9dc9fec2a58a83a88ec3b44e1af68fd548ba1f3f6d870e36df688daf728fa",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authorization/Services/IRbiPermissionSource.cs",
+    "source": "Auth/Authorization/Services/IRbiPermissionSource.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "01bc29a2bb84df2b8c05d0bfe0ac8d3c268b3a095e2ed0057ff80dc8cc347bac",
+    "upstream_sha256": "01bc29a2bb84df2b8c05d0bfe0ac8d3c268b3a095e2ed0057ff80dc8cc347bac",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authorization/Services/RbiPermissionService.cs",
+    "source": "Auth/Authorization/Services/RbiPermissionService.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "492b69e5f578d1d9705843783ac782b74b66b3dce571835e7e2324cfeff86a63",
+    "upstream_sha256": "492b69e5f578d1d9705843783ac782b74b66b3dce571835e7e2324cfeff86a63",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Localization/CultureCatalog.cs",
+    "source": "Localization/Core/CultureCatalog.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "fd130d5ddd539f4258bda6c13919ca395f4bc9b3d41967ce63a0446d28e3726f",
+    "upstream_sha256": "fd130d5ddd539f4258bda6c13919ca395f4bc9b3d41967ce63a0446d28e3726f",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Localization/Internal/RbiLocalizationDefaults.cs",
+    "source": "Localization/Core/Internal/RbiLocalizationDefaults.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "5f0507a36922287f5539ff0dbf7dfbb47497f47e72e687f33693f7da2e169163",
+    "upstream_sha256": "5f0507a36922287f5539ff0dbf7dfbb47497f47e72e687f33693f7da2e169163",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Localization/Internal/RbiLocalizationResourceParser.cs",
+    "source": "Localization/Core/Internal/RbiLocalizationResourceParser.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "8ffcfbaaf15419f4118037865a2adc031a0efd916f86239a70fbfc35d6c6d58f",
+    "upstream_sha256": "8ffcfbaaf15419f4118037865a2adc031a0efd916f86239a70fbfc35d6c6d58f",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Localization/Internal/RbiLocalizationStartupFilter.cs",
+    "source": "Localization/Core/Internal/RbiLocalizationStartupFilter.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "81f3ffaa8745c64bc8962f5bbe1fc4ba6f2cfb062f5454367ed09b9452a7d279",
+    "upstream_sha256": "81f3ffaa8745c64bc8962f5bbe1fc4ba6f2cfb062f5454367ed09b9452a7d279",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Localization/Internal/RbiMissingKeyTracker.cs",
+    "source": "Localization/Core/Internal/RbiMissingKeyTracker.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "6cb64dd9c7161cd3dec5658b427187a45638e4eed12fc9d7ee43acfecd31ba73",
+    "upstream_sha256": "6cb64dd9c7161cd3dec5658b427187a45638e4eed12fc9d7ee43acfecd31ba73",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Localization/Localization.cs",
+    "source": "Localization/Core/Localization.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "e0d557513425db578f9ff810020c63f6ece93570732281c1ac09aaa7f283653f",
+    "upstream_sha256": "e0d557513425db578f9ff810020c63f6ece93570732281c1ac09aaa7f283653f",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Localization/Properties/AssemblyInfo.cs",
+    "source": "Localization/Core/Properties/AssemblyInfo.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "c1168a2806a583ca22d7ee8cfaeaf70ed519ca333deda0b9f292186e5d7bd9e7",
+    "upstream_sha256": "c1168a2806a583ca22d7ee8cfaeaf70ed519ca333deda0b9f292186e5d7bd9e7",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Localization/Providers/IRbiLocalizationProvider.cs",
+    "source": "Localization/Core/Providers/IRbiLocalizationProvider.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "550530dcd9b0b7e0c827dd6bae582cabfb7755bbfd6245cca65937ba4c97af39",
+    "upstream_sha256": "550530dcd9b0b7e0c827dd6bae582cabfb7755bbfd6245cca65937ba4c97af39",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Localization/Providers/RbiStaticJsonLocalizationProvider.cs",
+    "source": "Localization/Core/Providers/RbiStaticJsonLocalizationProvider.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "4cf4d94ea1fb191e38e4bed8a196bc1ad1cbc18ee54505aa514fce20391544fd",
+    "upstream_sha256": "4cf4d94ea1fb191e38e4bed8a196bc1ad1cbc18ee54505aa514fce20391544fd",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Localization/PublicAPI.Shipped.txt",
+    "source": "Localization/Core/PublicAPI.Shipped.txt",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "3c3b422dddb1efeb0fc5b228608fd8682452b2a9507d4031894bce3c4dedadbd",
+    "upstream_sha256": "3c3b422dddb1efeb0fc5b228608fd8682452b2a9507d4031894bce3c4dedadbd",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Localization/PublicAPI.Unshipped.txt",
+    "source": "Localization/Core/PublicAPI.Unshipped.txt",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "5ebbdb6b4d22986520ec5b1ae9cb94ee77e7fe3eeb116b2b936dcf887cf3a03c",
+    "upstream_sha256": "5ebbdb6b4d22986520ec5b1ae9cb94ee77e7fe3eeb116b2b936dcf887cf3a03c",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Localization/RBI.Localization.csproj",
+    "source": "Localization/Core/RBI.Localization.csproj",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "b6cafc6e7508f61f2bac0701b69845a0e7fa379dbe1d69643961abc7e509d91a",
+    "upstream_sha256": "b6cafc6e7508f61f2bac0701b69845a0e7fa379dbe1d69643961abc7e509d91a",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Localization/README.md",
+    "source": "Localization/Core/README.md",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "7d389d917c6e01ef5002d984a6c8e5dbb07941a55544adbff78902e2490a4b4b",
+    "upstream_sha256": "1ca7600f1bf2ed21f8aa1204e4a1b29381c675935fe1d2341aedbc9ecec8793f",
+    "adaptation": "project path/version or source-install documentation only"
+  },
+  {
+    "path": "Frontend/Platform/RBI.Localization/Services/IRbiLocalizer.cs",
+    "source": "Localization/Core/Services/IRbiLocalizer.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "76efff3471809295b8aa237daf06738033bc12b6c8da7c469ba0f5e766a894c4",
+    "upstream_sha256": "76efff3471809295b8aa237daf06738033bc12b6c8da7c469ba0f5e766a894c4",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Localization/Services/RbiLocalizer.cs",
+    "source": "Localization/Core/Services/RbiLocalizer.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "4394d949cc955c9fb83eedf7c45545400259c97e40fa16d48d93c31bdf915e01",
+    "upstream_sha256": "4394d949cc955c9fb83eedf7c45545400259c97e40fa16d48d93c31bdf915e01",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.ApiCore/ApiClients.cs",
+    "source": "Api/ApiClients.cs",
+    "revision": "a38b94c66637314fec4cfd29e40a4026c00192e7",
+    "sha256": "90d632dfe75ed1f13301dcb2cc9db4a582aab57663fd63106be6919cb208aae9",
+    "upstream_sha256": "90d632dfe75ed1f13301dcb2cc9db4a582aab57663fd63106be6919cb208aae9",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.ApiCore/ApiOptions.cs",
+    "source": "Api/ApiOptions.cs",
+    "revision": "a38b94c66637314fec4cfd29e40a4026c00192e7",
+    "sha256": "872530e6c9c921c5e712c6ab5269e42f51abfa0cd2cfc56da23801d34c81d10e",
+    "upstream_sha256": "872530e6c9c921c5e712c6ab5269e42f51abfa0cd2cfc56da23801d34c81d10e",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.ApiCore/Internal/IRbiApiLogicalRequestHandler.cs",
+    "source": "Api/Internal/IRbiApiLogicalRequestHandler.cs",
+    "revision": "a38b94c66637314fec4cfd29e40a4026c00192e7",
+    "sha256": "e097a672b668d2e340192fcb43c95909897fc08eb427123b9e60348b3ec73715",
+    "upstream_sha256": "e097a672b668d2e340192fcb43c95909897fc08eb427123b9e60348b3ec73715",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.ApiCore/Internal/RbiApiClientRegistration.cs",
+    "source": "Api/Internal/RbiApiClientRegistration.cs",
+    "revision": "a38b94c66637314fec4cfd29e40a4026c00192e7",
+    "sha256": "47569f8f7fa4567c9f6ef7b099638ae30750fa7f02c0f30e80715d106501c19a",
+    "upstream_sha256": "47569f8f7fa4567c9f6ef7b099638ae30750fa7f02c0f30e80715d106501c19a",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.ApiCore/Internal/RbiApiRequestContextHandler.cs",
+    "source": "Api/Internal/RbiApiRequestContextHandler.cs",
+    "revision": "a38b94c66637314fec4cfd29e40a4026c00192e7",
+    "sha256": "fa721104cd95b28079e517ad317f81593a9802edfe282f1f705b78f9bc550bcd",
+    "upstream_sha256": "fa721104cd95b28079e517ad317f81593a9802edfe282f1f705b78f9bc550bcd",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.ApiCore/Internal/RbiApiResilience.cs",
+    "source": "Api/Internal/RbiApiResilience.cs",
+    "revision": "a38b94c66637314fec4cfd29e40a4026c00192e7",
+    "sha256": "ba7e2d172699ee7722f8339b3ae8489f0a4eaa0300c376853cd28888ebf988c2",
+    "upstream_sha256": "ba7e2d172699ee7722f8339b3ae8489f0a4eaa0300c376853cd28888ebf988c2",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.ApiCore/Models/ApiError.cs",
+    "source": "Api/Models/ApiError.cs",
+    "revision": "a38b94c66637314fec4cfd29e40a4026c00192e7",
+    "sha256": "28406c006805cc307d1c57e3f34f0064a17ad5eb3afa2da1d6e6632f909bf10f",
+    "upstream_sha256": "28406c006805cc307d1c57e3f34f0064a17ad5eb3afa2da1d6e6632f909bf10f",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.ApiCore/Models/RbiApiFile.cs",
+    "source": "Api/Models/RbiApiFile.cs",
+    "revision": "a38b94c66637314fec4cfd29e40a4026c00192e7",
+    "sha256": "697d3c6715435b03ccfff23392318784b7a475f28084d70fe8abb2123de667f2",
+    "upstream_sha256": "697d3c6715435b03ccfff23392318784b7a475f28084d70fe8abb2123de667f2",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.ApiCore/Models/RbiApiResult.cs",
+    "source": "Api/Models/RbiApiResult.cs",
+    "revision": "a38b94c66637314fec4cfd29e40a4026c00192e7",
+    "sha256": "6a379838ac4bc4826441b5f8ae315970eb9243c77a72a70aedbe85bb2cf2cbb2",
+    "upstream_sha256": "6a379838ac4bc4826441b5f8ae315970eb9243c77a72a70aedbe85bb2cf2cbb2",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.ApiCore/Properties/AssemblyInfo.cs",
+    "source": "Api/Properties/AssemblyInfo.cs",
+    "revision": "a38b94c66637314fec4cfd29e40a4026c00192e7",
+    "sha256": "9fcca87161b8791d629cb0340daf1fce3efbd7e59364e53da832c07bfb361219",
+    "upstream_sha256": "9fcca87161b8791d629cb0340daf1fce3efbd7e59364e53da832c07bfb361219",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.ApiCore/PublicAPI.Shipped.txt",
+    "source": "Api/PublicAPI.Shipped.txt",
+    "revision": "a38b94c66637314fec4cfd29e40a4026c00192e7",
+    "sha256": "3c3b422dddb1efeb0fc5b228608fd8682452b2a9507d4031894bce3c4dedadbd",
+    "upstream_sha256": "3c3b422dddb1efeb0fc5b228608fd8682452b2a9507d4031894bce3c4dedadbd",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.ApiCore/PublicAPI.Unshipped.txt",
+    "source": "Api/PublicAPI.Unshipped.txt",
+    "revision": "a38b94c66637314fec4cfd29e40a4026c00192e7",
+    "sha256": "b5caa10b7d21ba864fdfb35e27e8f009e3454d13e3afe45f4305d6f85623c83f",
+    "upstream_sha256": "b5caa10b7d21ba864fdfb35e27e8f009e3454d13e3afe45f4305d6f85623c83f",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.ApiCore/RBI.ApiCore.csproj",
+    "source": "Api/RBI.ApiCore.csproj",
+    "revision": "a38b94c66637314fec4cfd29e40a4026c00192e7",
+    "sha256": "cc3fee05d4c8094c2d4201e441507423ca24ce11eec6b885c95f56fd1280aae4",
+    "upstream_sha256": "6ee8e78059230f4a05c3c70fbfb711517080d18e8c87362de96f5d95ca3893a6",
+    "adaptation": "project path/version or source-install documentation only"
+  },
+  {
+    "path": "Frontend/Platform/RBI.ApiCore/README.md",
+    "source": "Api/README.md",
+    "revision": "a38b94c66637314fec4cfd29e40a4026c00192e7",
+    "sha256": "4e0895857d6a4c31d0c89907a4b75fb27b7058c9fb5be848733d6b72f4ea50e2",
+    "upstream_sha256": "d921d8f45303a3449eafc49a3d535a634cbe79adfc4f435d021fc2a71a1ac306",
+    "adaptation": "project path/version or source-install documentation only"
+  },
+  {
+    "path": "Frontend/Platform/RBI.ApiCore/Services/IRbiApiFileTransport.cs",
+    "source": "Api/Services/IRbiApiFileTransport.cs",
+    "revision": "a38b94c66637314fec4cfd29e40a4026c00192e7",
+    "sha256": "3b1ebd2fa7da478cc933fc72d75d4543525c354dc8ee0f9a2d1891857f37324c",
+    "upstream_sha256": "3b1ebd2fa7da478cc933fc72d75d4543525c354dc8ee0f9a2d1891857f37324c",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.ApiCore/Services/IRbiApiTransport.cs",
+    "source": "Api/Services/IRbiApiTransport.cs",
+    "revision": "a38b94c66637314fec4cfd29e40a4026c00192e7",
+    "sha256": "bf23bd5a6f76e1b3d7407fd2b98aad86f1959435ce2ca015ae6adb6d497c053d",
+    "upstream_sha256": "bf23bd5a6f76e1b3d7407fd2b98aad86f1959435ce2ca015ae6adb6d497c053d",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.ApiCore/Services/RbiApiTransport.cs",
+    "source": "Api/Services/RbiApiTransport.cs",
+    "revision": "a38b94c66637314fec4cfd29e40a4026c00192e7",
+    "sha256": "79f4f0fe0349ec9a8f57d2b76958e4245a4b9f017efca3bac1692a48467edbad",
+    "upstream_sha256": "79f4f0fe0349ec9a8f57d2b76958e4245a4b9f017efca3bac1692a48467edbad",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authentication/AuthenticationOptions.cs",
+    "source": "Auth/Authentication/AuthenticationOptions.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "e1a96bb4c8cbe1a9fea0c2b9a8933ce6a3058dbb07d6786bf51d3d187ca79169",
+    "upstream_sha256": "e1a96bb4c8cbe1a9fea0c2b9a8933ce6a3058dbb07d6786bf51d3d187ca79169",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authentication/Handlers/RbiCookieAuthenticationEvents.cs",
+    "source": "Auth/Authentication/Handlers/RbiCookieAuthenticationEvents.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "b1dbc6c330c9ed456b5c61e5fc9d757e8a6d77244d883d3a052afebdbc530197",
+    "upstream_sha256": "b1dbc6c330c9ed456b5c61e5fc9d757e8a6d77244d883d3a052afebdbc530197",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authentication/Handlers/RbiOpenIdConnectEvents.cs",
+    "source": "Auth/Authentication/Handlers/RbiOpenIdConnectEvents.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "8e9aa2f773a6db3d1527192d1682680e4d2ce60494421fa191078500a92b6574",
+    "upstream_sha256": "8e9aa2f773a6db3d1527192d1682680e4d2ce60494421fa191078500a92b6574",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authentication/Handlers/RbiUserAccessTokenHandler.cs",
+    "source": "Auth/Authentication/Handlers/RbiUserAccessTokenHandler.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "96cdb240f6b476f693c749ac543ef22a6478558369705307910816a4b257f9dd",
+    "upstream_sha256": "96cdb240f6b476f693c749ac543ef22a6478558369705307910816a4b257f9dd",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authentication/Internal/IRbiAuthenticationSessionContext.cs",
+    "source": "Auth/Authentication/Internal/IRbiAuthenticationSessionContext.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "14523db8dcce4afeb6f69f3fb929ecff1945bea37196152c515dd9020b07c696",
+    "upstream_sha256": "14523db8dcce4afeb6f69f3fb929ecff1945bea37196152c515dd9020b07c696",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authentication/Internal/IRbiRefreshTokenClient.cs",
+    "source": "Auth/Authentication/Internal/IRbiRefreshTokenClient.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "1ef32613cb78ccb17a9753620209bffd5843ace70654c6bb9ee06705abe7e281",
+    "upstream_sha256": "1ef32613cb78ccb17a9753620209bffd5843ace70654c6bb9ee06705abe7e281",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authentication/Internal/IRbiTokenSessionStore.cs",
+    "source": "Auth/Authentication/Internal/IRbiTokenSessionStore.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "e0a3cf194e505baadcfabaf800384ff368fcc7f6ec4f76e60707afefba6dc07e",
+    "upstream_sha256": "e0a3cf194e505baadcfabaf800384ff368fcc7f6ec4f76e60707afefba6dc07e",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authentication/Internal/RbiAuthenticationDefaults.cs",
+    "source": "Auth/Authentication/Internal/RbiAuthenticationDefaults.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "7c1f111dbd50ed73fac25517baab95eb7c137d2250a762ae73d3ab43d8286a1e",
+    "upstream_sha256": "7c1f111dbd50ed73fac25517baab95eb7c137d2250a762ae73d3ab43d8286a1e",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authentication/Internal/RbiAuthenticationOptionsValidator.cs",
+    "source": "Auth/Authentication/Internal/RbiAuthenticationOptionsValidator.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "ec8a60d96370f3d881137c8483c762a7483982ef53f98f78d5ecfbeba44c8672",
+    "upstream_sha256": "ec8a60d96370f3d881137c8483c762a7483982ef53f98f78d5ecfbeba44c8672",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authentication/Internal/RbiAuthenticationSchemes.cs",
+    "source": "Auth/Authentication/Internal/RbiAuthenticationSchemes.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "8ca1ed8d96eaa5bb305fdbb53ae3a78b4134af25b8453aee093b0bfd3a9bdcb0",
+    "upstream_sha256": "8ca1ed8d96eaa5bb305fdbb53ae3a78b4134af25b8453aee093b0bfd3a9bdcb0",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authentication/Internal/RbiAuthenticationStateSessionContext.cs",
+    "source": "Auth/Authentication/Internal/RbiAuthenticationStateSessionContext.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "b78b99078190bf70cc71c730d0906ca4d48f38d89a3166ef169b69cf18482754",
+    "upstream_sha256": "b78b99078190bf70cc71c730d0906ca4d48f38d89a3166ef169b69cf18482754",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authentication/IoC/AuthEndpoints.cs",
+    "source": "Auth/Authentication/IoC/AuthEndpoints.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "a7aac06604f7795cada1c85a947e65e4d5a7ddf60454ed1301e9b05300a7f3a5",
+    "upstream_sha256": "a7aac06604f7795cada1c85a947e65e4d5a7ddf60454ed1301e9b05300a7f3a5",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authentication/IoC/AuthenticatedClients.cs",
+    "source": "Auth/Authentication/IoC/AuthenticatedClients.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "39f17d5837d28c8cc357a853311f92e5d7867953abafccbaa9cb02f23ad9eece",
+    "upstream_sha256": "39f17d5837d28c8cc357a853311f92e5d7867953abafccbaa9cb02f23ad9eece",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authentication/IoC/Authentication.cs",
+    "source": "Auth/Authentication/IoC/Authentication.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "269be73a1b450cbc101c0f328cc8652ee726df7fe9964f6c63960c16593b9bc1",
+    "upstream_sha256": "269be73a1b450cbc101c0f328cc8652ee726df7fe9964f6c63960c16593b9bc1",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authentication/Models/RbiTokenAcquisitionResult.cs",
+    "source": "Auth/Authentication/Models/RbiTokenAcquisitionResult.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "d35469d4ba8504eb5ca3fdb7d60234e33836327f1ae48ee09819a132890353ba",
+    "upstream_sha256": "d35469d4ba8504eb5ca3fdb7d60234e33836327f1ae48ee09819a132890353ba",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authentication/Models/RbiTokenSession.cs",
+    "source": "Auth/Authentication/Models/RbiTokenSession.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "12d99a1b1424ca31b39ccf05cc44d71a1e43c8b72ed4494c2682abfcc707e2bc",
+    "upstream_sha256": "12d99a1b1424ca31b39ccf05cc44d71a1e43c8b72ed4494c2682abfcc707e2bc",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authentication/Properties/AssemblyInfo.cs",
+    "source": "Auth/Authentication/Properties/AssemblyInfo.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "cb203d70d7f3a1943a404134badd86f3253217d5500482be3aacabfd7fa469cf",
+    "upstream_sha256": "cb203d70d7f3a1943a404134badd86f3253217d5500482be3aacabfd7fa469cf",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authentication/PublicAPI.Shipped.txt",
+    "source": "Auth/Authentication/PublicAPI.Shipped.txt",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "3c3b422dddb1efeb0fc5b228608fd8682452b2a9507d4031894bce3c4dedadbd",
+    "upstream_sha256": "3c3b422dddb1efeb0fc5b228608fd8682452b2a9507d4031894bce3c4dedadbd",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authentication/PublicAPI.Unshipped.txt",
+    "source": "Auth/Authentication/PublicAPI.Unshipped.txt",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "bf21f54a47efee4b0b34fda9dc99de695fd9636b3a11b74494472cdd42d553d0",
+    "upstream_sha256": "bf21f54a47efee4b0b34fda9dc99de695fd9636b3a11b74494472cdd42d553d0",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authentication/RBI.Authentication.csproj",
+    "source": "Auth/Authentication/RBI.Authentication.csproj",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "c35e97877636b7d9c22eb9038a090f38c5aab8300590ccf16356f0a695122975",
+    "upstream_sha256": "bf559aaa69fdbbc7135e49b3092563ebeb57fa6c4d44667ce2183de98f8709eb",
+    "adaptation": "project path/version or source-install documentation only"
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authentication/README.md",
+    "source": "Auth/Authentication/README.md",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "c24f739e1db8928399d213a43c673d3d9fb58ebc0829cbff4d4740d095ae21af",
+    "upstream_sha256": "d39c36a4f70c785117b18b8652c5553c83dea1843b4987a56ffcdea00451efee",
+    "adaptation": "project path/version or source-install documentation only"
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authentication/Services/RbiDistributedTokenSessionStore.cs",
+    "source": "Auth/Authentication/Services/RbiDistributedTokenSessionStore.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "bee6e952c3116f86803db43cfefcb0e38119821d84f90b85ac1306975568e3c0",
+    "upstream_sha256": "bee6e952c3116f86803db43cfefcb0e38119821d84f90b85ac1306975568e3c0",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authentication/Services/RbiOidcRefreshTokenClient.cs",
+    "source": "Auth/Authentication/Services/RbiOidcRefreshTokenClient.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "1610314aac94ae95686a5d50ed2d0273399f976438e94c5de90e540b25ca68db",
+    "upstream_sha256": "1610314aac94ae95686a5d50ed2d0273399f976438e94c5de90e540b25ca68db",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authentication/Services/RbiRefreshCoordinator.cs",
+    "source": "Auth/Authentication/Services/RbiRefreshCoordinator.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "c6a1913217397584cc68ed69292682c653d6aff0ce0b91a9e456f2fe6110311a",
+    "upstream_sha256": "c6a1913217397584cc68ed69292682c653d6aff0ce0b91a9e456f2fe6110311a",
+    "adaptation": null
+  },
+  {
+    "path": "Frontend/Platform/RBI.Authentication/Services/RbiUserAccessTokenProvider.cs",
+    "source": "Auth/Authentication/Services/RbiUserAccessTokenProvider.cs",
+    "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
+    "sha256": "79c83c8cd783194c0fb7236af66d888e1f5f46b37fc9f22aa0c0264731752629",
+    "upstream_sha256": "79c83c8cd783194c0fb7236af66d888e1f5f46b37fc9f22aa0c0264731752629",
+    "adaptation": null
+  }
+]

@@ -1,0 +1,15 @@
+<section @attributes="AdditionalAttributes" class="@CssClass" data-surface="@SurfaceAttribute">
+    @ChildContent
+</section>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RbiSectionSpacing Spacing { get; set; } = RbiSectionSpacing.Default;
+    [Parameter] public RbiSurface Surface { get; set; } = RbiSurface.Default;
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CssClass => $"rbi-section rbi-section--{Spacing.ToString().ToLowerInvariant()} {Class}".TrimEnd();
+    private string? SurfaceAttribute => Surface == RbiSurface.Default ? null : Surface.ToString().ToLowerInvariant();
+}

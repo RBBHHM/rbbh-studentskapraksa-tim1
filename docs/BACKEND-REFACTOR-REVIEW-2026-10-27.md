@@ -98,7 +98,7 @@ Preserved user file: `tests/Web.Blazor.BrowserHost/Properties/launchSettings.jso
 Commands (repository root unless indicated):
 
 ```powershell
-dotnet restore RelatedPartiesRegister.slnx --artifacts-path artifacts/backend-refactor --packages artifacts/migration-template/nuget-cache --configfile artifacts/migration-template/NuGet.config
+dotnet restore RelatedPartiesRegister.slnx --artifacts-path artifacts/backend-refactor --configfile NuGet.config
 dotnet build RelatedPartiesRegister.slnx --artifacts-path artifacts/backend-refactor --no-restore -p:RunAnalyzers=true
 $env:RBBH_TEST_SQLSERVER='Server=(localdb)\MSSQLLocalDB;Integrated Security=true;TrustServerCertificate=true'
 dotnet test RelatedPartiesRegister.slnx --artifacts-path artifacts/backend-refactor --no-restore --no-build --results-directory artifacts/backend-refactor/results/final --logger 'trx;LogFilePrefix=final'

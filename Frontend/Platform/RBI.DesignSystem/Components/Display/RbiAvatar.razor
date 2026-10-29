@@ -1,0 +1,36 @@
+<span @attributes="SafeAttributes" class="@CssClass" role="@Role" aria-label="@AccessibleLabel">
+    @* The fallback is always rendered beneath the image so loading and failed images never leave an empty circle or shift layout. *@
+    <span class="rbi-avatar__fallback" aria-hidden="true">@Fallback</span>
+    @if (!_imageFailed && !string.IsNullOrWhiteSpace(Source))
+    {
+        <img src="@Source" alt="" aria-hidden="true" @onerror="ImageFailed" />
+    }
+</span>
+
+@code {
+    private bool _imageFailed;
+    private string? _previousSource;
+
+    [Parameter] public string? Source { get; set; }
+    [Parameter, EditorRequired] public string Fallback { get; set; } = string.Empty;
+    [Parameter] public string? AccessibleLabel { get; set; }
+    [Parameter] public RbiAvatarSize Size { get; set; } = RbiAvatarSize.Medium;
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CssClass => string.Join(' ', new[] { "rbi-avatar", $"rbi-avatar--{Size.ToString().ToLowerInvariant()}", Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private string Role => string.IsNullOrWhiteSpace(AccessibleLabel) ? "presentation" : "img";
+    private IReadOnlyDictionary<string, object>? SafeAttributes => RBI.DesignSystem.Components.Forms.RbiFormUtilities.SafeAttributes(AdditionalAttributes, "class", "role", "aria-label");
+
+    protected override void OnParametersSet()
+    {
+        if (!string.Equals(_previousSource, Source, StringComparison.Ordinal))
+        {
+            _previousSource = Source;
+            _imageFailed = false;
+        }
+        if (string.IsNullOrWhiteSpace(Fallback)) throw new InvalidOperationException($"{nameof(Fallback)} is required.");
+    }
+
+    private void ImageFailed() => _imageFailed = true;
+}

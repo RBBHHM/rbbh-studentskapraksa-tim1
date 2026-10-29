@@ -1,0 +1,54 @@
+@inherits InputBase<bool>
+
+<label class="@WrapperClass">
+    <input @attributes="SafeAttributes"
+           id="@ResolvedId"
+           class="rbi-choice__input"
+           type="checkbox"
+           role="switch"
+           checked="@CurrentValue"
+           disabled="@EffectiveDisabled"
+           required="@EffectiveRequired"
+           aria-invalid="@AriaInvalid"
+           aria-describedby="@DescribedBy"
+           @onchange="ChangeValue" />
+    <span class="rbi-switch__track" aria-hidden="true"><span class="rbi-switch__thumb"></span></span>
+    <span class="rbi-choice__content">
+        <span class="rbi-choice__label">@ChildContent</span>
+        @if (!string.IsNullOrWhiteSpace(Description))
+        {
+            <span id="@DescriptionId" class="rbi-choice__description">@Description</span>
+        }
+    </span>
+</label>
+
+@code {
+    private readonly string _generatedId = RbiFormUtilities.Id("switch");
+
+    [CascadingParameter] private RbiFieldContext? Field { get; set; }
+    [Parameter] public string? Id { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Description { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool Required { get; set; }
+    [Parameter] public bool Invalid { get; set; }
+
+    private bool EffectiveDisabled => Disabled || Field?.Disabled == true;
+    private bool EffectiveRequired => Required || Field?.Required == true;
+    private bool ValidationInvalid => EditContext?.GetValidationMessages(FieldIdentifier).Any() == true;
+    private bool EffectiveInvalid => Invalid || Field?.Invalid == true || ValidationInvalid;
+    private string ResolvedId => Id ?? RbiFormUtilities.Attribute(AdditionalAttributes, "id") ?? Field?.ControlId ?? _generatedId;
+    private string DescriptionId => $"{ResolvedId}-description";
+    private string WrapperClass => string.Join(' ', new[] { "rbi-choice", "rbi-switch", EffectiveDisabled ? "rbi-choice--disabled" : null, EffectiveInvalid ? "rbi-choice--invalid" : null, CssClass }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private string? AriaInvalid => EffectiveInvalid ? "true" : RbiFormUtilities.Attribute(AdditionalAttributes, "aria-invalid");
+    private string? DescribedBy => RbiFormUtilities.JoinIds(Field?.DescribedBy, string.IsNullOrWhiteSpace(Description) ? null : DescriptionId, RbiFormUtilities.Attribute(AdditionalAttributes, "aria-describedby"));
+    private IReadOnlyDictionary<string, object>? SafeAttributes => RbiFormUtilities.SafeAttributes(AdditionalAttributes, "id", "class", "type", "role", "checked", "disabled", "required", "aria-invalid", "aria-describedby");
+
+    private void ChangeValue(ChangeEventArgs args) => CurrentValue = args.Value is bool value && value;
+    protected override bool TryParseValueFromString(string? value, out bool result, out string validationErrorMessage)
+    {
+        result = string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
+        validationErrorMessage = string.Empty;
+        return true;
+    }
+}

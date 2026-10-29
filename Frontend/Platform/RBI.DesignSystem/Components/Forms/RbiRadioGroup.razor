@@ -1,0 +1,101 @@
+@typeparam TValue
+@using System.Linq.Expressions
+@using Microsoft.AspNetCore.Components.Forms
+@implements IDisposable
+
+<fieldset @attributes="SafeAttributes" id="@ResolvedId" class="@CssClass" disabled="@Disabled">
+    @if (!string.IsNullOrWhiteSpace(Label))
+    {
+        <legend id="@LabelId" class="rbi-radio-group__label">
+            @Label
+            @if (Required)
+            {
+                <span class="rbi-field__required" aria-hidden="true">*</span>
+            }
+        </legend>
+    }
+    <div role="radiogroup"
+         aria-label="@AriaLabel"
+         aria-labelledby="@AriaLabelledBy"
+         aria-invalid="@AriaInvalid"
+         aria-required="@AriaRequired"
+         aria-describedby="@DescribedBy"
+         class="rbi-radio-group__options">
+        <CascadingValue Value="@GroupContext" IsFixed="false">
+            @ChildContent
+        </CascadingValue>
+    </div>
+    @if (HasHelpText)
+    {
+        <p id="@HelpId" class="rbi-field__help">@HelpText</p>
+    }
+    <div class="@MessageCssClass" aria-live="polite" aria-atomic="true">@if (Invalid) {<p id="@ErrorId" class="rbi-field__error">@ResolvedError</p>}</div>
+</fieldset>
+
+@code {
+    private readonly string _generatedId = RbiFormUtilities.Id("radio-group");
+    private EditContext? _subscribedContext;
+
+    [CascadingParameter] private EditContext? EditContext { get; set; }
+    [Parameter] public string? Id { get; set; }
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public string? AccessibleLabel { get; set; }
+    [Parameter] public string? HelpText { get; set; }
+    [Parameter] public string? ErrorText { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool Required { get; set; }
+    [Parameter] public TValue? Value { get; set; }
+    [Parameter] public EventCallback<TValue?> ValueChanged { get; set; }
+    [Parameter] public Expression<Func<TValue?>>? ValueExpression { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string ResolvedId => Id ?? RbiFormUtilities.Attribute(AdditionalAttributes, "id") ?? _generatedId;
+    private string LabelId => $"{ResolvedId}-label";
+    private string HelpId => $"{ResolvedId}-help";
+    private string ErrorId => $"{ResolvedId}-error";
+    private string Name => RbiFormUtilities.Attribute(AdditionalAttributes, "name") ?? ResolvedId;
+    private FieldIdentifier? FieldIdentifier => RbiFormUtilities.FieldFor(ValueExpression);
+    private string? ValidationError => FieldIdentifier is { } fieldIdentifier && EditContext is not null ? EditContext.GetValidationMessages(fieldIdentifier).FirstOrDefault() : null;
+    private string? ResolvedError => ErrorText ?? ValidationError;
+    private string MessageCssClass => Invalid ? "rbi-field__message" : "rbi-field__message rbi-field__message--empty";
+    private bool Invalid => !string.IsNullOrWhiteSpace(ResolvedError);
+    private bool HasHelpText => !string.IsNullOrWhiteSpace(HelpText);
+    private string? DescribedBy => RbiFormUtilities.JoinIds(HasHelpText ? HelpId : null, Invalid ? ErrorId : null, RbiFormUtilities.Attribute(AdditionalAttributes, "aria-describedby"));
+    private string? AriaLabelledBy => string.IsNullOrWhiteSpace(Label) ? RbiFormUtilities.Attribute(AdditionalAttributes, "aria-labelledby") : LabelId;
+    private string? AriaLabel => string.IsNullOrWhiteSpace(Label) ? AccessibleLabel ?? RbiFormUtilities.Attribute(AdditionalAttributes, "aria-label") : null;
+    private string? AriaInvalid => Invalid ? "true" : RbiFormUtilities.Attribute(AdditionalAttributes, "aria-invalid");
+    private string? AriaRequired => Required ? "true" : RbiFormUtilities.Attribute(AdditionalAttributes, "aria-required");
+    private string CssClass => string.Join(' ', new[] { "rbi-radio-group", Disabled ? "rbi-choice--disabled" : null, Invalid ? "rbi-choice--invalid" : null, Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private RbiRadioGroupContext<TValue> GroupContext => new(Name, Value, Disabled, Required, Invalid, DescribedBy, SelectAsync);
+    private IReadOnlyDictionary<string, object>? SafeAttributes => RbiFormUtilities.SafeAttributes(AdditionalAttributes, "id", "class", "name", "role", "disabled", "aria-label", "aria-labelledby", "aria-invalid", "aria-required", "aria-describedby");
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(Label) && string.IsNullOrWhiteSpace(AccessibleLabel) && string.IsNullOrWhiteSpace(RbiFormUtilities.Attribute(AdditionalAttributes, "aria-label")) && string.IsNullOrWhiteSpace(RbiFormUtilities.Attribute(AdditionalAttributes, "aria-labelledby")))
+            throw new InvalidOperationException($"{nameof(Label)} or {nameof(AccessibleLabel)} is required for the radio group.");
+
+        if (!ReferenceEquals(_subscribedContext, EditContext))
+        {
+            if (_subscribedContext is not null) _subscribedContext.OnValidationStateChanged -= ValidationChanged;
+            _subscribedContext = EditContext;
+            if (_subscribedContext is not null) _subscribedContext.OnValidationStateChanged += ValidationChanged;
+        }
+    }
+
+    private async Task SelectAsync(TValue value)
+    {
+        if (Disabled || EqualityComparer<TValue?>.Default.Equals(Value, value)) return;
+        StateHasChanged();
+        await ValueChanged.InvokeAsync(value);
+        if (FieldIdentifier is { } fieldIdentifier && EditContext is not null) EditContext.NotifyFieldChanged(fieldIdentifier);
+    }
+
+    private void ValidationChanged(object? sender, ValidationStateChangedEventArgs args) => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        if (_subscribedContext is not null) _subscribedContext.OnValidationStateChanged -= ValidationChanged;
+    }
+}

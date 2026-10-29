@@ -1,0 +1,20 @@
+@typeparam TValue
+
+<button @attributes="SafeAttributes" type="button" role="radio" class="@CssClass" disabled="@EffectiveDisabled" aria-checked="@(Selected ? "true" : "false")" tabindex="@(Selected && !EffectiveDisabled ? 0 : -1)" @onclick="SelectAsync">
+    @ChildContent
+</button>
+
+@code {
+    [CascadingParameter] private RbiToggleGroupContext<TValue> Group { get; set; } = default!;
+    [Parameter, EditorRequired] public TValue Value { get; set; } = default!;
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private bool Selected => EqualityComparer<TValue?>.Default.Equals(Group.Value, Value);
+    private bool EffectiveDisabled => Disabled || Group.Disabled;
+    private string CssClass => string.Join(' ', new[] { "rbi-toggle", "rbi-toggle-group__item", Selected ? "rbi-toggle--pressed" : null, Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private IReadOnlyDictionary<string, object>? SafeAttributes => RBI.DesignSystem.Components.Forms.RbiFormUtilities.SafeAttributes(AdditionalAttributes, "class", "type", "disabled", "role", "tabindex", "aria-checked", "aria-pressed");
+    private Task SelectAsync() => EffectiveDisabled ? Task.CompletedTask : Group.SelectAsync(Value);
+}

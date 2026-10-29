@@ -1,6 +1,10 @@
-# Related Parties Register — native Blazor handoff
+> Current layout/source delivery: see README and Frontend/Platform/SOURCE.md.
+> Earlier dated acceptance numbers below are historical checkpoints; current
+> structural verification is recorded in STRUCTURAL-CLEANUP-2026-10-28.md.
 
-## Current integration and source-retirement result — 2026-10-26
+# Related Parties Register â€” native Blazor handoff
+
+## Current integration and source-retirement result â€” 2026-10-26
 
 The owner confirmed ff2d173 as Claude's final batch. It was cherry-picked as
 4d821d9 and semantically reconciled; ccca8c5 preserves global-period guards in
@@ -21,7 +25,7 @@ No production deployment, production data backfill or push was performed.
 F3 production reconciliation and real SSO/SQL/mail/shared-state/OCP/feed gates
 remain outstanding. All following checkpoint sections are historical evidence.
 
-## Hardening checkpoint before visual integration — 2026-10-26, after18702db
+## Hardening checkpoint before visual integration â€” 2026-10-26, after18702db
 
 **LOCAL BEHAVIOR/SECURITY VERIFIED; VISUAL RECONCILIATION AND PRODUCTION CUTOVER
 OUTSTANDING.** Owner decisions supersede the earlier unknown-not-Guest rule.
@@ -130,11 +134,11 @@ CodeQL scans the maintained solution/native JS/TS. No workflow was run remotely.
 
 Removed: duplicate old .yaml workflows, both nested workflows, Makefile,
 build/restore/test/dev-web .cmd wrappers, IIS deployment and candidate publish/probe
-scripts. Only scripts/dev-api.cmd and scripts/testing/Test-LocalApi.ps1 remain
+scripts. Only the retired API wrapper and scripts/testing/Test-LocalApi.ps1 remain
 temporarily because the untouched React reference package.json calls them.
 README uses direct dotnet/docker commands; no replacement wrapper was introduced.
 
-src/Web remains **untouched**. Claude's visual commit ff2d173 now exists and its
+the retired React reference tree remains **untouched**. Claude's visual commit ff2d173 now exists and its
 report was reviewed: Admin74/75 before an unrerun correction, five roles not run,
 and incomplete dark/mobile visual evidence. Final-batch readiness is unconfirmed;
 it has not been cherry-picked. Review/reconcile the confirmed final visual
@@ -146,14 +150,14 @@ the old backend-only .sln is not the native release gate.
 
 External blockers: actual realm verified-email/sub/export/backfill acceptance;
 production SQL migration/reconciliation and deployed concurrency permissions;
-SMTP/HTTP mail recipients/delivery; approved RBI package publication/private feed;
+SMTP/HTTP mail recipients/delivery;
 shared cache/DataProtection/multi-pod/proxy/circuit/TLS; protected Actions/OCP
 runner/registry access and accepted immutable artifacts; corporate advisory-feed
 and runtime servicing confirmation. Local green tests do not authorize cutover.
 User-owned tests/Web.Blazor.BrowserHost/Properties/launchSettings.json is untouched
 (SHA25607DAA11FF2D5D953B78D8FE4C7209AF625C3D76F2FBEC747986EB6F8DF39EC93).
 
-## Historical reconciliation at18702db — retained checkpoint
+## Historical reconciliation at18702db â€” retained checkpoint
 
 Everything below describes the earlier checkpoint, including its old Guest/F3,
 workflow/schema/script statements and594/237 totals. It is not the current
@@ -165,14 +169,14 @@ that live SQL/SSO/OCP acceptance has passed. Never deploy two canonical frontend
 
 ## 1. Original React routes
 
-`/` → `/app`; `/app/physical-persons`, `legal-persons`, `limits`, `capital`,
+`/` â†’ `/app`; `/app/physical-persons`, `legal-persons`, `limits`, `capital`,
 `reports`, `notifications`, `admin/users`, `admin/period`, `admin/code-lists`,
 `admin/audit`, `profile`, `guide`. Full source contracts are in
 BLAZOR-MIGRATION-INVENTORY.md, inspected baseline `68d3e7f`.
 
 ## 2. Native Blazor routes
 
-All listed `/app` paths exist under src/Web.Blazor/Components/Pages.
+All listed `/app` paths exist under Frontend/Components/Pages.
 `/` also opens the dashboard; `/profile` remains a template alias. Error/not-found
 pages and FocusOnNavigate remain template-owned. No business endpoint was deleted.
 
@@ -273,7 +277,7 @@ Actual login/logout/refresh/audience and user lookup require an approved test
 realm/environment; isolated test identity cannot certify them. No credentials
 were read into chat, committed or logged.
 
-### F3 identity binding — PARTIAL, production migration NOT implemented
+### F3 identity binding â€” PARTIAL, production migration NOT implemented
 
 Subject-first lookup is implemented. A known inactive subject is denied without
 email fallback. Verified unique normalized email fallback is implemented; unknown
@@ -397,10 +401,10 @@ business decisions, backend calculations and import partial-row semantics remain
 F3 one-time subject-link migration/backfill and real Keycloak export/data
 reconciliation, including actual email_verified claim; owner-provisioned/approved
 Keycloak confidential client and issuer/audience/redirect
-settings; actual SSO/login/logout/refresh and identity↔application-user acceptance;
+settings; actual SSO/login/logout/refresh and identityâ†”application-user acceptance;
 approved shared IDistributedCache registration/provider and shared DataProtection;
 live SQL concurrency/constraints and existing migration policy acceptance; SMTP
-delivery; private publication of approved RBI transport packages; OCP/proxy/circuit
+delivery;  OCP/proxy/circuit
 deployment and replacement-workflow proof; corporate dependency/runtime servicing
 acceptance. Pkcs9.0.21 remains pinned and locally patched. Production vulnerability-
 feed confirmation remains external: cached/no-restore green builds are NOT fresh
@@ -410,45 +414,22 @@ forwarded-header network trust require explicit deployment acceptance, not reuse
 as approved native production defaults. No credential guessing, live destructive
 data tests or production cutover is authorized by local green tests.
 
-## 18. Removed React dependencies/files
+## 18. Current repository and source delivery
 
-**None removed from src/Web or active deployment.** Its new MIGRATION_REFERENCE
-marker is the only React-tree change in final completion. Native src/Web.Blazor has no
-React/TanStack/Radix/i18next/Tailwind/keycloak-js dependency. Retiring/archive of
-the old frontend is deferred until parity/environment acceptance; preserving
-reference source is intentional, not two active production implementations.
-The274 previously tracked files and exact package/tool consumers are inventoried
-in BLAZOR-MIGRATION-RETIREMENT-AND-DEPLOYMENT.md. Current legacy keycloak-js is
-absent; no imaginary dependency removal is claimed.
+The retired React source/tooling is absent from the final branch. Production code
+lives only in Backend and Frontend. Root tests contains backend unit/integration,
+Blazor .NET and test-only BrowserHost/browser coverage. The single canonical
+solution is RelatedPartiesRegister.slnx. Exactly three root workflows remain.
 
-## 19. Repository structure
+The seven required RBI runtime projects are checked in under Frontend/Platform
+and consumed via ProjectReference. This supersedes earlier package-only migration
+assumptions. Source provenance is in Frontend/Platform/SOURCE.md. No unpublished
+RBI feed, sibling checkout or cached RBI package is required.
 
-RelatedPartiesRegister/{API,BL,DL,...} and existing backend tests remain intact.
-src/Web is the React reference; src/Web.Blazor contains Components/{Layout,Pages,
-Registry}, Api, Security, Localization, wwwroot and Program.cs. tests contains
-Web.Blazor.Tests, Web.Blazor.Browser and test-only Web.Blazor.BrowserHost.
-RelatedPartiesRegister.Migration.slnx groups local migration verification; docs
-contains inventory, authorization, parity, closure and handoff. artifacts is
-ignored. No frontend dependency on backend EF/ClosedXML projects.
+## 19. Local run and production boundary
 
-## 20. Local run
-
-See src/Web.Blazor/README.md. Restore with an explicit approved local/private feed
-and isolated package cache (no machine paths committed). ApiCore/Authentication
-0.1.1-migration.1 consume approved platform commita38b94c; other runtime packages
-remain0.1.0. Use isolated --artifacts-path when a user host locks default output.
-Missing auth/API in Development is honestly signed out, with no login handler or
-outbound anonymous proxy. No fake production account is supplied.
-
-## 21. Production deployment procedure — gated, not executed
-
-Provision approved packages, server runtime/proxy/circuit settings, confidential
-OIDC secrets via approved secret storage, HTTPS backend URL ending in '/', shared
-cache/provider registration and DataProtection. Missing auth outside Development
-fails startup; do not bypass that gate. Validate real issuer/audience/session,
-SQL and SMTP workflows, final-Admin concurrency, browser/accessibility/responsive
-flows and secure logs in UAT. Obtain owner/security/deployment approval. Only then
-prove/activate the replacement frontend workflow, switch the canonical route and
-archive/remove React-only dependencies and static packaging in a separate bounded
-cutover commit. Keep rollback to the accepted artifact; never silently reseed or
-migrate production data, and never run both frontends as canonical production apps.
+Use the root README for seeded Admin BrowserHost versus real backend/frontend
+configuration. The test harness has no production deployment role. Production
+still requires approved shared session/cache/key storage, proxy/CA values,
+SQL/SSO/mail and subject-link reconciliation. No production data migration or
+cutover is implied by local source delivery or local green tests.

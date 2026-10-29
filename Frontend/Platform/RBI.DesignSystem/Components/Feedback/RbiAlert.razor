@@ -1,0 +1,28 @@
+<div @attributes="SafeAttributes"
+     class="@CssClass"
+     role="@Role"
+     aria-live="@AriaLive">
+    <span class="rbi-alert__icon" aria-hidden="true">@RBI.DesignSystem.Components.RbiControlIcon.Render(Icon)</span>
+    <div class="rbi-alert__content">
+        @if (!string.IsNullOrWhiteSpace(Title))
+        {
+            <div class="rbi-alert__title">@Title</div>
+        }
+        <div class="rbi-alert__description">@ChildContent</div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public RbiAlertTone Tone { get; set; } = RbiAlertTone.Information;
+    [Parameter] public RbiAlertAnnouncement Announcement { get; set; }
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CssClass => string.Join(' ', new[] { "rbi-alert", $"rbi-alert--{Tone.ToString().ToLowerInvariant()}", Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    private string Role => Announcement switch { RbiAlertAnnouncement.Assertive => "alert", RbiAlertAnnouncement.Polite => "status", _ => "note" };
+    private string? AriaLive => Announcement switch { RbiAlertAnnouncement.Assertive => "assertive", RbiAlertAnnouncement.Polite => "polite", _ => null };
+    private string Icon => Tone switch { RbiAlertTone.Success => "success", RbiAlertTone.Warning => "warning", RbiAlertTone.Danger => "close", RbiAlertTone.Brand => "brand", _ => "info" };
+    private IReadOnlyDictionary<string, object>? SafeAttributes => RBI.DesignSystem.Components.Forms.RbiFormUtilities.SafeAttributes(AdditionalAttributes, "class", "role", "aria-live");
+}
