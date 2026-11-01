@@ -31,7 +31,7 @@ public class KeycloakAdminService
         var realmMarker = issuer.LastIndexOf("/realms/", StringComparison.OrdinalIgnoreCase);
         _keycloakBase = realmMarker > 0 ? issuer[..realmMarker] : string.Empty;
         _realmName = realmMarker > 0 ? issuer[(realmMarker + 8)..].TrimEnd('/') : string.Empty;
-        _adminClientId = config["KeycloakSettings:AdminClientId"] ?? string.Empty;
+        _adminClientId = config["KeycloakSettings:ClientId"] ?? string.Empty;
         _adminClientSecret = config["KeycloakSettings:AdminClientSecret"] ?? string.Empty;
         _logger = logger;
 
