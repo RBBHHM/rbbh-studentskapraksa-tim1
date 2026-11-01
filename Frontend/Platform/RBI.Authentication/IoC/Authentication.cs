@@ -84,6 +84,7 @@ public static class RbiAuthenticationServiceCollectionExtensions
                 oidc.Authority = configured.Authority;
                 oidc.ClientId = configured.ClientId;
                 oidc.ClientSecret = configured.ClientSecret;
+                oidc.PushedAuthorizationBehavior = PushedAuthorizationBehavior.Disable;
                 oidc.RequireHttpsMetadata = !environment.IsDevelopment() ||
                     configured.Authority.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
                 oidc.ResponseType = OpenIdConnectResponseType.Code;

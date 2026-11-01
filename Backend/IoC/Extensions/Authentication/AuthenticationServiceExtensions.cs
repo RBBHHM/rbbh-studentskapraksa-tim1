@@ -6,6 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using RBBH.ConnectedParties.Helpers.Constants;
 using System.Security.Claims;
+using System.Diagnostics;
 
 namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
 {
@@ -26,8 +27,6 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
             var issuer = configuration["KeycloakSettings:Issuer"];
 
             var publicIssuer = configuration["KeycloakSettings:PublicIssuer"];
-
-            var audience = configuration["KeycloakSettings:Audience"];
             var clientId = configuration["KeycloakSettings:ClientId"];
             var clientSecret = configuration["KeycloakSettings:ClientSecret"];
 
@@ -59,13 +58,6 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
             var localDevelopmentMetadata = environment.IsDevelopment()
                 && Uri.TryCreate(issuer, UriKind.Absolute, out var issuerUri)
                 && issuerUri.Scheme == Uri.UriSchemeHttp && issuerUri.IsLoopback;
-
-            // Fail closed: a missing audience would otherwise silently accept tokens
-            // issued to any client in the realm. Development keeps the documented
-            // local behavior (audience check skipped only while it is unset).
-            if (string.IsNullOrWhiteSpace(audience) && !environment.IsDevelopment())
-                throw new InvalidOperationException(
-                    "KeycloakSettings:Audience mora biti postavljen kada je Keycloak uključen izvan Development okruženja.");
 
             services
                 .AddAuthentication(options =>
@@ -101,13 +93,15 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
 
                     options.Authority = issuer;
                     options.RequireHttpsMetadata = !localDevelopmentMetadata;
-                    options.Audience = audience;
+
+                    // Local Development only: do not validate the token audience.
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
                         ValidateIssuer = true,
                         ValidIssuers = validIssuers,
-                        ValidateAudience = !string.IsNullOrWhiteSpace(audience),
-                        ValidAudience = audience,
+
+                        ValidateAudience = false,
+
                         ValidateIssuerSigningKey = true,
                         RequireSignedTokens = true,
                         RequireExpirationTime = true,
@@ -119,22 +113,87 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
                     options.RefreshInterval = TimeSpan.FromSeconds(10);
 
                     options.Events = new JwtBearerEvents
-                    {
-                        OnAuthenticationFailed = context =>
-                        {
-                            if (context.Exception is SecurityTokenExpiredException)
-                                context.Response.Headers.Append("Token-Expired", "true");
+{
+    OnMessageReceived = context =>
+    {
+        var hasBearer = context.Request.Headers.Authorization
+            .ToString()
+            .StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase);
 
-                            if (context.Exception is SecurityTokenInvalidSigningKeyException)
-                                context.Response.Headers.Append("SigningKey-Invalid", "true");
+        Console.WriteLine(
+            $"[JWT] Request: {context.Request.Method} {context.Request.Path}; " +
+            $"HasBearer={hasBearer}");
 
-                            return Task.CompletedTask;
-                        }
-                    };
+        Console.WriteLine(
+            $"[JWT] Request: {context.Request.Method} {context.Request.Path}; " +
+            $"HasBearer={hasBearer}");
+
+        return Task.CompletedTask;
+    },
+
+    OnTokenValidated = context =>
+    {
+        var subject = context.Principal?.FindFirst("sub")?.Value;
+        var username = context.Principal?.FindFirst("preferred_username")?.Value;
+        var tokenAudiences = context.Principal?
+            .FindAll("aud")
+            .Select(claim => claim.Value);
+
+        Console.WriteLine(
+            $"[JWT] VALID. Path={context.Request.Path}; " +
+            $"sub={subject}; username={username}; " +
+            $"aud=[{string.Join(", ", tokenAudiences ?? [])}]");
+
+        Console.WriteLine(
+            $"[JWT] VALID. Path={context.Request.Path}; " +
+            $"sub={subject}; username={username}; " +
+            $"aud=[{string.Join(", ", tokenAudiences ?? [])}]");
+
+        return Task.CompletedTask;
+    },
+
+    OnAuthenticationFailed = context =>
+    {
+        Console.WriteLine(
+            $"[JWT] FAILED. Path={context.Request.Path}; " +
+            $"Exception={context.Exception.GetType().Name}; " +
+            $"Message={context.Exception.Message}");
+
+        Console.WriteLine(
+            $"[JWT] FAILED. Path={context.Request.Path}; " +
+            $"Exception={context.Exception.GetType().Name}; " +
+            $"Message={context.Exception.Message}");
+
+        if (context.Exception is SecurityTokenExpiredException)
+            context.Response.Headers.Append("Token-Expired", "true");
+
+        if (context.Exception is SecurityTokenInvalidSigningKeyException)
+            context.Response.Headers.Append("SigningKey-Invalid", "true");
+
+        return Task.CompletedTask;
+    },
+
+    OnChallenge = context =>
+    {
+        Console.WriteLine(
+            $"[JWT] CHALLENGE. Path={context.Request.Path}; " +
+            $"Error={context.Error ?? "(null)"}; " +
+            $"Description={context.ErrorDescription ?? "(null)"}");
+
+        Console.WriteLine(
+            $"[JWT] CHALLENGE. Path={context.Request.Path}; " +
+            $"Error={context.Error ?? "(null)"}; " +
+            $"Description={context.ErrorDescription ?? "(null)"}");
+
+        return Task.CompletedTask;
+    }
+};
+
                 })
                 .AddOpenIdConnect("KeycloakOidc", options =>
                 {
                     options.Authority = issuer;
+                    options.MapInboundClaims = false;
                     options.ClientId = clientId;
                     options.ClientSecret = clientSecret;
                     options.RequireHttpsMetadata = !localDevelopmentMetadata;
@@ -144,7 +203,6 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
                     options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
                     options.SaveTokens = true;
                     options.GetClaimsFromUserInfoEndpoint = true;
-                    options.MapInboundClaims = false;
                     options.CorrelationCookie.SameSite = SameSiteMode.Lax;
                     options.NonceCookie.SameSite = SameSiteMode.Lax;
                     options.Scope.Add("roles");

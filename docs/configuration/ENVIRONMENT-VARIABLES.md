@@ -15,10 +15,10 @@ for local identity credentials. See root README for seeded demo versus real app 
 | `Database__IntegratedSecurity`, `Database__User`, `Database__Password` | Integrated identity or SQL login. Use least privilege and trusted TLS. |
 | `Database__ApplyMigrations` | Defaults false; startup does not migrate or seed production data. |
 | `KeycloakSettings__Enabled` | May be false only in Development; not an authenticated demo mode. |
-| `KeycloakSettings__Issuer`, `KeycloakSettings__Audience` | Approved HTTPS issuer and API audience. Audience is mandatory outside Development. |
+| `KeycloakSettings__Issuer` | Approved HTTPS issuer. |
 | `KeycloakSettings__ClientId`, `KeycloakSettings__ClientSecret` | Backend confidential client. Required with enabled production authentication. |
 | `KeycloakSettings__PublicIssuer` | Optional approved public issuer when metadata addressing differs. |
-| `KeycloakSettings__AdminClientId`, `KeycloakSettings__AdminClientSecret` | Configure only where the existing Keycloak administration integration requires them. |
+| `KeycloakSettings__AdminClientId`, `KeycloakSettings__AdminClientSecret` | Configure only where the existing Keycloak administration integration requires them. - same client id | 
 | `Email__Provider` | `demo` for isolated local work; configure approved HTTP API or SMTP for real delivery. |
 | `Email__AdminEmail`, `Email__HrEmail`, `Email__From`, `Email__AppBaseUrl` | Approved recipients, sender and links; do not test with real mail inadvertently. |
 | `Email__SendEmailWithHtmlBodyUrl` | Existing HTTP mail endpoint when that provider is selected. |

@@ -1,0 +1,114 @@
+sad cemo testirati sve sto se tice ovih stavki da vidimo jedno po jedno 
+kako bih pribiljezila na jedno mjesto sta se sve treba optimizovati ili popraviti 
+(performanse ostavljamo za kraj) - hocu da prvo proanaliziramo citav projekat da li se ikako fajlovi, kod da li moze negdje biti bolji ispravniji 
+sa boljim praksama napisan, sigurniji kod, ljepsi za citati tj ne spagheti kod ne samo da bi radio citav projekat nego
+da bude citav kod clean sa odlicnom arhitekturom i jasnom i lakom citljivoscu
+nakon toga cemo ici stavku po stavku sa ovog spiska sta se sve treba napraviti/popraviti od funkcionalnosti da bi sve radilo
+trenutno radi ispravno frontend - keycloak - backend
+testirana je ta konekcija u smislu komunikacije izmedju poziva samo na localhost nivou ne sa 3scale niti OCP route sto ce se isto morati testirati kasnije 
+kada se bude deployalo na OCP pa uvrstilo na dev modeu umjesto localhost
+ovdje cu ostaviti sve moguce informacije sto imam, specifikacije zahtjeva a onda cemo jednu po jednu stavku rjesavati,
+zelim da se dinamicki generisu testovi za svaku funkcionalnost makar unit testovi da nema puno fajlova generalno da nema skripti nekih
+jer time projekat odmah gubi na svojoj jednostavnosti
+
+Popravke na aplikaciji Related Parties Register
+
+Performanse
+- hocu da testiramo uz lighthouse i bilo sta jos sto bi znacilo za brzinu na stranici ucitavanje podataka kretanje generalno i bilo sta vezano za performanse makar to bilo direktno u kodu bolji optimizovan kod
+na backendu samo mi je bitno da je sto vise kvalitetan a ne samo da bi radilo, to mi je glavni fokus na projektu
+
+Sigurnost i autentikacija
+- nije moguce nijedan request poslati bez odgovarajuceg tokena i treba uraditi sve najbolje prakse zastite podataka i sl. GDPR i autentikacije
+
+Role, dozvole i autorizacija
+- provjeriti da li je svaka stranica zasticena na frontendu kao i svaki endpoint na backendu u zavisnosti od svake Role
+- role premjestiti u appsettings ili negdje drugo ali ne smiju biti zakucane u kodu to je bitno
+- role je mozda najbolje drzati kao definiciju jednog sifrarnika i njegove vrijednosti, te da se lako na jednom mjestu u modulu Sifrarnici CRUD svi sifrarnici aplikacije
+- autorizacija treba da traje 8h tj da sesija traje 8h i da se tokom tog perioda ne trazi od usera s login formom opet
+- omoguciti da ako osoba prvi put udje u app time se assign automatski Gost rola tj ne mora osoba biti dodana u tabelu za usere nit ista zelim da bilo koja osoba sto udje u app
+samo dobije privilegije jednog gosta i njegove mogucnosti, te da u sifrarniku drzimo ko vrijednosti svih ljudi sa njihovim rolama koje su bilo sta osim gosta tj. neke konkretne
+- omoguciti da osoba ukoliko zeli da ima neku posebnu rolu da je moze i zatraziti direktno preko aplikacije na nacin da imamo i endpoint koji to obradjuje kao logiku
+na nacin da osoba na aplikaciji u gornjem desnom cosku ima button Zatrazi rolu i klikom na to otvara se modalni prozor koji izlista koje sve role moze izabrati i to moze biti
+multiselect i klikom na to i opcionalne Napomene salje se mail administratorima aplikacije lijepo uredjen i sa svim bitnim info, gdje klikom na link u mailu otvaraju se u sustini svi zahtjevi
+administratora kao page na web aplikaciji istoj nasoj Register Related Parties i tu moze odbiti ili prihvatiti zahtjev ako prihvati doci mora opet mail notifikacija osobi da joj je zahtjev odobren i 
+dodijeljena rola i da zaista klikom na to odobrenje zahtjeva ne samo da se odradi slanje maila nego da se odradi i u bazi da se zaista toj osobi insert/updateuje status/rola
+- zelim da na my profile stranici imaju button da mogu Promijeni rolu button kliknuti pa isto izabrati kao drugu rolu i napomena text box pa da se posalje administratoru isto mail
+te klikom admina na zahtjev (isti sve fazon ko gore samo je ovdje kljucna rijec promjeniti rolu) i onda admin kada klikne u spisku zahtjeva ovom se odma u bazi updateuje i onom sto
+je trazio dodje odobrenje na mail i logicno updateuje se stanje sa stranicama i sve
+
+Keycloak i identity binding
+- ne svidja mi se sto se tek kad udje se na stranicu mora kliknuti na sign in button pa onda tek ce biti KC login forma, hocu da bude odmah login forma da se otvori ako su se 
+izgubili podaci nema logike
+- ne svidja mi se sto ima onoliko KC nepotrebnih polja u AppUsers a svakako zelim refaktorisanje baze necu da ima se uopste AppUsers tabela nego kao sifrarnik i da nema tih polja jer nema potrebe
+dovoljno je da taj sifrarnik o userima ima samo njihovo ime prezime email username rolu itd a ne i o KC , time ce se moci ukloniti i medjutabela za user role dodijeljene jer nema potrebe za njom svakakoa
+nek sve bude u sto manje razdvojenim nepotrebnim dijelovima i u sifrarnicima nek se vezu dobro podaci i da je dobra struktura po najboljim praksama
+- hocu da postoji zastita da ne moze se dodati neki user u sifrarnik ako vec postoji po emailu itd. tj zastita od duplikata
+- Testirati:
+postoje li dva AppUsers zapisa s istim e-mailom; šta se desi ako se korisniku promijeni e-mail u Keycloak-u; - prijedlog rjesenja za handleanje takvih slucaja da bude dobro rjesenje za odrzavanje tj lako a ne da mora neko to doznati pa rucno izmjenit u bazi da bi radilo opet i osoba imala pristup idalje nego da je nekako uvezano sve funkcionalnost
+šta se desi ako se promijeni username; šta se desi ako se obriše/resetuje Keycloak korisnik i dobije novi sub.
+- hocu da bude jasno napisana greska tj Log da mogu u OCP vidjeti ako ista padne ili ne bude radilo tj da ne bude generalno ne samo za keycloak sta god se radi jasna poruka o gresci i da imamo global exception handlera i sve dobro struktuirano oko toga
+
+Baza
+- provjeriti moze li se kako optimizovati ERD tj struktura baze projekta s poljima, da li svaka tabela ima jasnu strukturu, postuje istu nomenklaturu itd.
+- uraditi dobre prakse
+
+Pravna lica
+- ovo je specifikacija zahtjeva sto se treba postovati: Dogovor sa satanka 10.09.2026 - forma Pravnih Lica
+polje Povezano lice DA/NE izbaciti
+Polje Datum od - treba biti obavezno
+ Pravna lica 
+Polja
+Redni broj
+Rezidentnost – obavezno polje
+Rezident
+Nerezident
+FBA_ID – obavezno polje – popunjava se ako je klijent nerezident – slobodan unos – numerički prikaz – 10 cifara maximalno
+Porez_broj – obavezno polje ako je pravno lice rezidenti (za nerezidente ovo polje treba biti neaktivno) – slobodan unos – maksimalno 13 cifara – napomena: forma za fizička lica ima isto polje sa masimalno 13 cifara (JMBG) – mjesto istine za pretraživanje – kod.dbo.komitent – kolona porez_broj
+Matbroj – obavezno polje za sve klijente pravna lica ako postoje u bazi banke – omogućiti da ovo polje ostane prazno – numeričko polje – mjesto istine za pretraživanje je kod.dbo.komitent – kolona matbroj
+Naziv – naziv pravnog lica – obavezno polje - slobodan unos – ograničiti na 100 – tekstualno polje – mogući afrikati – mjesto istine za pretraživanje kod.dbo.komintent – kolona naziv
+GCC broj – obavezno polje – podatak iz sistema  Banke – treba nuditi pretraživanje – numeričko polje – Tabela glava.dbo.grupekom – kolona brojg
+GCC naziv – obavezno polje – podatak iz sistema  Banke, a popunjava se automatski na osnovu prethodnog polja – tekstualno polje ++ – Tabela glava.dbo.grupekom – kolona naziv_grupe
+Osnov povezanost –  obavezno polje - drop box
+Opis osnova povezanosti/ Sadržaj referentnih članova ZOB – obavezno polje - kada se u prethodnom polju odabere određeni drop box u ovom polju pridružiti opis
+Povezano lice sa Bankom – drop box – DA/NE – obavezno polje
+Datum od – obavezno polje – format datuma
+Datum do –  nije obavezno polje – format datuma – može biti prazno
+Omogućiti export i imort, te tabele trebaju biti istog sadržaja i formata
+Unos i pretraživanje podataka, ne treba biti case sensitive
+u att xls export to excel Pravna lica
+- potrebno uraditi mapiranja s bazom tj ovo gore sto se spominju npr glava.dbo.grupekom sluze sve te tabele gore kao mjesto istine da se odatle kupe info direktno
+- obavezno polje porezni broj
+- edge caseovi za import excel - testirati duboko ali i uciniti da radi import generalno jer trenutno ne radi, uraditi sva testiranja za ovo duboko
+- created by, modified by i datumi dodati u excel export trenutni
+- treba mi temeljito da pise error za bilo kakav neispravan slucaj od export/importa i treba da postoji validacija vrijednosti a ne samo header kolona u importu
+- treba da ne dozvoli se klik na Next button ako neki uslov nije ispunjen od popunjenih polja i treba da se odmah cim se neko polje popuni kao listener da javlja u skladu 
+sa popunjenim gresku sta treba osoba da ispravi a ne da tek klikom na button da registruje i ispise te porukice
+
+Fizička lica
+Limiti
+Kapital
+Regulatorno izvještavanje
+Notifikacije
+Korisnici
+Upravljanje periodom
+Šifrarnici
+Audit logovi
+API pozivi
+Testiranje
+Monitoring i održavanje
+
+Dokumentacija
+- previse je fajlova za dokumentacije treba da bude samo 1 readme o svemu za app lijepo i jasno struktuirano bez ikakvih spominjanja o migraciji i historiji nekoj
+i da bude 1 onboarding fajl kad bi neko novi tek krenuo radit na projektu da ima sve na jednom mjestu jasno koncizno napisane korake za rad
+- hocu da postoje release notes kao cijela jedna stranica i da se pri svakom releaseu za UAT link ispise uvijek release notes kao u sustini sta su sve novosti tog releasea na UAT a na PROD da pise isto u skladu sa tim ali 
+prod tag verzija i isti release notes kao od UATa samo nek bude verzija kako treba da pise hocu da nema skripti za to generisanje nit ista nego da se samo cita u sustini direkt sa githuba i to tj da je clean rjesenje 
+
+Generalno
+- kad kliknem u sidebaru na neki drugi modul ne highlightuje trenutni modul nego uvijek na Overview modul
+- favicon.ico nema potrebe da postoji i hocu da je ikonica raiffeisen logo koju vec svakako imam u tabu a ne da se ne loada uopste
+- necu da na formi ijednoj ima ikakve vrijednosti zakucane i generalno da se napravi takav test da kad se pokrene za bilo kakav multiselect checkbox ili obicni select
+vise eto opcija gdje god se pojavi necu da mi moze uopste se kompajlirati app dok se to ne zamjeni sa sifrarnikom to je jako bitno, cilj mi je da nista nije zakucano u app
+- vrlo bitna stvar je da hocu da imam za lokalizaciju 2 sifrarnika 1 za jezike generalno a 2 za vrijednosti u jezicima i da je jako bitno da svaki tekst bude parametrizovan sa nekim
+resource key od lokalizacije sifrarnika a ne da je nesto napisano zakucano u kodu kao poruka ili ista, vrlo bitno je da to vrijedi za bilo kakav tekst pa makar to bio error message ili
+tekst neki u poljima ili ista, nigdje apsolutno ne smije biti zakucano, to zelim isto da bude napravljeno ko test tj da ne smije cijela app imati igdje zakucan tekst u kodu tj da nije
+parametrizovan

@@ -10,6 +10,7 @@ using RBBH.ConnectedParties.DL.Persistence;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using dotenv.net;
+using RBBH.ConnectedParties.Helpers;
 
 DotEnv.Load();
 
@@ -63,6 +64,25 @@ app.UseCors();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.Use(async (context, next) =>
+{
+    await next();
+
+    if (context.Request.Path.StartsWithSegments("/api"))
+    {
+        Console.WriteLine(
+            $"[API] {context.Request.Method} {context.Request.Path} " +
+            $"=> {context.Response.StatusCode}; " +
+            $"Authenticated={context.User.Identity?.IsAuthenticated}; " +
+            $"User={context.User.FindFirst("preferred_username")?.Value ?? "(none)"}; " +
+            $"Subject={AuthenticatedActor.Subject(context.User) ?? "(none)"}; " +
+            $"ApplicationUserId={context.User.FindFirst(AuthenticatedActor.ApplicationUserIdClaim)?.Value ?? "(none)"}; " +
+            $"Roles=[{string.Join(", ", context.User.FindAll(System.Security.Claims.ClaimTypes.Role).Select(x => x.Value))}]; " +
+            $"Permissions=[{string.Join(", ", context.User.FindAll("permission").Select(x => x.Value))}]");
+    }
+});
+
 app.UseMiddleware<RBBH.ConnectedParties.Middlewares.PeriodLockMiddleware>();
 
 app.MapGet("/authentication/login", (string? returnUrl) =>
@@ -88,6 +108,16 @@ app.MapGet("/api/auth/profile", (HttpContext context) => Results.Ok(new
 })).RequireAuthorization();
 
 app.MapControllers();
+
+if (app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
+
+    var db = scope.ServiceProvider
+        .GetRequiredService<ConnectedPartiesDbContext>();
+
+    await db.Database.MigrateAsync();
+}
 
 app.Run();
 
