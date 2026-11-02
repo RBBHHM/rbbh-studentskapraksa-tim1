@@ -173,6 +173,9 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
         {
             services.AddAuthorization(options =>
             {
+                options.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+                    .RequireAuthenticatedUser().RequireRole(ApplicationAccessRoles.Guest).Build();
+                options.AddPolicy(ApplicationPolicies.ApplicationAccess, options.DefaultPolicy);
                 AddPermissionPolicy(options, ApplicationPolicies.PhysicalPersonsRead, ApplicationPermissions.PhysicalPersonsView);
                 AddWritePolicy(options, ApplicationPolicies.PhysicalPersonsWrite, ApplicationPermissions.PhysicalPersonsCreate, ApplicationPermissions.PhysicalPersonsEdit, ApplicationPermissions.PhysicalPersonsDelete);
                 AddPermissionPolicy(options, ApplicationPolicies.PhysicalPersonsCreate, ApplicationPermissions.PhysicalPersonsCreate);

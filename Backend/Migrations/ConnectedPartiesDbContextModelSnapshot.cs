@@ -77,6 +77,104 @@ namespace RBBH.ConnectedParties.Migrations
                     b.ToTable("AuditLogs");
                 });
 
+            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Authorization.RequestedRole", b =>
+                {
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("RequestId", "RoleId");
+
+                    b.HasIndex("RoleId");
+
+                    b.ToTable("RequestedRole");
+                });
+
+            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Authorization.RoleRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ClientRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("DecisionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("DecisionNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ProcessedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("RequesterSubject")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequesterSubject")
+                        .IsUnique()
+                        .HasFilter("[Status] = N'pending'");
+
+                    b.HasIndex("RequesterSubject", "ClientRequestId")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "CreatedAt");
+
+                    b.ToTable("RoleRequests");
+                });
+
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -232,6 +330,101 @@ namespace RBBH.ConnectedParties.Migrations
                     b.HasIndex("TipLimita");
 
                     b.ToTable("Limiti", (string)null);
+                });
+
+            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Notifications.ApplicationNotification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("BodyKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("EventKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ParametersJson")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RecipientEmail")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("RecipientSubject")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Route")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("TitleKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecipientSubject", "CreatedAt");
+
+                    b.HasIndex("RecipientSubject", "EventKey")
+                        .IsUnique();
+
+                    b.ToTable("Notifications");
+                });
+
+            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Notifications.NotificationDelivery", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("DeliveredAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid?>("LeaseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("LeaseUntil")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("NextAttemptAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("NotificationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NotificationId")
+                        .IsUnique();
+
+                    b.HasIndex("DeliveredAt", "NextAttemptAt");
+
+                    b.ToTable("NotificationDeliveries");
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.PeriodLock.PeriodLock", b =>
@@ -1019,6 +1212,25 @@ namespace RBBH.ConnectedParties.Migrations
                     b.ToTable("AppUsers");
                 });
 
+            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Authorization.RequestedRole", b =>
+                {
+                    b.HasOne("RBBH.ConnectedParties.DL.Entities.Authorization.RoleRequest", "Request")
+                        .WithMany("RequestedRoles")
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("RBBH.ConnectedParties.DL.Entities.Role.Role", "Role")
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Request");
+
+                    b.Navigation("Role");
+                });
+
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Limiti.Limit", b =>
                 {
                     b.HasOne("RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntity", "LegalEntity")
@@ -1028,6 +1240,17 @@ namespace RBBH.ConnectedParties.Migrations
                         .IsRequired();
 
                     b.Navigation("LegalEntity");
+                });
+
+            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Notifications.NotificationDelivery", b =>
+                {
+                    b.HasOne("RBBH.ConnectedParties.DL.Entities.Notifications.ApplicationNotification", "Notification")
+                        .WithOne("Delivery")
+                        .HasForeignKey("RBBH.ConnectedParties.DL.Entities.Notifications.NotificationDelivery", "NotificationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Notification");
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.RelatedPersons.FamilyMember", b =>
@@ -1097,6 +1320,16 @@ namespace RBBH.ConnectedParties.Migrations
                         .IsRequired();
 
                     b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Authorization.RoleRequest", b =>
+                {
+                    b.Navigation("RequestedRoles");
+                });
+
+            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Notifications.ApplicationNotification", b =>
+                {
+                    b.Navigation("Delivery");
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.RelatedPersons.FamilyMember", b =>

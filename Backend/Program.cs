@@ -21,6 +21,7 @@ builder.Services.AddApplicationForwardedHeaders(builder.Configuration, builder.E
 // Dependency Injection
 builder.Services.AddServicesExtensions(builder.Configuration, builder.Environment, builder.Host);
 builder.Services.AddHostedService<RBBH.ConnectedParties.Services.AutoLockHostedService>();
+builder.Services.AddHostedService<RBBH.ConnectedParties.Services.NotificationDeliveryWorker>();
 
 // Build app
 var app = builder.Build();

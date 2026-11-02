@@ -16,7 +16,7 @@ public partial class AppUserService
             var localRoles = await _db.Roles
                 .Where(role => roleIds.Contains(role.Id) && role.IsActive)
                 .ToListAsync(cancellationToken);
-            if (localRoles.Count != roleIds.Count || localRoles.Any(role => !ApplicationAccessRoles.Assignable.Contains(role.Name)))
+            if (localRoles.Count != roleIds.Count || localRoles.Any(role => role.Name == ApplicationAccessRoles.Guest))
                 return new(UserMutationStatus.InvalidRoles);
 
             AppUser? localUser = null;

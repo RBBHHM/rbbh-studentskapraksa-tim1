@@ -23,9 +23,34 @@ public partial class ConnectedPartiesDbContext : DbContext
     public virtual DbSet<AppUser> AppUsers { get; set; }
     public virtual DbSet<AuditLog> AuditLogs { get; set; }
     public virtual DbSet<Limit> Limiti { get; set; }
+    public DbSet<DL.Entities.Authorization.RoleRequest> RoleRequests => Set<DL.Entities.Authorization.RoleRequest>();
+    public DbSet<DL.Entities.Notifications.ApplicationNotification> Notifications => Set<DL.Entities.Notifications.ApplicationNotification>();
+    public DbSet<DL.Entities.Notifications.NotificationDelivery> NotificationDeliveries => Set<DL.Entities.Notifications.NotificationDelivery>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<DL.Entities.Authorization.RoleRequest>(entity =>
+        {
+            entity.HasIndex(row => new { row.RequesterSubject, row.ClientRequestId }).IsUnique();
+            entity.HasIndex(row => row.RequesterSubject).IsUnique().HasFilter("[Status] = N'pending'");
+            entity.HasIndex(row => new { row.Status, row.CreatedAt });
+        });
+        modelBuilder.Entity<DL.Entities.Authorization.RequestedRole>(entity =>
+        {
+            entity.HasKey(row => new { row.RequestId, row.RoleId });
+            entity.HasOne(row => row.Request).WithMany(row => row.RequestedRoles).HasForeignKey(row => row.RequestId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(row => row.Role).WithMany().HasForeignKey(row => row.RoleId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<DL.Entities.Notifications.ApplicationNotification>(entity =>
+        {
+            entity.HasIndex(row => new { row.RecipientSubject, row.EventKey }).IsUnique();
+            entity.HasIndex(row => new { row.RecipientSubject, row.CreatedAt });
+        });
+        modelBuilder.Entity<DL.Entities.Notifications.NotificationDelivery>(entity =>
+        {
+            entity.HasIndex(row => new { row.DeliveredAt, row.NextAttemptAt });
+            entity.HasOne(row => row.Notification).WithOne(row => row.Delivery).HasForeignKey<DL.Entities.Notifications.NotificationDelivery>(row => row.NotificationId).OnDelete(DeleteBehavior.Restrict);
+        });
         modelBuilder.Entity<CodeList>(entity =>
         {
             entity.HasKey(e => e.ID);

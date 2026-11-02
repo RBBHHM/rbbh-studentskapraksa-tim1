@@ -10,10 +10,7 @@ internal static class RegistryVerification
     {
         // Offline/test construction has no validated actor and cannot establish provenance.
         if (accessor?.HttpContext is not { } context) return null;
-        var subject = AuthenticatedActor.Subject(context.User);
-        if (context.User.Identity?.IsAuthenticated != true || string.IsNullOrWhiteSpace(subject) || subject.Length > 100)
-            throw new MissingActorIdentityException();
-        return subject;
+        return AuthenticatedActor.RequireSubject(context.User);
     }
 
     internal static void Authorize(string? creatorSubject, IHttpContextAccessor? accessor)

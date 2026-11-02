@@ -2,6 +2,8 @@ namespace RBBH.ConnectedParties.BL.ServiceInterfaces;
 
 public interface IEmailService
 {
+    /// <summary>Strict delivery for the durable outbox: failures must propagate for retry.</summary>
+    Task SendApplicationNotificationAsync(string to, string subject, string htmlBody, CancellationToken cancellationToken = default);
     /// <summary>Notifikacija adminu: korisnik podnio zahtjev za otključavanje.</summary>
     Task SendUnlockRequestAsync(
         string adminEmail, string requestedBy, int year, int month, string reason);

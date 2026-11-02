@@ -10,6 +10,19 @@ public sealed class EmailDiagnosticsTests
 {
     private const string PrivateValue = "private-recipient@example.test";
 
+    [Fact]
+    public async Task DurableDeliveryPropagatesProviderRejectionForRetry()
+    {
+        using var http = new HttpClient(new MailTransport(503));
+        var factory = new Mock<IHttpClientFactory>(); factory.Setup(item => item.CreateClient(It.IsAny<string>())).Returns(http);
+        var store = new EmailLogStore();
+        var service = new HttpApiEmailService(factory.Object, Options.Create(new EmailSettings
+        { From = "sender@example.test", SendEmailWithHtmlBodyUrl = "https://mail.example.test/send" }), store,
+            new Mock<ILogger<HttpApiEmailService>>().Object);
+        await Assert.ThrowsAsync<HttpRequestException>(() => service.SendApplicationNotificationAsync(PrivateValue, "subject", "body"));
+        Assert.Empty(store.GetAll());
+    }
+
     [Theory]
     [InlineData(200)]
     [InlineData(500)]

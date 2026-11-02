@@ -36,7 +36,7 @@ public partial class AppUserService(ConnectedPartiesDbContext dbContext, Keycloa
         var userIds = users.Select(u => u.Id).ToList();
         var userRoles = await _db.UserRoles.AsNoTracking()
             .Where(ur => userIds.Contains(ur.UserId) && ur.IsActive)
-            .Join(_db.Roles.Where(role => role.IsActive && ApplicationAccessRoles.Assignable.Contains(role.Name)),
+            .Join(_db.Roles.Where(role => role.IsActive && role.Name != ApplicationAccessRoles.Guest),
                 ur => ur.RoleId, r => r.Id, (ur, r) => new { ur.UserId, r.Name })
             .ToListAsync();
         var rolesByUser = userRoles.GroupBy(x => x.UserId)
@@ -94,7 +94,7 @@ public partial class AppUserService(ConnectedPartiesDbContext dbContext, Keycloa
         var localRoles = await _db.Roles
             .Where(role => requestedRoleIds.Contains(role.Id) && role.IsActive)
             .ToListAsync();
-        if (localRoles.Count != requestedRoleIds.Length || localRoles.Any(role => !ApplicationAccessRoles.Assignable.Contains(role.Name)))
+        if (localRoles.Count != requestedRoleIds.Length || localRoles.Any(role => role.Name == ApplicationAccessRoles.Guest))
             return Result<UserDTO>.ValidationError("Odabrane aplikacijske role nisu ispravne.");
 
         var roleNames = localRoles.Select(role => role.Name).ToList();

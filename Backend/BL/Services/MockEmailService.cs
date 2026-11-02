@@ -10,6 +10,14 @@ public sealed class MockEmailService(
 {
     private string AppBaseUrl => options.Value.AppBaseUrl;
 
+    public Task SendApplicationNotificationAsync(string to, string subject, string htmlBody, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        store.Add(new EmailLogEntry { To = to, Subject = subject, HtmlBody = htmlBody, Audience = "application" });
+        Log(to, subject);
+        return Task.CompletedTask;
+    }
+
     public Task SendUnlockRequestAsync(
         string adminEmail, string requestedBy, int year, int month, string reason)
     {

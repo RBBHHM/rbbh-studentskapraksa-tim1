@@ -15,9 +15,17 @@ public static class AuthenticatedActor
         Subject(principal), Email(principal),
         Guid.TryParse(principal.FindFirst(ApplicationUserIdClaim)?.Value, out var id) ? id : null);
 
+    public static string RequireSubject(ClaimsPrincipal principal)
+    {
+        var subject = Subject(principal);
+        if (principal.Identity?.IsAuthenticated != true || string.IsNullOrWhiteSpace(subject) ||
+            subject.Length > 100 || subject != subject.Trim()) throw new MissingActorIdentityException();
+        return subject;
+    }
+
     public static string Email(ClaimsPrincipal principal)
     {
-        var email = principal.FindFirst(ClaimTypes.Email)?.Value?.Trim();
+        var email = (principal.FindFirst(ClaimTypes.Email)?.Value ?? principal.FindFirst("email")?.Value)?.Trim();
         if (principal.Identity?.IsAuthenticated != true || string.IsNullOrWhiteSpace(email))
             throw new MissingActorIdentityException();
         return email;

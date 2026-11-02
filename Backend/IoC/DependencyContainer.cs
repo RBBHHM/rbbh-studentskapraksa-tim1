@@ -39,6 +39,8 @@ namespace RBBH.ConnectedParties.IoC
             #region Register application service classes with their interfaces
 
             services.AddScoped<IRoleService, RoleService>();
+            services.AddScoped<RoleRequestService>();
+            services.AddScoped<NotificationDispatcher>();
             services.AddScoped<ICodeListService, CodeListService>();
             services.AddScoped<IRelatedPersonService, RelatedPersonService>();
             services.AddHttpClient<KeycloakAdminService>();
