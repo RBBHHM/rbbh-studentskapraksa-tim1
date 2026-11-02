@@ -112,6 +112,131 @@ The task's execution rule requires approval before security-policy changes and i
 
 Independently implementable first batch: safe operational logging and error redaction, HTML encoding/canonical mail links, backend image entrypoint alignment and compatible validation fixes. No permission grant, shared DTO or schema needs to change for these. Remaining functionality follows the approved contracts, then migrations, then real-path tests, then measured performance and environment acceptance. External bank/realm/OCP verification stays BLOCKED until real inputs are supplied.
 
+### Concrete S2/S3 proposal for approval (not implemented)
+
+**S2: four-eyes and server-owned verification status.**
+
+- New legal/physical records and imports store a server-populated creator subject, separate from the existing display/email audit fields. The value comes from the validated identity, never a DTO, submitted local user ID or an email comparison. Keep it immutable through updates. Add nullable subject columns through an additive migration; do not drop or reinterpret historical fields.
+- Reject verification by the same creator subject with403 and a safe business message. Other authorized verifiers keep the existing application permission and period-lock checks. Verified status can change only through the verification operation; legacy Update.Status may repeat the current status for compatibility but a submitted transition is rejected with400. A normal edit must not become a status-grant bypass.
+- Historical records without proven creator subject cannot safely pass four-eyes by comparing today's email. Proposed default:409 requiring creator-identity reconciliation; no unlogged administrator override. Apply an approved per-record historical mapping only after evidence/backup review. This can temporarily block verification of old records and needs explicit acceptance before deployment.
+- Commit verification mutation and its audit atomically; rejected attempts create no success audit. Test creator/noncreator with changed email/username, forged body fields, missing provenance, repeated verification, status-overposting and locked periods through the actual HTTP pipeline, plus a SQL upgrade retaining existing records.
+
+**S3: request ownership, approver authority and notification privacy.**
+
+| Operation | Proposed authority and scope | Failure behavior |
+|---|---|---|
+| Submit/request own role changes | Authenticated subject, verified usable email; virtual Guest may request without pre-existing AppUser | Missing trusted identity401/validation400; applicant identity ignored/rejected in body |
+| View own role requests/inbox | Current authenticated subject owns record | Cross-owner ID404; no recipient/body disclosure |
+| Review/approve/reject role requests | Active application Admin (new stable permission seeded only to Admin) | Nonapprover403; self-approval403; stale/incompatible replay409 |
+| Period request creation/list/response | Existing write permission for submission retained; owner-only view/response; Admin additionally reviews all | Cross-owner404; response only to NEEDS_INFO, otherwise409 |
+| Period lock/unlock/reject/request-more-info | Proposed Admin-only processing, replacing current broad CapitalWrite processing where applicable | Capital without Admin403; this is a policy change, not a bug fix to apply silently |
+| Notification/email preview | Recipient-scoped inbox; raw global HTML email preview restricted to isolated Development test/demo; Admin production delivery metadata excludes message body/recipient detail unless separately approved | Nonowner404; no broad CapitalRead access to other recipients' messages |
+
+Approval is one conditional transition with a request version; role replacement, final-Admin check and audit share one transaction. Competing approve/reject produces one winner and409 for the other. An identical successful idempotency-key replay returns the prior result without second mutation/mail. Do not rebind a confirmed subject or transfer privileges to a recreated Keycloak account by email. Role-request approval must use the same explicit subject-link procedure as C1. Delivery records are committed atomically; retry only pending mail deliveries, with deduplication and bounded attempts. This needs the additive C1 contracts/schema and frontend coordination; it is not covered by S1 approval.
+
+Required S3 HTTP/SQL tests: anonymous401; Guest/functional-role/Admin matrix; owner/nonowner IDs; forged applicant/approver; inactive/ambiguous identities; self-approval; duplicated/racing decisions; final-Admin protection on change requests; no audit/role mutation on failure; notification isolation; failed mail without duplicate grants. Existing Capital period-processing behavior remains unchanged until this proposal is approved.
+
 ## Implementation and fresh verification
 
-Pending implementation. This report will record actual commit-local commands/results; baseline failures must not be presented as fixed or excluded silently.
+The first backend implementation batch is complete locally; overall backend finalization is **PARTIAL**, pending S2/S3 and shared-contract decisions plus external dependencies. S1 was explicitly approved by the user during this task. Baseline matrix statuses above remain historical; the following records the implemented deltas.
+
+| Area | Delivered delta | Remaining limit |
+|---|---|---|
+| AUTH-08/S1 | Configured API Audience validated everywhere; missing audience fails startup outside Development; unconfigured Development exception preserved. OIDC code+PKCE/client identity retained. | Real realm audience mapper, browser OIDC and UAT/PROD tokens require environment verification. |
+| OBS-01/ERR-01 | Removed raw console JWT/identity logs; route-template/status/elapsed/trace diagnostics include auth short-circuits; exception fallback no longer emits messages/inner exceptions/stack traces. Correlation IDs bounded and malformed/multiple headers replaced; response includes correlation even on handled500. Mail and legal operational logs exclude recipient/subject/actor/business-name payloads. | Broader telemetry/retention, framework/dependency configuration and S3 notification privacy remain open. |
+| NOT-03/ERR-01 | Eight mail templates HTML-encode dynamic values and use existing canonical /app routes; period error strings use a proper JSON writer for all32 control characters, preserving Unicode. | Durable recipient inbox/outbox, ownership and delivery semantics await C1/S3. |
+| OPS-01/DB-03 | Backend image runs actual DATA_CORE.dll. Startup migration is off by default, explicit Development opt-in only, relational-provider guarded; no production migration at startup. Warning no longer claims nonexistent seeded data. | Duplicate frontend/backend assembly identity prevents BrowserHost build; coordinate with frontend owner. Real image/OCP acceptance not performed. |
+| LEG-01/XLSX-02 | Shared service validation enforces name100, description500, basis100 and optional numeric50 bounds through create/update/import; non-ASCII numeric input rejected safely. Missing-name/nonempty rows counted as failures. Corrupt legal/physical XLSX returns safe file validation; row parser internals not exposed. Validated rows retain existing batch/partial-success model. | Versioned round-trip workbook/metadata, ZIP expansion limits, physical complete field parity, inactive/concurrent duplicate handling, tax-rule decision and bank mapping remain PARTIAL. Exact13+checksum tax behavior is preserved. |
+| CODE-01 | Duplicate key precheck normalizes case/whitespace and includes inactive values; Update deactivation obeys Delete reference guard; service field lengths match persisted limits. | Concurrent-create SQL uniqueness, definition FK/system protection/versioned cache need reviewed constraints/contracts. |
+
+No shared frontend DTO, frontend source, frontend localization, database entity/model or existing migration was edited. No new migration was created. No production data was read or modified. The tracked Backend project .user file is unchanged (only IDE debug-profile metadata); it is a repository-hygiene finding, not a secret leak. PKCS remains9.0.21 and no NuGet vulnerability/feed warnings were suppressed.
+
+### Commands and actual results
+
+Run from the dedicated backend-finalization checkout, in Release with no restore after the initial solution restore:
+
+| Check | Exact command or scope | Result |
+|---|---|---|
+| Restore | `dotnet restore RelatedPartiesRegister.slnx --disable-parallel -m:1` | PASS |
+| Backend build/analyzers | `dotnet build Backend/RelatedPartiesRegister.csproj -c Release --no-restore -p:RunAnalyzers=true -m:1 -nr:false` | PASS,0 warnings,0 errors |
+| Full backend unit | `dotnet test tests/Backend.UnitTests/UnitTests.csproj -c Release --no-restore -m:1 -nr:false --logger trx --results-directory artifacts/backend-finalization/final-tests` | **310/310 PASS**,0 skipped |
+| Full backend integration | `dotnet test tests/Backend.IntegrationTests/IntegrationTests.csproj -c Release --no-restore -m:1 -nr:false --logger trx --results-directory artifacts/backend-finalization/final-tests` with `RBBH_TEST_SQLSERVER=Server=(localdb)\MSSQLLocalDB;Integrated Security=true;TrustServerCertificate=true` | **219/219 PASS**,0 skipped, including8 actual SQL tests |
+| S1 configuration regression | `--filter FullyQualifiedName~JwtAudienceConfigurationTests` | 11/11 PASS, including all9 prior failures |
+| S1 real bearer HTTP | `--filter FullyQualifiedName~JwtAudienceHttpTests` | 9/9 PASS: exact/multiple audiences, wrong, absent, empty, whitespace, numeric and empty-array cases; OIDC configuration assertions retained |
+| Safe diagnostics HTTP | `--filter FullyQualifiedName~SafeDiagnosticsHttpTests` | 7/7 PASS |
+| Correlation middleware | `--filter FullyQualifiedName~IncludeCorrelationIDMiddlewareTests` | 9/9 PASS |
+| Encoding + existing period response + safe diagnostics | `--filter 'FullyQualifiedName~BusinessMessageEncodingTests\|FullyQualifiedName~UnlockResponseHttpTests\|FullyQualifiedName~SafeDiagnosticsHttpTests'` | 59/59 PASS |
+| Import field/parser/tax and physical tests | `--filter 'FullyQualifiedName~PhysicalImportValidationTests\|FullyQualifiedName~LegalImportValidationTests\|FullyQualifiedName~TaxNumberValidatorTests'` | 26/26 PASS |
+| Legal validation HTTP | `--filter FullyQualifiedName~LegalEntityHttpValidationTests` | 4/4 PASS, including malformed file400/no persistence |
+| Codebook service | `--filter FullyQualifiedName~CodeListServiceTests` | 25/25 PASS |
+| Email operational diagnostics | `--filter FullyQualifiedName~EmailDiagnosticsTests` | 4/4 PASS |
+| Release publish | `dotnet publish Backend/RelatedPartiesRegister.csproj -c Release --no-restore -p:RunAnalyzers=true -m:1 -nr:false -o artifacts/backend-finalization/publish` | PASS |
+| Published startup | DATA_CORE.dll in isolated Development/InMemory/demo-mail mode; ApplyMigrations=false and true tested separately | PASS both; /health/live and /health/ready each200/Healthy; owned smoke processes stopped afterwards |
+| Whole solution build | `dotnet build RelatedPartiesRegister.slnx -c Release --no-restore -p:RunAnalyzers=true -m:1 -nr:false` | FAIL with the same3 baseline BrowserHost namespace/reference errors; no claim of full .NET/browser success |
+| Whitespace | `git diff --check` and `git diff --check origin/main...HEAD` | PASS |
+
+Backend total: **529/529**, no skips. Focused results are subsets, not additional tests to add to529. The8 SQL cases cover actual SQL provider use, mutual Admin removal, demotion/deactivation, deactivate/delete, released locks, unconfirmed placeholder exclusion, subject-link migration/persistence/audit and readiness. These tests use uniquely named disposable databases, never the application database.
+
+The initial published startup attempt correctly failed missing real email configuration. Successful smoke probes explicitly selected `Email:Provider=demo`; they do not prove real email or SSO works. The pre-fix InMemory startup failed even with ApplyMigrations=false; the post-fix two-mode probe confirms that regression is removed.
+
+Startup command from the publish directory (random free port, no additional saved script):
+
+```powershell
+dotnet DATA_CORE.dll --environment Development --urls http://127.0.0.1:0 --Email:Provider demo --KeycloakSettings:Enabled false --Database:ServerName "" --Database:Name "" --Database:ApplyMigrations false
+```
+
+Repeating with `--Database:ApplyMigrations true` must warn/skip migration for InMemory. Real SQL migrations remain an explicit reviewed deployment action; no migration command against a populated database was executed here.
+
+### Commits and handoff
+
+Local implementation commits (before this evidence update):
+
+- `4367061`: requirement audit and proposed shared contracts.
+- `2bb9b9a`: safe request/auth/exception diagnostics and correlation IDs.
+- `292acba`: approved S1 Audience validation and HTTP evidence/configuration.
+- `42a13d5`: mail HTML encoding, canonical routes and safe period JSON.
+- `e491a6e`: startup migration opt-in and actual backend entrypoint.
+- `9275326`: import field bounds, incomplete rows and malformed workbooks.
+- `99ccca1`: stable codebook keys and referenced-deactivation guard.
+- `872ddaa`: mail/business operational log redaction.
+
+Migration instructions for this batch: no schema upgrade/backfill is needed. Configure the approved API audience before UAT/PROD startup. Default startup does not run migrations; opt in only in isolated Development when intentionally applying reviewed relational migrations. Keep first-link fallback disabled until real export/identity reconciliation is approved. Do not run historical destructive migrations on populated data on the strength of fresh-database tests.
+
+Frontend handoff: current HTTP DTO/route shapes remain compatible; no new role-request/history/localization routes are available yet. Coordinate the duplicate DATA_CORE assembly identity and approve C1–C5 before frontend implements proposed contracts. Error responses no longer expose internal exception details; correlation header is additive. Permission sets and Guest semantics are unchanged except for the explicitly approved S1 token audience enforcement.
+
+Release is not ready: S2/S3 security findings, populated-data migration decisions, bank finance/GCC contracts,8h shared session policy and real Keycloak/OCP/3scale/SQL/mail/TLS/proxy/cache/DP-key/retention/backup operations remain open. No credentials or infrastructure values were invented. No push was performed.
+
+### Exact changed files
+
+
+- `Backend/API/Controllers/PeriodLockController.cs`
+- `Backend/BL/Services/CodeListService.cs`
+- `Backend/BL/Services/EmailTemplates.cs`
+- `Backend/BL/Services/HttpApiEmailService.cs`
+- `Backend/BL/Services/LegalEntityService.cs`
+- `Backend/BL/Services/MockEmailService.cs`
+- `Backend/BL/Services/RelatedPersonService.cs`
+- `Backend/BL/Services/SmtpEmailService.cs`
+- `Backend/Dockerfile`
+- `Backend/Exceptions/GlobalExceptionHandler.cs`
+- `Backend/Helpers/Excel/ExcelImportSchema.cs`
+- `Backend/Helpers/Validators/TaxNumberValidator.cs`
+- `Backend/IoC/Extensions/Authentication/AuthenticationServiceExtensions.cs`
+- `Backend/IoC/Extensions/Databases/DatabaseExtensions.cs`
+- `Backend/IoC/Extensions/ExceptionHandling/ProblemDetailsConfig.cs`
+- `Backend/IoC/Middleware/IncludeCorrelationIDMiddleware.cs`
+- `Backend/IoC/Middleware/RequestOutcomeLoggingMiddleware.cs`
+- `Backend/Program.cs`
+- `Backend/appsettings.json`
+- `docs/BACKEND-FINALIZATION.md`
+- `docs/configuration/ENVIRONMENT-VARIABLES.md`
+- `tests/Backend.IntegrationTests/Tests/LegalEntity/LegalEntityHttpValidationTests.cs`
+- `tests/Backend.IntegrationTests/Tests/Operations/BusinessMessageEncodingTests.cs`
+- `tests/Backend.IntegrationTests/Tests/Operations/JwtAudienceHttpTests.cs`
+- `tests/Backend.IntegrationTests/Tests/Operations/SafeDiagnosticsHttpTests.cs`
+- `tests/Backend.UnitTests/Helpers/Validators/TaxNumberValidatorTests.cs`
+- `tests/Backend.UnitTests/Middleware/IncludeCorrelationIDMiddlewareTests.cs`
+- `tests/Backend.UnitTests/RelatedPersons/PhysicalImportValidationTests.cs`
+- `tests/Backend.UnitTests/Services/CodeListServiceTests/CodeListServiceTests.cs`
+- `tests/Backend.UnitTests/Services/EmailDiagnosticsTests.cs`
+- `tests/Backend.UnitTests/Services/LegalEntityServiceTests/LegalImportValidationTests.cs`
