@@ -31,7 +31,7 @@ for (const length of [9, 10, 490, 491, 500]) test(`native clarification boundary
   const confirm = dialog.getByRole("button", { name: "Potvrdi", exact: true }); if (length < 10) await expect(confirm).toBeDisabled(); else await confirm.click();
   const accepted = length >= 10 && length <= 490;
   if (accepted) await expect(dialog).toHaveCount(0);
-  else if (length >= 10) await expect(dialog.locator("div[role=alert]").first()).toContainText("Dopuna mora sadržavati od 10 do 490 znakova.");
+  else if (length >= 10) await expect(dialog.getByText(/Dopuna mora sadržavati od 10 do 490 znakova\./).first()).toBeVisible();
   const state = await (await request.get("/__fixtures/period-state", { headers })).json();
   expect(state.requests).toHaveLength(accepted ? 2 : 1);
   if (accepted) {

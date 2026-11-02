@@ -25,13 +25,10 @@
             <RbiField TValue="DateTime?" Id="legal-from" Label="@T["person.from"]" Required For="@(() => Model.DateFrom)"><InputDate TValue="DateTime?" id="legal-from" class="rbi-control" @bind-Value="Model.DateFrom" ParsingErrorMessage="@T["validation.date"]" /></RbiField>
             <RbiField TValue="DateTime?" Id="legal-to" Label="@T["person.to"]" For="@(() => Model.DateTo)"><InputDate TValue="DateTime?" id="legal-to" class="rbi-control" @bind-Value="Model.DateTo" ParsingErrorMessage="@T["validation.date"]" /></RbiField>
         </div>
-    @if (FormErrors.Any())
-        {
-            <div role="alert" tabindex="-1" @ref="_summary" class="rbi-field__message">@foreach (var message in FormErrors) { <p>@message</p> }</div>
-        }
+    <FormSummary @ref="_summary" Context="_context" />
         <div class="registry-toolbar">
             <RbiButton OnClick="Cancel" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton>
-            <RbiButton Type="RbiButtonType.Submit" Disabled="@(MutationBlocked || Incomplete)">@T["common.save"]</RbiButton>
+            <RbiButton Type="RbiButtonType.Submit" Disabled="@(MutationBlocked || _live.Incomplete)">@T["common.save"]</RbiButton>
         </div>
     </fieldset>
 </EditForm>
@@ -45,31 +42,17 @@
     private EditContext _context = null!;
     private RbiServerValidation _validation = null!;
     private readonly RbiFormSubmissionState _submission = new();
-    private ElementReference _summary;
+    private FormSummary _summary = null!;
     private bool _focusErrors;
-    private readonly HashSet<string> _touched = [];
-    private bool Incomplete => _touched.Count > 0 && Model.Validate().Count > 0;
-    private IEnumerable<string> FormErrors => _context.GetValidationMessages(new FieldIdentifier(Model, string.Empty));
+    private LiveValidation _live = null!;
     protected override void OnInitialized()
     {
         _context = new(Model); _validation = new(_context);
-        _context.OnFieldChanged += ShowLiveErrors;
-        _context.OnValidationStateChanged += Refresh;
-    }
-    private void Refresh(object? sender, ValidationStateChangedEventArgs args) => _ = InvokeAsync(StateHasChanged);
-    // Immediate feedback: validate on every field change and show messages for fields the user has touched.
-    private void ShowLiveErrors(object? sender, FieldChangedEventArgs args)
-    {
-        _touched.Add(args.FieldIdentifier.FieldName);
-        if (args.FieldIdentifier.FieldName == nameof(Model.IsResident)) { _touched.Add(nameof(Model.TaxNumber)); _touched.Add(nameof(Model.FbaId)); }
-        if (args.FieldIdentifier.FieldName == nameof(Model.BasisOfConnection)) _touched.Add(nameof(Model.ConnectionDescription));
-        var visible = Model.Validate().Where(item => _touched.Contains(item.Key))
-            .ToDictionary(item => item.Key, item => item.Value.Select(key => T[key]).ToArray());
-        _validation.DisplayErrors(visible);
+        _live = new(_context, _validation, () => Model.Validate(), key => T[key], () => _ = InvokeAsync(StateHasChanged), new() { [nameof(Model.IsResident)] = [nameof(Model.TaxNumber), nameof(Model.FbaId)], [nameof(Model.BasisOfConnection)] = [nameof(Model.ConnectionDescription)] });
     }
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_focusErrors) { _focusErrors = false; if (FormErrors.Any()) await _summary.FocusAsync(); }
+        if (_focusErrors) { _focusErrors = false; await _summary.FocusAsync(); }
     }
     private void BasisChanged() => Model.ConnectionDescription = Bases.FirstOrDefault(item => item.Kod == Model.BasisOfConnection)?.Opis;
     private async Task SubmitAsync() => await _submission.SubmitAsync(async () =>
@@ -83,5 +66,5 @@
         catch (RegistryApiException exception) { _validation.DisplayFormError(T[exception.MessageKey]); _focusErrors = true; }
         catch (OperationCanceledException) { /* The owning route cancels its request on disposal. */ }
     });
-    public void Dispose() { _context.OnFieldChanged -= ShowLiveErrors; _context.OnValidationStateChanged -= Refresh; _validation.Dispose(); }
+    public void Dispose() { _live.Dispose(); _validation.Dispose(); }
 }

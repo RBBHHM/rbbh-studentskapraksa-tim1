@@ -56,12 +56,12 @@ test("changed reference value immediately reaches the actual business form dropd
 });
 test("validation blocks requests and duplicate code remains an authoritative backend rejection", async ({ page, request }) => {
   await visit(page, "OsnovPovezanosti"); await page.getByRole("button", { name: "Nova vrijednost", exact: true }).click(); let dialog = page.getByRole("dialog");
-  await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog.locator("div[role=alert]").first()).toContainText("Naziv je obavezan");
+  await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog.getByText("Naziv je obavezan").first()).toBeVisible();
   expect((await (await request.get("/__fixtures/counts", { headers })).json()).mutations).toBe(0);
   await dialog.getByRole("textbox", { name: /^Naziv/ }).fill("Duplicate attempt"); await dialog.getByRole("textbox", { name: /^Kod/ }).fill("ZOB-2-V-5");
-  await dialog.getByRole("textbox", { name: "Redoslijed prikaza", exact: true }).fill("1.5"); await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog.locator("div[role=alert]").first()).toContainText("nenegativan cijeli broj");
+  await dialog.getByRole("textbox", { name: "Redoslijed prikaza", exact: true }).fill("1.5"); await page.keyboard.press("Tab"); await expect(dialog.getByText("nenegativan cijeli broj").first()).toBeVisible(); await expect(dialog.getByRole("button", { name: "Sačuvaj", exact: true })).toBeDisabled();
   expect((await (await request.get("/__fixtures/counts", { headers })).json()).mutations).toBe(0);
-  await dialog.getByRole("textbox", { name: "Redoslijed prikaza", exact: true }).fill(""); await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog.getByText("Backend je odbio podatke. Provjerite unesena polja.", { exact: true })).toBeVisible();
+  await dialog.getByRole("textbox", { name: "Redoslijed prikaza", exact: true }).fill(""); await page.keyboard.press("Tab"); await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog.getByText("Backend je odbio podatke. Provjerite unesena polja.", { exact: true })).toBeVisible();
   expect((await (await request.get("/__fixtures/codes-state", { headers })).json()).audit).toEqual([]);
 });
 test("referenced value and entire category deletion are rejected with no data/audit change", async ({ page, request }) => {

@@ -51,6 +51,13 @@ public sealed class FrontendSourceGuardTests
     }
 
     [Fact]
+    public void FormsDoNotRepeatFieldMessagesInAValidationSummary()
+    {
+        var offenders = Sources("*.razor").Where(source => Markup(source.Text).Contains("<ValidationSummary", StringComparison.Ordinal)).Select(source => source.Path).ToArray();
+        Assert.True(offenders.Length == 0, "Use <FormSummary> (form-level messages only):" + Environment.NewLine + string.Join(Environment.NewLine, offenders));
+    }
+
+    [Fact]
     public void MarkupHasNoLiteralSelectOptionsAndNoNewHardcodedBusinessLists()
     {
         var literalOption = new Regex(@"<option\b[^>]*\bvalue=""([^""@][^""]*)""");

@@ -56,7 +56,7 @@ test("required amounts/date and negative values cannot persist", async ({ page, 
   await open(page); await page.getByRole("button", { name: "Uredi kapital", exact: true }).click(); const dialog = page.getByRole("dialog");
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
   await expect(dialog.getByText("Polje je obavezno.", { exact: true }).first()).toBeVisible();
-  await fill(dialog, "-1"); await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
+  await fill(dialog, "-1"); await page.keyboard.press("Tab"); await expect(dialog.getByRole("button", { name: "Sačuvaj", exact: true })).toBeDisabled();
   await expect(dialog.getByText("Iznos ne može biti negativan.", { exact: true }).first()).toBeVisible();
   expect(await (await request.get("/__fixtures/capital", { headers })).json()).toEqual([]);
 });

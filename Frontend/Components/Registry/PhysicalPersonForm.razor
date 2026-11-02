@@ -68,14 +68,11 @@
                 </RbiRadioGroup>
             </div>
         }
-    @if (FormErrors.Any())
-        {
-            <div role="alert" tabindex="-1" @ref="_summary" class="rbi-field__message">@foreach (var message in FormErrors) { <p>@message</p> }</div>
-        }
+    <FormSummary @ref="_summary" Context="_context" />
         <div class="registry-toolbar">
             <RbiButton OnClick="Cancel" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton>
             @if (_step == 2) { <RbiButton OnClick="Back" Variant="RbiButtonVariant.Secondary">@T["common.back"]</RbiButton> }
-            <RbiButton Type="RbiButtonType.Submit" Disabled="@(_checking || MutationBlocked || Incomplete)">@T[_step == 1 ? "common.actions.continue" : "common.save"]</RbiButton>
+            <RbiButton Type="RbiButtonType.Submit" Disabled="@(_checking || MutationBlocked || _live.Incomplete)">@T[_step == 1 ? "common.actions.continue" : "common.save"]</RbiButton>
         </div>
     </fieldset>
 </EditForm>
@@ -98,29 +95,17 @@
     private int _step = 1;
     private bool _checking;
     private bool _focusStep, _focusErrors;
-    private ElementReference _stepHeading, _summary;
-    private readonly HashSet<string> _touched = [];
-    private bool Incomplete => _touched.Count > 0 && Model.Validate(identityOnly: _step == 1).Count > 0;
-    private IEnumerable<string> FormErrors => _context.GetValidationMessages(new FieldIdentifier(Model, string.Empty));
+    private ElementReference _stepHeading;
+    private FormSummary _summary = null!;
+    private LiveValidation _live = null!;
     protected override void OnInitialized()
     {
         _context = new(Model); _validation = new(_context); _duplicateValidation = new(_context);
-        _context.OnFieldChanged += ShowLiveErrors;
-        _context.OnValidationStateChanged += Refresh;
-    }
-    private void Refresh(object? sender, ValidationStateChangedEventArgs args) => _ = InvokeAsync(StateHasChanged);
-    // Immediate feedback: validate on every field change and show messages for the fields the user has touched.
-    private void ShowLiveErrors(object? sender, FieldChangedEventArgs args)
-    {
-        _touched.Add(args.FieldIdentifier.FieldName);
-        if (args.FieldIdentifier.FieldName == nameof(Model.RelationBasis)) _touched.Add(nameof(Model.RelationDescription));
-        var visible = Model.Validate(identityOnly: _step == 1).Where(item => _touched.Contains(item.Key))
-            .ToDictionary(item => item.Key, item => item.Value.Select(key => T[key]).ToArray());
-        _validation.DisplayErrors(visible);
+        _live = new(_context, _validation, () => Model.Validate(identityOnly: _step == 1), key => T[key], () => _ = InvokeAsync(StateHasChanged), new() { [nameof(Model.RelationBasis)] = [nameof(Model.RelationDescription)] });
     }
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_focusErrors) { _focusErrors = false; if (FormErrors.Any()) await _summary.FocusAsync(); }
+        if (_focusErrors) { _focusErrors = false; await _summary.FocusAsync(); }
         else if (_focusStep) { _focusStep = false; await _stepHeading.FocusAsync(); }
     }
     private void Back() { _step = 1; _focusStep = true; }
@@ -170,5 +155,5 @@
         }
         finally { if (!token.IsCancellationRequested) _checking = false; }
     }
-    public void Dispose() { _context.OnFieldChanged -= ShowLiveErrors; _context.OnValidationStateChanged -= Refresh; _lifetime.Cancel(); _duplicate?.Cancel(); _duplicate?.Dispose(); _lifetime.Dispose(); _validation.Dispose(); _duplicateValidation.Dispose(); }
+    public void Dispose() { _live.Dispose(); _lifetime.Cancel(); _duplicate?.Cancel(); _duplicate?.Dispose(); _lifetime.Dispose(); _validation.Dispose(); _duplicateValidation.Dispose(); }
 }

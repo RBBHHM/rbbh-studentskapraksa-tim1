@@ -69,10 +69,11 @@ test("required names and corporate email block requests; Guest needs no checkbox
   await visit(page); await page.getByRole("button", { name: "Dodaj korisnika", exact: true }).click();
   let dialog = page.getByRole("dialog"); await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
   await expect(dialog.getByRole("checkbox", { name: "Gost", exact: true })).toHaveCount(0);
-  await expect(dialog.getByRole("alert").first()).toBeVisible();
+  await expect(dialog.locator("[aria-invalid=true]").first()).toBeVisible();
   expect((await (await request.get("/__fixtures/counts", { headers })).json()).mutations).toBe(0);
   await dialog.getByRole("button", { name: "Odustani", exact: true }).click(); dialog = await createFields(page, "invalid@example.test");
-  await access(dialog, "FL", true); await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
+  await access(dialog, "FL", true); await dialog.getByLabel("Email", { exact: false }).blur();
+  await expect(dialog.getByRole("button", { name: "Sačuvaj", exact: true })).toBeDisabled();
   await expect(dialog.getByText("Unesite ispravnu email adresu s domenom @raiffeisengroup.ba.", { exact: true }).first()).toBeVisible();
   expect((await (await request.get("/__fixtures/counts", { headers })).json()).mutations).toBe(0);
 });

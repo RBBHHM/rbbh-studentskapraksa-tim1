@@ -52,8 +52,8 @@ test("create keeps zero/null and backend-derived capital, edit and confirmed del
 test("negative amounts remain field errors without persistence", async ({ page, request }) => {
   await open(page); const dialog = await begin(page);
   await dialog.getByLabel("Odobreni limit", { exact: false }).fill("-1");
-  await dialog.getByLabel("Maksimalna očekivana utilizacija", { exact: false }).fill("-2");
-  await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
+  await dialog.getByLabel("Maksimalna očekivana utilizacija", { exact: false }).fill("-2"); await page.keyboard.press("Tab");
+  await expect(dialog.getByRole("button", { name: "Sačuvaj", exact: true })).toBeDisabled();
   await expect(dialog.getByText("Iznos ne može biti negativan.", { exact: true }).first()).toBeVisible();
   expect(await (await request.get("/__fixtures/limits", { headers })).json()).toEqual([]);
 });

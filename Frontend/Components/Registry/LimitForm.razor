@@ -32,10 +32,10 @@
                 </dl>
             </section>
         }
-    <div role="alert" tabindex="-1" @ref="_summary"><ValidationSummary /></div>
+    <FormSummary @ref="_summary" Context="_context" />
         <div class="registry-toolbar">
             <RbiButton OnClick="Cancel" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton>
-            <RbiButton Type="RbiButtonType.Submit" Disabled="@(MutationBlocked || _entity is null || Types.Count == 0)">@T["common.save"]</RbiButton>
+            <RbiButton Type="RbiButtonType.Submit" Disabled="@(MutationBlocked || _entity is null || Types.Count == 0 || _live.Incomplete)">@T["common.save"]</RbiButton>
         </div>
     </fieldset>
 </EditForm>
@@ -52,9 +52,14 @@
     private RbiServerValidation _validation = null!;
     private readonly RbiFormSubmissionState _submission = new();
     private LimitEntityData? _entity;
-    private ElementReference _summary;
+    private FormSummary _summary = null!;
     private bool _focusErrors;
-    protected override void OnInitialized() { _context = new(Model); _validation = new(_context); }
+    private LiveValidation _live = null!;
+    protected override void OnInitialized()
+    {
+        _context = new(Model); _validation = new(_context);
+        _live = new(_context, _validation, () => Model.Validate(), key => T[key], () => _ = InvokeAsync(StateHasChanged));
+    }
     protected override async Task OnAfterRenderAsync(bool firstRender) { if (_focusErrors) { _focusErrors = false; await _summary.FocusAsync(); } }
     private async Task SubmitAsync() => await _submission.SubmitAsync(async () =>
     {
@@ -68,5 +73,5 @@
         catch (RegistryApiException exception) { _validation.DisplayFormError(T[exception.MessageKey]); _focusErrors = true; }
         catch (OperationCanceledException) { /* The owning route cancels on disposal. */ }
     });
-    public void Dispose() => _validation.Dispose();
+    public void Dispose() { _live.Dispose(); _validation.Dispose(); }
 }

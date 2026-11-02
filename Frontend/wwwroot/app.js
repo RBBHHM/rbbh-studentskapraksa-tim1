@@ -21,3 +21,13 @@ document.addEventListener("keydown", function (event) {
     event.preventDefault();
     target.click();
 });
+
+// Focus management after a failed submit: first field the form marked invalid.
+window.appFocus = {
+    firstInvalid: function () {
+        var dialog = document.querySelector("[role=dialog][open], dialog[open], [role=dialog]");
+        var root = dialog || document;
+        var field = root.querySelector("[aria-invalid=true]");
+        if (field) { field.focus(); }
+    }
+};
