@@ -16,6 +16,7 @@ namespace RBBH.ConnectedParties.Exceptions.Helpers
             {
                 BusinessRuleException business => business.Status,
                 Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException => StatusCodes.Status409Conflict,
+                Microsoft.EntityFrameworkCore.DbUpdateException { InnerException: Microsoft.Data.SqlClient.SqlException { Number: 2601 or 2627 } } => StatusCodes.Status409Conflict,
                 RBBH.ConnectedParties.Helpers.MissingActorIdentityException => StatusCodes.Status401Unauthorized,
                 ValidationException => StatusCodes.Status400BadRequest,
                 ApplicationException => StatusCodes.Status400BadRequest,

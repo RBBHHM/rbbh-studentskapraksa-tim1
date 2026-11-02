@@ -72,6 +72,7 @@ public sealed class UnlockResponseHttpTests : IAsyncLifetime
         db.UnlockRequests.Add(new UnlockRequest
         {
             Id = _originalId,
+            RequestedBySubject = "period-fixture-subject",
             RequestedBy = "original-fixture",
             RequestedByEmail = "original@example.test",
             Year = 2026,

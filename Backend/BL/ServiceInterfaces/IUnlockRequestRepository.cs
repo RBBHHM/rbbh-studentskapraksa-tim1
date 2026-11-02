@@ -8,10 +8,12 @@ public interface IUnlockRequestRepository
 
     /// <summary>Lista zahtjeva s opcionim filterom po statusu i paginacijom.</summary>
     Task<(List<UnlockRequest> Items, int Total)> GetPagedAsync(
-        string? status, int page, int pageSize);
+        string? status, int page, int pageSize, string? ownerSubject = null);
 
     /// <summary>Vraća jedan zahtjev po ID-u, ili null ako ne postoji.</summary>
     Task<UnlockRequest?> GetByIdAsync(Guid id);
+
+    Task RespondAsync(Guid id, string ownerSubject, UnlockRequest response, AuditEntry audit, CancellationToken cancellationToken);
 
     /// <summary>
     /// Postavlja sve PENDING zahtjeve za dati period na APPROVED.

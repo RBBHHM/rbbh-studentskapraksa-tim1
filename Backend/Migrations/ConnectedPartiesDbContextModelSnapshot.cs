@@ -324,6 +324,9 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<int>("Month")
                         .HasColumnType("int");
 
+                    b.Property<Guid?>("ParentRequestId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("ProcessedAt")
                         .HasColumnType("datetime2");
 
@@ -346,15 +349,30 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("RequestedBySubject")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<int>("Year")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ParentRequestId")
+                        .IsUnique()
+                        .HasFilter("[ParentRequestId] IS NOT NULL");
+
+                    b.HasIndex("RequestedBySubject");
 
                     b.HasIndex("Status");
 

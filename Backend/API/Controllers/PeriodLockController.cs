@@ -24,6 +24,10 @@ public class PeriodLockController(
     IAppUserService appUserService,
     ILogger<PeriodLockController> logger) : ControllerBase
 {
+    private string ActorSubject() =>
+        Helpers.RegistryVerification.CreatorSubject(new HttpContextAccessor { HttpContext = HttpContext })
+        ?? throw new MissingActorIdentityException();
+
     private string CurrentUser() =>
         RBBH.ConnectedParties.Helpers.AuthenticatedActor.Email(User);
 
@@ -82,7 +86,7 @@ public class PeriodLockController(
     public async Task<IActionResult> GetPeriodStatus(
         [FromQuery] int year, [FromQuery] int month)
     {
-        if (month < 1 || month > 12 || year < 2020)
+        if (month < 1 || month > 12 || year < 2020 || year > 9999)
             return BadRequest(Err("Nevažeći period."));
 
         var isLocked = await periodLockRepository.IsPeriodLockedAsync(year, month);
@@ -106,6 +110,8 @@ public class PeriodLockController(
         var now = DateTime.UtcNow;
         int year = dto?.Year ?? now.Year;
         int month = dto?.Month ?? now.Month;
+        if (year is < 2020 or > 9999 || month is < 1 or > 12)
+            return BadRequest(Err("Nevažeći period."));
 
         var periodLock = await periodLockRepository.GetByPeriodAsync(year, month);
 
@@ -161,6 +167,8 @@ public class PeriodLockController(
         var now = DateTime.UtcNow;
         int year = dto?.Year ?? now.Year;
         int month = dto?.Month ?? now.Month;
+        if (year is < 2020 or > 9999 || month is < 1 or > 12)
+            return BadRequest(Err("Nevažeći period."));
 
         var periodLock = await periodLockRepository.GetByPeriodAsync(year, month);
         bool isPast = year < now.Year || (year == now.Year && month < now.Month);
@@ -244,7 +252,7 @@ public class PeriodLockController(
         int year = dto.Year ?? now.Year;
         int month = dto.Month ?? now.Month;
 
-        if (month < 1 || month > 12 || year < 2020)
+        if (month < 1 || month > 12 || year < 2020 || year > 9999)
             return BadRequest(Err("Nevažeći period."));
 
         var username = CurrentUser();
@@ -255,6 +263,7 @@ public class PeriodLockController(
 
         var request = new UnlockRequest
         {
+            RequestedBySubject = ActorSubject(),
             RequestedBy = username,
             RequestedByEmail = email,
             Year = year,
@@ -297,9 +306,20 @@ public class PeriodLockController(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
+        return await ListUnlockRequests(status, page, pageSize, ActorSubject());
+    }
+
+    [HttpGet("unlock-requests/review")]
+    [Authorize(Policy = ApplicationPolicies.CapitalWrite)]
+    public Task<IActionResult> GetReviewUnlockRequests([FromQuery] string? status = null,
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 20) => ListUnlockRequests(status, page, pageSize, null);
+
+    private async Task<IActionResult> ListUnlockRequests(string? status, int page, int pageSize, string? owner)
+    {
+        page = Math.Max(1, page); pageSize = Math.Clamp(pageSize, 1, 200);
         // Allow empty string to mean "all statuses"
         var statusFilter = string.IsNullOrWhiteSpace(status) ? null : status;
-        var (items, total) = await unlockRequestRepository.GetPagedAsync(statusFilter, page, pageSize);
+        var (items, total) = await unlockRequestRepository.GetPagedAsync(statusFilter, page, pageSize, owner);
 
         var mapped = items.Select(r => new
         {
@@ -325,8 +345,8 @@ public class PeriodLockController(
         [FromRoute] Guid id,
         [FromBody] AdminActionDto dto)
     {
-        if (dto is null || string.IsNullOrWhiteSpace(dto.Note) || dto.Note.Length < 10)
-            return BadRequest(Err("Razlog odbijanja je obavezan (min. 10 karaktera).", "note"));
+        if (dto is null || string.IsNullOrWhiteSpace(dto.Note) || dto.Note.Trim().Length < 10 || dto.Note.Length > 1000)
+            return BadRequest(Err("Razlog odbijanja je obavezan (10–1000 karaktera).", "note"));
 
         var username = CurrentUser();
         var success = await unlockRequestRepository.RejectAsync(id, dto.Note.Trim(), username);
@@ -354,8 +374,8 @@ public class PeriodLockController(
         [FromRoute] Guid id,
         [FromBody] AdminActionDto dto)
     {
-        if (dto is null || string.IsNullOrWhiteSpace(dto.Note) || dto.Note.Length < 10)
-            return BadRequest(Err("Poruka korisniku je obavezna (min. 10 karaktera).", "note"));
+        if (dto is null || string.IsNullOrWhiteSpace(dto.Note) || dto.Note.Trim().Length < 10 || dto.Note.Length > 1000)
+            return BadRequest(Err("Poruka korisniku je obavezna (10–1000 karaktera).", "note"));
 
         // Dohvati zahtjev PRIJE update-a — potreban email i podaci korisnika
         var request = await unlockRequestRepository.GetByIdAsync(id);
@@ -400,8 +420,10 @@ public class PeriodLockController(
             return BadRequest(Err("Dopuna mora sadržavati od 10 do 490 znakova.", "message"));
 
         var original = await unlockRequestRepository.GetByIdAsync(id);
-        if (original is null)
+        if (original is null || original.RequestedBySubject != ActorSubject())
             return NotFound(Err("Zahtjev nije pronađen."));
+        if (original.Status != "NEEDS_INFO")
+            return Conflict(Err("Zahtjev više ne očekuje dopunu."));
 
         var now = DateTime.UtcNow;
         var username = CurrentUser();
@@ -413,6 +435,7 @@ public class PeriodLockController(
         // Kreiraj novi PENDING zahtjev s korisnikovim odgovorom
         var response = new UnlockRequest
         {
+            RequestedBySubject = ActorSubject(),
             RequestedBy = username,
             RequestedByEmail = email,
             Year = original.Year,
@@ -423,9 +446,7 @@ public class PeriodLockController(
             CreatedAt = now,
             IsActive = true
         };
-        await unlockRequestRepository.CreateAsync(response);
-
-        await auditService.LogAsync(new AuditEntry
+        await unlockRequestRepository.RespondAsync(id, ActorSubject(), response, new AuditEntry
         {
             TableName = "PeriodLock",
             RecordId = id.ToString(),
@@ -441,7 +462,7 @@ public class PeriodLockController(
             UserId = username,
             Username = username,
             IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-        });
+        }, HttpContext.RequestAborted);
 
         // Email adminu s korisnikovim odgovorom
         await emailService.SendUserResponseAsync(

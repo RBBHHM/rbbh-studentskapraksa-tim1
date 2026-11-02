@@ -15,9 +15,11 @@ public class UnlockRequestRepository(ConnectedPartiesDbContext db) : IUnlockRequ
     }
 
     public async Task<(List<UnlockRequest> Items, int Total)> GetPagedAsync(
-        string? status, int page, int pageSize)
+        string? status, int page, int pageSize, string? ownerSubject = null)
     {
+        page = Math.Max(1, page); pageSize = Math.Clamp(pageSize, 1, 200);
         var query = db.UnlockRequests.AsQueryable();
+        if (ownerSubject is not null) query = query.Where(row => row.RequestedBySubject == ownerSubject);
 
         if (!string.IsNullOrWhiteSpace(status))
             query = query.Where(r => r.Status == status.ToUpper());
@@ -25,8 +27,8 @@ public class UnlockRequestRepository(ConnectedPartiesDbContext db) : IUnlockRequ
         var total = await query.CountAsync();
 
         var items = await query
-            .OrderByDescending(r => r.CreatedAt)
-            .Skip((page - 1) * pageSize)
+            .OrderByDescending(r => r.CreatedAt).ThenBy(r => r.Id)
+            .Skip((int)Math.Min((long)(page - 1) * pageSize, int.MaxValue))
             .Take(pageSize)
             .AsNoTracking()
             .ToListAsync();
@@ -36,6 +38,26 @@ public class UnlockRequestRepository(ConnectedPartiesDbContext db) : IUnlockRequ
 
     public async Task<UnlockRequest?> GetByIdAsync(Guid id) =>
         await db.UnlockRequests.FirstOrDefaultAsync(r => r.Id == id);
+
+    public async Task RespondAsync(Guid id, string ownerSubject, UnlockRequest response, AuditEntry audit, CancellationToken cancellationToken)
+    {
+        var original = await db.UnlockRequests.SingleOrDefaultAsync(row => row.Id == id && row.RequestedBySubject == ownerSubject, cancellationToken)
+            ?? throw new Exceptions.BusinessRuleException(404, "request.not_found", "Zahtjev nije pronađen.");
+        if (original.Status != "NEEDS_INFO" || await db.UnlockRequests.AnyAsync(row => row.ParentRequestId == id, cancellationToken))
+            throw new Exceptions.BusinessRuleException(409, "request.invalid_state", "Zahtjev više ne očekuje dopunu.");
+        original.ModifiedAt = DateTime.UtcNow;
+        original.ModifiedBy = response.CreatedBy;
+        response.ParentRequestId = original.Id;
+        response.RequestedBySubject = ownerSubject;
+        db.UnlockRequests.Add(response);
+        db.AuditLogs.Add(new DL.Entities.Audit.AuditLog
+        {
+            TableName = audit.TableName, RecordId = audit.RecordId, Action = audit.Action,
+            UserId = audit.UserId, Username = audit.Username, IpAddress = audit.IpAddress,
+            OldValues = audit.OldValues, NewValues = audit.NewValues, Timestamp = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync(cancellationToken);
+    }
 
     public async Task<bool> RejectAsync(Guid id, string adminNote, string processedBy)
     {
