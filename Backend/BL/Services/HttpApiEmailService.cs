@@ -112,7 +112,7 @@ public sealed class HttpApiEmailService(
             if (!response.IsSuccessStatusCode)
             {
                 logger.LogWarning(
-                    "Slanje emaila na {To} nije uspjelo. Status: {StatusCode}", to, response.StatusCode);
+                    "Email delivery failed. Status {StatusCode}", (int)response.StatusCode);
                 return;
             }
 
@@ -124,11 +124,11 @@ public sealed class HttpApiEmailService(
                 Audience = audience,
                 RequestId = requestId
             });
-            logger.LogInformation("Email poslan preko zajedničkog servisa na {To}: {Subject}", to, subject);
+            logger.LogInformation("Email delivered through the configured HTTP transport.");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Greška prilikom slanja emaila na {To} preko zajedničkog servisa.", to);
+            logger.LogError("Email delivery failed. FailureType {FailureType}", ex.GetType().Name);
         }
     }
 }

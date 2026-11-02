@@ -103,5 +103,5 @@ public sealed class MockEmailService(
     }
 
     private void Log(string to, string subject) =>
-        logger.LogInformation("[EMAIL DEMO] Prima: {To} | Naslov: {Subject}", to, subject);
+        logger.LogInformation("Email recorded in the isolated demo store.");
 }

@@ -106,6 +106,6 @@ public sealed class SmtpEmailService(
         };
 
         await client.SendMailAsync(msg);
-        logger.LogInformation("Email poslan na {To}: {Subject}", to, subject);
+        logger.LogInformation("Email delivered through the configured SMTP transport.");
     }
 }

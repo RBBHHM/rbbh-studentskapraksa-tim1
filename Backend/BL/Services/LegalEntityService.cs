@@ -128,9 +128,7 @@ public class LegalEntityService : ILegalEntityService
         _context.LegalEntities.Add(entity);
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation(
-            "Pravno lice kreirano. Id={Id}; Name={Name}; CreatedBy={CreatedBy}",
-            entity.Id, entity.Name, createdBy);
+        _logger.LogInformation("Legal entity created.");
 
         return MapToDto(entity);
     }
@@ -168,9 +166,7 @@ public class LegalEntityService : ILegalEntityService
 
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation(
-            "Pravno lice ažurirano. Id={Id}; ModifiedBy={ModifiedBy}",
-            entity.Id, modifiedBy);
+        _logger.LogInformation("Legal entity updated.");
 
         return MapToDto(entity);
     }
@@ -191,9 +187,7 @@ public class LegalEntityService : ILegalEntityService
 
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation(
-            "Pravno lice deaktivirano (soft delete). Id={Id}; DeletedBy={DeletedBy}",
-            id, deletedBy);
+        _logger.LogInformation("Legal entity deactivated.");
     }
 
     /// <inheritdoc />
@@ -217,9 +211,7 @@ public class LegalEntityService : ILegalEntityService
 
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation(
-            "Pravno lice verificirano. Id={Id}; VerifiedBy={VerifiedBy}",
-            entity.Id, verifiedBy);
+        _logger.LogInformation("Legal entity verified.");
 
         return MapToDto(entity);
     }
