@@ -25,7 +25,7 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Databases
 
             if (!configured && environment.IsDevelopment())
                 services.AddSingleton(new DatabaseStartupWarning(
-                    "SQL Server nije konfigurisan. Aplikacija koristi privremenu seedovanu InMemory bazu; " +
+                    "SQL Server nije konfigurisan. Aplikacija koristi privremenu InMemory bazu; " +
                     "podaci će nestati nakon gašenja API-ja."));
                 
             services.AddDbContext<ConnectedPartiesDbContext>(options =>

@@ -94,14 +94,17 @@ app.MapGet("/api/auth/profile", (HttpContext context) => Results.Ok(new
 
 app.MapControllers();
 
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() && app.Configuration.GetValue<bool>("Database:ApplyMigrations"))
 {
     using var scope = app.Services.CreateScope();
 
     var db = scope.ServiceProvider
         .GetRequiredService<ConnectedPartiesDbContext>();
 
-    await db.Database.MigrateAsync();
+    if (db.Database.IsRelational())
+        await db.Database.MigrateAsync();
+    else
+        app.Logger.LogWarning("Development migration request ignored for the non-relational database provider.");
 }
 
 app.Run();
