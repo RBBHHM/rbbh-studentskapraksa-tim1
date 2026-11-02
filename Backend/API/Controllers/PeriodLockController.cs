@@ -477,27 +477,18 @@ public class RespondDto
     public string Message { get; set; } = null!;
 }
 
-// Writes string values without Unicode-escaping non-ASCII characters so that
-// JsonSerializer.Serialize(bad.Value) in integration tests produces literal Bosnian chars.
-internal sealed class UnsafeStringConverter : JsonConverter<string>
+// Preserve literal Bosnian text while letting the JSON writer escape every
+// control character, quote and backslash. Never construct raw JSON strings.
+internal sealed class BusinessMessageStringConverter : JsonConverter<string>
 {
     public override string? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         => reader.GetString();
 
-    public override void Write(Utf8JsonWriter writer, string value, JsonSerializerOptions options)
-    {
-        var escaped = value
-            .Replace("\\", "\\\\")
-            .Replace("\"", "\\\"")
-            .Replace("\n", "\\n")
-            .Replace("\r", "\\r")
-            .Replace("\t", "\\t")
-            .Replace("\b", "\\b")
-            .Replace("\f", "\\f");
-        writer.WriteRawValue($"\"{escaped}\"", skipInputValidation: true);
-    }
+    public override void Write(Utf8JsonWriter writer, string value, JsonSerializerOptions options) =>
+        writer.WriteStringValue(JsonEncodedText.Encode(value,
+            System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping));
 }
 
 internal sealed record ErrField(
     string? Field,
-    [property: JsonConverter(typeof(UnsafeStringConverter))] string Message);
+    [property: JsonConverter(typeof(BusinessMessageStringConverter))] string Message);

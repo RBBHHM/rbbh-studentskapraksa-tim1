@@ -103,7 +103,7 @@ public sealed class SafeDiagnosticsHttpTests
         };
         await options.Events.AuthenticationFailed(failure);
         Assert.Equal("true", context.Response.Headers[expired ? "Token-Expired" : "SigningKey-Invalid"].ToString());
-        var entry = Assert.Single(logs.Entries.Where(entry => entry.Category == "AuthenticationFailure"));
+        var entry = Assert.Single(logs.Entries, entry => entry.Category == "AuthenticationFailure");
         Assert.Contains(failure.Exception.GetType().Name, entry.Message);
         Assert.DoesNotContain(PrivateValue, entry.Message);
         Assert.Null(entry.Exception);

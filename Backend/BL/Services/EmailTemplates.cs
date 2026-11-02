@@ -1,3 +1,5 @@
+using System.Net;
+
 namespace RBBH.ConnectedParties.BL.Services;
 
 internal static class EmailTemplates
@@ -53,11 +55,11 @@ internal static class EmailTemplates
     private static string ActionButton(string href, string label) => $"""
         <tr>
           <td style="padding:0 32px 36px;text-align:center;">
-            <a href="{href}" target="_blank" rel="noopener noreferrer"
+            <a href="{WebUtility.HtmlEncode(href)}" target="_blank" rel="noopener noreferrer"
                style="display:inline-block;background:#FFD700;color:#1A1A1A;font-family:Arial,Helvetica,sans-serif;
                       font-size:14px;font-weight:700;padding:13px 32px;border-radius:6px;
                       text-decoration:none;letter-spacing:.2px;">
-              {label} &#8594;
+              {WebUtility.HtmlEncode(label)} &#8594;
             </a>
           </td>
         </tr>
@@ -72,8 +74,8 @@ internal static class EmailTemplates
             var bg = shaded ? "background:#F8F8F8;" : "";
             sb.Append($"""
                 <tr>
-                  <td style="{bg}padding:12px 16px;color:#888888;font-weight:600;width:140px;border-bottom:1px solid #EEEEEE;">{label}</td>
-                  <td style="{bg}padding:12px 16px;color:#1A1A1A;border-bottom:1px solid #EEEEEE;">{value}</td>
+                  <td style="{bg}padding:12px 16px;color:#888888;font-weight:600;width:140px;border-bottom:1px solid #EEEEEE;">{WebUtility.HtmlEncode(label)}</td>
+                  <td style="{bg}padding:12px 16px;color:#1A1A1A;border-bottom:1px solid #EEEEEE;">{WebUtility.HtmlEncode(value)}</td>
                 </tr>
                 """);
         }
@@ -89,7 +91,7 @@ internal static class EmailTemplates
     {
         var period    = MonthDisplay(year, month);
         var timestamp = DateTime.Now.ToString("dd.MM.yyyy. HH:mm");
-        var adminLink = $"{appBaseUrl.TrimEnd('/')}/admin/period";
+        var adminLink = $"{appBaseUrl.TrimEnd('/')}/app/admin/period";
 
         return Header() + $"""
                   <tr>
@@ -118,7 +120,7 @@ internal static class EmailTemplates
     {
         var period    = MonthDisplay(year, month);
         var timestamp = DateTime.Now.ToString("dd.MM.yyyy. HH:mm");
-        var appLink   = $"{appBaseUrl.TrimEnd('/')}/notifikacije";
+        var appLink   = $"{appBaseUrl.TrimEnd('/')}/app/notifications";
 
         return Header() + $"""
                   <tr>
@@ -127,7 +129,7 @@ internal static class EmailTemplates
                         Administrator treba više informacija
                       </h1>
                       <p style="color:#555555;font-size:14px;line-height:1.7;margin:0 0 20px;">
-                        Poštovani/a <strong>{requestedBy}</strong>, vaš zahtjev za otključavanje
+                        Poštovani/a <strong>{WebUtility.HtmlEncode(requestedBy)}</strong>, vaš zahtjev za otključavanje
                         perioda <strong>{period}</strong> je na čekanju.
                         Administrator Registra povezanih lica je postavio sljedeće pitanje ili napomenu:
                       </p>
@@ -138,7 +140,7 @@ internal static class EmailTemplates
                           <td width="4" style="background:#FFD700;border-radius:3px;">&nbsp;</td>
                           <td style="padding:14px 18px;background:#FFFBEA;border-radius:0 6px 6px 0;
                                      font-size:14px;color:#333333;line-height:1.7;font-style:italic;">
-                            {adminNote}
+                            {WebUtility.HtmlEncode(adminNote)}
                           </td>
                         </tr>
                       </table>
@@ -159,7 +161,7 @@ internal static class EmailTemplates
     {
         var period    = MonthDisplay(year, month);
         var timestamp = DateTime.Now.ToString("dd.MM.yyyy. HH:mm");
-        var adminLink = $"{appBaseUrl.TrimEnd('/')}/admin/period";
+        var adminLink = $"{appBaseUrl.TrimEnd('/')}/app/admin/period";
 
         return Header() + $"""
                   <tr>
@@ -168,7 +170,7 @@ internal static class EmailTemplates
                         Korisnik dostavio dodatne informacije
                       </h1>
                       <p style="color:#555555;font-size:14px;line-height:1.7;margin:0 0 24px;">
-                        Korisnik <strong>{requestedBy}</strong> je odgovorio na vaš zahtjev za
+                        Korisnik <strong>{WebUtility.HtmlEncode(requestedBy)}</strong> je odgovorio na vaš zahtjev za
                         dodatnim informacijama vezanim za period <strong>{period}</strong>.
                       </p>
                       {InfoTable(
@@ -183,7 +185,7 @@ internal static class EmailTemplates
                           <td style="padding:14px 18px;background:#FFFBEA;border-radius:0 6px 6px 0;
                                      font-size:14px;color:#333333;line-height:1.7;">
                             <strong style="display:block;margin-bottom:6px;color:#888888;font-size:12px;text-transform:uppercase;letter-spacing:.3px;">Odgovor korisnika</strong>
-                            {userMessage}
+                            {WebUtility.HtmlEncode(userMessage)}
                           </td>
                         </tr>
                       </table>
@@ -198,7 +200,7 @@ internal static class EmailTemplates
         DateTime? dateFrom, DateTime? dateTo, string appBaseUrl)
     {
         var timestamp = DateTime.Now.ToString("dd.MM.yyyy. HH:mm");
-        var appLink   = $"{appBaseUrl.TrimEnd('/')}/physical-persons";
+        var appLink   = $"{appBaseUrl.TrimEnd('/')}/app/physical-persons";
         var dfStr     = dateFrom.HasValue ? dateFrom.Value.ToString("dd.MM.yyyy.") : "—";
         var dtStr     = dateTo.HasValue   ? dateTo.Value.ToString("dd.MM.yyyy.")   : "—";
 
@@ -231,7 +233,7 @@ internal static class EmailTemplates
         DateTime dateTo, string appBaseUrl)
     {
         var timestamp = DateTime.Now.ToString("dd.MM.yyyy. HH:mm");
-        var appLink   = $"{appBaseUrl.TrimEnd('/')}/physical-persons";
+        var appLink   = $"{appBaseUrl.TrimEnd('/')}/app/physical-persons";
         var dtStr     = dateTo.ToString("dd.MM.yyyy.");
 
         return Header() + $"""
@@ -251,7 +253,7 @@ internal static class EmailTemplates
                           <td width="4" style="background:#C0392B;border-radius:3px;">&nbsp;</td>
                           <td style="padding:14px 18px;background:#FDEDEC;border-radius:0 6px 6px 0;
                                      font-size:14px;color:#333333;line-height:1.7;">
-                            Osnov povezanosti za lice <strong>{personName}</strong> istekao je
+                            Osnov povezanosti za lice <strong>{WebUtility.HtmlEncode(personName)}</strong> istekao je
                             <strong>{dtStr}</strong>.
                           </td>
                         </tr>
@@ -275,7 +277,7 @@ internal static class EmailTemplates
     {
         var period    = MonthDisplay(year, month);
         var timestamp = DateTime.Now.ToString("dd.MM.yyyy. HH:mm");
-        var appLink   = $"{appBaseUrl.TrimEnd('/')}/notifikacije";
+        var appLink   = $"{appBaseUrl.TrimEnd('/')}/app/notifications";
 
         return Header() + $"""
                   <tr>
@@ -284,7 +286,7 @@ internal static class EmailTemplates
                         Period je otključan
                       </h1>
                       <p style="color:#555555;font-size:14px;line-height:1.7;margin:0 0 20px;">
-                        Poštovani/a <strong>{requestedBy}</strong>, vaš zahtjev za otključavanje
+                        Poštovani/a <strong>{WebUtility.HtmlEncode(requestedBy)}</strong>, vaš zahtjev za otključavanje
                         perioda <strong>{period}</strong> je odobren.
                         Možete nastaviti s unosom podataka.
                       </p>
