@@ -28,6 +28,32 @@ public sealed class LocalHostTests
         }
     }
 
+    private sealed class ChallengeApp : WebApplicationFactory<Program>
+    {
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        {
+            builder.UseContentRoot(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "Frontend"));
+            builder.UseEnvironment("Development");
+            // UseSetting is visible to Program before the builder resolves identity configuration.
+            builder.UseSetting("Apis:BaseUrl", "http://localhost:5000/");
+            builder.UseSetting("Authentication:Authority", "https://identity.invalid/realms/test");
+            builder.UseSetting("Authentication:ClientId", "test-client");
+            builder.UseSetting("Authentication:ClientSecret", "test-secret");
+        }
+    }
+
+    [Fact]
+    public async Task ProtectedRouteStartsTheIdentityChallengeWithoutSignInScreen()
+    {
+        await using var app = new ChallengeApp();
+        using var client = app.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        var response = await client.GetAsync("/app/legal-persons");
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        var target = response.Headers.Location!.OriginalString;
+        Assert.StartsWith("/authentication/login?returnUrl=", target);
+        Assert.Contains(Uri.EscapeDataString("/app/legal-persons"), target);
+    }
+
     [Theory]
     [InlineData("/app")]
     [InlineData("/app/profile")]
