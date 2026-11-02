@@ -111,7 +111,7 @@ public abstract class AuthenticatedApiFixture : IAsyncLifetime
             var subject = Request.Headers["X-Subject"].FirstOrDefault() ?? "creator";
             if (subject == "anonymous") return Task.FromResult(AuthenticateResult.NoResult());
             Claim[] claims = [new("sub", subject), new(ClaimTypes.Email, Request.Headers["X-Email"].FirstOrDefault() ?? subject + "@example.test"),
-                new("preferred_username", subject), new("email_verified", "true")];
+                new("preferred_username", subject), new("email_verified", Request.Headers["X-Email-Verified"].FirstOrDefault() ?? "true")];
             return Task.FromResult(AuthenticateResult.Success(new(new ClaimsPrincipal(new ClaimsIdentity(claims, Scheme.Name)), Scheme.Name)));
         }
     }

@@ -47,6 +47,33 @@ public abstract class RoleRequestFixture : AuthenticatedApiFixture
 public sealed class RoleRequestWorkflowHttpTests : RoleRequestFixture
 {
     [Fact]
+    public async Task ChangeRequestCanRemoveExplicitRolesWithoutRemovingGuestBaseline()
+    {
+        using var applicant = NewClient("admin2"); var row = await Submit(applicant, purpose: "change", roles: []);
+        var id = row.GetProperty("id").GetGuid();
+        Assert.Equal(HttpStatusCode.OK, (await Client.PostAsJsonAsync($"/api/role-requests/{id}/approve", new { decisionId = Guid.NewGuid(), expectedVersion = 1 })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await applicant.GetAsync("/api/role-requests")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await applicant.GetAsync("/api/role-requests/options")).StatusCode);
+        await InDatabase(async db =>
+        {
+            var user = await db.AppUsers.SingleAsync(user => user.KeycloakId == "admin2");
+            Assert.False(await db.UserRoles.AnyAsync(item => item.UserId == user.Id && item.IsActive));
+            Assert.True(user.IsActive); Assert.Equal(2, await db.UserRoles.CountAsync(item => item.IsActive));
+        });
+    }
+
+    [Fact]
+    public async Task UnverifiedEmailAndUnknownRoleCannotCreateARequest()
+    {
+        using var guest = NewClient("guest"); guest.DefaultRequestHeaders.Add("X-Email-Verified", "false");
+        var body = new { clientRequestId = Guid.NewGuid(), purpose = "new", roleIds = new[] { await Role(ApplicationAccessRoles.LegalPersons) } };
+        Assert.Equal(HttpStatusCode.Forbidden, (await guest.PostAsJsonAsync("/api/role-requests", body)).StatusCode);
+        guest.DefaultRequestHeaders.Remove("X-Email-Verified");
+        Assert.Equal(HttpStatusCode.BadRequest, (await guest.PostAsJsonAsync("/api/role-requests", new { clientRequestId = Guid.NewGuid(), purpose = "new", roleIds = new[] { Guid.NewGuid() } })).StatusCode);
+        await InDatabase(async db => { Assert.Empty(db.RoleRequests); Assert.Empty(db.Notifications); });
+    }
+
+    [Fact]
     public async Task GuestRequestPersistsNothingPrivilegedUntilOtherAdminApprovesMultipleRoles()
     {
         using var applicant = NewClient("new-user");
