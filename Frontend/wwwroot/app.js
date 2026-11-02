@@ -13,3 +13,11 @@ document.addEventListener("keydown", function (event) {
     if (!open) { return; }
     if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Escape" || (event.key === "Enter" && target.getAttribute("aria-activedescendant"))) { event.preventDefault(); }
 }, true);
+// Enter toggles a focused checkbox (like Space) instead of submitting the form; Tab keeps its normal focus movement.
+document.addEventListener("keydown", function (event) {
+    var target = event.target;
+    if (event.key !== "Enter" || event.defaultPrevented || event.isComposing) { return; }
+    if (!(target instanceof HTMLInputElement) || target.type !== "checkbox" || target.disabled) { return; }
+    event.preventDefault();
+    target.click();
+});

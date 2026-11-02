@@ -56,6 +56,15 @@ test("create preserves multiple application roles and persists the actual backen
   const afterDuplicate = await (await request.get("/__fixtures/users-state", { headers })).json();
   expect(afterDuplicate.users).toHaveLength(state.users.length); expect(afterDuplicate.audit).toHaveLength(1);
 });
+test("Enter toggles a focused checkbox and Tab moves on without submitting", async ({ page, request }) => {
+  await visit(page); const dialog = await createFields(page);
+  const fl = dialog.getByRole("checkbox", { name: "FL", exact: true });
+  await fl.focus(); await fl.press("Enter");
+  await expect(fl).toBeChecked(); await expect(dialog).toBeVisible();
+  await fl.press("Enter"); await expect(fl).not.toBeChecked();
+  await fl.press("Tab"); await expect(fl).not.toBeFocused();
+  expect((await (await request.get("/__fixtures/counts", { headers })).json()).mutations).toBe(0);
+});
 test("required names and corporate email block requests; Guest needs no checkbox", async ({ page, request }) => {
   await visit(page); await page.getByRole("button", { name: "Dodaj korisnika", exact: true }).click();
   let dialog = page.getByRole("dialog"); await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
