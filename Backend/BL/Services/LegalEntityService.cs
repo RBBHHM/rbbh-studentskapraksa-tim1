@@ -33,11 +33,13 @@ public class LegalEntityService : ILegalEntityService
     ];
     private readonly ConnectedPartiesDbContext _context;
     private readonly ILogger<LegalEntityService> _logger;
+    private readonly IHttpContextAccessor? _actor;
 
-    public LegalEntityService(ConnectedPartiesDbContext context, ILogger<LegalEntityService> logger)
+    public LegalEntityService(ConnectedPartiesDbContext context, ILogger<LegalEntityService> logger, IHttpContextAccessor? actor = null)
     {
         _context = context;
         _logger = logger;
+        _actor = actor;
     }
 
     /// <inheritdoc />
@@ -120,6 +122,7 @@ public class LegalEntityService : ILegalEntityService
             DateFrom = dto.DateFrom,
             DateTo = dto.DateTo,
             Status = "Draft",
+            CreatorSubject = Helpers.RegistryVerification.CreatorSubject(_actor),
             CreatedBy = createdBy,
             CreatedAt = DateTime.UtcNow,
             IsActive = true
@@ -149,6 +152,10 @@ public class LegalEntityService : ILegalEntityService
         if (dto.ConnectedWithBank is null)
             throw new ValidationException("connectedWithBank", "Polje 'Povezano lice sa Bankom' je obavezno.");
 
+        // Status is owned by verification, even if an old client sends it back.
+        if (!string.IsNullOrWhiteSpace(dto.Status) && !string.Equals(dto.Status.Trim(), entity.Status, StringComparison.Ordinal))
+            throw new BusinessRuleException(400, "verification.status_owned", "Status se mijenja isključivo kroz verifikaciju.");
+
         entity.IsResident = dto.IsResident;
         entity.TaxNumber = dto.IsResident ? dto.TaxNumber?.Trim() : null;
         entity.FbaId = dto.IsResident ? null : dto.FbaId?.Trim();
@@ -160,7 +167,6 @@ public class LegalEntityService : ILegalEntityService
         entity.ConnectedWithBank = dto.ConnectedWithBank;
         entity.DateFrom = dto.DateFrom;
         entity.DateTo = dto.DateTo;
-        if (!string.IsNullOrWhiteSpace(dto.Status)) entity.Status = dto.Status.Trim();
         entity.ModifiedBy = modifiedBy;
         entity.ModifiedAt = DateTime.UtcNow;
 
@@ -203,12 +209,14 @@ public class LegalEntityService : ILegalEntityService
         if (string.Equals(entity.Status, "Verified", StringComparison.OrdinalIgnoreCase))
             throw new ValidationException("status", "Pravno lice je već verificirano.");
 
+        Helpers.RegistryVerification.Authorize(entity.CreatorSubject, _actor);
         entity.Status = "Verified";
         entity.VerifiedBy = verifiedBy;
         entity.VerifiedAt = DateTime.UtcNow;
         entity.ModifiedBy = verifiedBy;
         entity.ModifiedAt = DateTime.UtcNow;
 
+        _context.AuditLogs.Add(Helpers.RegistryVerification.Audit("LegalEntity", entity.Id, verifiedBy, _actor));
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("Legal entity verified.");
@@ -485,6 +493,7 @@ public class LegalEntityService : ILegalEntityService
                     Status             = "Draft",
                     IsActive           = true,
                     CreatedAt          = DateTime.UtcNow,
+                    CreatorSubject = Helpers.RegistryVerification.CreatorSubject(_actor),
                     CreatedBy          = createdBy
                 };
 

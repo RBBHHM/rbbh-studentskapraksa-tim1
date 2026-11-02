@@ -93,5 +93,28 @@ public partial class ConnectedPartiesDbContext : DbContext
         OnModelCreatingPartial(modelBuilder);
     }
 
+    private void ProtectCreatorIdentity()
+    {
+        foreach (var entry in ChangeTracker.Entries().Where(entry => entry.State == EntityState.Modified &&
+                     (entry.Entity is DL.Entities.LegalEntity.LegalEntity || entry.Entity is DL.Entities.RelatedPersons.RelatedPerson)))
+        {
+            var creator = entry.Property("CreatorSubject");
+            if (!Equals(creator.OriginalValue, creator.CurrentValue))
+                throw new Exceptions.BusinessRuleException(409, "verification.creator_immutable", "Identitet autora nije moguće promijeniti.");
+        }
+    }
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        ProtectCreatorIdentity();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        ProtectCreatorIdentity();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }

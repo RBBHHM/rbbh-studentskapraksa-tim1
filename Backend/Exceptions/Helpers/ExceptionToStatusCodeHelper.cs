@@ -14,6 +14,8 @@ namespace RBBH.ConnectedParties.Exceptions.Helpers
         {
             return exception switch
             {
+                BusinessRuleException business => business.Status,
+                Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException => StatusCodes.Status409Conflict,
                 RBBH.ConnectedParties.Helpers.MissingActorIdentityException => StatusCodes.Status401Unauthorized,
                 ValidationException => StatusCodes.Status400BadRequest,
                 ApplicationException => StatusCodes.Status400BadRequest,

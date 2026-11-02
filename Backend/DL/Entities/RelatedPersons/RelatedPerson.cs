@@ -125,6 +125,12 @@ public class RelatedPerson
 
     public bool IsActive { get; set; } = true;
 
+    [StringLength(100)]
+    public string? CreatorSubject { get; internal set; }
+
+    [Timestamp]
+    public byte[]? Version { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     [StringLength(100)]

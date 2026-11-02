@@ -20,7 +20,8 @@ namespace RBBH.ConnectedParties.BL.Services;
 public class RelatedPersonService(
     ConnectedPartiesDbContext dbContext,
     IEmailService emailService,
-    IOptions<EmailSettings> emailSettings) : IRelatedPersonService
+    IOptions<EmailSettings> emailSettings,
+    IHttpContextAccessor? actor = null) : IRelatedPersonService
 {
     private static readonly ExcelImportSchema.Column[] ImportColumns =
     [
@@ -183,6 +184,7 @@ public class RelatedPersonService(
         entity.IsActive = true;
         entity.CreatedAt = DateTime.UtcNow;
         entity.CreatedBy = korisnik;
+        entity.CreatorSubject = Helpers.RegistryVerification.CreatorSubject(actor);
 
         // Normalizacija JMBG-a (uklanjanje praznina)
         if (!string.IsNullOrWhiteSpace(entity.JMBG))
@@ -298,12 +300,14 @@ public class RelatedPersonService(
         if (entity.Status == RelatedPersonStatus.Verified)
             return Result<RelatedPersonResponseDTO>.ValidationError("Povezano fizičko lice je već verificirano.");
 
+        Helpers.RegistryVerification.Authorize(entity.CreatorSubject, actor);
         entity.Status = RelatedPersonStatus.Verified;
         entity.VerifiedBy = korisnik;
         entity.VerifiedAt = DateTime.UtcNow;
         entity.ModifiedBy = korisnik;
         entity.ModifiedAt = DateTime.UtcNow;
 
+        _dbContext.AuditLogs.Add(Helpers.RegistryVerification.Audit("RelatedPerson", entity.Id, korisnik, actor));
         await _dbContext.SaveChangesAsync();
 
         return Result<RelatedPersonResponseDTO>.Success(entity.Adapt<RelatedPersonResponseDTO>());
@@ -642,6 +646,7 @@ public class RelatedPersonService(
                     Status = RelatedPersonStatus.Draft,
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
+                    CreatorSubject = Helpers.RegistryVerification.CreatorSubject(actor),
                     CreatedBy = createdBy
                 };
 

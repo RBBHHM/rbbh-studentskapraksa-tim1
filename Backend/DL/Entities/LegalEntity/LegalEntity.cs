@@ -78,6 +78,12 @@ public class LegalEntity
     [StringLength(100)]
     public string CreatedBy { get; set; } = string.Empty;
 
+    [StringLength(100)]
+    public string? CreatorSubject { get; internal set; }
+
+    [Timestamp]
+    public byte[]? Version { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     [StringLength(100)]

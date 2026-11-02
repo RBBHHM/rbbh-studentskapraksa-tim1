@@ -36,6 +36,13 @@ namespace RBBH.ConnectedParties.Exceptions
                 Instance = $"{httpContext.Request.Method} {httpContext.Request.Path}"
             };
             problem.Extensions["traceId"] = httpContext.TraceIdentifier;
+            if (exception is BusinessRuleException business)
+            {
+                problem.Extensions["code"] = business.Code;
+                problem.Detail = business.Message;
+            }
+            else if (exception is Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
+                problem.Extensions["code"] = "request.concurrent_change";
             if (exception is ValidationException { Field: { Length: > 0 } field })
             {
                 // Business messages can interpolate identifiers. Publish the field,

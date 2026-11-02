@@ -48,24 +48,6 @@ public class VerificationController : BaseResuItController
         var korisnik = CurrentUser();
         var result = await _relatedPersonService.Verify(id, korisnik);
 
-        if (result.IsSuccessful)
-        {
-            await _auditService.LogAsync(new AuditEntry
-            {
-                TableName = "RelatedPerson",
-                RecordId = id.ToString(),
-                Action = "VERIFY",
-                NewValues = System.Text.Json.JsonSerializer.Serialize(new
-                {
-                    status = "Verified",
-                    verifiedBy = korisnik
-                }),
-                UserId = korisnik,
-                Username = korisnik,
-                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-            });
-        }
-
         return HandleResult(result);
     }
 
@@ -83,22 +65,6 @@ public class VerificationController : BaseResuItController
     {
         var korisnik = CurrentUser();
         var verified = await _legalEntityService.VerifyAsync(id, korisnik);
-
-        await _auditService.LogAsync(new AuditEntry
-        {
-            TableName = "LegalEntity",
-            RecordId = id.ToString(),
-            Action = "VERIFY",
-            NewValues = System.Text.Json.JsonSerializer.Serialize(new
-            {
-                status = verified.Status,
-                verifiedBy = verified.VerifiedBy,
-                verifiedAt = verified.VerifiedAt
-            }),
-            UserId = korisnik,
-            Username = korisnik,
-            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-        });
 
         return Ok(verified);
     }
