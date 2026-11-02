@@ -60,14 +60,19 @@ else
     private string ListId => Id + "-list";
     private string OptionId(int index) => $"{Id}-option-{index}";
     private string? ActiveId => ListVisible && _active >= 0 && _active < _results.Count ? OptionId(_active) : null;
-    private bool ListVisible => _open && _query.Trim().Length > 0;
+    private bool ListVisible => _open;
 
     protected override async Task OnInitializedAsync()
     {
         if (Value.HasValue && RequireData) await LoadDataAsync(Value.Value);
     }
 
-    private void OpenList() { _open = true; }
+    private void OpenList()
+    {
+        _open = true;
+        // All clients are offered immediately; typing narrows the list.
+        if (_results.Count == 0 && !_searching && _query.Trim().Length == 0) _ = SearchAsync();
+    }
     private void CloseList() { _open = false; _active = -1; }
 
     private async Task TypedAsync(ChangeEventArgs args)
@@ -76,8 +81,8 @@ else
         _open = true; _active = -1; _error = null;
         if (_query.Trim().Length == 0)
         {
-            _typing?.Cancel(); _results = []; _searching = false;
             if (Value.HasValue) { Value = null; _selectedName = null; await ValueChanged.InvokeAsync(null); await DataChanged.InvokeAsync(null); }
+            _ = SearchAsync();
             return;
         }
         _ = SearchAsync();
@@ -91,7 +96,7 @@ else
         _searching = true;
         try
         {
-            await Task.Delay(250, token);
+            if (term.Length > 0) await Task.Delay(250, token);
             var found = await Api.SearchEntitiesAsync(term, token);
             token.ThrowIfCancellationRequested();
             _results = found; _active = -1;

@@ -57,6 +57,14 @@ test("negative amounts remain field errors without persistence", async ({ page, 
   await expect(dialog.getByText("Iznos ne može biti negativan.", { exact: true }).first()).toBeVisible();
   expect(await (await request.get("/__fixtures/limits", { headers })).json()).toEqual([]);
 });
+test("entity picker lists clients on focus before anything is typed", async ({ page, request }) => {
+  await request.post("/__fixtures/legal-pages", { headers }); await open(page);
+  await page.getByRole("button", { name: "Novi zapis", exact: true }).click(); const dialog = page.getByRole("dialog");
+  const combobox = dialog.getByRole("combobox", { name: "Pravno lice", exact: false });
+  await combobox.focus();
+  await expect(dialog.getByRole("option").first()).toBeVisible();
+  await combobox.fill("No such company"); await expect(dialog.getByText("Nema rezultata.", { exact: true })).toBeVisible();
+});
 test("entity search reaches beyond the initial 20 and derives the selected entity only", async ({ page, request }) => {
   await request.post("/__fixtures/legal-pages", { headers }); await open(page);
   await page.getByRole("button", { name: "Novi zapis", exact: true }).click(); const dialog = page.getByRole("dialog");
