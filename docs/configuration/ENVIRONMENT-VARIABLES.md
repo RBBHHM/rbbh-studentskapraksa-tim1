@@ -18,6 +18,7 @@ for local identity credentials. See root README for seeded demo versus real app 
 | `KeycloakSettings__Issuer` | Approved HTTPS issuer. |
 | `KeycloakSettings__ClientId`, `KeycloakSettings__ClientSecret` | Backend confidential client. Required with enabled production authentication. |
 | `KeycloakSettings__PublicIssuer` | Optional approved public issuer when metadata addressing differs. |
+| `KeycloakSettings__Audience` | Required API access-token audience in UAT/PROD and every environment except Development. Configured values are validated in Development too. Only unconfigured Development permits the documented local exception. |
 | `KeycloakSettings__AdminClientId`, `KeycloakSettings__AdminClientSecret` | Configure only where the existing Keycloak administration integration requires them. - same client id | 
 | `Email__Provider` | `demo` for isolated local work; configure approved HTTP API or SMTP for real delivery. |
 | `Email__AdminEmail`, `Email__HrEmail`, `Email__From`, `Email__AppBaseUrl` | Approved recipients, sender and links; do not test with real mail inadvertently. |
@@ -44,6 +45,20 @@ register that infrastructure. Local Development cache is not the production solu
 Frontend proxy trust must also be approved and integrated for the real ingress.
 
 ## Production boundary
+
+For UAT/PROD, obtain the API audience from the realm owner and configure
+`KeycloakSettings__Audience` through deployment configuration. The access token
+sent to this API must contain that value in its `aud` claim (a single value or
+one member of an audience array). Configure the realm/client audience mapper
+accordingly. A missing/wrong audience is rejected with401; missing API audience
+configuration prevents startup outside Development. Do not disable validation to
+work around a mapper mismatch.
+
+This API audience is distinct from the OIDC confidential client ID. The existing
+authorization-code/PKCE login, issuer/signature/lifetime validation and OIDC ID-token
+audience validation remain in place. Local signed-token HTTP tests exercise the
+API bearer handler; actual realm login, mapper output and token forwarding must
+still be verified against the approved UAT/PROD Keycloak configuration.
 
 Production requires real SQL, Keycloak audience/claims/redirects, `email_verified`,
 subject-link backfill approval, trusted CA chains and mail delivery verification.

@@ -28,6 +28,7 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
             var publicIssuer = configuration["KeycloakSettings:PublicIssuer"];
             var clientId = configuration["KeycloakSettings:ClientId"];
             var clientSecret = configuration["KeycloakSettings:ClientSecret"];
+            var audience = configuration["KeycloakSettings:Audience"]?.Trim();
 
             var enabled = configuration.GetValue<bool?>("KeycloakSettings:Enabled")
                 ?? !string.IsNullOrWhiteSpace(issuer);
@@ -51,6 +52,10 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
                         : "Keycloak nije konfigurisan; zaštićeni pozivi nisu dostupni."));
                 return services;
             }
+
+            if (!environment.IsDevelopment() && string.IsNullOrWhiteSpace(audience))
+                throw new InvalidOperationException(
+                    "KeycloakSettings:Audience must be configured outside Development.");
 
             // HTTP metadata is a local Development exception, not a string-prefix
             // exception for production or hosts such as localhost.attacker.test.
@@ -93,13 +98,15 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
                     options.Authority = issuer;
                     options.RequireHttpsMetadata = !localDevelopmentMetadata;
 
-                    // Local Development only: do not validate the token audience.
+                    // Only unconfigured Development keeps the local audience exception.
+                    // API access-token audience is separate from the OIDC client ID.
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
                         ValidateIssuer = true,
                         ValidIssuers = validIssuers,
 
-                        ValidateAudience = false,
+                        ValidateAudience = !string.IsNullOrWhiteSpace(audience),
+                        ValidAudience = audience,
 
                         ValidateIssuerSigningKey = true,
                         RequireSignedTokens = true,
