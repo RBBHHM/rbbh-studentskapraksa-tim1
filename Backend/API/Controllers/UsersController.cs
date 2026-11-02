@@ -54,6 +54,13 @@ public class UsersController(IAppUserService appUserService)
         return HTTPExceptiontFromResult(result);
     }
 
+    [HttpPut("{userId}")]
+    [Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
+    public async Task<ActionResult<object>> UpdateProfile(string userId, UpdateUserProfileDTO dto) =>
+        MutationResponse(await _appUserService.UpdateProfileAsync(userId, dto,
+            RBBH.ConnectedParties.Helpers.AuthenticatedActor.Capture(User), RemoteIp, HttpContext.RequestAborted),
+            "Podaci korisnika su ažurirani.");
+
     /// <summary>Atomically replaces the user's functional application accesses.</summary>
     [HttpPost("{userId}/roles")]
     [HttpPut("{userId}/role")]

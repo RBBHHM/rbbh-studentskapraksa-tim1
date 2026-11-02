@@ -22,6 +22,7 @@ public class UserDTO
     public string Email { get; set; } = string.Empty;
     public List<string> Roles { get; set; } = new();
     public List<string> EffectivePermissions { get; set; } = new();
+    public bool IdentityConfirmed { get; set; }
     public bool IsActive { get; set; }
 }
 
@@ -41,8 +42,7 @@ public class CreateUserDTO
 
     [Required]
     [EmailAddress]
-    [RegularExpression(@"(?i)^[^@\s]+@raiffeisengroup\.ba$",
-        ErrorMessage = "Email adresa mora završavati domenom @raiffeisengroup.ba.")]
+    [StringLength(200)]
     public string Email { get; set; } = string.Empty;
 
     public List<Guid> RoleIds { get; set; } = [];
@@ -51,4 +51,12 @@ public class CreateUserDTO
     public string? RoleId { get; set; }
 
     public bool IsActive { get; set; } = true;
+}
+
+public sealed class UpdateUserProfileDTO
+{
+    [Required, StringLength(100)] public string Username { get; set; } = "";
+    [Required, StringLength(100)] public string FirstName { get; set; } = "";
+    [Required, StringLength(100)] public string LastName { get; set; } = "";
+    [Required, EmailAddress, StringLength(200)] public string Email { get; set; } = "";
 }

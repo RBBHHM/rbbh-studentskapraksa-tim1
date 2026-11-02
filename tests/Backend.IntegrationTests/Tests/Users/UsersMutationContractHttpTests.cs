@@ -114,7 +114,9 @@ public sealed class UsersMutationContractHttpTests : UsersHttpFixture
         var id = await AddUser(ApplicationAccessRoles.PhysicalPersons, "reactivate@example.test");
         await using var scope = _app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
-        var subject = (await db.AppUsers.SingleAsync(user => user.Id == id)).KeycloakId;
+        var row = await db.AppUsers.SingleAsync(user => user.Id == id);
+        row.IsActive = false; await db.SaveChangesAsync();
+        var subject = row.KeycloakId;
         // A GUID-shaped subject is not a local-ID reactivation alias today.
         Assert.Equal(HttpStatusCode.NotFound, (await _client.PostAsJsonAsync($"/api/users/{subject}/reactivate", new { })).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await _client.PostAsJsonAsync($"/api/users/{id}/reactivate", new { })).StatusCode);

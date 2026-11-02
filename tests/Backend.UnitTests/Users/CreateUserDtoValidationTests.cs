@@ -18,12 +18,15 @@ public class CreateUserDtoValidationTests
     [InlineData("hana.mahmutovic@gmail.com")]
     [InlineData("hana.mahmutovic@raiffeisenbank.ba")]
     [InlineData("hana.mahmutovic@sub.raiffeisengroup.ba")]
-    public void Email_WithoutExactCorporateDomain_IsRejected(string email)
+    public void Email_WithEditableExternalDomain_IsValid(string email)
     {
-        Validate(NewDto(email))
-            .Should().ContainSingle(error => error.MemberNames.Contains(nameof(CreateUserDTO.Email)))
-            .Which.ErrorMessage.Should().Contain("@raiffeisengroup.ba");
+        Validate(NewDto(email)).Should().BeEmpty();
     }
+
+    [Theory]
+    [InlineData("not-an-email")]
+    [InlineData("name@")]
+    public void MalformedEmailRemainsRejected(string email) => Validate(NewDto(email)).Should().NotBeEmpty();
 
     private static CreateUserDTO NewDto(string email) => new()
     {

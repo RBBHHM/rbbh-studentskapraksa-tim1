@@ -69,6 +69,12 @@ public partial class ConnectedPartiesDbContext : DbContext
             entity.HasIndex(e => e.KeycloakId).IsUnique();
             entity.HasIndex(e => e.Username).IsUnique();
             entity.HasIndex(e => e.Email).IsUnique();
+            entity.Property<string>("NormalizedEmail").HasMaxLength(200)
+                .HasComputedColumnSql("UPPER(LTRIM(RTRIM([Email])))", stored: true);
+            entity.Property<string>("NormalizedUsername").HasMaxLength(100)
+                .HasComputedColumnSql("UPPER(LTRIM(RTRIM([Username])))", stored: true);
+            entity.HasIndex("NormalizedEmail").IsUnique().HasFilter(null);
+            entity.HasIndex("NormalizedUsername").IsUnique().HasFilter(null);
         });
 
         modelBuilder.Entity<AuditLog>(entity =>
@@ -90,6 +96,7 @@ public partial class ConnectedPartiesDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => new { e.UserId, e.RoleId }).IsUnique();
+            entity.HasOne<AppUser>().WithMany().HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(e => e.Role)
                   .WithMany(role => role.UserRoles)
                   .HasForeignKey(e => e.RoleId)

@@ -54,6 +54,7 @@ public sealed class PeriodLockCoverageTests
         ["POST api/reports/daily"] = (Open, "persists a snapshot but does not change period data (business decision)"),
         ["POST api/reports/monthly/{year}/{month}"] = (Open, "persists a snapshot but does not change period data (business decision)"),
         ["POST api/users"] = (Open, "user administration"),
+        ["PUT api/users/{userId}"] = (Open, "profile metadata administration; subject and grants are immutable through this DTO"),
         ["POST api/users/{userId}/roles"] = (Open, "user administration"),
         ["PUT api/users/{userId}/role"] = (Open, "user administration"),
         ["DELETE api/users/{userId}"] = (Open, "user administration"),

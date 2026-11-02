@@ -83,8 +83,10 @@ public sealed class RoleRequestWorkflowSqlTests : RoleRequestFixture
             await db.GetService<IMigrator>().MigrateAsync(previous);
             var user = new AppUser { Username = "legacy", Email = "legacy@example.test", KeycloakId = "confirmed-existing-sub", KeycloakSubjectConfirmed = true };
             var role = new Role { Name = ApplicationAccessRoles.LegalPersons };
-            db.AppUsers.Add(user); db.Roles.Add(role); db.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = role.Id });
-            await db.SaveChangesAsync(); await db.Database.MigrateAsync();
+            await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO AppUsers (Id,KeycloakId,KeycloakSubjectConfirmed,Username,FirstName,LastName,Email,IsActive,CreatedAt,CreatedBy) VALUES ({user.Id},{user.KeycloakId},{true},{user.Username},{"Legacy"},{"Fixture"},{user.Email},{true},{DateTime.UtcNow},{"fixture"})");
+            await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO Roles (Id,Name,IsActive,CreatedAt,CreatedBy) VALUES ({role.Id},{role.Name},{true},{DateTime.UtcNow},{"fixture"})");
+            await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO UserRoles (Id,UserId,RoleId,IsActive,CreatedAt,CreatedBy) VALUES ({Guid.NewGuid()},{user.Id},{role.Id},{true},{DateTime.UtcNow},{"fixture"})");
+            await db.Database.MigrateAsync();
             Assert.Equal(user.Id, (await db.AppUsers.SingleAsync()).Id); Assert.True((await db.AppUsers.SingleAsync()).KeycloakSubjectConfirmed);
             Assert.Single(db.UserRoles); Assert.Empty(db.RoleRequests); Assert.Empty(db.Notifications);
         }
