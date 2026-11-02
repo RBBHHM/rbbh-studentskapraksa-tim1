@@ -285,6 +285,7 @@ public class LegalEntityService : ILegalEntityService
 
     private static void ValidateCreateDto(CreateLegalEntityDTO dto)
     {
+        ValidateStoredFields(dto.Name, dto.MaticniBroj, dto.Matbroj, dto.BasisOfConnection, dto.ConnectionDescription);
         if (dto.IsResident)
         {
             if (string.IsNullOrWhiteSpace(dto.TaxNumber))
@@ -297,7 +298,7 @@ public class LegalEntityService : ILegalEntityService
             if (string.IsNullOrWhiteSpace(dto.FbaId))
                 throw new ValidationException("fbaId", "FBA ID je obavezan za nerezidentno pravno lice.");
 
-            if (!System.Text.RegularExpressions.Regex.IsMatch(dto.FbaId.Trim(), @"^\d{1,10}$"))
+            if (dto.FbaId.Trim().Length > 10 || !dto.FbaId.Trim().All(char.IsAsciiDigit))
                 throw new ValidationException("fbaId", "FBA ID mora sadržavati maksimalno 10 cifara.");
         }
 
@@ -315,6 +316,7 @@ public class LegalEntityService : ILegalEntityService
 
     private static void ValidateUpdateDto(UpdateLegalEntityDTO dto)
     {
+        ValidateStoredFields(dto.Name, dto.MaticniBroj, dto.Matbroj, dto.BasisOfConnection, dto.ConnectionDescription);
         if (dto.IsResident)
         {
             if (string.IsNullOrWhiteSpace(dto.TaxNumber))
@@ -325,7 +327,7 @@ public class LegalEntityService : ILegalEntityService
         {
             if (string.IsNullOrWhiteSpace(dto.FbaId))
                 throw new ValidationException("fbaId", "FBA ID je obavezan za nerezidentno pravno lice.");
-            if (!System.Text.RegularExpressions.Regex.IsMatch(dto.FbaId.Trim(), @"^\d{1,10}$"))
+            if (dto.FbaId.Trim().Length > 10 || !dto.FbaId.Trim().All(char.IsAsciiDigit))
                 throw new ValidationException("fbaId", "FBA ID mora sadržavati maksimalno 10 cifara.");
         }
         if (string.IsNullOrWhiteSpace(dto.Name))
@@ -335,6 +337,27 @@ public class LegalEntityService : ILegalEntityService
         ValidateRequiredBusinessFields(dto.ConnectionDescription, dto.DateFrom);
         if (dto.DateFrom.HasValue && dto.DateTo.HasValue && dto.DateTo < dto.DateFrom)
             throw new ValidationException("dateTo", "Datum do mora biti nakon datuma od.");
+    }
+
+    private static void ValidateStoredFields(string name, string? maticniBroj, string? matbroj,
+        string basis, string? description)
+    {
+        if (name?.Length > 100)
+            throw new ValidationException("name", "Naziv smije sadržavati najviše 100 znakova.");
+        if (basis?.Length > 100)
+            throw new ValidationException("basisOfConnection", "Osnov povezanosti smije sadržavati najviše 100 znakova.");
+        if (description?.Length > 500)
+            throw new ValidationException("connectionDescription", "Opis povezanosti smije sadržavati najviše 500 znakova.");
+        ValidateOptionalNumber(maticniBroj, "maticniBroj");
+        ValidateOptionalNumber(matbroj, "matbroj");
+    }
+
+    private static void ValidateOptionalNumber(string? value, string field)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return;
+        var normalized = value.Trim();
+        if (normalized.Length > 50 || !normalized.All(char.IsAsciiDigit))
+            throw new ValidationException(field, "Matični broj smije sadržavati najviše 50 cifara.");
     }
 
     private static void ValidateRequiredBusinessFields(string? connectionDescription, DateTime? dateFrom)
@@ -370,7 +393,7 @@ public class LegalEntityService : ILegalEntityService
     /// <inheritdoc />
     public async Task<ImportResultDTO> ImportFromExcelAsync(Stream stream, string createdBy)
     {
-        using var wb = new ClosedXML.Excel.XLWorkbook(stream);
+        using var wb = ExcelImportSchema.OpenWorkbook(stream);
         var ws = wb.Worksheets.First();
         var lastRow = ws.LastRowUsed()?.RowNumber() ?? 1;
 
@@ -406,11 +429,11 @@ public class LegalEntityService : ILegalEntityService
                 var dateFromStr    = ws.Cell(row, 9).GetString().Trim();
                 var dateToStr      = ws.Cell(row, 10).GetString().Trim();
 
-                if (string.IsNullOrWhiteSpace(name))
-                    continue; // prazan red — preskoči bez greške
+                if (ws.Row(row).Cells(1, ImportColumns.Length).All(cell => string.IsNullOrWhiteSpace(cell.GetString())))
+                    continue; // Ignore only entirely empty rows, never an incomplete record.
 
                 if (string.IsNullOrWhiteSpace(basisOfConn))
-                    throw new InvalidOperationException("Osnov povezanosti je obavezan.");
+                    throw new ValidationException("Osnov povezanosti je obavezan.");
 
                 var isResident = tipStr.Equals("Rezident", StringComparison.OrdinalIgnoreCase) ||
                     tipStr.Equals("Resident", StringComparison.OrdinalIgnoreCase);
@@ -418,7 +441,7 @@ public class LegalEntityService : ILegalEntityService
                     tipStr.Equals("Non-resident", StringComparison.OrdinalIgnoreCase) ||
                     tipStr.Equals("Nonresident", StringComparison.OrdinalIgnoreCase);
                 if (!isResident && !isNonResident)
-                    throw new InvalidOperationException("Tip mora biti 'Rezident/Resident' ili 'Nerezident/Non-resident'.");
+                    throw new ValidationException("Tip mora biti 'Rezident/Resident' ili 'Nerezident/Non-resident'.");
 
                 bool? connectedWithBank = connBankStr.Equals("DA", StringComparison.OrdinalIgnoreCase) ? true
                     : connBankStr.Equals("YES", StringComparison.OrdinalIgnoreCase) ? true
@@ -427,7 +450,7 @@ public class LegalEntityService : ILegalEntityService
                     : null;
 
                 if (connectedWithBank is null)
-                    throw new InvalidOperationException("Kolona 'Povezano lice s Bankom' mora sadržavati DA/NE ili YES/NO.");
+                    throw new ValidationException("Kolona 'Povezano lice s Bankom' mora sadržavati DA/NE ili YES/NO.");
 
                 DateTime? dateFrom = ParseOptionalDate(dateFromStr, "Datum od");
                 DateTime? dateTo   = ParseOptionalDate(dateToStr, "Datum do");
@@ -447,11 +470,11 @@ public class LegalEntityService : ILegalEntityService
                 };
                 ValidateCreateDto(dto);
                 if (dto.ConnectedWithBank is null)
-                    throw new InvalidOperationException("Kolona 'Povezano lice s Bankom' mora sadržavati DA/NE ili YES/NO.");
+                    throw new ValidationException("Kolona 'Povezano lice s Bankom' mora sadržavati DA/NE ili YES/NO.");
                 var identifier = isResident ? taxNumber : fbaId;
                 var identifiers = isResident ? usedTaxNumbers : usedFbaIds;
                 if (!identifiers.Add(identifier))
-                    throw new InvalidOperationException(isResident
+                    throw new ValidationException(isResident
                         ? "Pravno lice s ovim poreznim brojem već postoji."
                         : "Pravno lice s ovim FBA ID-em već postoji.");
 
@@ -476,10 +499,16 @@ public class LegalEntityService : ILegalEntityService
                 _context.LegalEntities.Add(entity);
                 result.Imported++;
             }
-            catch (Exception ex)
+            catch (ValidationException exception)
             {
                 result.Failed++;
-                result.Errors.Add($"Red {row}: {ex.Message}");
+                result.Errors.Add($"Red {row}: {exception.ErrorMessage}");
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException and not OutOfMemoryException)
+            {
+                result.Failed++;
+                result.Errors.Add($"Red {row}: Podatke nije moguće pročitati. Provjerite format i vrijednosti polja.");
+                _logger.LogWarning("Legal import row could not be read. Row {Row}. FailureType {FailureType}", row, exception.GetType().Name);
             }
         }
 
@@ -495,7 +524,7 @@ public class LegalEntityService : ILegalEntityService
         if (DateTime.TryParse(value, CultureInfo.GetCultureInfo("bs-BA"), DateTimeStyles.None, out var date) ||
             DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out date))
             return date;
-        throw new InvalidOperationException($"Kolona '{field}' ne sadrži ispravan datum.");
+        throw new ValidationException($"Kolona '{field}' ne sadrži ispravan datum.");
     }
 
     private static LegalEntityDTO MapToDto(LegalEntity e) => new()

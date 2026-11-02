@@ -5,7 +5,7 @@ namespace RBBH.ConnectedParties.Helpers.Validators
 {
     public static class TaxNumberValidator
     {
-        private const string TaxNumberPattern = @"^\d{13}$";
+        private const string TaxNumberPattern = @"^[0-9]{13}$";
 
         public static bool ValidateTaxNumber(string taxNumber)
         {

@@ -531,7 +531,7 @@ public class RelatedPersonService(
     /// <inheritdoc/>
     public async Task<ImportResultDTO> ImportFromExcelAsync(Stream stream, string createdBy)
     {
-        using var wb = new ClosedXML.Excel.XLWorkbook(stream);
+        using var wb = ExcelImportSchema.OpenWorkbook(stream);
         var ws = wb.Worksheets.First();
         var lastRow = ws.LastRowUsed()?.RowNumber() ?? 1;
 
@@ -572,13 +572,13 @@ public class RelatedPersonService(
                 var specContStr = ws.Cell(row, 14).GetString().Trim();
                 var malusStr = ws.Cell(row, 15).GetString().Trim();
 
-                if (string.IsNullOrWhiteSpace(firstName) && string.IsNullOrWhiteSpace(lastName))
-                    continue; // prazan red — preskoči bez greške
+                if (ws.Row(row).Cells(1, ImportColumns.Length).All(cell => string.IsNullOrWhiteSpace(cell.GetString())))
+                    continue; // Only entirely empty rows may be ignored.
 
                 if (string.IsNullOrWhiteSpace(firstName))
-                    throw new InvalidOperationException("Ime je obavezno.");
+                    throw new RBBH.ConnectedParties.Exceptions.ValidationException("Ime je obavezno.");
                 if (string.IsNullOrWhiteSpace(lastName))
-                    throw new InvalidOperationException("Prezime je obavezno.");
+                    throw new RBBH.ConnectedParties.Exceptions.ValidationException("Prezime je obavezno.");
 
                 var isResident = residencyStr.Equals("Rezident", StringComparison.OrdinalIgnoreCase) ||
                     residencyStr.Equals("Resident", StringComparison.OrdinalIgnoreCase);
@@ -586,7 +586,7 @@ public class RelatedPersonService(
                     residencyStr.Equals("Non-resident", StringComparison.OrdinalIgnoreCase) ||
                     residencyStr.Equals("Nonresident", StringComparison.OrdinalIgnoreCase);
                 if (!isResident && !isNonResident)
-                    throw new InvalidOperationException("Rezidentnost mora biti 'Rezident/Resident' ili 'Nerezident/Non-resident'.");
+                    throw new RBBH.ConnectedParties.Exceptions.ValidationException("Rezidentnost mora biti 'Rezident/Resident' ili 'Nerezident/Non-resident'.");
                 var residency = isResident ? ResidencyType.Resident : ResidencyType.NonResident;
 
                 DateTime? dateFrom = ParseOptionalDate(dateFromStr, "Datum od");
@@ -613,11 +613,11 @@ public class RelatedPersonService(
                     MalusClawback = ParseRequiredBool(malusStr, "Malus & Clawback")
                 };
                 var validationError = RelatedPersonValidator.Validate(dto);
-                if (validationError is not null) throw new InvalidOperationException(validationError);
+                if (validationError is not null) throw new RBBH.ConnectedParties.Exceptions.ValidationException(validationError);
                 if (dto.Residency == ResidencyType.Resident && !usedJmbgs.Add(dto.JMBG!))
-                    throw new InvalidOperationException("Fizičko lice s ovim JMBG-om već postoji.");
+                    throw new RBBH.ConnectedParties.Exceptions.ValidationException("Fizičko lice s ovim JMBG-om već postoji.");
                 if (dto.Residency == ResidencyType.NonResident && !usedFbaIds.Add(dto.FBAId!))
-                    throw new InvalidOperationException("Fizičko lice s ovim FBA ID-em već postoji.");
+                    throw new RBBH.ConnectedParties.Exceptions.ValidationException("Fizičko lice s ovim FBA ID-em već postoji.");
 
                 var entity = new RelatedPerson
                 {
@@ -648,10 +648,15 @@ public class RelatedPersonService(
                 _dbContext.RelatedPersons.Add(entity);
                 result.Imported++;
             }
-            catch (Exception ex)
+            catch (RBBH.ConnectedParties.Exceptions.ValidationException exception)
             {
                 result.Failed++;
-                result.Errors.Add($"Red {row}: {ex.Message}");
+                result.Errors.Add($"Red {row}: {exception.ErrorMessage}");
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException and not OutOfMemoryException)
+            {
+                result.Failed++;
+                result.Errors.Add($"Red {row}: Podatke nije moguće pročitati. Provjerite format i vrijednosti polja.");
             }
         }
 
@@ -669,7 +674,7 @@ public class RelatedPersonService(
         if (value.Equals("NE", StringComparison.OrdinalIgnoreCase) ||
             value.Equals("NO", StringComparison.OrdinalIgnoreCase) ||
             value.Equals("false", StringComparison.OrdinalIgnoreCase)) return false;
-        throw new InvalidOperationException($"Kolona '{field}' mora sadržavati DA/NE ili YES/NO.");
+        throw new RBBH.ConnectedParties.Exceptions.ValidationException($"Kolona '{field}' mora sadržavati DA/NE ili YES/NO.");
     }
 
     private static DateTime? ParseOptionalDate(string value, string field)
@@ -678,7 +683,7 @@ public class RelatedPersonService(
         if (DateTime.TryParse(value, CultureInfo.GetCultureInfo("bs-BA"), DateTimeStyles.None, out var date) ||
             DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out date))
             return date;
-        throw new InvalidOperationException($"Kolona '{field}' ne sadrži ispravan datum.");
+        throw new RBBH.ConnectedParties.Exceptions.ValidationException($"Kolona '{field}' ne sadrži ispravan datum.");
     }
 
     // ─── Privatne pomoćne metode ─────────────────────────────────────────────

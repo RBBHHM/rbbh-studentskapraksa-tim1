@@ -13,6 +13,19 @@ public static class ExcelImportSchema
 {
     public const int MaximumDataRows = 5_000;
 
+    public static XLWorkbook OpenWorkbook(Stream stream)
+    {
+        try
+        {
+            return new XLWorkbook(stream);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException and not OutOfMemoryException)
+        {
+            throw new RBBH.ConnectedParties.Exceptions.ValidationException("file",
+                "Excel datoteka nije ispravna ili je oštećena. Sačuvajte je kao .xlsx i pokušajte ponovo.");
+        }
+    }
+
     public sealed record Column(string DisplayName, params string[] AcceptedHeaders);
 
     public static IReadOnlyList<string> Validate(IXLWorksheet worksheet, IReadOnlyList<Column> columns)
