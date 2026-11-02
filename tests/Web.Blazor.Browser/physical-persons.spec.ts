@@ -55,11 +55,11 @@ test("resident identity validation blocks invalid JMBG and saves a valid residen
   await dialog.getByLabel(/^Prezime/).fill("Fixture");
   await dialog.getByRole("radio", { name: "Rezident", exact: true }).check();
   await expect(dialog.getByLabel("Broj pasoša", { exact: false })).toBeDisabled();
-  await dialog.getByLabel("JMBG", { exact: false }).fill("0101990500000");
-  await dialog.getByRole("button", { name: "Nastavi", exact: true }).click();
+  await dialog.getByLabel("JMBG", { exact: false }).fill("0101990500000"); await dialog.getByLabel("JMBG", { exact: false }).blur();
+  await expect(dialog.getByRole("button", { name: "Nastavi", exact: true })).toBeDisabled();
   await expect(dialog.getByText("Provjerite JMBG:", { exact: false }).first()).toBeVisible();
   await expect(dialog.getByLabel("JMBG", { exact: false })).toBeVisible();
-  await dialog.getByLabel("JMBG", { exact: false }).fill("0101990500003");
+  await dialog.getByLabel("JMBG", { exact: false }).fill("0101990500003"); await dialog.getByLabel("JMBG", { exact: false }).blur();
   await dialog.getByRole("button", { name: "Nastavi", exact: true }).click();
   await finishBusiness(dialog);
   await expect(page.getByRole("row", { name: /Resident Fixture/ })).toBeVisible();

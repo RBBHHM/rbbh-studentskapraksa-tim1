@@ -69,7 +69,7 @@
     }
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_focusErrors) { _focusErrors = false; await _summary.FocusAsync(); }
+        if (_focusErrors) { _focusErrors = false; if (FormErrors.Any()) await _summary.FocusAsync(); }
     }
     private void BasisChanged() => Model.ConnectionDescription = Bases.FirstOrDefault(item => item.Kod == Model.BasisOfConnection)?.Opis;
     private async Task SubmitAsync() => await _submission.SubmitAsync(async () =>
