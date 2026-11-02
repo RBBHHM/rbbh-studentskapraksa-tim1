@@ -78,11 +78,37 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
                 })
                 .AddCookie(options =>
                 {
+                    options.ExpireTimeSpan = TimeSpan.FromHours(8);
+                    options.SlidingExpiration = false;
                     options.Cookie.HttpOnly = true;
                     options.Cookie.SameSite = SameSiteMode.Lax;
                     options.Cookie.SecurePolicy = environment.IsDevelopment()
                         ? CookieSecurePolicy.SameAsRequest
                         : CookieSecurePolicy.Always;
+                    options.Events.OnSigningIn = context =>
+                    {
+                        var now = (context.Options.TimeProvider ?? TimeProvider.System).GetUtcNow();
+                        var ceiling = now.AddHours(8);
+                        context.Properties.IssuedUtc = now;
+                        context.Properties.AllowRefresh = false;
+                        if (context.Properties.ExpiresUtc is null || context.Properties.ExpiresUtc > ceiling)
+                            context.Properties.ExpiresUtc = ceiling;
+                        return Task.CompletedTask;
+                    };
+                    options.Events.OnValidatePrincipal = async context =>
+                    {
+                        var now = (context.Options.TimeProvider ?? TimeProvider.System).GetUtcNow();
+                        var accessToken = context.Properties.GetTokenValue("access_token");
+                        var tokenValid = string.IsNullOrEmpty(accessToken) ||
+                            DateTimeOffset.TryParse(context.Properties.GetTokenValue("expires_at"), System.Globalization.CultureInfo.InvariantCulture,
+                                System.Globalization.DateTimeStyles.RoundtripKind, out var expires) && now < expires;
+                        if (!tokenValid || context.Properties.IssuedUtc is not { } issued || now >= issued.AddHours(8) || issued > now.AddMinutes(1))
+                        {
+                            context.RejectPrincipal();
+                            await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                        }
+                        context.ShouldRenew = false;
+                    };
                     options.Events.OnRedirectToLogin = context =>
                     {
                         context.Response.StatusCode = StatusCodes.Status401Unauthorized;
@@ -192,8 +218,8 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
                 AddPermissionPolicy(options, ApplicationPolicies.CapitalEdit, ApplicationPermissions.CapitalEdit);
                 AddPermissionPolicy(options, ApplicationPolicies.CapitalDelete, ApplicationPermissions.CapitalDelete);
                 // Reporting exception approved for this application: reading/downloading
-                // is open to every known application user (Guest baseline is granted only
-                // to an active AppUser, never to an unknown identity); generating persists
+                // is open to effective Guest, including unprovisioned authenticated identities;
+                // inactive identities receive no Guest baseline. Generating persists
                 // a snapshot and requires the database-owned Kapital/Admin create permission.
                 options.AddPolicy(ApplicationPolicies.ReportsRead, policy => policy
                     .RequireAuthenticatedUser()

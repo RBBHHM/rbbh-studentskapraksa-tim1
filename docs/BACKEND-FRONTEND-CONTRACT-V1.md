@@ -11,7 +11,7 @@ Approved direction: user instruction dated2026-11-02. This contract freezes addi
 - Raw `/api/email-log` HTML previews are Development/demo-only and restricted to matching recipient; production returns no raw stored messages. Use the recipient-scoped inbox below for the application.
 - Error responses retain ProblemDetails or existing errors[] compatibility. New stable `code` extensions are safe to localize; do not parse exception messages. Correlation response header is additive. S1 requires `KeycloakSettings__Audience` outside Development; OIDC client identity is separate.
 
-## C1: role requests and inbox (implementation follows this contract)
+## C1: role requests and inbox (implemented in 6ababe7; further verification noted in the main report)
 
 All routes require authentication. Request/owner identity comes from validated subject; verified email required to submit. Application database grants remain authoritative; unknown authenticated users retain virtual Guest without AppUser provisioning. No bearer token enters browser code.
 
@@ -32,7 +32,9 @@ Notification DTO: `{id,titleKey,bodyKey,parameters,route,createdAt,readAt}`. Key
 
 ## C2: backend session
 
-Backend application cookie lifetime is an absolute8h maximum, with sliding expiration disabled. OIDC login remains authorization-code+PKCE; token issuer/signature/audience/expiry/realm revocation must remain valid. Refresh cannot extend the application session beyond8h. Session expiry returns401; logout clears the app cookie and follows the configured OIDC sign-out. Frontend RBI server-side session/token cache must adopt the same absolute cap; real realm refresh/SSO policy may require earlier reauthentication. End-to-end8h completion remains unverified until Claude's browser handling and real Keycloak are tested.
+Backend application cookie lifetime is an absolute8h maximum, with sliding expiration disabled. OIDC login remains authorization-code+PKCE; token issuer/signature/audience/expiry/realm revocation must remain valid. Refresh cannot extend the application session beyond8h. Session expiry returns401; saved OIDC access-token expiry is enforced even if the app cookie has longer to live. The backend does not silently extend expired realm tokens; frontend RBI server-side refresh must respect both realm policy and the absolute cap.
+
+Safe backend logout flow: authenticated `GET /authentication/antiforgery` returns `{requestToken,headerName}` plus an HttpOnly antiforgery cookie; send that token in `X-CSRF-TOKEN` on `POST /authentication/logout`. Missing/invalid CSRF returns400 without logging the user out. A valid POST clears the application cookie and uses configured OIDC sign-out. Existing GET `/authentication/logout` is deprecated and retained for compatibility; coordinate its retirement with frontend adoption rather than silently breaking old links. Until that coordination and real Keycloak checks are complete, do not mark complete logout/session acceptance VERIFIED. Frontend RBI server-side session/token cache must adopt the same absolute cap; real realm refresh/SSO policy may require earlier reauthentication. End-to-end8h completion remains unverified until Claude's browser handling and real Keycloak are tested.
 
 ## C3: registry and workbook additions (pending backend implementation)
 

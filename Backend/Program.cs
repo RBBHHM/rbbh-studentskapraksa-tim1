@@ -17,6 +17,11 @@ DotEnv.Load();
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
 builder.Services.AddApplicationForwardedHeaders(builder.Configuration, builder.Environment);
+builder.Services.AddAntiforgery(options =>
+{
+    options.HeaderName = "X-CSRF-TOKEN";
+    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
+});
 
 // Dependency Injection
 builder.Services.AddServicesExtensions(builder.Configuration, builder.Environment, builder.Host);
@@ -71,27 +76,7 @@ app.UseAuthorization();
 
 app.UseMiddleware<RBBH.ConnectedParties.Middlewares.PeriodLockMiddleware>();
 
-app.MapGet("/authentication/login", (string? returnUrl) =>
-    Results.Challenge(
-        new Microsoft.AspNetCore.Authentication.AuthenticationProperties
-        {
-            RedirectUri = SafeLocalReturnUrl(returnUrl)
-        },
-        ["KeycloakOidc"]));
-app.MapGet("/authentication/logout", () =>
-    Results.SignOut(
-        new Microsoft.AspNetCore.Authentication.AuthenticationProperties { RedirectUri = "/" },
-        [Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme, "KeycloakOidc"]));
-app.MapGet("/api/auth/profile", (HttpContext context) => Results.Ok(new
-{
-    userId = RBBH.ConnectedParties.Helpers.AuthenticatedActor.Subject(context.User),
-    fullName = context.User.FindFirst("name")?.Value ?? context.User.Identity?.Name,
-    username = context.User.FindFirst("preferred_username")?.Value,
-    email = context.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value,
-    applicationUserId = context.User.FindFirst(RBBH.ConnectedParties.Helpers.AuthenticatedActor.ApplicationUserIdClaim)?.Value,
-    roles = context.User.FindAll(System.Security.Claims.ClaimTypes.Role).Select(claim => claim.Value).Distinct(),
-    permissions = context.User.FindAll("permission").Select(claim => claim.Value).Distinct()
-})).RequireAuthorization();
+app.MapApplicationAuthentication();
 
 app.MapControllers();
 
@@ -109,8 +94,3 @@ if (app.Environment.IsDevelopment() && app.Configuration.GetValue<bool>("Databas
 }
 
 app.Run();
-
-static string SafeLocalReturnUrl(string? returnUrl) =>
-    !string.IsNullOrWhiteSpace(returnUrl) && returnUrl.StartsWith('/') && !returnUrl.StartsWith("//")
-        ? returnUrl
-        : "/app";

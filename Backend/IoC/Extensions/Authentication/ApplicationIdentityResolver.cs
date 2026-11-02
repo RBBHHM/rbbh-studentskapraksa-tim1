@@ -24,7 +24,7 @@ public sealed class ApplicationIdentityResolver(ConnectedPartiesDbContext db, IC
                 return new(null, true);
         }
 
-        var email = principal.FindFirst(ClaimTypes.Email)?.Value?.Trim().ToLowerInvariant();
+        var email = (principal.FindFirst(ClaimTypes.Email)?.Value ?? principal.FindFirst("email")?.Value)?.Trim().ToLowerInvariant();
         if (string.IsNullOrEmpty(email)) return new(null, false); // Virtual Guest reads only; mutations require actor email.
         var matches = await db.AppUsers.IgnoreQueryFilters()
             .Where(user => user.Email.Trim().ToLower() == email).Take(2).ToListAsync();
@@ -58,7 +58,7 @@ public sealed class ApplicationIdentityResolver(ConnectedPartiesDbContext db, IC
             row.KeycloakSubjectConfirmed = true;
             row.KeycloakSubjectLinkedAt = DateTime.UtcNow;
             row.ModifiedAt = DateTime.UtcNow;
-            row.ModifiedBy = principal.FindFirst(ClaimTypes.Email)!.Value;
+            row.ModifiedBy = Helpers.AuthenticatedActor.Email(principal);
             await db.SaveChangesAsync();
             await new AuditService(db).LogAsync(new()
             {
