@@ -12,6 +12,14 @@ public class CodeList
 {
     [Key]
     public int ID { get; set; }
+    public Guid? DefinitionId { get; set; }
+    public CodeListDefinition? Definition { get; set; }
+    public bool IsSystemRequired { get; set; }
+    [StringLength(10)] public string? LanguageCode { get; set; }
+    [StringLength(200)] public string? ResourceKey { get; set; }
+    [StringLength(4000)] public string? ResourceLabel { get; set; }
+    [StringLength(4000)] public string? ResourceHelper { get; set; }
+    [StringLength(500)] public string? ResourcePlaceholder { get; set; }
 
     /// <summary>
     /// Kategorija šifarnika, npr. "TipRola", "OsnovPovezanosti", "VrstaLimita", "TipLica", "TipDokumenta"

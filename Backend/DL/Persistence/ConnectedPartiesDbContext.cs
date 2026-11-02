@@ -56,6 +56,13 @@ public partial class ConnectedPartiesDbContext : DbContext
             entity.HasKey(e => e.ID);
             entity.HasIndex(e => e.Kategorija);
             entity.HasQueryFilter(e => e.Aktivan);
+            entity.HasOne(e => e.Definition).WithMany().HasForeignKey(e => e.DefinitionId).OnDelete(DeleteBehavior.Restrict);
+            entity.Property<string>("NormalizedCategory").HasMaxLength(100).HasComputedColumnSql("UPPER(LTRIM(RTRIM([Kategorija])))", stored: true);
+            entity.Property<string>("NormalizedCode").HasMaxLength(50).HasComputedColumnSql("UPPER(LTRIM(RTRIM([Kod])))", stored: true);
+            entity.HasIndex("NormalizedCategory", "NormalizedCode").IsUnique().HasFilter(null);
+            entity.Property(e => e.ResourceKey).UseCollation("Latin1_General_100_CI_AS");
+            entity.HasIndex(e => new { e.Kategorija, e.LanguageCode, e.ResourceKey }).IsUnique()
+                .HasFilter("[LanguageCode] IS NOT NULL AND [ResourceKey] IS NOT NULL");
         });
         modelBuilder.Entity<CodeListDefinition>(entity =>
         {
@@ -139,13 +146,48 @@ public partial class ConnectedPartiesDbContext : DbContext
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
         ProtectCreatorIdentity();
+        TouchCodebookVersions();
         return base.SaveChanges(acceptAllChangesOnSuccess);
     }
 
-    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         ProtectCreatorIdentity();
-        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        var categories = ChangedCodebookCategories();
+        if (categories.Length > 0 || ChangeTracker.Entries<CodeListDefinition>().Any(entry => entry.State is EntityState.Added or EntityState.Modified))
+        {
+            var definitions = await CodeListDefinitions.Where(row => categories.Contains(row.Name.ToUpper())).ToListAsync(cancellationToken);
+            TouchCodebookVersions(categories, definitions);
+        }
+        return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    private string[] ChangedCodebookCategories() => ChangeTracker.Entries<CodeList>()
+        .Where(entry => entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
+        .Select(entry => entry.Entity.Kategorija?.ToUpperInvariant()).OfType<string>().Distinct().ToArray();
+
+    private void TouchCodebookVersions()
+    {
+        var categories = ChangedCodebookCategories();
+        if (categories.Length == 0 && !ChangeTracker.Entries<CodeListDefinition>().Any(entry => entry.State is EntityState.Added or EntityState.Modified)) return;
+        TouchCodebookVersions(categories, CodeListDefinitions.Where(row => categories.Contains(row.Name.ToUpper())).ToList());
+    }
+
+    private void TouchCodebookVersions(string[] categories, List<CodeListDefinition> definitions)
+    {
+        foreach (var row in CodeListDefinitions.Local.Where(row => categories.Contains(row.Name.ToUpper())).Concat(definitions).Distinct())
+        {
+            var entry = Entry(row);
+            if (entry.State == EntityState.Added) row.Version = Math.Max(1, row.Version);
+            else if (row.Version == entry.Property(item => item.Version).OriginalValue) row.Version++;
+            row.ModifiedAt = DateTime.UtcNow;
+        }
+        foreach (var entry in ChangeTracker.Entries<CodeListDefinition>().Where(entry => entry.State == EntityState.Modified))
+        {
+            if (entry.Entity.Version == entry.Property(item => item.Version).OriginalValue) entry.Entity.Version++;
+            entry.Entity.ModifiedAt = DateTime.UtcNow;
+        }
     }
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);

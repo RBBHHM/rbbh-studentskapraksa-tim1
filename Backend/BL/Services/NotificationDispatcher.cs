@@ -8,7 +8,7 @@ namespace RBBH.ConnectedParties.BL.Services;
 
 /// <summary>Only sends committed notices; never replays business grants or decisions.</summary>
 public sealed class NotificationDispatcher(ConnectedPartiesDbContext db, IEmailService mail,
-    IOptions<EmailSettings> settings, ILogger<NotificationDispatcher> logger)
+    IOptions<EmailSettings> settings, ILogger<NotificationDispatcher> logger, RuntimeLocalizationCatalog localization)
 {
     private static readonly SemaphoreSlim LocalClaimGate = new(1, 1);
 
@@ -33,10 +33,12 @@ public sealed class NotificationDispatcher(ConnectedPartiesDbContext db, IEmailS
                     uri.UserInfo.Length > 0 || uri.Query.Length > 0 || uri.Fragment.Length > 0 ||
                     !row.Notification.Route.StartsWith("/app/", StringComparison.Ordinal))
                     throw new InvalidOperationException("Notification application URL is not configured safely.");
-                // Semantic keys are the explicit fallback until the runtime catalog resolves them.
-                // No request content is interpreted as HTML or used to construct destinations.
-                var title = row.Notification.TitleKey;
-                var text = row.Notification.BodyKey;
+                var titleKey = row.Notification.TitleKey.Replace('_', '.');
+                var bodyKey = row.Notification.BodyKey.Replace('_', '.');
+                var title = await localization.Text(titleKey, null, ct);
+                var text = await localization.Text(bodyKey, null, ct);
+                // Missing setup/templates is retryable; sending raw keys would falsely mark delivery as successful.
+                if (title == titleKey || text == bodyKey) throw new InvalidOperationException("Notification resources unavailable.");
                 var link = baseUrl.TrimEnd('/') + row.Notification.Route;
                 var html = $"<p>{WebUtility.HtmlEncode(text)}</p><a href=\"{WebUtility.HtmlEncode(link)}\">{WebUtility.HtmlEncode(title)}</a>";
                 await mail.SendApplicationNotificationAsync(row.Notification.RecipientEmail, title, html, ct);

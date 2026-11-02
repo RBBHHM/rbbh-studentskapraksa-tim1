@@ -52,6 +52,42 @@ namespace RBBH.ConnectedParties.Exceptions
                     [field] = ["Provjerite unesene podatke i pokušajte ponovo."]
                 };
             }
+            // Resolve per request: the exception handler is singleton, while the catalog/database is scoped.
+            var catalog = httpContext.RequestServices?.GetService<BL.Services.RuntimeLocalizationCatalog>();
+            if (catalog is not null)
+            {
+                try
+                {
+                    var language = httpContext.Request.Headers.AcceptLanguage.ToString();
+                    var family = statusCode >= 500 ? "unavailable" : "invalid";
+                    var titleKey = $"errors.request.{family}.title";
+                    var detailKey = $"errors.request.{family}.detail";
+                    if (exception is BusinessRuleException rule)
+                    {
+                        var resourceKey = "errors." + rule.Code.Replace('_', '.');
+                        problem.Extensions["resourceKey"] = resourceKey;
+                        var translated = await catalog.Text(resourceKey, language, cancellationToken);
+                        if (translated != resourceKey) problem.Detail = translated;
+                        else if (!string.IsNullOrWhiteSpace(language) && !language.StartsWith("BS", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var genericDetail = await catalog.Text(detailKey, language, cancellationToken);
+                            if (genericDetail != detailKey) problem.Detail = genericDetail;
+                        }
+                    }
+                    else
+                    {
+                        var detail = await catalog.Text(detailKey, language, cancellationToken);
+                        if (detail != detailKey) problem.Detail = detail;
+                    }
+                    var title = await catalog.Text(titleKey, language, cancellationToken);
+                    if (title != titleKey) problem.Title = title;
+                }
+                catch (Exception localizationFailure) when (localizationFailure is not OperationCanceledException)
+                {
+                    // A broken/missing catalog must never hide the original safe failure or leak storage details.
+                    logger.LogWarning("Error localization unavailable. FailureType {FailureType}", localizationFailure.GetType().Name);
+                }
+            }
             await httpContext.Response.WriteAsJsonAsync(problem, cancellationToken);
             return true;
         }

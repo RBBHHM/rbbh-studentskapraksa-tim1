@@ -41,6 +41,13 @@ namespace RBBH.ConnectedParties.IoC
             services.AddScoped<IRoleService, RoleService>();
             services.AddScoped<RoleRequestService>();
             services.AddScoped<NotificationDispatcher>();
+            services.AddSingleton<RuntimeLocalizationCache>();
+            services.AddOptions<RuntimeLocalizationOptions>().Bind(configuration.GetSection("Localization"))
+                .Validate(options => !string.IsNullOrWhiteSpace(options.DefaultLanguage) && options.DefaultLanguage.Length <= 10 &&
+                    !string.IsNullOrWhiteSpace(options.LanguagesCodebook) && options.LanguagesCodebook.Length <= 100 &&
+                    !string.IsNullOrWhiteSpace(options.LanguagePacksCodebook) && options.LanguagePacksCodebook.Length <= 100 &&
+                    options.LanguagesCodebook != options.LanguagePacksCodebook).ValidateOnStart();
+            services.AddScoped<RuntimeLocalizationCatalog>();
             services.AddScoped<ICodeListService, CodeListService>();
             services.AddScoped<IRelatedPersonService, RelatedPersonService>();
             services.AddHttpClient<KeycloakAdminService>();

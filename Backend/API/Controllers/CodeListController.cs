@@ -23,6 +23,7 @@ namespace RBBH.ConnectedParties.API.Controllers;
 public class CodeListController(ICodeListService codeListService, ConnectedPartiesDbContext db, IAuditService auditService) : BaseResuItController
 {
     private readonly ICodeListService _codeListService = codeListService;
+    // Kept in the constructor for source compatibility; mutations now persist their audit in the same SaveChanges.
     private readonly IAuditService _auditService = auditService;
 
     // ─── Lista kategorija ─────────────────────────────────────────────────────
@@ -42,28 +43,42 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
     [Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
     public async Task<ActionResult<object>> CreateCategory([FromBody] CreateCodeListDefinitionDTO dto)
     {
-        var name = dto.Name.Trim();
-        if (name.Length < 2 || name.Length > 100)
+        var name = dto.Name?.Trim() ?? string.Empty;
+        if (name.Length < 2 || name.Length > 100 || dto.Description?.Length > 500)
             return BadRequest(new ProblemDetails { Title = "Naziv nije ispravan", Detail = "Naziv definicije mora imati između 2 i 100 znakova." });
-        if (await db.CodeListDefinitions.AnyAsync(item => item.Name == name) || await db.CodeLists.IgnoreQueryFilters().AnyAsync(item => item.Kategorija == name))
+        if (await db.CodeListDefinitions.AnyAsync(item => item.Name.Trim().ToUpper() == name.ToUpper()) || await db.CodeLists.IgnoreQueryFilters().AnyAsync(item => item.Kategorija.Trim().ToUpper() == name.ToUpper()))
             return Conflict(new ProblemDetails { Title = "Definicija već postoji", Detail = $"Šifrarnik '{name}' već postoji." });
         var korisnik = GetKorisnik();
         var definition = new CodeListDefinition { Name = name, Description = dto.Description?.Trim(), CreatedBy = korisnik };
         db.CodeListDefinitions.Add(definition);
-        await db.SaveChangesAsync();
+        db.AuditLogs.Add(new() { TableName = "CodeList", RecordId = definition.Id.ToString(), Action = "CODELIST_ADD",
+            UserId = korisnik, Username = korisnik, Timestamp = DateTime.UtcNow });
+        await db.SaveChangesAsync(HttpContext.RequestAborted);
 
-        await _auditService.LogAsync(new AuditEntry
-        {
-            TableName = "CodeList",
-            RecordId = definition.Id.ToString(),
-            Action = "CODELIST_ADD",
-            NewValues = System.Text.Json.JsonSerializer.Serialize(new { name = definition.Name, description = definition.Description }),
-            UserId = korisnik,
-            Username = korisnik,
-            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-        });
+
 
         return Created($"{Request.Path}/{definition.Id}", new { definition.Id, definition.Name, definition.Description });
+    }
+
+    [HttpGet("categories/definitions")]
+    public async Task<IActionResult> Definitions(CancellationToken ct) => Ok(new
+    {
+        items = await db.CodeListDefinitions.AsNoTracking().OrderBy(row => row.Name).Select(row => new
+        { row.Id, row.Name, row.Description, row.IsActive, row.IsSystemRequired, row.Version, row.CreatedAt, row.CreatedBy, row.ModifiedAt, row.ModifiedBy }).ToListAsync(ct)
+    });
+
+    [HttpPut("categories/{name}"), Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
+    public async Task<IActionResult> UpdateDefinition(string name, UpdateCodeListDefinitionDTO input, CancellationToken ct)
+    {
+        if (input.Description?.Length > 500) return BadRequest(new ProblemDetails { Status = 400, Title = "Opis smije imati najviše 500 znakova." });
+        var definition = await db.CodeListDefinitions.SingleOrDefaultAsync(row => row.Name == name, ct);
+        if (definition is null) return NotFound();
+        if (definition.Version != input.ExpectedVersion) return Conflict(new ProblemDetails { Status = 409, Title = "Šifrarnik je u međuvremenu izmijenjen. Osvježite prikaz." });
+        var actor = GetKorisnik(); definition.Description = input.Description?.Trim(); definition.ModifiedBy = actor;
+        db.AuditLogs.Add(new() { TableName = "CodeList", RecordId = definition.Id.ToString(), Action = "CODELIST_UPDATE",
+            UserId = actor, Username = actor, Timestamp = DateTime.UtcNow });
+        await db.SaveChangesAsync(ct);
+        return Ok(new { definition.Id, definition.Name, definition.Description, definition.Version, definition.ModifiedAt, definition.ModifiedBy });
     }
 
     /// <summary>
@@ -80,16 +95,6 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
         var result = await _codeListService.DeleteCategory(name, korisnik);
         // Return the HTTP result, not ActionResult<bool> as an object/HTTP 200.
         if (!result.IsSuccessful) return HandleResult(result).Result!;
-
-        await _auditService.LogAsync(new AuditEntry
-        {
-            TableName = "CodeList",
-            RecordId = name,
-            Action = "CODELIST_DELETE",
-            UserId = korisnik,
-            Username = korisnik,
-            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-        });
 
         return Ok(new { message = $"Šifrarnik '{name}' je uspješno obrisan." });
     }
@@ -151,16 +156,6 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
 
         if (result.IsSuccessful)
         {
-            await _auditService.LogAsync(new AuditEntry
-            {
-                TableName = "CodeList",
-                RecordId = result.Value.ID.ToString(),
-                Action = "CODELIST_ADD",
-                NewValues = System.Text.Json.JsonSerializer.Serialize(new { kategorija = result.Value.Kategorija, naziv = result.Value.Naziv }),
-                UserId = korisnik,
-                Username = korisnik,
-                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-            });
             return Created($"{Request.Path}/{result.Value.ID}", result.Value);
         }
 
@@ -182,16 +177,11 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
             return BadRequest(new { errors = new[] { new { field = "value", message = "Vrijednost je obavezna." } } });
 
         var korisnik = GetKorisnik();
-        var kod = request.Value.Trim()
-            .ToUpperInvariant()
-            .Replace(" ", "_")
-            .Replace("Š", "S").Replace("Č", "C").Replace("Ć", "C")
-            .Replace("Ž", "Z").Replace("Đ", "DJ");
 
         var dto = new CreateCodeListDTO
         {
             Kategorija = kategorija,
-            Kod = kod[..Math.Min(kod.Length, 50)],
+            Kod = ValueCode(request.Value.Trim()),
             Naziv = request.Value.Trim(),
             RedoslijedPrikaza = null
         };
@@ -201,17 +191,6 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
         if (result.IsSuccessful)
         {
             var item = result.Value;
-
-            await _auditService.LogAsync(new AuditEntry
-            {
-                TableName = "CodeList",
-                RecordId = item.ID.ToString(),
-                Action = "CODELIST_ADD",
-                NewValues = System.Text.Json.JsonSerializer.Serialize(new { kategorija, naziv = item.Naziv }),
-                UserId = korisnik,
-                Username = korisnik,
-                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-            });
 
             return Created($"{Request.Path}/{item.ID}", new
             {
@@ -246,17 +225,6 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
 
         var x = result.Value;
 
-        await _auditService.LogAsync(new AuditEntry
-        {
-            TableName = "CodeList",
-            RecordId = id.ToString(),
-            Action = "CODELIST_UPDATE",
-            NewValues = System.Text.Json.JsonSerializer.Serialize(new { kategorija = x.Kategorija, naziv = x.Naziv }),
-            UserId = korisnik,
-            Username = korisnik,
-            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-        });
-
         return Ok(new
         {
             id = x.ID,
@@ -284,19 +252,25 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
 
         if (result.IsSuccessful)
         {
-            await _auditService.LogAsync(new AuditEntry
-            {
-                TableName = "CodeList",
-                RecordId = id.ToString(),
-                Action = "CODELIST_DELETE",
-                UserId = korisnik,
-                Username = korisnik,
-                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-            });
             return Ok(new { message = "Šifarnik je uspješno obrisan." });
         }
 
         return HTTPExceptiontFromResult(result);
+    }
+
+    /// <summary>Exports the label-only workbook accepted by the existing legacy import contract.</summary>
+    [HttpGet("{kategorija}/export")]
+    public async Task<IActionResult> Export(string kategorija, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(kategorija) || kategorija.Length > 100)
+            return BadRequest(new ProblemDetails { Status = 400, Title = "Naziv šifrarnika nije ispravan." });
+        var values = await db.CodeLists.AsNoTracking().Where(row => row.Kategorija == kategorija)
+            .OrderBy(row => row.RedoslijedPrikaza).ThenBy(row => row.Naziv).ThenBy(row => row.ID)
+            .Select(row => row.Naziv).Take(5001).ToListAsync(ct);
+        if (values.Count > 5000) return BadRequest(new ProblemDetails { Status = 400, Title = "Dozvoljeno je najviše 5.000 redova po izvozu." });
+        var bytes = RBBH.ConnectedParties.Helpers.Excel.RegistryExcelExporter.Create("Šifrarnik", ["Vrijednost"],
+            values.Select(value => (IReadOnlyList<object?>)[value]));
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "codebook.xlsx");
     }
 
     // ─── Excel import ────────────────────────────────────────────────────────
@@ -331,11 +305,12 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
 
         // ClosedXML/OpenXML requires a seekable stream — copy IFormFile into MemoryStream first.
         using var seekable = new MemoryStream();
-        await file.CopyToAsync(seekable);
+        await file.CopyToAsync(seekable, HttpContext.RequestAborted);
         seekable.Position = 0;
 
         try
         {
+            RBBH.ConnectedParties.Helpers.Excel.WorkbookEnvelope.Validate(seekable);
             using var workbook = new XLWorkbook(seekable);
             var ws = workbook.Worksheet(1);
             var lastColumn = ws.LastColumnUsed()?.ColumnNumber() ?? 0;
@@ -393,51 +368,52 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
             return Ok(preview);
 
         var korisnik = GetKorisnik();
+        var normalizedCategory = kategorija.Trim().ToUpperInvariant();
+        if (kategorija.Trim().Length is < 1 or > 100) return BadRequest(new { error = "Naziv šifrarnika nije ispravan." });
+        var definition = await db.CodeListDefinitions.SingleOrDefaultAsync(item => item.Name.ToUpper() == normalizedCategory, HttpContext.RequestAborted);
+        if (definition is { IsActive: false }) return BadRequest(new { error = "Šifrarnik je deaktiviran." });
+        if (definition is null)
+        {
+            definition = new CodeListDefinition { Name = kategorija.Trim(), CreatedBy = korisnik };
+            db.CodeListDefinitions.Add(definition);
+        }
+        var usedCodes = (await db.CodeLists.IgnoreQueryFilters().Where(row => row.Kategorija.ToUpper() == normalizedCategory)
+            .Select(row => row.Kod).ToListAsync(HttpContext.RequestAborted)).ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var val in toImport)
         {
-            var kod = val.ToUpperInvariant()
-                .Replace(" ", "_")
-                .Replace("Š", "S").Replace("Č", "C").Replace("Ć", "C")
-                .Replace("Ž", "Z").Replace("Đ", "DJ");
-
-            var result = await _codeListService.Create(new CreateCodeListDTO
+            var code = ValueCode(val);
+            if (!usedCodes.Add(code))
             {
-                Kategorija = kategorija,
-                Kod = kod[..Math.Min(kod.Length, 50)],
-                Naziv = val
-            }, korisnik);
-
-            if (result.IsSuccessful) preview.Imported++;
+                preview.Errors.Add($"Vrijednost '{val}' ima kod koji već postoji u šifrarniku ili datoteci.");
+                continue;
+            }
+            db.CodeLists.Add(new() { Kategorija = definition.Name, DefinitionId = definition.Id, Kod = code, Naziv = val,
+                KreiraoKorisnik = korisnik, KreiranDatum = DateTime.UtcNow });
+            preview.Imported++;
         }
-
-        await _auditService.LogAsync(new AuditEntry
-        {
-            TableName = "CodeList",
-            RecordId = "-",
-            Action = "IMPORT",
-            NewValues = System.Text.Json.JsonSerializer.Serialize(new
-            {
-                kategorija,
-                fileName = file.FileName,
-                imported = preview.Imported,
-                failed = preview.Errors.Count
-            }),
-            UserId = korisnik,
-            Username = korisnik,
-            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-        });
+        definition.ModifiedBy = korisnik;
+        db.AuditLogs.Add(new() { TableName = "CodeList", RecordId = definition.Name, Action = "IMPORT",
+            UserId = korisnik, Username = korisnik, Timestamp = DateTime.UtcNow,
+            NewValues = System.Text.Json.JsonSerializer.Serialize(new { imported = preview.Imported, failed = preview.Errors.Count }) });
+        await db.SaveChangesAsync(HttpContext.RequestAborted);
 
         return Ok(preview);
+    }
+
+    private static string ValueCode(string value)
+    {
+        var code = value.ToUpperInvariant().Replace(" ", "_").Replace("Š", "S").Replace("Č", "C").Replace("Ć", "C").Replace("Ž", "Z").Replace("Đ", "DJ");
+        return code.Length <= 50 ? code : code[..33] + "_" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(value.ToUpperInvariant())))[..16];
     }
 
     // ─── Helper ───────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Uses the authenticated email claim; no fabricated actor fallback.
+    /// Uses the authenticated username or stable subject; no fabricated actor fallback.
     /// Prilagoditi prema konkretnoj autentifikaciji projekta.
     /// </summary>
     private string GetKorisnik()
     {
-        return RBBH.ConnectedParties.Helpers.AuthenticatedActor.Email(User);
+        return User.FindFirst("preferred_username")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? RBBH.ConnectedParties.Helpers.AuthenticatedActor.RequireSubject(User);
     }
 }

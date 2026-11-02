@@ -174,7 +174,7 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
     private void Notify(string recipient, string email, string eventKey, string messageKey, RoleRequest row, string route)
     {
         var notice = new ApplicationNotification { RecipientSubject = recipient, RecipientEmail = email, EventKey = eventKey,
-            TitleKey = "notifications." + messageKey + ".title", BodyKey = "notifications." + messageKey + ".body",
+            TitleKey = "notifications." + messageKey.Replace('_', '.') + ".title", BodyKey = "notifications." + messageKey.Replace('_', '.') + ".body",
             ParametersJson = JsonSerializer.Serialize(new { requester = row.Username, requestId = row.Id, status = row.Status }), Route = route };
         notice.Delivery = new NotificationDelivery { NotificationId = notice.Id };
         db.Notifications.Add(notice);

@@ -19,6 +19,8 @@ public abstract class RoleRequestFixture : AuthenticatedApiFixture
     protected override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<RoleRequestService>(); services.AddScoped<NotificationDispatcher>();
+        services.AddSingleton<RuntimeLocalizationCache>(); services.AddOptions<RuntimeLocalizationOptions>();
+        services.AddScoped<RuntimeLocalizationCatalog>();
         services.Configure<EmailSettings>(options => options.AppBaseUrl = "https://app.example.test");
         _mail.Setup(mail => mail.SendApplicationNotificationAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         services.AddSingleton(_mail.Object);
@@ -27,7 +29,26 @@ public abstract class RoleRequestFixture : AuthenticatedApiFixture
     protected async Task<Guid> Role(string name)
     {
         Guid id = Guid.Empty;
-        await InDatabase(async db => id = (await db.Roles.SingleAsync(role => role.Name == name)).Id);
+        await InDatabase(async db =>
+        {
+            // InMemory has no migrations; seed the same logical prerequisites explicitly.
+            if (!await db.CodeListDefinitions.AnyAsync(row => row.Name == "LanguagePacks"))
+            {
+                var languages = new RBBH.ConnectedParties.DL.Entities.Sifarnici.CodeListDefinition { Name = "Languages", CreatedBy = "fixture" };
+                var packs = new RBBH.ConnectedParties.DL.Entities.Sifarnici.CodeListDefinition { Name = "LanguagePacks", CreatedBy = "fixture" };
+                db.CodeListDefinitions.AddRange(languages, packs);
+                db.CodeLists.Add(new() { Kategorija = "Languages", DefinitionId = languages.Id, Kod = "BS", Naziv = "Bosanski", KreiraoKorisnik = "fixture" });
+                foreach (var outcome in new[] { "submitted", "approved", "rejected" })
+                foreach (var part in new[] { "title", "body" })
+                {
+                    var key = $"notifications.role.request.{outcome}.{part}";
+                    db.CodeLists.Add(new() { Kategorija = "LanguagePacks", DefinitionId = packs.Id, Kod = Guid.NewGuid().ToString("N"), Naziv = key,
+                        ResourceKey = key, LanguageCode = "BS", ResourceLabel = "Fixture notification " + outcome, KreiraoKorisnik = "fixture" });
+                }
+                await db.SaveChangesAsync();
+            }
+            id = (await db.Roles.SingleAsync(role => role.Name == name)).Id;
+        });
         return id;
     }
 

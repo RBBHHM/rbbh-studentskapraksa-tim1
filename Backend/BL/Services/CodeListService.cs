@@ -42,7 +42,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
             return Result<List<CodeListDropdownDTO>>.ValidationError("Kategorija ne smije biti prazna.");
 
         var items = await _dbContext.CodeLists
-            .Where(x => x.Kategorija == kategorija && x.Aktivan)
+            .Where(x => x.Kategorija == kategorija && x.Aktivan && (x.Definition == null || x.Definition.IsActive))
             .OrderBy(x => x.RedoslijedPrikaza ?? int.MaxValue)
             .ThenBy(x => x.Naziv)
             .ProjectToType<CodeListDropdownDTO>()
@@ -118,7 +118,18 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
             KreiraoKorisnik   = korisnik,
         };
 
+        var definition = await _dbContext.CodeListDefinitions.SingleOrDefaultAsync(item => item.Name == category);
+        if (definition is not null && !definition.IsActive)
+            return Result<CodeListResponseDTO>.ValidationError("Šifrarnik je deaktiviran.");
+        if (definition is null)
+        {
+            definition = new CodeListDefinition { Name = category, CreatedBy = korisnik };
+            _dbContext.CodeListDefinitions.Add(definition);
+        }
+        entitet.DefinitionId = definition.Id;
+        definition.ModifiedBy = korisnik;
         _dbContext.CodeLists.Add(entitet);
+        AddAudit(entitet.Kategorija, entitet.Kod, entitet.IzmijenjenDatum is null ? "CODELIST_ADD" : "CODELIST_UPDATE", korisnik);
         await _dbContext.SaveChangesAsync();
 
         return Result<CodeListResponseDTO>.Success(entitet.Adapt<CodeListResponseDTO>());
@@ -148,7 +159,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
             return Result<CodeListResponseDTO>.NotFoundError($"Šifarnik s ID={id} nije pronađen.");
 
         // Updating Aktivan must enforce the same reference guard as Delete.
-        if (entitet.Aktivan && !dto.Aktivan && await JeVrijednostUUpotrebi(entitet.Kategorija, entitet.Kod))
+        if (entitet.Aktivan && !dto.Aktivan && (entitet.IsSystemRequired || await JeVrijednostUUpotrebi(entitet.Kategorija, entitet.Kod)))
             return Result<CodeListResponseDTO>.ValidationError("Vrijednost je trenutno u upotrebi i ne može biti deaktivirana.");
 
         // Ažuriramo dopuštena polja (Kategorija i Kod se ne mijenjaju)
@@ -159,6 +170,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
         entitet.IzmijenjenDatum   = DateTime.UtcNow;
         entitet.IzmijenioKorisnik = korisnik;
 
+        AddAudit(entitet.Kategorija, entitet.Kod, entitet.IzmijenjenDatum is null ? "CODELIST_ADD" : "CODELIST_UPDATE", korisnik);
         await _dbContext.SaveChangesAsync();
 
         return Result<CodeListResponseDTO>.Success(entitet.Adapt<CodeListResponseDTO>());
@@ -186,7 +198,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
             return Result<bool>.NotFoundError($"Šifarnik s ID={id} nije pronađen.");
 
         // PL-37 — provjera upotrebe
-        var uUpotrebi = await JeVrijednostUUpotrebi(entitet.Kategorija, entitet.Kod);
+        var uUpotrebi = entitet.IsSystemRequired || await JeVrijednostUUpotrebi(entitet.Kategorija, entitet.Kod);
         if (uUpotrebi)
             return Result<bool>.ValidationError(
                 $"Vrijednost '{entitet.Naziv}' ({entitet.Kod}) je trenutno u upotrebi i ne može biti obrisana. " +
@@ -197,6 +209,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
         entitet.IzmijenjenDatum   = DateTime.UtcNow;
         entitet.IzmijenioKorisnik = korisnik;
 
+        AddAudit(entitet.Kategorija, entitet.Kod, "CODELIST_DELETE", korisnik);
         await _dbContext.SaveChangesAsync();
 
         return Result<bool>.Success(true);
@@ -221,7 +234,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
         if (definition is null && values.Count == 0)
             return Result<bool>.NotFoundError($"Šifrarnik '{normalizedCategory}' nije pronađen.");
 
-        if (await JeKategorijaUUpotrebi(normalizedCategory, values.Select(item => item.Kod)))
+        if (definition?.IsSystemRequired == true || values.Any(item => item.IsSystemRequired) || await JeKategorijaUUpotrebi(normalizedCategory, values.Select(item => item.Kod)))
             return Result<bool>.ValidationError(
                 $"Šifrarnik '{normalizedCategory}' se ne može obrisati jer se najmanje jedna njegova vrijednost koristi u aplikaciji. " +
                 "Prvo uklonite poslovne zapise koji koriste te vrijednosti.");
@@ -235,8 +248,9 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
         }
 
         if (definition is not null)
-            definition.IsActive = false;
+            { definition.IsActive = false; definition.ModifiedBy = korisnik; }
 
+        AddAudit(normalizedCategory, null, "CODELIST_DELETE", korisnik);
         await _dbContext.SaveChangesAsync();
         return Result<bool>.Success(true);
     }
@@ -249,6 +263,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
     /// </summary>
     private async Task<bool> JeVrijednostUUpotrebi(string kategorija, string kod)
     {
+        if (await _dbContext.CodeLists.IgnoreQueryFilters().AnyAsync(row => row.LanguageCode == kod && row.ResourceKey != null)) return true;
         return kategorija switch
         {
             "OsnovPovezanosti" =>
@@ -285,6 +300,12 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
             _ => false
         };
     }
+
+    private void AddAudit(string category, string? code, string action, string actor) => _dbContext.AuditLogs.Add(new()
+    {
+        TableName = "CodeList", RecordId = category, Action = action, UserId = actor, Username = actor,
+        Timestamp = DateTime.UtcNow, NewValues = System.Text.Json.JsonSerializer.Serialize(new { category, code })
+    });
 
     private static Result<CodeListResponseDTO>? ValidateCreateDTO(CreateCodeListDTO dto)
     {

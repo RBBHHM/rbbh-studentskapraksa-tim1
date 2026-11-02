@@ -91,3 +91,5 @@ public sealed class CreateCodeListDefinitionDTO
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
 }
+
+public sealed record UpdateCodeListDefinitionDTO(string? Description, int ExpectedVersion);
