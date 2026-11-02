@@ -195,13 +195,13 @@ h1[tabindex="-1"]:focus, h1:focus-visible { outline: none; }
 .profile-hero__line { display: flex; align-items: center; gap: .5rem; margin: .5rem 0 0; font-size: var(--font-size-sm); color: var(--text-secondary); overflow-wrap: anywhere; }
 .profile-hero__line .rbi-icon { width: 1rem; height: 1rem; }
 .profile-grid { display: grid; gap: 1.25rem; margin: 1.5rem 0 0; }
-@media (min-width: 1024px) { .profile-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .profile-card--details { grid-column: 1 / -1; } }
+@media (min-width: 1024px) { .profile-grid { grid-template-columns: minmax(14rem, 1fr) minmax(0, 3fr); align-items: start; } .profile-card--details { grid-column: 1 / -1; } }
 .profile-card { margin: 0; border: 1px solid var(--border-subtle); border-radius: var(--radii-sm, .25rem); background: var(--surface-default); padding: 1.5rem; box-shadow: var(--shadow-sm, 0 1px 2px rgb(0 0 0 / .06)); }
 .profile-card dd { margin: 0; }
 .profile-card__title { font-size: var(--font-size-xl, 1.25rem); font-weight: var(--font-weight-bold); margin-block-end: 1rem; }
 .profile-roles { display: flex; flex-wrap: wrap; gap: .5rem; }
 .profile-role { border-radius: 9999px; background: var(--surface-muted); padding: .375rem .75rem; font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold, 600); }
-.profile-permissions { display: grid; gap: .75rem; margin: 0; padding: 0; list-style: none; font-size: var(--font-size-sm); }
+.profile-permissions { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: .75rem; margin: 0; padding: 0; list-style: none; font-size: var(--font-size-sm); }
 .profile-permissions li { display: flex; gap: .75rem; overflow-wrap: anywhere; }
 .profile-permissions .rbi-icon { width: 1rem; height: 1rem; margin-block-start: .125rem; flex-shrink: 0; color: var(--feedback-success-foreground); }
 .profile-card--details { display: grid; grid-template-columns: max-content 1fr; gap: .5rem 1.5rem; background: var(--surface-subtle); font-size: var(--font-size-sm); }
