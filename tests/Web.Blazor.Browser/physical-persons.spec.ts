@@ -84,11 +84,11 @@ test("unavailable period disables physical verification until an explicit refres
   await expect(page.getByRole("button", { name: "Uredi", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Obriši", exact: true })).toBeDisabled();
   await expect(page.getByText(/Stanje perioda trenutno nije dostupno/)).toBeVisible();
-  await request.post("/__fixtures/period-available", { headers }); await page.reload(); await interactive(page);
+  await request.post("/__fixtures/period-available", { headers }); await request.post("/__fixtures/persons-entered-by-other", { headers }); await page.reload(); await interactive(page);
   await expect(page.getByRole("button", { name: "Verificiraj", exact: true })).toBeEnabled();
 });
-test("duplicates block progression, edit excludes self, verification and deactivation refresh", async ({ page }) => {
-  await openPhysical(page);
+test("duplicates block progression, edit excludes self, verification and deactivation refresh", async ({ page, request }) => {
+  const headers = { "X-Fixture-Control": "true" }; await openPhysical(page);
   await createNonresident(page, "Lifecycle", "LIF12345", "456789");
   let row = page.getByRole("row", { name: /Lifecycle Fixture/ });
   await row.getByRole("button", { name: "Uredi", exact: true }).click();
@@ -98,6 +98,12 @@ test("duplicates block progression, edit excludes self, verification and deactiv
   await expect(dialog.getByRole("radiogroup", { name: "Malus & Clawback", exact: false }).getByRole("radio", { name: "Ne", exact: true })).toBeChecked();
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
   await expect(dialog).not.toBeVisible();
+  const own = row.getByRole("button", { name: "Verificiraj", exact: true });
+  await expect(own).toBeDisabled();
+  await expect(own.locator("xpath=..")).toHaveAttribute("title", /četiri oka/);
+  expect((await request.post("/__fixtures/persons-entered-by-other", { headers })).status()).toBe(204);
+  await page.reload(); await interactive(page);
+  row = page.getByRole("row", { name: /Lifecycle Fixture/ });
   await row.getByRole("button", { name: "Verificiraj", exact: true }).click();
   await expect(row.getByText("Verificirano", { exact: true })).toBeVisible();
   await expect(row.getByRole("button", { name: "Verificiraj", exact: true })).toHaveCount(0);

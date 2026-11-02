@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using ClosedXML.Excel;
@@ -662,6 +662,14 @@ internal static class BrowserHostProgram
                                     IsActive = true,
                                     CreatedAt = new DateTime(2026, 1, 1).AddMinutes(index)
                                 });
+                                await db.SaveChangesAsync();
+                            }
+                            break;
+                        case "/__fixtures/persons-entered-by-other":
+                            await using (var scope = backend.Services.CreateAsyncScope())
+                            {
+                                var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                                foreach (var person in db.RelatedPersons.IgnoreQueryFilters()) person.CreatedBy = "fixture-author";
                                 await db.SaveChangesAsync();
                             }
                             break;

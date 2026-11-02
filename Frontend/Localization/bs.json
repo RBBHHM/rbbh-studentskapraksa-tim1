@@ -118,6 +118,7 @@
     "common.export": "Izvezi Excel",
     "common.new": "Novi zapis",
     "common.edit": "Uredi",
+    "common.verify-own": "Isti korisnik ne može unijeti i verificirati zapis (princip četiri oka).",
     "common.verify": "Verificiraj",
     "common.deactivate": "Obriši",
     "common.confirm": "Potvrdi",

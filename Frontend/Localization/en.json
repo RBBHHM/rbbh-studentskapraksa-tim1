@@ -118,6 +118,7 @@
     "common.export": "Export Excel",
     "common.new": "New record",
     "common.edit": "Edit",
+    "common.verify-own": "The user who entered a record cannot verify it (four-eyes principle).",
     "common.verify": "Verify",
     "common.deactivate": "Delete",
     "common.confirm": "Confirm",
