@@ -15,13 +15,16 @@ namespace RBBH.ConnectedParties.Exceptions
             int statusCode = ExceptionToStatusCodeHelper.GetStatus(exception);
             httpContext.Response.StatusCode = statusCode;
 
+            // Database/authentication exception messages can contain submitted data.
+            // Keep operational diagnostics useful without serializing the exception.
             logger.LogError(
-                 exception,
-                 "Unhandled exception for {RequestMethod} {RequestPath}. Status {StatusCode}. TraceId {TraceId}",
-                 httpContext.Request.Method,
-                 httpContext.Request.Path.Value,
-                 statusCode,
-                 httpContext.TraceIdentifier);
+                "Request failed. Method {RequestMethod}. Route {Route}. FailureType {FailureType}. Status {StatusCode}. TraceId {TraceId}",
+                httpContext.Request.Method,
+                ((httpContext.GetEndpoint() ?? httpContext.Features.Get<IExceptionHandlerFeature>()?.Endpoint)
+                    as Microsoft.AspNetCore.Routing.RouteEndpoint)?.RoutePattern.RawText ?? "(unmatched)",
+                exception.GetType().Name,
+                statusCode,
+                httpContext.TraceIdentifier);
 
             var problem = new ProblemDetails
             {

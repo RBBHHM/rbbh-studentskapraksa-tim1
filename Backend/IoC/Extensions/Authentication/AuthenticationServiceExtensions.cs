@@ -6,7 +6,6 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using RBBH.ConnectedParties.Helpers.Constants;
 using System.Security.Claims;
-using System.Diagnostics;
 
 namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
 {
@@ -113,81 +112,23 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
                     options.RefreshInterval = TimeSpan.FromSeconds(10);
 
                     options.Events = new JwtBearerEvents
-{
-    OnMessageReceived = context =>
-    {
-        var hasBearer = context.Request.Headers.Authorization
-            .ToString()
-            .StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase);
+                    {
+                        OnAuthenticationFailed = context =>
+                        {
+                            // Exception messages can contain token/claim data. Log only
+                            // the failure category and a server-controlled trace identifier.
+                            var logger = context.HttpContext.RequestServices
+                                .GetRequiredService<ILoggerFactory>().CreateLogger("AuthenticationFailure");
+                            logger.LogWarning("Bearer authentication failed. FailureType {FailureType}. TraceId {TraceId}",
+                                context.Exception.GetType().Name, context.HttpContext.TraceIdentifier);
 
-        Console.WriteLine(
-            $"[JWT] Request: {context.Request.Method} {context.Request.Path}; " +
-            $"HasBearer={hasBearer}");
-
-        Console.WriteLine(
-            $"[JWT] Request: {context.Request.Method} {context.Request.Path}; " +
-            $"HasBearer={hasBearer}");
-
-        return Task.CompletedTask;
-    },
-
-    OnTokenValidated = context =>
-    {
-        var subject = context.Principal?.FindFirst("sub")?.Value;
-        var username = context.Principal?.FindFirst("preferred_username")?.Value;
-        var tokenAudiences = context.Principal?
-            .FindAll("aud")
-            .Select(claim => claim.Value);
-
-        Console.WriteLine(
-            $"[JWT] VALID. Path={context.Request.Path}; " +
-            $"sub={subject}; username={username}; " +
-            $"aud=[{string.Join(", ", tokenAudiences ?? [])}]");
-
-        Console.WriteLine(
-            $"[JWT] VALID. Path={context.Request.Path}; " +
-            $"sub={subject}; username={username}; " +
-            $"aud=[{string.Join(", ", tokenAudiences ?? [])}]");
-
-        return Task.CompletedTask;
-    },
-
-    OnAuthenticationFailed = context =>
-    {
-        Console.WriteLine(
-            $"[JWT] FAILED. Path={context.Request.Path}; " +
-            $"Exception={context.Exception.GetType().Name}; " +
-            $"Message={context.Exception.Message}");
-
-        Console.WriteLine(
-            $"[JWT] FAILED. Path={context.Request.Path}; " +
-            $"Exception={context.Exception.GetType().Name}; " +
-            $"Message={context.Exception.Message}");
-
-        if (context.Exception is SecurityTokenExpiredException)
-            context.Response.Headers.Append("Token-Expired", "true");
-
-        if (context.Exception is SecurityTokenInvalidSigningKeyException)
-            context.Response.Headers.Append("SigningKey-Invalid", "true");
-
-        return Task.CompletedTask;
-    },
-
-    OnChallenge = context =>
-    {
-        Console.WriteLine(
-            $"[JWT] CHALLENGE. Path={context.Request.Path}; " +
-            $"Error={context.Error ?? "(null)"}; " +
-            $"Description={context.ErrorDescription ?? "(null)"}");
-
-        Console.WriteLine(
-            $"[JWT] CHALLENGE. Path={context.Request.Path}; " +
-            $"Error={context.Error ?? "(null)"}; " +
-            $"Description={context.ErrorDescription ?? "(null)"}");
-
-        return Task.CompletedTask;
-    }
-};
+                            if (context.Exception is SecurityTokenExpiredException)
+                                context.Response.Headers.Append("Token-Expired", "true");
+                            if (context.Exception is SecurityTokenInvalidSigningKeyException)
+                                context.Response.Headers.Append("SigningKey-Invalid", "true");
+                            return Task.CompletedTask;
+                        }
+                    };
 
                 })
                 .AddOpenIdConnect("KeycloakOidc", options =>

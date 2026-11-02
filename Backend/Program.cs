@@ -62,26 +62,11 @@ app.MapCustomHealthChecks();
 app.UseCors();
 //#endif
 
+// Include authentication/authorization short-circuits without logging identity data.
+app.UseMiddleware<RequestOutcomeLoggingMiddleware>();
+
 app.UseAuthentication();
 app.UseAuthorization();
-
-app.Use(async (context, next) =>
-{
-    await next();
-
-    if (context.Request.Path.StartsWithSegments("/api"))
-    {
-        Console.WriteLine(
-            $"[API] {context.Request.Method} {context.Request.Path} " +
-            $"=> {context.Response.StatusCode}; " +
-            $"Authenticated={context.User.Identity?.IsAuthenticated}; " +
-            $"User={context.User.FindFirst("preferred_username")?.Value ?? "(none)"}; " +
-            $"Subject={AuthenticatedActor.Subject(context.User) ?? "(none)"}; " +
-            $"ApplicationUserId={context.User.FindFirst(AuthenticatedActor.ApplicationUserIdClaim)?.Value ?? "(none)"}; " +
-            $"Roles=[{string.Join(", ", context.User.FindAll(System.Security.Claims.ClaimTypes.Role).Select(x => x.Value))}]; " +
-            $"Permissions=[{string.Join(", ", context.User.FindAll("permission").Select(x => x.Value))}]");
-    }
-});
 
 app.UseMiddleware<RBBH.ConnectedParties.Middlewares.PeriodLockMiddleware>();
 

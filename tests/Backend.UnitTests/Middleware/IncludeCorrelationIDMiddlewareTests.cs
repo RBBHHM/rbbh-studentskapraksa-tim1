@@ -7,6 +7,35 @@ namespace UnitTests.Middleware
 {
     public class IncludeCorrelationIDMiddlewareTests
     {
+        [Theory]
+        [InlineData("")]
+        [InlineData("private@example.test")]
+        [InlineData("line\r\nbreak")]
+        [InlineData("first,second")]
+        [InlineData("å")]
+        [InlineData("01234567890123456789012345678901234567890123456789012345678901234")]
+        public async Task InvalidCorrelationIsReplacedBeforeDownstreamUse(string value)
+        {
+            var context = new DefaultHttpContext();
+            context.Request.Headers[AppConstants.CORRELATION_ID] = value;
+            var middleware = new IncludeCorrelationIDMiddleware(nextContext =>
+            {
+                Assert.True(Guid.TryParse(context.Request.Headers[AppConstants.CORRELATION_ID], out _));
+                return Task.CompletedTask;
+            });
+            await middleware.InvokeAsync(context);
+            Assert.Equal(context.Request.Headers[AppConstants.CORRELATION_ID], context.Response.Headers[AppConstants.CORRELATION_ID]);
+        }
+
+        [Fact]
+        public async Task MultipleCorrelationValuesAreReplaced()
+        {
+            var context = new DefaultHttpContext();
+            context.Request.Headers.Append(AppConstants.CORRELATION_ID, new[] { "first", "second" });
+            await new IncludeCorrelationIDMiddleware(_ => Task.CompletedTask).InvokeAsync(context);
+            Assert.True(Guid.TryParse(context.Request.Headers[AppConstants.CORRELATION_ID], out _));
+        }
+
         [Fact]
         public async Task InvokeAsync_AddsCorrelationID_WhenHeaderDoesNotExist()
         {
