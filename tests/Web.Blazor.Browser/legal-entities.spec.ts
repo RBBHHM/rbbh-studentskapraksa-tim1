@@ -51,7 +51,7 @@ test("resident tax checksum, registration and date-order validation precede real
   await dialog.getByLabel("Porezni broj", { exact: false }).fill("1234567890123");
   await dialog.getByLabel("Matični broj", { exact: false }).fill("ABC");
   await dialog.getByLabel("Datum do", { exact: false }).fill("2025-12-31");
-  await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
+  await expect(dialog.getByRole("button", { name: "Sačuvaj", exact: true })).toBeDisabled();
   await expect(dialog.getByText("Provjerite porezni broj:", { exact: false }).first()).toBeVisible();
   await expect(dialog.getByText("Matični broj smije sadržavati", { exact: false }).first()).toBeVisible();
   await expect(dialog.getByText("Datum do ne može biti prije datuma od.", { exact: true }).first()).toBeVisible();
