@@ -20,6 +20,17 @@ test("real audit entries retain human fields and scalar search without executing
   await expect(page.locator('img[src="x"]')).toHaveCount(0);
   await page.getByLabel("Pretraga podataka na prikazanoj stranici", { exact: true }).fill("no-match"); await expect(row).toHaveCount(0);
 });
+test("audit details open in a dialog with highlighted field changes and inert markup", async ({ page, request }) => {
+  await request.post("/__fixtures/audit-existing", { headers }); await page.goto("/app/admin/audit"); await interactive(page);
+  const row = page.getByRole("row", { name: /fixture-auditor/ });
+  await expect(row.locator(".audit-badge--success")).toBeVisible();
+  await row.getByRole("button", { name: /^Detalji/ }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.locator(".audit-row--added")).toContainText("audit-body-needle");
+  await expect(dialog.locator("img")).toHaveCount(0);
+  expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
+  await page.keyboard.press("Escape"); await expect(dialog).toHaveCount(0);
+});
 test("audit paging reaches records beyond the source first 200", async ({ page, request }) => {
   await request.post("/__fixtures/audit-pages", { headers }); await page.goto("/app/admin/audit"); await interactive(page);
   await expect(page.getByRole("row", { name: /audit-page-000/ })).toBeVisible(); await expect(page.getByRole("row", { name: /audit-page-200/ })).toHaveCount(0);
