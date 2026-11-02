@@ -240,3 +240,14 @@ Release is not ready: S2/S3 security findings, populated-data migration decision
 - `tests/Backend.UnitTests/Services/CodeListServiceTests/CodeListServiceTests.cs`
 - `tests/Backend.UnitTests/Services/EmailDiagnosticsTests.cs`
 - `tests/Backend.UnitTests/Services/LegalEntityServiceTests/LegalImportValidationTests.cs`
+
+## Continued implementation after 05b63b4 (approved S2/S3, 2026-11-02)
+
+The user approved S2/S3 and additive C1–C5 implementation. Preserve Capital period-processing permissions; the earlier Admin-only period-processing proposal is superseded and is **not applied**. New contract handoff: [BACKEND-FRONTEND-CONTRACT-V1.md](BACKEND-FRONTEND-CONTRACT-V1.md).
+
+- `7f2585d` (SAFE-01/S2): server-derived immutable CreatorSubject, additive nullable provenance and SQL rowversion on legal/physical records; creator403, ownerless historical409; legal Update cannot transition status; physical overposting ignored; verification+audit saved atomically.310/310 unit PASS;23/23 affected HTTP/SQL/period/subject-link tests PASS, including real SQL racing verification and audit-trigger rollback. No historical provenance invented.
+- `5735ba0` (PER-03/S3 initial): owner-only period-request list; additive CapitalWrite `/review` queue; response subject/state checks; one-response parent key and rowversion; response/audit atomic; production raw-mail preview disabled and isolated Development preview recipient-filtered.310/310 unit PASS;34/34 affected HTTP/SQL/period tests PASS. Original NEEDS_INFO→new PENDING child workflow retained, including the original record status; duplicate child blocked409. Existing Capital processing grants preserved.
+
+Additive migrations `AddRegistryCreatorProvenance` and `AddPeriodRequestOwnership` are local source changes, tested only on disposable SQL databases. Apply before upgraded API rollout; leave historical creator/requester subjects null until an approved reconciliation. Never use current email to invent historical ownership. Generated Down operations remove the new fields: do not run a data-losing downgrade in shared environments without explicit approval/backup; application rollback can retain additive columns.
+
+These batches do not complete role-request/inbox/localization/history/registry/reporting scope. Continue the dependency-ordered backlog; final statuses must be VERIFIED / BLOCKED / NOT_IMPLEMENTED after complete backend regression.
