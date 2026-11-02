@@ -90,3 +90,20 @@ test("dark guide retains WCAG AA contrast at desktop and375px", async ({ page })
     expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
   }
 });
+test("sidebar highlights only the current module after client-side navigation", async ({ page }) => {
+  await visit(page, "/app");
+  const current = page.locator("a.app-nav__link[aria-current='page']");
+  await expect(current).toHaveCount(1);
+  await expect(current).toHaveAttribute("href", "/app");
+  await page.locator("a.app-nav__link[href='/app/guide']").click();
+  await expect(page).toHaveURL(/\/app\/guide$/);
+  await expect(current).toHaveCount(1);
+  await expect(current).toHaveAttribute("href", "/app/guide");
+});
+test("tab icon is the approved bank mark and loads", async ({ page, request }) => {
+  await visit(page, "/app");
+  const href = await page.locator("link[rel='icon']").getAttribute("href");
+  expect(href).toContain("rbi-bank-squared-col.png");
+  expect((await request.get("/" + href)).status()).toBe(200);
+  expect((await request.get("/favicon.ico")).status()).not.toBe(200);
+});
