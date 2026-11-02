@@ -362,6 +362,8 @@
     "period.status.rejected": "Odbijen",
     "codes.title": "Šifrarnici",
     "codes.subtitle": "Centralno upravljanje vrijednostima koje aplikacija koristi u formama.",
+    "codes.search": "Pretraga šifrarnika",
+    "codes.all": "Svi šifrarnici",
     "codes.category": "Kategorija",
     "codes.definition-create": "Novi šifrarnik",
     "codes.definition-name": "Naziv definicije",

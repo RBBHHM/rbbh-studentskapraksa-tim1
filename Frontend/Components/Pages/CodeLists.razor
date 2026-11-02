@@ -31,16 +31,31 @@ else
     {
         @if (_toastError is not null) { <div role="alert" class="app-toast app-toast--danger"><RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_toastError]" /></div> }
         @if (_notice is not null) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@_notice" /></div> }
-        <fieldset disabled="@(_busy || _refreshing)" class="registry-category"><legend class="app-visually-hidden">@T["codes.category"]</legend>
-            <div class="registry-field registry-field--category"><label for="code-category">@T["codes.category"]</label>
-            <RbiSelect TValue="string" Id="code-category" @bind-Value="_category" @bind-Value:after="CategoryChangedAsync" Disabled="@(_categories.Count == 0)">
-                @foreach (var category in _categories) { <option value="@category">@category</option> }
-            </RbiSelect></div>
-            @if (_canWrite && _category.Length > 0)
+        @if (_category.Length == 0)
+        {
+            <div class="registry-controls"><RegistrySearch Id="code-search" Label="@T["codes.search"]" @bind-Value="_search" /></div>
+            @if (_categories.Count == 0) { <div class="registry-surface"><RegistryEmpty Body="@T["codes.no-categories"]" /></div> }
+            else if (!FilteredCategories.Any()) { <div class="registry-surface"><RegistryEmpty Body="@T["state.no-match"]" /></div> }
+            else
             {
-                <RbiButton OnClick="() => _deleteCategory = _category" Variant="RbiButtonVariant.Destructive"><RbiIcon Name="RbiIconName.Trash2" />@T["codes.delete-category"]</RbiButton>
+                <ul class="codes-cards" aria-label="@T["codes.title"]">
+                    @foreach (var category in FilteredCategories)
+                    {
+                        <li><button type="button" class="codes-card" disabled="@(_busy || _refreshing)" @onclick="() => OpenCategoryAsync(category)"><AppIcon Name="AppIconName.BookOpen" /><span class="codes-card__name">@category</span></button></li>
+                    }
+                </ul>
             }
-        </fieldset>
+        }
+        else
+        {
+            <div class="registry-category">
+                <RbiButton Disabled="@(_busy || _refreshing)" OnClick="BackToOverviewAsync" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.ArrowLeft" />@T["codes.all"]</RbiButton>
+                @if (_canWrite)
+                {
+                    <RbiButton Disabled="@(_busy || _refreshing)" OnClick="() => _deleteCategory = _category" Variant="RbiButtonVariant.Destructive"><RbiIcon Name="RbiIconName.Trash2" />@T["codes.delete-category"]</RbiButton>
+                }
+            </div>
+        }
         @if (_canWrite && _category.Length > 0) { <p class="registry-help app-visually-hidden">@T["codes.import-help"]</p> }
         @if (_refreshing) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
         else if (_category.Length == 0) { <div class="registry-surface"><RegistryEmpty Body="@T["codes.no-categories"]" /></div> }
@@ -109,7 +124,7 @@ else
             _canWrite = _canRead && profile.Permissions.Contains("ADMINISTRATION_MANAGE");
             if (!_canRead) return;
             _categories = (await Api.CategoriesAsync(_token)).Categories;
-            if (!_categories.Contains(_category)) _category = _categories.FirstOrDefault() ?? "";
+            if (!_categories.Contains(_category)) _category = "";
             _values = _category.Length == 0 ? [] : (await Api.ValuesAsync(_category, _token)).Items;
             _loaded = true;
         }
@@ -117,7 +132,11 @@ else
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         finally { _loading = _refreshing = false; }
     }
-    private Task CategoryChangedAsync() { _values = []; _notice = null; return LoadAsync(); }
+    private string _search = "";
+    private IEnumerable<string> FilteredCategories => _categories.Where(item => string.IsNullOrWhiteSpace(_search) || item.Contains(_search.Trim(), StringComparison.OrdinalIgnoreCase));
+    // Values are loaded only for the list the user opens, never for an automatically chosen first one.
+    private Task OpenCategoryAsync(string category) { _category = category; _values = []; _notice = null; return LoadAsync(); }
+    private Task BackToOverviewAsync() { _category = ""; _values = []; _notice = null; return LoadAsync(); }
     private void NewDefinition() { if (_canWrite && !_busy) _draft = new() { Definition = true }; }
     private void NewValue() { if (_canWrite && !_busy && _category.Length > 0) _draft = new() { Category = _category }; }
     private void Edit(CodeValue value) { if (_canWrite && !_busy) _draft = CodeListDraft.From(value); }

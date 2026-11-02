@@ -362,6 +362,8 @@
     "period.status.rejected": "Rejected",
     "codes.title": "Code lists",
     "codes.subtitle": "Centrally manage values used by application forms.",
+    "codes.search": "Search code lists",
+    "codes.all": "All code lists",
     "codes.category": "Category",
     "codes.definition-create": "New code list",
     "codes.definition-name": "Definition name",
