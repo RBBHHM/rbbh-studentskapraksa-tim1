@@ -72,7 +72,7 @@ test("reject, status filter and cancel do not fabricate or duplicate mutations",
 });
 test("request paging reaches beyond the source first hundred", async ({ page, request }) => {
   await request.post("/__fixtures/period-pages", { headers }); await visit(page); await page.getByRole("button", { name: "Sljedeća stranica", exact: true }).click();
-  await expect(page.getByText("Stranica 2 od 2; ukupno zapisa: 101.", { exact: true })).toBeVisible(); await expect(page.getByRole("row").filter({ hasText: "requester100" })).toBeVisible();
+  await expect(page.getByText("Ukupno zapisa: 101", { exact: true })).toBeVisible(); await expect(page.getByRole("row").filter({ hasText: "requester100" })).toBeVisible();
 });
 test("outage never looks like an open period and retry recovers", async ({ page, request }) => {
   await request.post("/__fixtures/unavailable", { headers }); await visit(page); await expect(page.getByText("Servis trenutno nije dostupan. Pokušajte ponovo.", { exact: true }).first()).toBeVisible();

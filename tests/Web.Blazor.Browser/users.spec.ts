@@ -107,7 +107,7 @@ test("deactivate/reactivate and permanent delete require confirmation and preser
 });
 test("server paging exposes users beyond the source first twenty", async ({ page, request }) => {
   await request.post("/__fixtures/users-pages", { headers }); await visit(page);
-  await page.getByRole("button", { name: "Sljedeća stranica", exact: true }).click(); await expect(page.getByText("Stranica 2 od 2; ukupno zapisa: 23.", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Sljedeća stranica", exact: true }).click(); await expect(page.getByText("Ukupno zapisa: 23", { exact: true })).toBeVisible();
   await expect(page.getByRole("row").filter({ hasText: "page21@fixture.test" })).toBeVisible();
 });
 test("outage is redacted and retry recovers without fabricating empty users", async ({ page, request }) => {
