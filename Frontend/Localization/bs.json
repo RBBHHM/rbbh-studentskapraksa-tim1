@@ -443,6 +443,7 @@
     "guide.administration.point2": "Dodatni pristupi vežu se za postojeći identitet kroz aplikacijsku evidenciju. Uklanjanje svih dodatnih rola vraća korisnika na Gost pristup ako nije ugrožen posljednji aktivni Admin. Nije dozvoljeno deaktivirati ili obrisati vlastiti račun niti ukloniti posljednji aktivni Admin pristup.",
     "guide.administration.point3": "Šifrarnici pune izbore u formama. Aktivna vrijednost se može birati; neaktivna ostaje radi historije. Backend odbija brisanje vrijednosti ili cijelog šifrarnika dok ga poslovni podatak koristi. Uvoz ima pregled i izričitu potvrdu ispravnih redova.",
     "guide.administration.point4": "Audit evidencija pokazuje ko je, kada i nad kojim područjem izvršio promjenu, uključujući dostupne stare i nove vrijednosti.",
+    "guide.before-title": "Prije spremanja",
     "guide.before": "Provjerite obavezna polja, identifikatore, datume i poslovni osnov. Aplikacija prikazuje detaljnu poruku ako nešto nije ispravno; podatak se ne čuva dok se greška ne otkloni. Ako ishod snimanja nije poznat, prvo osvježite pregled prije ponovnog slanja.",
     "dashboard.description": "Upravljajte povezanim licima, limitima, izvještajima i administrativnim postavkama na jednom mjestu.",
     "dashboard.eyebrow": "Centralni registar",

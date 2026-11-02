@@ -443,6 +443,7 @@
     "guide.administration.point2": "Additional access is linked to an existing identity through application records. Removing additional roles returns the user to Guest access unless the final active Admin would be lost. You cannot deactivate/delete yourself or remove the final active Admin access.",
     "guide.administration.point3": "Code lists populate form choices. Active values can be selected; inactive values remain for history. The backend rejects deleting a value or entire list while business data uses it. Import has a preview and an explicit confirmation of valid rows.",
     "guide.administration.point4": "The audit log shows who changed what, when and in which area, including available old and new values.",
+    "guide.before-title": "Before you save",
     "guide.before": "Check required fields, identifiers, dates and business basis. The application shows a detailed message when something is invalid; data is not saved until the issue is resolved. If the outcome of saving is unknown, refresh the view before submitting again.",
     "dashboard.description": "Manage related parties, limits, reports and administrative settings in one place.",
     "dashboard.eyebrow": "Central register",
