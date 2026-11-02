@@ -12,7 +12,6 @@ public sealed class FrontendSourceGuardTests
     private static readonly HashSet<string> KnownHardcodedBusinessLists =
     [
         "Components/Pages/Period.razor|Statuses",
-        "Components/Pages/MyProfile.razor|AccessKeys",
         "Components/Pages/Guide.razor|States",
     ];
 

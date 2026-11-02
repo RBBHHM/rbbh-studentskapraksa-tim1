@@ -75,8 +75,7 @@ else
     private bool _disposed, _authenticated, _canRead, _canWrite, _busy, _loading = true, _refreshing, _loaded, _delete;
     private string? _notice;
     private int TotalPages => Math.Max(1, (int)Math.Ceiling(_result.Total / 20d));
-    private string RoleLabel(string role) => role.ToLowerInvariant() is "fl" or "pl" or "kapital" or "limiti" or "admin" or "gost"
-        ? T["users.role." + role.ToLowerInvariant()] : role;
+    private string RoleLabel(string role) => T.Role(role);
     private bool IsSelf(ApplicationUser user) => _profile?.ApplicationUserId is { } id ? user.Id == id
         : !string.IsNullOrWhiteSpace(_profile?.Email) && string.Equals(_profile.Email.Trim(), user.Email.Trim(), StringComparison.OrdinalIgnoreCase);
     protected override Task OnInitializedAsync() => LoadAsync();

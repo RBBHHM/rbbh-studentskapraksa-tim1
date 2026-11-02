@@ -66,9 +66,9 @@ else { <HeroBar Title="@T["profile.title"]" Description="@T["profile.description
     private string? Claim(string type) => _user?.FindFirst(type)?.Value;
     private string? DisplayName => Claim(ClaimTypes.Name) ?? Claim("name") ?? _user?.Identity?.Name;
     private string? Username => Claim(ClaimTypes.Upn) ?? Claim("preferred_username") ?? _profile?.Username;
-    private static readonly string[] AccessKeys = ["fl", "pl", "limiti", "kapital", "admin"];
-    private static IEnumerable<string> AccessRoles(ApplicationProfile profile) => profile.Roles.Where(role => AccessKeys.Contains(role.ToLowerInvariant()));
-    private string RoleLabel(string role) => role.ToLowerInvariant() switch { "fl" => T["person.title"], "pl" => T["legal.title"], "limiti" => T["limit.title"], "kapital" => T["capital.title"], "admin" => T["profile.admin"], _ => role };
+    // Roles come from the backend profile; Guest is the absence of a granted role.
+    private static IEnumerable<string> AccessRoles(ApplicationProfile profile) => profile.Roles.Where(role => !role.Equals("gost", StringComparison.OrdinalIgnoreCase));
+    private string RoleLabel(string role) => T.Role(role);
     private string Initials => string.IsNullOrWhiteSpace(DisplayName) ? "?" : DisplayName[..1].ToUpperInvariant();
     public void Dispose() { _lifetime.Cancel(); _lifetime.Dispose(); }
 }
