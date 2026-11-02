@@ -95,8 +95,12 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
         if (validacija is not null) return validacija;
 
         // Provjera duplikata — isti Kod u istoj Kategoriji
-        var postoji = await _dbContext.CodeLists.AnyAsync(x =>
-            x.Kategorija == dto.Kategorija && x.Kod == dto.Kod);
+        var category = dto.Kategorija.Trim();
+        var normalizedCategory = category.ToUpperInvariant();
+        var code = dto.Kod.Trim().ToUpperInvariant();
+        // Inactive values retain their stable key and must be reactivated, not duplicated.
+        var postoji = await _dbContext.CodeLists.IgnoreQueryFilters().AnyAsync(x =>
+            x.Kategorija.Trim().ToUpper() == normalizedCategory && x.Kod.Trim().ToUpper() == code);
 
         if (postoji)
             return Result<CodeListResponseDTO>.ValidationError(
@@ -104,8 +108,8 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
 
         var entitet = new CodeList
         {
-            Kategorija        = dto.Kategorija.Trim(),
-            Kod               = dto.Kod.Trim().ToUpper(),
+            Kategorija        = category,
+            Kod               = code,
             Naziv             = dto.Naziv.Trim(),
             Opis              = dto.Opis?.Trim(),
             RedoslijedPrikaza = dto.RedoslijedPrikaza,
@@ -131,6 +135,9 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
         if (string.IsNullOrWhiteSpace(dto.Naziv))
             return Result<CodeListResponseDTO>.ValidationError("Naziv ne smije biti prazan.");
 
+        if (dto.Naziv.Length > 200 || dto.Opis?.Length > 500)
+            return Result<CodeListResponseDTO>.ValidationError("Naziv smije imati najviše 200, a opis najviše 500 znakova.");
+
         // Moramo pratiti entitet da bismo ga mogli ažurirati
         var entitet = await _dbContext.CodeLists
             .IgnoreQueryFilters()
@@ -139,6 +146,10 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
 
         if (entitet is null)
             return Result<CodeListResponseDTO>.NotFoundError($"Šifarnik s ID={id} nije pronađen.");
+
+        // Updating Aktivan must enforce the same reference guard as Delete.
+        if (entitet.Aktivan && !dto.Aktivan && await JeVrijednostUUpotrebi(entitet.Kategorija, entitet.Kod))
+            return Result<CodeListResponseDTO>.ValidationError("Vrijednost je trenutno u upotrebi i ne može biti deaktivirana.");
 
         // Ažuriramo dopuštena polja (Kategorija i Kod se ne mijenjaju)
         entitet.Naziv             = dto.Naziv.Trim();
@@ -285,6 +296,10 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
 
         if (string.IsNullOrWhiteSpace(dto.Naziv))
             return Result<CodeListResponseDTO>.ValidationError("Naziv ne smije biti prazan.");
+
+        if (dto.Kategorija.Length > 100 || dto.Kod.Length > 50 || dto.Naziv.Length > 200 || dto.Opis?.Length > 500)
+            return Result<CodeListResponseDTO>.ValidationError(
+                "Kategorija smije imati najviše 100, kod 50, naziv 200, a opis 500 znakova.");
 
         return null; // Validno
     }
