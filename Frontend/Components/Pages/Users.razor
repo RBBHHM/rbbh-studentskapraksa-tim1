@@ -30,10 +30,10 @@ else
     else
     {
         <RbiTable AccessibleLabel="@T["users.title"]" Class="registry-table registry-users-table">
-            <thead><tr><th scope="col">@T["users.user"]</th><th scope="col">@T["users.email"]</th><th scope="col">@T["users.col-accesses"]</th><th scope="col">@T["users.permissions"]</th><th scope="col" class="registry-center">@T["users.status"]</th>@if (_canWrite) { <th scope="col" class="registry-center registry-actions-cell">@T["users.actions"]</th> }</tr></thead>
+            <thead><tr><th scope="col">@T["users.user"]</th><th scope="col">@T["users.email"]</th><th scope="col">@T["users.col-accesses"]</th><th scope="col" class="registry-center">@T["users.status"]</th>@if (_canWrite) { <th scope="col" class="registry-center registry-actions-cell">@T["users.actions"]</th> }</tr></thead>
             <tbody>@foreach (var user in _result.Users)
             {
-                <tr @key="user.Id"><td><strong>@user.FirstName @user.LastName</strong><br /><span class="registry-sub">@user.Username</span></td><td>@user.Email</td><td>@(user.IsActive && user.Roles.Count == 0 ? RoleLabel("gost") : string.Join(", ", user.Roles.Select(RoleLabel)))</td><td class="registry-permissions">@string.Join(", ", user.EffectivePermissions)</td><td class="registry-center"><Indicator Kind="@(user.IsActive ? "active" : "inactive")" Label="@T[user.IsActive ? "users.active" : "users.inactive"]" /></td>
+                <tr @key="user.Id"><td><strong>@user.FirstName @user.LastName</strong><br /><span class="registry-sub">@user.Username</span></td><td>@user.Email</td><td>@(user.IsActive && user.Roles.Count == 0 ? RoleLabel("gost") : string.Join(", ", user.Roles.Select(RoleLabel)))</td><td class="registry-center"><Indicator Kind="@(user.IsActive ? "active" : "inactive")" Label="@T[user.IsActive ? "users.active" : "users.inactive"]" /></td>
                 @if (_canWrite)
                 {
                     <td class="registry-actions-cell"><div class="registry-row-actions">

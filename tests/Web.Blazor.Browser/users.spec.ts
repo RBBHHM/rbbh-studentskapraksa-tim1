@@ -32,7 +32,7 @@ test("Admin sees real user/access metadata, accessible create form and disabled 
   await expect(own.getByRole("button", { name: "Deaktiviraj", exact: true })).toBeDisabled();
   await expect(own.getByRole("button", { name: "Obriši korisnika", exact: true })).toBeDisabled();
   await expect(own.getByRole("button", { name: "Promijeni ulogu", exact: true })).toBeDisabled();
-  await expect(own).toContainText("ADMINISTRATION_MANAGE");
+  await expect(own).toContainText("Administrator");
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
   await page.getByRole("button", { name: "Dodaj korisnika", exact: true }).click();
   await settled(page.getByRole("dialog"));
@@ -45,7 +45,7 @@ test("create preserves multiple application roles and persists the actual backen
   await access(dialog, "PL", true);
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).toHaveCount(0);
   const row = page.getByRole("row").filter({ hasText: "new.user@raiffeisengroup.ba" });
-  await expect(row).toContainText("FL_CREATE"); await expect(row).toContainText("PL_CREATE");
+  await expect(row).toContainText("FL, PL");
   await page.reload(); await interactive(page); await expect(row).toBeVisible();
   const state = await (await request.get("/__fixtures/users-state", { headers })).json();
   expect(state.users.find((user: { username: string }) => user.username === "new.user")).toMatchObject({ firstName: "Native", lastName: "User", isActive: true });
@@ -73,12 +73,12 @@ test("role replacement and non-final empty roles preserve the existing mapping-r
   await other.getByRole("button", { name: "Promijeni ulogu", exact: true }).click();
   let dialog = page.getByRole("dialog"); await access(dialog, "FL", false);
   await access(dialog, "Kapital", true); await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
-  await expect(dialog).toHaveCount(0); await expect(other).toContainText("KAPITAL_CREATE");
+  await expect(dialog).toHaveCount(0); await expect(other).toContainText("Kapital");
   await other.getByRole("button", { name: "Promijeni ulogu", exact: true }).click(); dialog = page.getByRole("dialog");
   await access(dialog, "Kapital", false);
   await expect(dialog.getByText(/Zapis identiteta i status ostaju sačuvani/)).toBeVisible();
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).toHaveCount(0);
-  await expect(other).toBeVisible(); await expect(other).toContainText("FL_VIEW"); await expect(other).not.toContainText("KAPITAL_CREATE");
+  await expect(other).toBeVisible(); await expect(other).toContainText("Gost"); await expect(other).not.toContainText("Kapital");
   const state = await (await request.get("/__fixtures/users-state", { headers })).json();
   expect(state.users.find((user: { email: string }) => user.email === "other-FL@fixture.test").isActive).toBe(true);
 });
@@ -86,7 +86,7 @@ test("own role editor is unavailable even when another active Admin exists", asy
   await request.post("/__fixtures/users-reference", { headers }); await visit(page);
   const own = page.getByRole("row").filter({ hasText: "admin@fixture.test" }).filter({ hasNotText: "other-admin@fixture.test" });
   await expect(own.getByRole("button", { name: "Promijeni ulogu", exact: true })).toBeDisabled();
-  await expect(own).toContainText("ADMINISTRATION_MANAGE");
+  await expect(own).toContainText("Administrator");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("row").filter({ hasText: "other-admin@fixture.test" }).getByRole("button", { name: "Promijeni ulogu", exact: true })).toBeEnabled();
   expect((await (await request.get("/__fixtures/users-state", { headers })).json()).audit).toEqual([]);

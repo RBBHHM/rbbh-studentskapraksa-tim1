@@ -15,7 +15,16 @@ public sealed class UserDraft
     public string Username { get; set; } = "";
     public string FirstName { get; set; } = "";
     public string LastName { get; set; } = "";
+    public const string EmailDomain = "@raiffeisengroup.ba";
+    private string _suggestedEmail = "";
     public string Email { get; set; } = "";
+    /// <summary>Pre-fills the corporate address while the user has not typed their own; it stays editable.</summary>
+    public void UsernameChanged()
+    {
+        if (Id is not null || (Email.Length > 0 && Email != _suggestedEmail)) return;
+        _suggestedEmail = Username.Trim().Length == 0 ? "" : Username.Trim() + EmailDomain;
+        Email = _suggestedEmail;
+    }
     public List<UserRoleChoice> Roles { get; init; } = [];
     public Guid[] SelectedRoles => Roles.Where(role => role.Selected).Select(role => role.Id).ToArray();
     public static UserDraft From(ApplicationUser? user, RolesCatalog catalog) => new()
@@ -34,7 +43,7 @@ public sealed class UserDraft
         if (Id is not null) return errors; // Empty edit deliberately preserves removal/Guest semantics, subject to backend safety.
         foreach (var (field, value) in new[] { (nameof(Username), Username), (nameof(FirstName), FirstName), (nameof(LastName), LastName) })
             if (string.IsNullOrWhiteSpace(value) || value.Trim().Length > 100) errors[field] = ["users.name-invalid"];
-        if (!new EmailAddressAttribute().IsValid(Email.Trim()) || !Email.Trim().EndsWith("@raiffeisengroup.ba", StringComparison.OrdinalIgnoreCase))
+        if (!new EmailAddressAttribute().IsValid(Email.Trim()) || !Email.Trim().EndsWith(EmailDomain, StringComparison.OrdinalIgnoreCase))
             errors[nameof(Email)] = ["users.email-invalid"];
         return errors;
     }

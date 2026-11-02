@@ -130,4 +130,16 @@ public sealed class UsersApiTests
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token) => respond(request);
     }
+
+    [Fact]
+    public void EmailIsSuggestedFromUsernameButStaysEditable()
+    {
+        var draft = new UserDraft { Username = "ana.anic" };
+        draft.UsernameChanged();
+        Assert.Equal("ana.anic@raiffeisengroup.ba", draft.Email);
+        draft.Username = "ana.a"; draft.UsernameChanged();
+        Assert.Equal("ana.a@raiffeisengroup.ba", draft.Email);
+        draft.Email = "ana@partner.example"; draft.Username = "other"; draft.UsernameChanged();
+        Assert.Equal("ana@partner.example", draft.Email);
+    }
 }

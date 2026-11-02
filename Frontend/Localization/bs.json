@@ -288,7 +288,7 @@
     "users.username": "Korisničko ime",
     "users.email": "Email",
     "users.accesses": "Funkcionalni pristupi",
-    "users.col-accesses": "Pristupi",
+    "users.col-accesses": "Rola",
     "users.permissions": "Efektivna ovlaštenja",
     "users.status": "Status",
     "users.actions": "Akcije",

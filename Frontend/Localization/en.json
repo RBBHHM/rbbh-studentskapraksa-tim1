@@ -288,7 +288,7 @@
     "users.username": "Username",
     "users.email": "Email",
     "users.accesses": "Functional accesses",
-    "users.col-accesses": "Accesses",
+    "users.col-accesses": "Role",
     "users.permissions": "Effective permissions",
     "users.status": "Status",
     "users.actions": "Actions",
