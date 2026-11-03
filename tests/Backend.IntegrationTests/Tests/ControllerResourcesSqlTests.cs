@@ -150,4 +150,27 @@ public sealed class ControllerResourcesSqlTests : RoleCatalogFixture
         });
     }
 
+    [SqlServerFact]
+    public async Task CodebookImportRejectsActualHeaderAndDataFormulasBeforeReadingOrPersistingValues()
+    {
+        Client.DefaultRequestHeaders.Add("Accept-Language", "EN");
+        foreach (var formulaInHeader in new[] { false, true })
+        {
+            using var workbook = new ClosedXML.Excel.XLWorkbook(); var sheet = workbook.AddWorksheet("Fixture");
+            sheet.Cell(1, 1).Value = "Value"; sheet.Cell(2, 1).Value = "Example";
+            sheet.Cell(formulaInHeader ? 1 : 2, 1).FormulaA1 = formulaInHeader ? "CONCATENATE(\"Val\",\"ue\")" : "1+1";
+            using var stream = new MemoryStream(); workbook.SaveAs(stream);
+            using var form = new MultipartFormDataContent(); form.Add(new ByteArrayContent(stream.ToArray()), "file", "formula.xlsx");
+            var response = await Client.PostAsync("/api/code-lists/FormulaFixture/import?dryRun=false", form);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Equal("The import template must not contain formulas. Enter field values.", body.GetProperty("error").GetString());
+        }
+        await InDatabase(async db =>
+        {
+            Assert.False(await db.CodeLists.AnyAsync(row => row.Kategorija == "FormulaFixture"));
+            Assert.False(await db.CodeListDefinitions.AnyAsync(row => row.Name == "FormulaFixture")); Assert.Empty(db.AuditLogs);
+        });
+    }
+
 }

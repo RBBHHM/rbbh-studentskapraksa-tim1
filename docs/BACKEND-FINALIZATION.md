@@ -429,3 +429,9 @@ A real SQL HTTP regression generates a snapshot with GCC/large-exposure metadata
 ### Period-lock log privacy closure (OBS-01)
 
 The remaining global period-lock warning now records method and matched route template, or `(unmatched)`, rather than the raw user-controlled path. Responses, period policy and permissions are unchanged. Two direct middleware cases include an email-shaped path sentinel with and without endpoint metadata; both prove423, no action execution, template/fallback visibility and absence of the sentinel/exception from logs. The complete affected period-lock privacy/route unit set is **14/14 PASS**. Analyzer build and diff check PASS.
+
+### Generic codebook workbook formula guard (XLSX-02 / CODE-02)
+
+Final workbook review found that the one-column codebook path validated ZIP/size/schema but could read formula cell values before rejecting them, unlike the registry imports. It now rejects actual header/data formulas before any GetString/evaluation or persistence, using the existing localized error contract. Literal string values are not classified as formulas. Added per-row/request cancellation checks; labels, generated-code rules, partial-success behavior and the one-column format remain unchanged.
+
+The real SQL HTTP regression submits both formula-header and formula-data workbooks with dryRun=false, asserts400 localized feedback and no definition/value/audit persistence. Affected workbook/localization integration set **11/11 PASS**; analyzer build0 warnings/errors and diff check PASS. This is an input-validation closure, not a new workbook format.

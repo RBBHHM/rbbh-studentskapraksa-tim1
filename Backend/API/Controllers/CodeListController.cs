@@ -322,12 +322,15 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
             if (lastRow - 1 > 5_000)
                 return BadRequest(new { error = BackendMessages.Message("workbook.codelist.data.limit") });
 
+            if (ws.CellsUsed().Any(cell => cell.HasFormula))
+                return BadRequest(new { error = BackendMessages.Message("workbook.data.formula") });
             var header = ws.Cell(1, 1).GetString().Trim().ToLowerInvariant();
             if (header is not ("vrijednost" or "value" or "naziv" or "name"))
                 return BadRequest(new { error = BackendMessages.Message("workbook.codelist.header", ws.Cell(1, 1).GetString().Trim()) });
 
             foreach (var row in ws.RowsUsed().Skip(1))
             {
+                HttpContext.RequestAborted.ThrowIfCancellationRequested();
                 var val = row.Cell(1).GetString()?.Trim();
                 if (string.IsNullOrWhiteSpace(val)) continue;
 
@@ -381,6 +384,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
             .Select(row => row.Kod).ToListAsync(HttpContext.RequestAborted)).ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var val in toImport)
         {
+            HttpContext.RequestAborted.ThrowIfCancellationRequested();
             var code = ValueCode(val);
             if (!usedCodes.Add(code))
             {
