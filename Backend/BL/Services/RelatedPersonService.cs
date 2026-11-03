@@ -90,7 +90,7 @@ public class RelatedPersonService(
     {
         var items = await _dbContext.RelatedPersons.AsNoTracking().OrderBy(row => row.LastName).ThenBy(row => row.FirstName).ThenBy(row => row.Id)
             .Take(5001).ProjectToType<RelatedPersonResponseDTO>().ToListAsync(ct);
-        return items.Count > 5000 ? Result<List<RelatedPersonResponseDTO>>.ValidationError("Dozvoljeno je najviše 5.000 redova po izvozu.")
+        return items.Count > 5000 ? Result<List<RelatedPersonResponseDTO>>.ValidationError(BackendMessages.Message("errors.workbook.export.limit"))
             : Result<List<RelatedPersonResponseDTO>>.Success(items);
     }
 
@@ -111,7 +111,7 @@ public class RelatedPersonService(
     public async Task<Result<RelatedPersonResponseDTO>> GetById(Guid id)
     {
         if (id == Guid.Empty)
-            return Result<RelatedPersonResponseDTO>.ValidationError("ID nije validan.");
+            return Result<RelatedPersonResponseDTO>.ValidationError(BackendMessages.Message("validation.identifier.invalid"));
 
         var entity = await _dbContext.RelatedPersons
             .AsNoTracking()
@@ -119,7 +119,7 @@ public class RelatedPersonService(
             .FirstOrDefaultAsync(rp => rp.Id == id && rp.IsActive);
 
         if (entity is null)
-            return Result<RelatedPersonResponseDTO>.NotFoundError($"Povezano fizičko lice s ID={id} nije pronađeno.");
+            return Result<RelatedPersonResponseDTO>.NotFoundError(BackendMessages.Message("validation.person.id.missing", id));
 
         return Result<RelatedPersonResponseDTO>.Success(entity.Adapt<RelatedPersonResponseDTO>());
     }
@@ -135,7 +135,7 @@ public class RelatedPersonService(
 
         var selected = people.FirstOrDefault(person => person.Id == relatedPersonId);
         if (selected is null)
-            return Result<List<RelatedPersonTreeNodeDTO>>.NotFoundError("Odabrano fizičko lice nije pronađeno.");
+            return Result<List<RelatedPersonTreeNodeDTO>>.NotFoundError(BackendMessages.Message("validation.person.missing"));
 
         var byId = people.ToDictionary(person => person.Id);
         var childrenByParent = people.Where(person => person.RelatedToPersonId.HasValue)
@@ -155,7 +155,7 @@ public class RelatedPersonService(
                 FirstName = person.FirstName,
                 LastName = person.LastName,
                 PersonType = person.RelatedToPersonId.HasValue ? "FamilyMember" : person.IsIdentifiedStaff ? "Employee" : "RelatedPerson",
-                PersonTypeLabel = person.RelatedToPersonId.HasValue ? "Član porodice" : person.IsIdentifiedStaff ? "Zaposlenik" : "Povezano lice"
+                PersonTypeLabel = person.RelatedToPersonId.HasValue ? BackendMessages.Message("labels.person.type.family") : person.IsIdentifiedStaff ? BackendMessages.Message("labels.person.type.employee") : BackendMessages.Message("labels.person.type.related")
             };
 
             if (!path.Add(person.Id)) return node;
@@ -180,11 +180,11 @@ public class RelatedPersonService(
         var query = _dbContext.RelatedPersons.AsNoTracking().Where(person => !excludeId.HasValue || person.Id != excludeId.Value);
 
         if (normalizedJmbg is not null && await query.AnyAsync(person => person.JMBG == normalizedJmbg))
-            return Duplicate("jmbg", "Fizičko lice sa ovim JMBG-om već postoji.");
+            return Duplicate("jmbg", BackendMessages.Message("validation.person.identity.jmbg.duplicate"));
         if (normalizedPassport is not null && await query.AnyAsync(person => person.PassportNumber != null && person.PassportNumber.ToUpper() == normalizedPassport))
-            return Duplicate("passportNumber", "Fizičko lice sa ovim brojem pasoša već postoji.");
+            return Duplicate("passportNumber", BackendMessages.Message("validation.person.identity.passport.duplicate"));
         if (normalizedFba is not null && await query.AnyAsync(person => person.FBAId != null && person.FBAId.ToUpper() == normalizedFba))
-            return Duplicate("fbaId", "Fizičko lice sa ovim FBA ID-em već postoji.");
+            return Duplicate("fbaId", BackendMessages.Message("validation.person.identity.fba.duplicate"));
         return new DuplicateIdentityResponseDTO();
     }
 
@@ -242,7 +242,7 @@ public class RelatedPersonService(
     public async Task<Result<RelatedPersonResponseDTO>> Update(Guid id, UpdateRelatedPersonDTO dto, string korisnik)
     {
         if (id == Guid.Empty)
-            return Result<RelatedPersonResponseDTO>.ValidationError("ID nije validan.");
+            return Result<RelatedPersonResponseDTO>.ValidationError(BackendMessages.Message("validation.identifier.invalid"));
 
         ImmediateFamilyPolicy.Apply(dto);
         var validationError = RelatedPersonValidator.Validate(dto);
@@ -265,7 +265,7 @@ public class RelatedPersonService(
             .FirstOrDefaultAsync(rp => rp.Id == id);
 
         if (entity is null)
-            return Result<RelatedPersonResponseDTO>.NotFoundError($"Povezano fizičko lice s ID={id} nije pronađeno.");
+            return Result<RelatedPersonResponseDTO>.NotFoundError(BackendMessages.Message("validation.person.id.missing", id));
 
         var before = entity.Adapt<RelatedPersonResponseDTO>();
         dto.Adapt(entity);
@@ -287,7 +287,7 @@ public class RelatedPersonService(
     public async Task<Result<bool>> Delete(Guid id, string korisnik)
     {
         if (id == Guid.Empty)
-            return Result<bool>.ValidationError("ID nije validan.");
+            return Result<bool>.ValidationError(BackendMessages.Message("validation.identifier.invalid"));
 
         var entity = await _dbContext.RelatedPersons
             .Include(rp => rp.RelatedFamilyMembers)
@@ -295,7 +295,7 @@ public class RelatedPersonService(
             .FirstOrDefaultAsync(rp => rp.Id == id);
 
         if (entity is null)
-            return Result<bool>.NotFoundError($"Povezano fizičko lice s ID={id} nije pronađeno.");
+            return Result<bool>.NotFoundError(BackendMessages.Message("validation.person.id.missing", id));
 
         var now = DateTime.UtcNow;
 
@@ -326,17 +326,17 @@ public class RelatedPersonService(
     public async Task<Result<RelatedPersonResponseDTO>> Verify(Guid id, string korisnik)
     {
         if (id == Guid.Empty)
-            return Result<RelatedPersonResponseDTO>.ValidationError("ID nije validan.");
+            return Result<RelatedPersonResponseDTO>.ValidationError(BackendMessages.Message("validation.identifier.invalid"));
 
         var entity = await _dbContext.RelatedPersons
             .AsTracking()
             .FirstOrDefaultAsync(rp => rp.Id == id && rp.IsActive);
 
         if (entity is null)
-            return Result<RelatedPersonResponseDTO>.NotFoundError($"Povezano fizičko lice s ID={id} nije pronađeno.");
+            return Result<RelatedPersonResponseDTO>.NotFoundError(BackendMessages.Message("validation.person.id.missing", id));
 
         if (entity.Status == RelatedPersonStatus.Verified)
-            return Result<RelatedPersonResponseDTO>.ValidationError("Povezano fizičko lice je već verificirano.");
+            return Result<RelatedPersonResponseDTO>.ValidationError(BackendMessages.Message("validation.person.verified"));
 
         Helpers.RegistryVerification.Authorize(entity.CreatorSubject, actor);
         entity.Status = RelatedPersonStatus.Verified;
@@ -356,16 +356,16 @@ public class RelatedPersonService(
         if (!relatedToPersonId.HasValue)
             return null;
         if (currentPersonId.HasValue && relatedToPersonId.Value == currentPersonId.Value)
-            return "Fizičko lice ne može biti povezano samo sa sobom.";
+            return BackendMessages.Message("validation.person.link.self");
 
         var exists = await _dbContext.RelatedPersons
             .AsNoTracking()
             .AnyAsync(person => person.Id == relatedToPersonId.Value && person.IsActive);
         if (!exists)
-            return "Odabrano povezano fizičko lice više ne postoji ili nije aktivno.";
+            return BackendMessages.Message("validation.person.link.missing");
 
         if (currentPersonId.HasValue && await CreatesRelatedPersonCycle(currentPersonId.Value, relatedToPersonId.Value))
-            return "Odabrana porodična veza bi kreirala kružnu vezu između fizičkih lica.";
+            return BackendMessages.Message("validation.person.link.cycle");
 
         return null;
     }
@@ -411,7 +411,7 @@ public class RelatedPersonService(
         var personExists = await RelatedPersonExists(relatedPersonId);
         if (!personExists)
             return Result<List<FamilyMemberResponseDTO>>.NotFoundError(
-                $"Povezano fizičko lice s ID={relatedPersonId} nije pronađeno.");
+                BackendMessages.Message("validation.person.id.missing", relatedPersonId));
 
         var members = await _dbContext.FamilyMembers
             .AsNoTracking()
@@ -429,7 +429,7 @@ public class RelatedPersonService(
         var personExists = await RelatedPersonExists(relatedPersonId);
         if (!personExists)
             return Result<List<FamilyMemberResponseDTO>>.NotFoundError(
-                $"Povezano fizičko lice s ID={relatedPersonId} nije pronađeno.");
+                BackendMessages.Message("validation.person.id.missing", relatedPersonId));
 
         var members = await _dbContext.FamilyMembers
             .AsNoTracking()
@@ -454,7 +454,7 @@ public class RelatedPersonService(
 
         if (relatedPerson is null)
             return Result<FamilyMemberResponseDTO>.NotFoundError(
-                $"Povezano fizičko lice s ID={relatedPersonId} nije pronađeno.");
+                BackendMessages.Message("validation.person.id.missing", relatedPersonId));
 
         var declarationError = RelatedPersonValidator.ValidateCanAddFamilyMember(relatedPerson);
         if (declarationError is not null)
@@ -472,7 +472,7 @@ public class RelatedPersonService(
 
             if (!parentExists)
                 return Result<FamilyMemberResponseDTO>.ValidationError(
-                    "Odabrani nadređeni član porodice (ParentFamilyMemberId) ne postoji za ovo matično lice.");
+                    BackendMessages.Message("validation.family.parent.missing"));
         }
 
         var entity = dto.Adapt<FamilyMember>();
@@ -506,7 +506,7 @@ public class RelatedPersonService(
 
         if (entity is null)
             return Result<FamilyMemberResponseDTO>.NotFoundError(
-                $"Član porodice s ID={familyMemberId} nije pronađen za matično lice ID={relatedPersonId}.");
+                BackendMessages.Message("validation.family.id.missing", familyMemberId, relatedPersonId));
 
         // Validacija ParentFamilyMemberId: ne smije pokazivati na samog sebe niti
         // kreirati ciklus, i mora pripadati istom matičnom licu.
@@ -514,7 +514,7 @@ public class RelatedPersonService(
         {
             if (dto.ParentFamilyMemberId.Value == entity.Id)
                 return Result<FamilyMemberResponseDTO>.ValidationError(
-                    "Član porodice ne može biti naveden kao nadređeni sam sebi.");
+                    BackendMessages.Message("validation.family.parent.self"));
 
             var parentExists = await _dbContext.FamilyMembers
                 .AnyAsync(fm => fm.Id == dto.ParentFamilyMemberId.Value
@@ -523,12 +523,12 @@ public class RelatedPersonService(
 
             if (!parentExists)
                 return Result<FamilyMemberResponseDTO>.ValidationError(
-                    "Odabrani nadređeni član porodice (ParentFamilyMemberId) ne postoji za ovo matično lice.");
+                    BackendMessages.Message("validation.family.parent.missing"));
 
             var wouldCreateCycle = await CreatesCycle(entity.Id, dto.ParentFamilyMemberId.Value);
             if (wouldCreateCycle)
                 return Result<FamilyMemberResponseDTO>.ValidationError(
-                    "Odabrana veza bi kreirala kružnu zavisnost u porodičnom stablu.");
+                    BackendMessages.Message("validation.family.cycle"));
         }
 
         var before = entity.Adapt<FamilyMemberResponseDTO>();
@@ -557,12 +557,11 @@ public class RelatedPersonService(
 
         if (entity is null)
             return Result<bool>.NotFoundError(
-                $"Član porodice s ID={familyMemberId} nije pronađen za matično lice ID={relatedPersonId}.");
+                BackendMessages.Message("validation.family.id.missing", familyMemberId, relatedPersonId));
 
         if (entity.ChildFamilyMembers.Any(c => c.IsActive))
             return Result<bool>.ValidationError(
-                "Nije moguće obrisati člana porodice koji ima povezane potomke u porodičnom stablu. " +
-                "Prvo uklonite ili premjestite potomke.");
+                BackendMessages.Message("validation.family.children.delete"));
 
         var before = entity.Adapt<FamilyMemberResponseDTO>();
         entity.IsActive = false;
@@ -605,8 +604,8 @@ public class RelatedPersonService(
             : (Ordered: Enumerable.Range(2, Math.Max(0, lastRow - 1)).ToList(), Blocked: new List<int>());
         foreach (var blocked in order.Blocked)
         {
-            result.Failed++; result.Errors.Add($"Red {blocked}: Porodična veza je kružna ili zavisi od kružne veze.");
-            result.Details.Add(new(blocked, "relatedToPersonId", "import.relationship_cycle", "Provjerite porodične veze u datoteci."));
+            result.Failed++; result.Errors.Add(BackendMessages.Message("workbook.row.family.cycle", blocked));
+            result.Details.Add(new(blocked, "relatedToPersonId", "import.relationship_cycle", BackendMessages.Message("validation.family.import.links")));
         }
 
         foreach (var row in order.Ordered)
@@ -634,9 +633,9 @@ public class RelatedPersonService(
                     continue; // Only entirely empty rows may be ignored.
 
                 if (string.IsNullOrWhiteSpace(firstName))
-                    throw new RBBH.ConnectedParties.Exceptions.ValidationException("Ime je obavezno.");
+                    throw new RBBH.ConnectedParties.Exceptions.ValidationException(BackendMessages.Message("validation.person.first.name.required"));
                 if (string.IsNullOrWhiteSpace(lastName))
-                    throw new RBBH.ConnectedParties.Exceptions.ValidationException("Prezime je obavezno.");
+                    throw new RBBH.ConnectedParties.Exceptions.ValidationException(BackendMessages.Message("validation.person.last.name.required"));
 
                 var isResident = residencyStr.Equals("Rezident", StringComparison.OrdinalIgnoreCase) ||
                     residencyStr.Equals("Resident", StringComparison.OrdinalIgnoreCase);
@@ -644,7 +643,7 @@ public class RelatedPersonService(
                     residencyStr.Equals("Non-resident", StringComparison.OrdinalIgnoreCase) ||
                     residencyStr.Equals("Nonresident", StringComparison.OrdinalIgnoreCase);
                 if (!isResident && !isNonResident)
-                    throw new RBBH.ConnectedParties.Exceptions.ValidationException("Rezidentnost mora biti 'Rezident/Resident' ili 'Nerezident/Non-resident'.");
+                    throw new RBBH.ConnectedParties.Exceptions.ValidationException(BackendMessages.Message("validation.person.residency.import"));
                 var residency = isResident ? ResidencyType.Resident : ResidencyType.NonResident;
 
                 DateTime? dateFrom = ParseOptionalDate(dateFromStr, "Datum od");
@@ -677,7 +676,7 @@ public class RelatedPersonService(
                     {
                         var resolved = links.Where(parentIds.ContainsKey).SelectMany(key => parentIds[key]).Distinct().ToArray();
                         if (links.Any(key => !parentIds.ContainsKey(key)) || resolved.Length != 1)
-                            throw new RBBH.ConnectedParties.Exceptions.ValidationException("relatedToPersonId", "Povezano lice nije pronađeno ili identifikatori nisu jednoznačni.");
+                            throw new RBBH.ConnectedParties.Exceptions.ValidationException("relatedToPersonId", BackendMessages.Message("validation.person.link.ambiguous"));
                         dto.RelatedToPersonId = resolved[0];
                     }
                 }
@@ -687,11 +686,11 @@ public class RelatedPersonService(
                 var validationError = RelatedPersonValidator.Validate(dto);
                 if (validationError is not null) throw new RBBH.ConnectedParties.Exceptions.ValidationException(validationError);
                 if (!string.IsNullOrWhiteSpace(dto.JMBG) && usedJmbgs.Contains(dto.JMBG))
-                    throw new RBBH.ConnectedParties.Exceptions.ValidationException("jmbg", "Fizičko lice s ovim JMBG-om već postoji.");
+                    throw new RBBH.ConnectedParties.Exceptions.ValidationException("jmbg", BackendMessages.Message("validation.person.jmbg.duplicate"));
                 if (!string.IsNullOrWhiteSpace(dto.PassportNumber) && usedPassports.Contains(dto.PassportNumber))
-                    throw new RBBH.ConnectedParties.Exceptions.ValidationException("passportNumber", "Fizičko lice s ovim brojem pasoša već postoji.");
+                    throw new RBBH.ConnectedParties.Exceptions.ValidationException("passportNumber", BackendMessages.Message("validation.person.passport.duplicate"));
                 if (!string.IsNullOrWhiteSpace(dto.FBAId) && usedFbaIds.Contains(dto.FBAId))
-                    throw new RBBH.ConnectedParties.Exceptions.ValidationException("fbaId", "Fizičko lice s ovim FBA ID-em već postoji.");
+                    throw new RBBH.ConnectedParties.Exceptions.ValidationException("fbaId", BackendMessages.Message("validation.person.fba.duplicate"));
 
                 var entity = new RelatedPerson
                 {
@@ -731,13 +730,13 @@ public class RelatedPersonService(
             catch (RBBH.ConnectedParties.Exceptions.ValidationException exception)
             {
                 result.Failed++;
-                result.Errors.Add($"Red {row}: {exception.ErrorMessage}");
+                result.Errors.Add(BackendMessages.Message("workbook.row.error", row, exception.ErrorMessage));
                 result.Details.Add(new(row, exception.Field ?? "row", "validation.invalid", exception.ErrorMessage));
             }
             catch (Exception exception) when (exception is not OperationCanceledException and not OutOfMemoryException)
             {
                 result.Failed++;
-                result.Errors.Add($"Red {row}: Podatke nije moguće pročitati. Provjerite format i vrijednosti polja.");
+                result.Errors.Add(BackendMessages.Message("workbook.row.unreadable", row));
                 result.Details.Add(new(row, "row", "import.invalid_row", "Provjerite format i vrijednosti polja."));
             }
         }
@@ -759,7 +758,7 @@ public class RelatedPersonService(
         if (value.Equals("NE", StringComparison.OrdinalIgnoreCase) ||
             value.Equals("NO", StringComparison.OrdinalIgnoreCase) ||
             value.Equals("false", StringComparison.OrdinalIgnoreCase)) return false;
-        throw new RBBH.ConnectedParties.Exceptions.ValidationException($"Kolona '{field}' mora sadržavati DA/NE ili YES/NO.");
+        throw new RBBH.ConnectedParties.Exceptions.ValidationException(BackendMessages.Message("workbook.column.boolean.invalid", field));
     }
 
     private static DateTime? ParseOptionalDate(string value, string field)
@@ -768,7 +767,7 @@ public class RelatedPersonService(
         if (DateTime.TryParse(value, CultureInfo.GetCultureInfo("bs-BA"), DateTimeStyles.None, out var date) ||
             DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out date))
             return date;
-        throw new RBBH.ConnectedParties.Exceptions.ValidationException($"Kolona '{field}' ne sadrži ispravan datum.");
+        throw new RBBH.ConnectedParties.Exceptions.ValidationException(BackendMessages.Message("workbook.column.date.invalid", field));
     }
 
     // ─── Privatne pomoćne metode ─────────────────────────────────────────────

@@ -56,9 +56,28 @@ public sealed class BusinessResourceContractTests
         while (root is not null && !Directory.Exists(Path.Combine(root.FullName, "Backend"))) root = root.Parent;
         Assert.NotNull(root);
         var violations = new List<string>();
-        var direct = new Regex(@"\b(?:Title|Detail|message|ErrorMessage)\s*=\s*[$@]*""[^""]");
+        var direct = new Regex(@"\b(?:Title|Detail|message|error|ErrorMessage)\s*=\s*[$@]*""[^""]");
         var key = new Regex("BackendMessages\\.Message\\(\\s*\"([a-z][a-z0-9.]+)\"\\s*[,)]");
         foreach (var folder in new[] { "API/Controllers", "DL/DTO" })
+        foreach (var file in Directory.EnumerateFiles(Path.Combine(root!.FullName, "Backend", folder), "*.cs", SearchOption.AllDirectories))
+        {
+            var source = File.ReadAllText(file);
+            if (direct.IsMatch(source)) violations.Add(Path.GetRelativePath(root.FullName, file));
+            foreach (Match match in key.Matches(source)) Assert.Contains(match.Groups[1].Value, BackendMessages.All.Keys);
+        }
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void ServiceValidationAndImportMessagesDoNotEmbedUserFacingText()
+    {
+        var root = new DirectoryInfo(AppContext.BaseDirectory);
+        while (root is not null && !Directory.Exists(Path.Combine(root.FullName, "Backend"))) root = root.Parent;
+        Assert.NotNull(root);
+        var violations = new List<string>();
+        var direct = new Regex(@"(?:ValidationError|NotFoundError)\s*\(\s*[$@]*""|ValidationException\s*\(\s*(?:""[^""]*""\s*,\s*)?[$@]*""[^""]*""\s*\)");
+        var key = new Regex("BackendMessages\\.Message\\(\\s*\"([a-z][a-z0-9.]+)\"\\s*[,)]");
+        foreach (var folder in new[] { "BL/Services", "Helpers/Validators", "Helpers/Excel" })
         foreach (var file in Directory.EnumerateFiles(Path.Combine(root!.FullName, "Backend", folder), "*.cs", SearchOption.AllDirectories))
         {
             var source = File.ReadAllText(file);

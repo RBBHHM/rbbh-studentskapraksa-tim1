@@ -96,7 +96,7 @@ public class LegalEntityService : ILegalEntityService
     {
         var items = await _context.LegalEntities.AsNoTracking().OrderBy(row => row.Name).ThenBy(row => row.Id).Take(5001)
             .Select(row => MapToDto(row)).ToListAsync(_actor?.HttpContext?.RequestAborted ?? default);
-        if (items.Count > 5000) throw new ValidationException("file", "Dozvoljeno je najviše 5.000 redova po izvozu.");
+        if (items.Count > 5000) throw new ValidationException("file", BackendMessages.Message("errors.workbook.export.limit"));
         return items;
     }
 
@@ -120,7 +120,7 @@ public class LegalEntityService : ILegalEntityService
         await ValidateUniqueIdentifierAsync(dto.IsResident, dto.TaxNumber, dto.FbaId);
 
         if (dto.ConnectedWithBank is null)
-            throw new ValidationException("connectedWithBank", "Polje 'Povezano lice sa Bankom' je obavezno.");
+            throw new ValidationException("connectedWithBank", BackendMessages.Message("validation.registry.bank.relation.required"));
 
         var entity = new LegalEntity
         {
@@ -162,7 +162,7 @@ public class LegalEntityService : ILegalEntityService
             .FirstOrDefaultAsync(e => e.Id == id);
 
         if (entity is null)
-            throw new ValidationException("id", $"Pravno lice s ID-om {id} nije pronađeno.");
+            throw new ValidationException("id", BackendMessages.Message("validation.registry.legal.id.missing", id));
 
         ValidateUpdateDto(dto);
         (await Helpers.CodebookChoices.Load(_context, _actor?.HttpContext?.RequestAborted ?? default, "OsnovPovezanosti"))
@@ -172,7 +172,7 @@ public class LegalEntityService : ILegalEntityService
         await ValidateUniqueIdentifierAsync(dto.IsResident, dto.TaxNumber, dto.FbaId, id);
 
         if (dto.ConnectedWithBank is null)
-            throw new ValidationException("connectedWithBank", "Polje 'Povezano lice sa Bankom' je obavezno.");
+            throw new ValidationException("connectedWithBank", BackendMessages.Message("validation.registry.bank.relation.required"));
 
         // Status is owned by verification, even if an old client sends it back.
         if (!string.IsNullOrWhiteSpace(dto.Status) && !string.Equals(dto.Status.Trim(), entity.Status, StringComparison.Ordinal))
@@ -211,7 +211,7 @@ public class LegalEntityService : ILegalEntityService
             .FirstOrDefaultAsync(e => e.Id == id);
 
         if (entity is null)
-            throw new ValidationException("id", $"Pravno lice s ID-om {id} nije pronađeno.");
+            throw new ValidationException("id", BackendMessages.Message("validation.registry.legal.id.missing", id));
 
         entity.IsActive = false;
         entity.ModifiedBy = deletedBy;
@@ -232,10 +232,10 @@ public class LegalEntityService : ILegalEntityService
             .FirstOrDefaultAsync(e => e.Id == id && e.IsActive);
 
         if (entity is null)
-            throw new ValidationException("id", $"Pravno lice s ID-om {id} nije pronađeno.");
+            throw new ValidationException("id", BackendMessages.Message("validation.registry.legal.id.missing", id));
 
         if (string.Equals(entity.Status, "Verified", StringComparison.OrdinalIgnoreCase))
-            throw new ValidationException("status", "Pravno lice je već verificirano.");
+            throw new ValidationException("status", BackendMessages.Message("validation.registry.legal.verified"));
 
         Helpers.RegistryVerification.Authorize(entity.CreatorSubject, _actor);
         entity.Status = "Verified";
@@ -324,29 +324,29 @@ public class LegalEntityService : ILegalEntityService
         if (dto.IsResident)
         {
             if (string.IsNullOrWhiteSpace(dto.TaxNumber))
-                throw new ValidationException("taxNumber", "Porezni broj je obavezan za rezidentno pravno lice.");
+                throw new ValidationException("taxNumber", BackendMessages.Message("validation.registry.tax.resident.required"));
 
             TaxNumberValidator.ValidateTaxNumber(dto.TaxNumber);
         }
         else
         {
             if (string.IsNullOrWhiteSpace(dto.FbaId))
-                throw new ValidationException("fbaId", "FBA ID je obavezan za nerezidentno pravno lice.");
+                throw new ValidationException("fbaId", BackendMessages.Message("validation.registry.fba.nonresident.required"));
 
             if (dto.FbaId.Trim().Length > 10 || !dto.FbaId.Trim().All(char.IsAsciiDigit))
-                throw new ValidationException("fbaId", "FBA ID mora sadržavati maksimalno 10 cifara.");
+                throw new ValidationException("fbaId", BackendMessages.Message("validation.registry.fba.digit.limit"));
         }
 
         if (string.IsNullOrWhiteSpace(dto.Name))
-            throw new ValidationException("name", "Naziv je obavezan.");
+            throw new ValidationException("name", BackendMessages.Message("validation.registry.name.required"));
 
         if (string.IsNullOrWhiteSpace(dto.BasisOfConnection))
-            throw new ValidationException("basisOfConnection", "Osnov povezanosti je obavezan.");
+            throw new ValidationException("basisOfConnection", BackendMessages.Message("validation.registry.connection.required"));
 
         ValidateRequiredBusinessFields(dto.ConnectionDescription, dto.DateFrom);
 
         if (dto.DateFrom.HasValue && dto.DateTo.HasValue && dto.DateTo < dto.DateFrom)
-            throw new ValidationException("dateTo", "Datum do mora biti nakon datuma od.");
+            throw new ValidationException("dateTo", BackendMessages.Message("validation.registry.date.order"));
     }
 
     private static void ValidateUpdateDto(UpdateLegalEntityDTO dto)
@@ -355,34 +355,34 @@ public class LegalEntityService : ILegalEntityService
         if (dto.IsResident)
         {
             if (string.IsNullOrWhiteSpace(dto.TaxNumber))
-                throw new ValidationException("taxNumber", "Porezni broj je obavezan za rezidentno pravno lice.");
+                throw new ValidationException("taxNumber", BackendMessages.Message("validation.registry.tax.resident.required"));
             TaxNumberValidator.ValidateTaxNumber(dto.TaxNumber);
         }
         else
         {
             if (string.IsNullOrWhiteSpace(dto.FbaId))
-                throw new ValidationException("fbaId", "FBA ID je obavezan za nerezidentno pravno lice.");
+                throw new ValidationException("fbaId", BackendMessages.Message("validation.registry.fba.nonresident.required"));
             if (dto.FbaId.Trim().Length > 10 || !dto.FbaId.Trim().All(char.IsAsciiDigit))
-                throw new ValidationException("fbaId", "FBA ID mora sadržavati maksimalno 10 cifara.");
+                throw new ValidationException("fbaId", BackendMessages.Message("validation.registry.fba.digit.limit"));
         }
         if (string.IsNullOrWhiteSpace(dto.Name))
-            throw new ValidationException("name", "Naziv je obavezan.");
+            throw new ValidationException("name", BackendMessages.Message("validation.registry.name.required"));
         if (string.IsNullOrWhiteSpace(dto.BasisOfConnection))
-            throw new ValidationException("basisOfConnection", "Osnov povezanosti je obavezan.");
+            throw new ValidationException("basisOfConnection", BackendMessages.Message("validation.registry.connection.required"));
         ValidateRequiredBusinessFields(dto.ConnectionDescription, dto.DateFrom);
         if (dto.DateFrom.HasValue && dto.DateTo.HasValue && dto.DateTo < dto.DateFrom)
-            throw new ValidationException("dateTo", "Datum do mora biti nakon datuma od.");
+            throw new ValidationException("dateTo", BackendMessages.Message("validation.registry.date.order"));
     }
 
     private static void ValidateStoredFields(string name, string? maticniBroj, string? matbroj,
         string basis, string? description)
     {
         if (name?.Length > 100)
-            throw new ValidationException("name", "Naziv smije sadržavati najviše 100 znakova.");
+            throw new ValidationException("name", BackendMessages.Message("validation.registry.name.length"));
         if (basis?.Length > 100)
-            throw new ValidationException("basisOfConnection", "Osnov povezanosti smije sadržavati najviše 100 znakova.");
+            throw new ValidationException("basisOfConnection", BackendMessages.Message("validation.registry.connection.length"));
         if (description?.Length > 500)
-            throw new ValidationException("connectionDescription", "Opis povezanosti smije sadržavati najviše 500 znakova.");
+            throw new ValidationException("connectionDescription", BackendMessages.Message("validation.registry.description.length"));
         ValidateOptionalNumber(maticniBroj, "maticniBroj");
         ValidateOptionalNumber(matbroj, "matbroj");
     }
@@ -392,15 +392,15 @@ public class LegalEntityService : ILegalEntityService
         if (string.IsNullOrWhiteSpace(value)) return;
         var normalized = value.Trim();
         if (normalized.Length > 50 || !normalized.All(char.IsAsciiDigit))
-            throw new ValidationException(field, "Matični broj smije sadržavati najviše 50 cifara.");
+            throw new ValidationException(field, BackendMessages.Message("validation.registry.registration.length"));
     }
 
     private static void ValidateRequiredBusinessFields(string? connectionDescription, DateTime? dateFrom)
     {
         if (string.IsNullOrWhiteSpace(connectionDescription))
-            throw new ValidationException("connectionDescription", "Opis osnova povezanosti je obavezan.");
+            throw new ValidationException("connectionDescription", BackendMessages.Message("validation.registry.description.required"));
         if (!dateFrom.HasValue)
-            throw new ValidationException("dateFrom", "Datum početka povezanosti je obavezan.");
+            throw new ValidationException("dateFrom", BackendMessages.Message("validation.registry.start.required"));
     }
 
     private async Task ValidateUniqueIdentifierAsync(bool isResident, string? taxNumber, string? fbaId, Guid? excludedId = null)
@@ -412,7 +412,7 @@ public class LegalEntityService : ILegalEntityService
                 .AnyAsync(e => e.TaxNumber == taxNumber.Trim() && (!excludedId.HasValue || e.Id != excludedId));
 
             if (exists)
-                throw new ValidationException("taxNumber", $"Pravno lice s poreznim brojem {taxNumber} već postoji.");
+                throw new ValidationException("taxNumber", BackendMessages.Message("validation.registry.legal.tax.exists", taxNumber));
         }
         else if (!isResident && !string.IsNullOrWhiteSpace(fbaId))
         {
@@ -421,7 +421,7 @@ public class LegalEntityService : ILegalEntityService
                 .AnyAsync(e => e.FbaId == fbaId.Trim() && (!excludedId.HasValue || e.Id != excludedId));
 
             if (exists)
-                throw new ValidationException("fbaId", $"Pravno lice s FBA ID-om {fbaId} već postoji.");
+                throw new ValidationException("fbaId", BackendMessages.Message("validation.registry.legal.fba.exists", fbaId));
         }
     }
 
@@ -471,7 +471,7 @@ public class LegalEntityService : ILegalEntityService
                     continue; // Ignore only entirely empty rows, never an incomplete record.
 
                 if (string.IsNullOrWhiteSpace(basisOfConn))
-                    throw new ValidationException("Osnov povezanosti je obavezan.");
+                    throw new ValidationException(BackendMessages.Message("validation.registry.connection.required"));
 
                 var isResident = tipStr.Equals("Rezident", StringComparison.OrdinalIgnoreCase) ||
                     tipStr.Equals("Resident", StringComparison.OrdinalIgnoreCase);
@@ -479,7 +479,7 @@ public class LegalEntityService : ILegalEntityService
                     tipStr.Equals("Non-resident", StringComparison.OrdinalIgnoreCase) ||
                     tipStr.Equals("Nonresident", StringComparison.OrdinalIgnoreCase);
                 if (!isResident && !isNonResident)
-                    throw new ValidationException("Tip mora biti 'Rezident/Resident' ili 'Nerezident/Non-resident'.");
+                    throw new ValidationException(BackendMessages.Message("validation.registry.legal.residency.import"));
 
                 bool? connectedWithBank = connBankStr.Equals("DA", StringComparison.OrdinalIgnoreCase) ? true
                     : connBankStr.Equals("YES", StringComparison.OrdinalIgnoreCase) ? true
@@ -488,7 +488,7 @@ public class LegalEntityService : ILegalEntityService
                     : null;
 
                 if (connectedWithBank is null)
-                    throw new ValidationException("Kolona 'Povezano lice s Bankom' mora sadržavati DA/NE ili YES/NO.");
+                    throw new ValidationException(BackendMessages.Message("validation.registry.bank.relation.import"));
 
                 DateTime? dateFrom = ParseOptionalDate(dateFromStr, "Datum od");
                 DateTime? dateTo   = ParseOptionalDate(dateToStr, "Datum do");
@@ -513,13 +513,13 @@ public class LegalEntityService : ILegalEntityService
                 choices.Check("OsnovPovezanosti", dto.BasisOfConnection, "basisOfConnection");
                 var gcc = await ResolveGcc(dto.GccNumber);
                 if (dto.ConnectedWithBank is null)
-                    throw new ValidationException("Kolona 'Povezano lice s Bankom' mora sadržavati DA/NE ili YES/NO.");
+                    throw new ValidationException(BackendMessages.Message("validation.registry.bank.relation.import"));
                 var identifier = isResident ? taxNumber : fbaId;
                 var identifiers = isResident ? usedTaxNumbers : usedFbaIds;
                 if (!identifiers.Add(identifier))
                     throw new ValidationException(isResident
-                        ? "Pravno lice s ovim poreznim brojem već postoji."
-                        : "Pravno lice s ovim FBA ID-em već postoji.");
+                        ? BackendMessages.Message("validation.registry.legal.tax.duplicate")
+                        : BackendMessages.Message("validation.registry.legal.fba.duplicate"));
 
                 var entity = new LegalEntity
                 {
@@ -548,18 +548,18 @@ public class LegalEntityService : ILegalEntityService
             catch (ValidationException exception)
             {
                 result.Failed++;
-                result.Errors.Add($"Red {row}: {exception.ErrorMessage}");
+                result.Errors.Add(BackendMessages.Message("workbook.row.error", row, exception.ErrorMessage));
                 result.Details.Add(new(row, exception.Field ?? "row", "validation.invalid", exception.ErrorMessage));
             }
             catch (BusinessRuleException exception) when (exception.Status < 500)
             {
-                result.Failed++; result.Errors.Add($"Red {row}: {exception.Message}");
+                result.Failed++; result.Errors.Add(BackendMessages.Message("workbook.row.error", row, exception.Message));
                 result.Details.Add(new(row, "gccNumber", exception.Code, exception.Message));
             }
             catch (Exception exception) when (exception is not OperationCanceledException and not OutOfMemoryException and not BusinessRuleException)
             {
                 result.Failed++;
-                result.Errors.Add($"Red {row}: Podatke nije moguće pročitati. Provjerite format i vrijednosti polja.");
+                result.Errors.Add(BackendMessages.Message("workbook.row.unreadable", row));
                 result.Details.Add(new(row, "row", "import.invalid_row", "Provjerite format i vrijednosti polja."));
                 _logger.LogWarning("Legal import row could not be read. Row {Row}. FailureType {FailureType}", row, exception.GetType().Name);
             }
@@ -577,7 +577,7 @@ public class LegalEntityService : ILegalEntityService
     private static bool? ParseExposure(string value) => string.IsNullOrWhiteSpace(value) ? null
         : value.Equals("DA", StringComparison.OrdinalIgnoreCase) || value.Equals("YES", StringComparison.OrdinalIgnoreCase) ? true
         : value.Equals("NE", StringComparison.OrdinalIgnoreCase) || value.Equals("NO", StringComparison.OrdinalIgnoreCase) ? false
-        : throw new ValidationException("isLargeExposure", "Velika izloženost mora sadržavati DA/NE ili YES/NO.");
+        : throw new ValidationException("isLargeExposure", BackendMessages.Message("validation.registry.exposure.import"));
 
     private static DateTime? ParseOptionalDate(string value, string field)
     {
@@ -585,7 +585,7 @@ public class LegalEntityService : ILegalEntityService
         if (DateTime.TryParse(value, CultureInfo.GetCultureInfo("bs-BA"), DateTimeStyles.None, out var date) ||
             DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out date))
             return date;
-        throw new ValidationException($"Kolona '{field}' ne sadrži ispravan datum.");
+        throw new ValidationException(BackendMessages.Message("workbook.column.date.invalid", field));
     }
 
     private static LegalEntityDTO MapToDto(LegalEntity e) => new()

@@ -46,7 +46,7 @@ public class PeriodLockRepository(ConnectedPartiesDbContext db) : IPeriodLockRep
     {
         periodLock.Department = null;
         if (await db.PeriodLocks.AnyAsync(row => row.Year == periodLock.Year && row.Month == periodLock.Month && row.Department != null))
-            throw new ApplicationException("Historijsko stanje perioda zahtijeva administratorsko usklađivanje.");
+            throw new ApplicationException(BackendMessages.Message("errors.period.reconciliation.required"));
         db.PeriodLocks.Add(periodLock);
         await db.SaveChangesAsync();
         return periodLock;

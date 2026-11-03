@@ -292,11 +292,11 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
         [FromQuery] bool dryRun = true)
     {
         if (file is null || file.Length == 0)
-            return BadRequest(new { error = "Fajl je obavezan." });
+            return BadRequest(new { error = BackendMessages.Message("workbook.codelist.file.required") });
 
         var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
         if (ext != ".xlsx")
-            return BadRequest(new { error = "Prihvataju se samo .xlsx fajlovi." });
+            return BadRequest(new { error = BackendMessages.Message("workbook.codelist.file.format") });
         if (file.Length > 10 * 1024 * 1024)
             return BadRequest(new { error = BackendMessages.Message("errors.workbook.size") });
 
@@ -316,15 +316,15 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
             var lastColumn = ws.LastColumnUsed()?.ColumnNumber() ?? 0;
             var lastRow = ws.LastRowUsed()?.RowNumber() ?? 0;
             if (lastColumn != 1)
-                return BadRequest(new { error = $"Predložak šifarnika mora sadržavati tačno jednu kolonu, a pronađeno je {lastColumn}." });
+                return BadRequest(new { error = BackendMessages.Message("workbook.codelist.schema.count", lastColumn) });
             if (lastRow < 2)
-                return BadRequest(new { error = "Excel datoteka mora sadržavati zaglavlje i najmanje jedan red podataka." });
+                return BadRequest(new { error = BackendMessages.Message("workbook.codelist.data.required") });
             if (lastRow - 1 > 5_000)
-                return BadRequest(new { error = "Dozvoljeno je najviše 5.000 redova po uvozu." });
+                return BadRequest(new { error = BackendMessages.Message("workbook.codelist.data.limit") });
 
             var header = ws.Cell(1, 1).GetString().Trim().ToLowerInvariant();
             if (header is not ("vrijednost" or "value" or "naziv" or "name"))
-                return BadRequest(new { error = $"Neispravno zaglavlje kolone A. Očekivano je 'Vrijednost' ili 'Value', a pronađeno '{ws.Cell(1, 1).GetString().Trim()}'." });
+                return BadRequest(new { error = BackendMessages.Message("workbook.codelist.header", ws.Cell(1, 1).GetString().Trim()) });
 
             foreach (var row in ws.RowsUsed().Skip(1))
             {
@@ -333,7 +333,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
 
                 if (val.Length > 200)
                 {
-                    validationErrors.Add($"Red {row.RowNumber()}: naziv smije imati najviše 200 znakova.");
+                    validationErrors.Add(BackendMessages.Message("workbook.codelist.name.length", row.RowNumber()));
                     continue;
                 }
                 rawValues.Add((row.RowNumber(), val));
@@ -341,7 +341,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            return BadRequest(new { error = "Excel datoteka nije ispravna ili je oštećena. Sačuvajte je kao .xlsx i pokušajte ponovo." });
+            return BadRequest(new { error = BackendMessages.Message("workbook.invalid") });
         }
 
         var existingResult = await _codeListService.GetAllByKategorija(kategorija);
@@ -371,7 +371,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
         var normalizedCategory = kategorija.Trim().ToUpperInvariant();
         if (kategorija.Trim().Length is < 1 or > 100) return BadRequest(new { error = BackendMessages.Message("errors.codelist.name.invalid") });
         var definition = await db.CodeListDefinitions.SingleOrDefaultAsync(item => item.Name.ToUpper() == normalizedCategory, HttpContext.RequestAborted);
-        if (definition is { IsActive: false }) return BadRequest(new { error = "Šifrarnik je deaktiviran." });
+        if (definition is { IsActive: false }) return BadRequest(new { error = BackendMessages.Message("validation.codelist.inactive") });
         if (definition is null)
         {
             definition = new CodeListDefinition { Name = kategorija.Trim(), CreatedBy = korisnik };
@@ -384,7 +384,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
             var code = ValueCode(val);
             if (!usedCodes.Add(code))
             {
-                preview.Errors.Add($"Vrijednost '{val}' ima kod koji već postoji u šifrarniku ili datoteci.");
+                preview.Errors.Add(BackendMessages.Message("workbook.codelist.code.duplicate", val));
                 continue;
             }
             db.CodeLists.Add(new() { Kategorija = definition.Name, DefinitionId = definition.Id, Kod = code, Naziv = val,

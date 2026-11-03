@@ -25,8 +25,8 @@ public sealed class CapitalService(ConnectedPartiesDbContext db, IHttpContextAcc
         const decimal maximum = 9_999_999_999_999_999.99m;
         var values = new[] { dto.RegulatoryCapital, dto.CoreCapital, dto.SupplementaryCapital };
         if (values.Any(value => value is null || value < 0 || value > maximum || decimal.Round(value.Value, 2) != value.Value))
-            return Result<CapitalDTO>.ValidationError("Unesite sva tri nenegativna iznosa kapitala, s najviše dvije decimale i do 16 cifara prije decimalnog zareza.");
-        if (!dto.CapitalDate.HasValue) return Result<CapitalDTO>.ValidationError("Datum kapitala je obavezan.");
+            return Result<CapitalDTO>.ValidationError(BackendMessages.Message("validation.capital.amounts"));
+        if (!dto.CapitalDate.HasValue) return Result<CapitalDTO>.ValidationError(BackendMessages.Message("validation.capital.date.required"));
         var row = new CapitalRevision { RegulatoryCapital = dto.RegulatoryCapital!.Value, CoreCapital = dto.CoreCapital!.Value,
             SupplementaryCapital = dto.SupplementaryCapital!.Value, EffectiveDate = dto.CapitalDate.Value.Date,
             RecordedBy = korisnik, ActorSubject = actor?.HttpContext is { } context ? Helpers.AuthenticatedActor.RequireSubject(context.User) : null };

@@ -47,7 +47,7 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
         if (maximum.HasValue) ordered = ordered.Take(maximum.Value + 1);
         var items = await ordered.Select(x => ToResponseDto(x.Limit, x.Entity)).ToListAsync(ct);
         if (maximum.HasValue && items.Count > maximum.Value)
-            return Result<List<LimitResponseDTO>>.ValidationError("Dozvoljeno je najviše 5.000 redova po izvozu.");
+            return Result<List<LimitResponseDTO>>.ValidationError(BackendMessages.Message("errors.workbook.export.limit"));
         foreach (var item in items)
             ApplyCapital(item, capital);
 
@@ -75,7 +75,7 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
     public async Task<Result<LimitResponseDTO>> GetByID(int id)
     {
         if (id < 1)
-            return Result<LimitResponseDTO>.ValidationError("ID nije validan.");
+            return Result<LimitResponseDTO>.ValidationError(BackendMessages.Message("validation.identifier.invalid"));
 
         var item = await BaseQuery()
             .Where(x => x.Limit.Id == id)
@@ -83,7 +83,7 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
             .FirstOrDefaultAsync();
 
         if (item is null)
-            return Result<LimitResponseDTO>.NotFoundError($"Limit s ID={id} nije pronađen.");
+            return Result<LimitResponseDTO>.NotFoundError(BackendMessages.Message("validation.limits.id.missing", id));
 
         ApplyCapital(item, await GetGlobalCapitalAsync());
 
@@ -121,7 +121,7 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
     public async Task<Result<LimitResponseDTO>> Update(int id, UpdateLimitDTO dto, string korisnik)
     {
         if (id < 1)
-            return Result<LimitResponseDTO>.ValidationError("ID nije validan.");
+            return Result<LimitResponseDTO>.ValidationError(BackendMessages.Message("validation.identifier.invalid"));
 
         var validacija = await ValidateDto(dto.LegalEntityId, dto.TipLimita, dto.OdobreniLimit, dto.MaksimalnaOcekivanaUtilizacija, dto.Komentar);
         if (validacija is not null)
@@ -132,7 +132,7 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
             .FirstOrDefaultAsync(x => x.Id == id);
 
         if (entitet is null)
-            return Result<LimitResponseDTO>.NotFoundError($"Limit s ID={id} nije pronađen.");
+            return Result<LimitResponseDTO>.NotFoundError(BackendMessages.Message("validation.limits.id.missing", id));
 
         var before = Snapshot(entitet);
         entitet.LegalEntityId = dto.LegalEntityId;
@@ -157,14 +157,14 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
     public async Task<Result<bool>> Delete(int id, string korisnik)
     {
         if (id < 1)
-            return Result<bool>.ValidationError("ID nije validan.");
+            return Result<bool>.ValidationError(BackendMessages.Message("validation.identifier.invalid"));
 
         var entitet = await _dbContext.Limiti
             .AsTracking()
             .FirstOrDefaultAsync(x => x.Id == id);
 
         if (entitet is null)
-            return Result<bool>.NotFoundError($"Limit s ID={id} nije pronađen.");
+            return Result<bool>.NotFoundError(BackendMessages.Message("validation.limits.id.missing", id));
 
         if (string.IsNullOrWhiteSpace(korisnik)) throw new Helpers.MissingActorIdentityException();
         _dbContext.Limiti.Remove(entitet);
@@ -191,7 +191,7 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
         var types = (await _dbContext.CodeLists.Where(row => row.Kategorija == "VrstaLimita" && (row.Definition == null || row.Definition.IsActive)).Select(row => row.Kod).ToListAsync(ct)).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var pending = new List<(int Row, Limit Value)>(); var fileKeys = new HashSet<RowKey>();
         void Failure(int row, string field, string code, string message)
-        { result.Failed++; result.Errors.Add($"Red {row}: {message}"); result.Details.Add(new(row, field, code, message)); }
+        { result.Failed++; result.Errors.Add(BackendMessages.Message("workbook.row.error", row, message)); result.Details.Add(new(row, field, code, message)); }
         for (var row = 2; row <= lastRow; row++)
         {
             ct.ThrowIfCancellationRequested();
@@ -202,25 +202,25 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
                     ExcelImportSchema.CellText(sheet.Cell(row, 5)), ExcelImportSchema.CellText(sheet.Cell(row, 6)));
                 var matches = keys.Where(identity.ContainsKey).SelectMany(key => identity[key]).Distinct().ToArray();
                 if (keys.Length == 0 || keys.Any(key => !identity.ContainsKey(key)) || matches.Length != 1)
-                    throw new RBBH.ConnectedParties.Exceptions.ValidationException("legalEntityId", "Identifikatori ne odgovaraju jednom aktivnom pravnom licu.");
+                    throw new RBBH.ConnectedParties.Exceptions.ValidationException("legalEntityId", BackendMessages.Message("validation.limits.identity.ambiguous"));
                 var type = ExcelImportSchema.CellText(sheet.Cell(row, 7)).ToUpperInvariant();
                 var approved = Amount(sheet.Cell(row, 8), "odobreniLimit"); var utilization = Amount(sheet.Cell(row, 9), "maksimalnaOcekivanaUtilizacija");
                 var comment = ExcelImportSchema.CellText(sheet.Cell(row, 11));
                 var fieldError = ValidateFields(type, approved, utilization, comment);
                 if (fieldError is not null) throw new RBBH.ConnectedParties.Exceptions.ValidationException("row", fieldError);
-                if (!types.Contains(type)) throw new RBBH.ConnectedParties.Exceptions.ValidationException("tipLimita", "Vrsta limita nije aktivna u šifrarniku.");
+                if (!types.Contains(type)) throw new RBBH.ConnectedParties.Exceptions.ValidationException("tipLimita", BackendMessages.Message("validation.limits.type.inactive"));
                 var due = ExcelImportSchema.CellText(sheet.Cell(row, 10)); DateTime? date = null;
                 if (due.Length > 0)
                 {
                     if (!DateTime.TryParse(due, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed) &&
                         !DateTime.TryParse(due, CultureInfo.GetCultureInfo("bs-BA"), DateTimeStyles.None, out parsed))
-                        throw new RBBH.ConnectedParties.Exceptions.ValidationException("rokOcekivaneUtilizacije", "Provjerite format datuma očekivane utilizacije.");
+                        throw new RBBH.ConnectedParties.Exceptions.ValidationException("rokOcekivaneUtilizacije", BackendMessages.Message("validation.limits.date.invalid"));
                     date = parsed;
                 }
                 var value = new Limit { LegalEntityId = matches[0], TipLimita = type, OdobreniLimit = approved, MaksimalnaOcekivanaUtilizacija = utilization,
                     RokOcekivaneUtilizacije = date, Komentar = string.IsNullOrWhiteSpace(comment) ? null : comment, CreatedBy = korisnik, CreatedAt = DateTime.UtcNow };
                 value.ImportFingerprint = Fingerprint(value);
-                if (!fileKeys.Add(Key(value))) { Failure(row, "row", "import.duplicate", "Isti limit je ponovljen u datoteci."); continue; }
+                if (!fileKeys.Add(Key(value))) { Failure(row, "row", "import.duplicate", BackendMessages.Message("validation.limits.import.duplicate")); continue; }
                 pending.Add((row, value));
             }
             catch (RBBH.ConnectedParties.Exceptions.ValidationException error) { Failure(row, error.Field ?? "row", "validation.invalid", error.ErrorMessage); }
@@ -231,7 +231,7 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
         var existing = (await _dbContext.Limiti.AsNoTracking().Where(row => ids.Contains(row.LegalEntityId)).ToListAsync(ct)).Select(Key).ToHashSet();
         var accepted = new List<Limit>();
         foreach (var item in pending)
-            if (existing.Contains(Key(item.Value))) Failure(item.Row, "row", "import.duplicate", "Isti limit već postoji za odabrano pravno lice.");
+            if (existing.Contains(Key(item.Value))) Failure(item.Row, "row", "import.duplicate", BackendMessages.Message("validation.limits.import.existing"));
             else accepted.Add(item.Value);
         if (accepted.Count > 0) { await PersistNew(accepted, korisnik, "IMPORT", ct); result.Imported = accepted.Count; }
         return result;
@@ -250,13 +250,13 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
     private static string? ValidateFields(string? type, decimal? approved, decimal? utilization, string? comment)
     {
         const decimal maximum = 9_999_999_999_999_999.99m;
-        if (string.IsNullOrWhiteSpace(type)) return "Tip limita je obavezan.";
-        if (type.Length > 100) return "Vrsta limita smije imati najviše 100 znakova.";
-        if (approved < 0) return "Odobreni limit ne može biti negativan.";
-        if (utilization < 0) return "Maksimalna očekivana utilizacija ne može biti negativna.";
-        if (comment?.Length > 1000) return "Komentar smije imati najviše 1.000 znakova.";
+        if (string.IsNullOrWhiteSpace(type)) return BackendMessages.Message("validation.limits.type.required");
+        if (type.Length > 100) return BackendMessages.Message("validation.limits.type.length");
+        if (approved < 0) return BackendMessages.Message("validation.limits.approved.negative");
+        if (utilization < 0) return BackendMessages.Message("validation.limits.utilization.negative");
+        if (comment?.Length > 1000) return BackendMessages.Message("validation.limits.comment.length");
         if (new[] { approved, utilization }.Any(value => value.HasValue && (value < 0 || value > maximum || decimal.Round(value.Value, 2) != value.Value)))
-            return "Iznosi moraju biti nenegativni, s najviše dvije decimale i do 16 cifara prije decimalnog zareza.";
+            return BackendMessages.Message("validation.limits.amount.precision");
         return null;
     }
     private sealed record RowKey(Guid Party, string Type, string? Approved, string? Utilization, long? Due, string? Comment);
@@ -359,12 +359,12 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
         decimal? maksimalnaOcekivanaUtilizacija, string? komentar)
     {
         if (legalEntityId == Guid.Empty)
-            return Result<LimitResponseDTO>.ValidationError("Pravno lice je obavezno.");
+            return Result<LimitResponseDTO>.ValidationError(BackendMessages.Message("validation.limits.legal.required"));
 
         var legalEntityExists = await _dbContext.LegalEntities.AsNoTracking()
             .AnyAsync(e => e.Id == legalEntityId && e.IsActive);
         if (!legalEntityExists)
-            return Result<LimitResponseDTO>.ValidationError("Odabrano pravno lice ne postoji.");
+            return Result<LimitResponseDTO>.ValidationError(BackendMessages.Message("validation.limits.legal.missing"));
 
         var fieldsError = ValidateFields(tipLimita, odobreniLimit, maksimalnaOcekivanaUtilizacija, komentar);
         if (fieldsError is not null) return Result<LimitResponseDTO>.ValidationError(fieldsError);
@@ -372,7 +372,7 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
         var tipLimitaPostoji = await _dbContext.CodeLists.AsNoTracking()
             .AnyAsync(c => c.Kategorija.ToUpper() == "VRSTALIMITA" && c.Kod.ToUpper() == kod && c.Aktivan && (c.Definition == null || c.Definition.IsActive));
         if (!tipLimitaPostoji)
-            return Result<LimitResponseDTO>.ValidationError($"Tip limita '{tipLimita}' ne postoji u šifarniku vrsta limita.");
+            return Result<LimitResponseDTO>.ValidationError(BackendMessages.Message("validation.limits.type.unknown", tipLimita));
 
         return null;
     }

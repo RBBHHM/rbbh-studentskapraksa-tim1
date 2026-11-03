@@ -30,6 +30,6 @@ internal sealed class CodebookChoices
     internal void Check(string category, string? value, string field)
     {
         if (!string.IsNullOrWhiteSpace(value) && _values.TryGetValue(category, out var choices) && !choices.Contains(value.Trim()))
-            throw new ValidationException(field, "Odabrana vrijednost nije aktivna u šifrarniku. Osvježite dostupne opcije.");
+            throw new ValidationException(field, BackendMessages.Message("validation.codelist.choice.inactive"));
     }
 }

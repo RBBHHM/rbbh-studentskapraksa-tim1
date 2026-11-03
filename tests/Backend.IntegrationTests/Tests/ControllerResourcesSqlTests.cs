@@ -19,6 +19,7 @@ public sealed class ControllerResourcesSqlTests : RoleCatalogFixture
         base.ConfigureServices(services); services.AddControllersExtension();
         services.AddScoped<BackendLocalizationFilter>();
         services.AddScoped<IAppUserService, AppUserService>(); services.AddHttpClient<KeycloakAdminService>();
+        services.AddScoped<ICapitalService, CapitalService>(); services.AddScoped<ICodeListService, CodeListService>();
     }
 
     [SqlServerFact]
@@ -88,4 +89,38 @@ public sealed class ControllerResourcesSqlTests : RoleCatalogFixture
         Assert.Equal("Uneseni podaci nisu ispravni.", BackendMessages.Message("errors.model.invalid.title"));
         await InDatabase(async db => Assert.Empty(db.AuditLogs));
     }
+    [SqlServerFact]
+    public async Task ServiceValidationAndCodebookWorkbookErrorsUseTheRequestLanguage()
+    {
+        Client.DefaultRequestHeaders.Add("Accept-Language", "EN");
+        var response = await Client.PutAsJsonAsync("/api/capital", new
+        { regulatoryCapital = -1m, coreCapital = 2m, supplementaryCapital = 3m, capitalDate = "2026-10-01" });
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var invalid = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Enter all three nonnegative capital amounts with at most two decimal places and 16 integer digits.", invalid.GetProperty("detail").GetString());
+        using var workbook = new ClosedXML.Excel.XLWorkbook();
+        var sheet = workbook.AddWorksheet("Fixture"); sheet.Cell(1, 1).Value = "Unexpected"; sheet.Cell(2, 1).Value = "Example";
+        using var stream = new MemoryStream(); workbook.SaveAs(stream);
+        using var form = new MultipartFormDataContent(); form.Add(new ByteArrayContent(stream.ToArray()), "file", "values.xlsx");
+        var import = await Client.PostAsync("/api/code-lists/Fixture/import?dryRun=true", form);
+        Assert.Equal(HttpStatusCode.BadRequest, import.StatusCode);
+        var error = await import.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Column A has an invalid header. Expected 'Vrijednost' or 'Value', found 'Unexpected'.", error.GetProperty("error").GetString());
+        await InDatabase(async db => { Assert.Empty(db.CapitalRevisions); Assert.Empty(db.AuditLogs); Assert.False(await db.CodeLists.AnyAsync(row => row.Kategorija == "Fixture")); });
+    }
+
+    [SqlServerFact]
+    public async Task PeriodLockMiddlewareLocalizesItsDenialBeforeMvcAndPreservesThe423Contract()
+    {
+        await InDatabase(async db => { (await db.PeriodLocks.SingleAsync()).IsLocked = true; await db.SaveChangesAsync(); });
+        Client.DefaultRequestHeaders.Add("Accept-Language", "DE");
+        var response = await Client.PutAsJsonAsync("/api/capital", new
+        { regulatoryCapital = 100m, coreCapital = 50m, supplementaryCapital = 50m, capitalDate = "2026-10-01" });
+        Assert.Equal((HttpStatusCode)423, response.StatusCode);
+        var error = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(JsonValueKind.Null, error.GetProperty("errors")[0].GetProperty("field").ValueKind);
+        Assert.Equal("Die Dateneingabe ist für diesen Zeitraum gesperrt.", error.GetProperty("errors")[0].GetProperty("message").GetString());
+        await InDatabase(async db => { Assert.Empty(db.CapitalRevisions); Assert.Empty(db.AuditLogs); });
+    }
+
 }

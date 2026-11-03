@@ -89,12 +89,12 @@ public partial class AppUserService(ConnectedPartiesDbContext dbContext, Keycloa
         createdBy = actor.DisplayName;
         var normalizedEmail = dto.Email.Trim().ToLowerInvariant();
         if (!System.Net.Mail.MailAddress.TryCreate(normalizedEmail, out var email) || email.Address != normalizedEmail || normalizedEmail.Length > 200)
-            return Result<UserDTO>.ValidationError("Email adresa nije ispravna.");
+            return Result<UserDTO>.ValidationError(BackendMessages.Message("validation.users.email.invalid"));
         var keycloakId = Guid.NewGuid().ToString();
         if (_keycloakAdmin.IsEnabled)
         {
             var identity = await _keycloakAdmin.FindByEmailAsync(normalizedEmail, ct);
-            if (identity is null) return Result<UserDTO>.ValidationError("Korisnik nije pronađen u sistemu za prijavu.");
+            if (identity is null) return Result<UserDTO>.ValidationError(BackendMessages.Message("validation.users.identity.missing"));
             keycloakId = identity.Subject;
             dto.Username = identity.Username ?? dto.Username;
             dto.FirstName = identity.FirstName ?? dto.FirstName;
@@ -104,12 +104,12 @@ public partial class AppUserService(ConnectedPartiesDbContext dbContext, Keycloa
         {
         var username = dto.Username.Trim(); var normalizedName = username.ToUpperInvariant(); var normalizedAddress = normalizedEmail.ToUpperInvariant();
         if (string.IsNullOrEmpty(username) || username.Length > 100 || string.IsNullOrWhiteSpace(dto.FirstName) || dto.FirstName.Length > 100 || string.IsNullOrWhiteSpace(dto.LastName) || dto.LastName.Length > 100)
-            return Result<UserDTO>.ValidationError("Provjerite ime, prezime i korisničko ime.");
+            return Result<UserDTO>.ValidationError(BackendMessages.Message("validation.users.names.invalid"));
         if (await _db.AppUsers.AnyAsync(user => user.Username.Trim().ToUpper() == normalizedName || user.Email.Trim().ToUpper() == normalizedAddress || user.KeycloakId == keycloakId, ct))
-            return Result<UserDTO>.ValidationError("Korisnik sa navedenim identitetom već postoji.");
+            return Result<UserDTO>.ValidationError(BackendMessages.Message("validation.users.identity.duplicate"));
         var localRoles = await _db.Roles.Where(role => requestedRoleIds.Contains(role.Id) && role.IsActive).ToListAsync(ct);
         if (localRoles.Count != requestedRoleIds.Length || localRoles.Any(role => role.Name == ApplicationAccessRoles.Guest))
-            return Result<UserDTO>.ValidationError("Odabrane aplikacijske role nisu ispravne.");
+            return Result<UserDTO>.ValidationError(BackendMessages.Message("validation.users.roles.invalid"));
         var roleNames = localRoles.Select(role => role.Name).ToList();
         var user = new AppUser
         {
@@ -170,6 +170,6 @@ public partial class AppUserService(ConnectedPartiesDbContext dbContext, Keycloa
                 .Select(mapping => mapping.Permission.Code).ToListAsync())
                 .Concat(RolePermissionMatrix.PermissionsByRole[ApplicationAccessRoles.Guest]).Distinct(StringComparer.Ordinal).ToList() : []
         });
-        }, () => Result<UserDTO>.ValidationError("Izmjena je u toku. Pokušajte ponovo."), ct);
+        }, () => Result<UserDTO>.ValidationError(BackendMessages.Message("errors.request.busy")), ct);
     }
 }

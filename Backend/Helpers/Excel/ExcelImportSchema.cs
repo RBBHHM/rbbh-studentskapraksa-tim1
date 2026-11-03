@@ -23,7 +23,7 @@ public static class ExcelImportSchema
         catch (Exception exception) when (exception is not OperationCanceledException and not OutOfMemoryException)
         {
             throw new RBBH.ConnectedParties.Exceptions.ValidationException("file",
-                "Excel datoteka nije ispravna ili je oštećena. Sačuvajte je kao .xlsx i pokušajte ponovo.");
+                BackendMessages.Message("workbook.invalid"));
         }
     }
 
@@ -40,38 +40,36 @@ public static class ExcelImportSchema
         var lastUsedRow = worksheet.LastRowUsed()?.RowNumber() ?? 0;
 
         if (lastUsedRow == 0)
-            return ["Excel datoteka je prazna. Koristite propisani predložak sa zaglavljem i podacima."];
+            return [BackendMessages.Message("workbook.empty")];
 
         if (lastUsedColumn != columns.Count)
         {
             errors.Add(
-                $"Excel predložak mora sadržavati tačno {columns.Count} kolona, a pronađeno je {lastUsedColumn}. " +
-                "Nemojte dodavati, uklanjati niti premještati kolone.");
+                BackendMessages.Message("workbook.schema.count", columns.Count, lastUsedColumn));
         }
 
         for (var index = 0; index < columns.Count; index++)
         {
             var header = worksheet.Cell(1, index + 1);
-            if (header.HasFormula) { errors.Add("Zaglavlje ne smije sadržavati formule."); continue; }
+            if (header.HasFormula) { errors.Add(BackendMessages.Message("workbook.header.formula")); continue; }
             var actual = header.GetString().Trim();
             var expected = columns[index];
             if (expected.AcceptedHeaders.Any(alias => Normalize(alias) == Normalize(actual)))
                 continue;
 
             errors.Add(
-                $"Kolona {XLHelper.GetColumnLetterFromNumber(index + 1)} ima neispravno zaglavlje. " +
-                $"Očekivano je '{expected.DisplayName}', a pronađeno '{(actual.Length == 0 ? "prazno" : actual)}'.");
+                BackendMessages.Message("workbook.schema.header", XLHelper.GetColumnLetterFromNumber(index + 1), expected.DisplayName, actual.Length == 0 ? BackendMessages.Message("workbook.value.empty") : actual));
         }
 
         var dataRows = Math.Max(lastUsedRow - 1, 0);
         if (dataRows == 0)
-            errors.Add("Excel datoteka nema nijedan red podataka ispod zaglavlja.");
+            errors.Add(BackendMessages.Message("workbook.data.empty"));
         else if (dataRows > MaximumDataRows)
-            errors.Add($"Excel datoteka sadrži {dataRows} redova. Dozvoljeno je najviše {MaximumDataRows} redova po uvozu.");
+            errors.Add(BackendMessages.Message("workbook.data.limit", dataRows, MaximumDataRows));
 
         if (lastUsedRow <= MaximumDataRows + 1 && lastUsedColumn <= columns.Count &&
             worksheet.CellsUsed().Any(cell => cell.HasFormula))
-            errors.Add("Predložak za uvoz ne smije sadržavati formule. Unesite vrijednosti polja.");
+            errors.Add(BackendMessages.Message("workbook.data.formula"));
         return errors;
     }
 

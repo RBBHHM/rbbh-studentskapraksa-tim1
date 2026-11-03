@@ -22,14 +22,14 @@ public static class RelatedPersonValidator
     public static string? ValidateIdentification(ResidencyType residency, string? jmbg, string? passportNumber, string? fbaId)
     {
         if (!string.IsNullOrWhiteSpace(fbaId) && !System.Text.RegularExpressions.Regex.IsMatch(fbaId.Trim(), @"^[0-9]{1,10}$"))
-            return "FBA ID mora sadržavati najviše 10 cifara.";
+            return BackendMessages.Message("validation.registry.fba.digits");
         if (!Enum.IsDefined(residency) || residency is not (ResidencyType.Resident or ResidencyType.NonResident))
-            return "Odaberite rezidentnost: rezident ili nerezident.";
+            return BackendMessages.Message("validation.person.residency.selection");
 
         if (residency == ResidencyType.Resident)
         {
             if (string.IsNullOrWhiteSpace(jmbg))
-                return "JMBG je obavezan za rezidenta.";
+                return BackendMessages.Message("validation.person.jmbg.resident.required");
 
             try
             {
@@ -43,7 +43,7 @@ public static class RelatedPersonValidator
         else // NonResident
         {
             if (string.IsNullOrWhiteSpace(passportNumber) && string.IsNullOrWhiteSpace(fbaId))
-                return "Za nerezidenta je potrebno unijeti broj pasoša ili FBA ID.";
+                return BackendMessages.Message("validation.person.nonresident.identity");
 
             // Ako je JMBG ipak unesen, mora biti validan
             if (!string.IsNullOrWhiteSpace(jmbg))
@@ -68,7 +68,7 @@ public static class RelatedPersonValidator
     public static string? ValidateDateRange(DateTime? dateFrom, DateTime? dateTo)
     {
         if (dateFrom.HasValue && dateTo.HasValue && dateTo.Value < dateFrom.Value)
-            return "Datum do ne može biti prije datuma od.";
+            return BackendMessages.Message("validation.person.date.order");
 
         return null;
     }
@@ -80,7 +80,7 @@ public static class RelatedPersonValidator
     public static string? ValidateCanAddFamilyMember(RelatedPerson relatedPerson)
     {
         if (relatedPerson.DeclarationNoFamilyMembers)
-            return "Nije moguće dodati člana porodice — odabrana je izjava o nepostojanju članova porodice.";
+            return BackendMessages.Message("validation.family.declaration");
 
         return null;
     }
@@ -129,7 +129,7 @@ public static class RelatedPersonValidator
         return ValidatePersonFields(dto.FirstName, dto.LastName, dto.PassportNumber)
             ?? ValidateIdentification(dto.Residency, dto.JMBG, dto.PassportNumber, dto.FBAId)
             ?? (!string.IsNullOrWhiteSpace(dto.FBAId) && !System.Text.RegularExpressions.Regex.IsMatch(dto.FBAId.Trim(), @"^[0-9]{1,10}$")
-                ? "FBA ID mora sadržavati najviše 10 cifara." : null);
+                ? BackendMessages.Message("validation.registry.fba.digits") : null);
     }
 
     /// <summary>
@@ -140,16 +140,16 @@ public static class RelatedPersonValidator
         return ValidatePersonFields(dto.FirstName, dto.LastName, dto.PassportNumber)
             ?? ValidateIdentification(dto.Residency, dto.JMBG, dto.PassportNumber, dto.FBAId)
             ?? (!string.IsNullOrWhiteSpace(dto.FBAId) && !System.Text.RegularExpressions.Regex.IsMatch(dto.FBAId.Trim(), @"^[0-9]{1,10}$")
-                ? "FBA ID mora sadržavati najviše 10 cifara." : null);
+                ? BackendMessages.Message("validation.registry.fba.digits") : null);
     }
 
     private static string? ValidateMainNonResident(ResidencyType residency, string? passportNumber, string? fbaId)
     {
         if (residency != ResidencyType.NonResident) return null;
-        if (string.IsNullOrWhiteSpace(passportNumber)) return "Broj pasoša je obavezan za nerezidenta.";
-        if (string.IsNullOrWhiteSpace(fbaId)) return "FBA ID je obavezan za nerezidenta.";
+        if (string.IsNullOrWhiteSpace(passportNumber)) return BackendMessages.Message("validation.person.passport.required");
+        if (string.IsNullOrWhiteSpace(fbaId)) return BackendMessages.Message("validation.person.fba.required");
         if (!System.Text.RegularExpressions.Regex.IsMatch(fbaId.Trim(), @"^[0-9]{1,10}$"))
-            return "FBA ID mora sadržavati najviše 10 cifara.";
+            return BackendMessages.Message("validation.registry.fba.digits");
         return null;
     }
 
@@ -157,11 +157,11 @@ public static class RelatedPersonValidator
     {
         const string personNamePattern = @"^[\p{L}][\p{L} '\-]{1,99}$";
         if (string.IsNullOrWhiteSpace(firstName) || !System.Text.RegularExpressions.Regex.IsMatch(firstName.Trim(), personNamePattern))
-            return "Ime mora sadržavati najmanje dva slova i ne smije sadržavati brojeve.";
+            return BackendMessages.Message("validation.person.first.name.format");
         if (string.IsNullOrWhiteSpace(lastName) || !System.Text.RegularExpressions.Regex.IsMatch(lastName.Trim(), personNamePattern))
-            return "Prezime mora sadržavati najmanje dva slova i ne smije sadržavati brojeve.";
+            return BackendMessages.Message("validation.person.last.name.format");
         if (!string.IsNullOrWhiteSpace(passportNumber) && !System.Text.RegularExpressions.Regex.IsMatch(passportNumber.Trim(), @"^[A-Za-z0-9][A-Za-z0-9-]{4,19}$"))
-            return "Broj pasoša mora sadržavati 5 do 20 slova, cifara ili crtica.";
+            return BackendMessages.Message("validation.person.passport.format");
         return null;
     }
 
@@ -170,21 +170,21 @@ public static class RelatedPersonValidator
         DateTime? dateFrom, DateTime? dateTo)
     {
         if (relationBasis?.Length > 500 || relationDescription?.Length > 1000 || specialRelationBasis?.Length > 500)
-            return "Osnovi smiju imati najviše 500, a opis najviše 1.000 znakova.";
+            return BackendMessages.Message("validation.person.connection.bounds");
         if (string.IsNullOrWhiteSpace(relationBasis))
-            return "Osnov povezanosti je obavezan.";
+            return BackendMessages.Message("validation.registry.connection.required");
         if (string.IsNullOrWhiteSpace(relationDescription))
-            return "Opis osnova povezanosti je obavezan.";
+            return BackendMessages.Message("validation.registry.description.required");
         if (string.IsNullOrWhiteSpace(specialRelationBasis))
-            return "Osnov posebnog odnosa je obavezan.";
+            return BackendMessages.Message("validation.person.special.basis.required");
         if (!IsImmediateFamily(specialRelationBasis) && !isIdentifiedStaff)
-            return "Fizičko lice koje nije član uže porodice mora biti identifikovani zaposlenik.";
+            return BackendMessages.Message("validation.person.staff.required");
         if (IsImmediateFamily(specialRelationBasis) && !relatedToPersonId.HasValue)
-            return "Za člana uže porodice odaberite fizičko lice s kojim je povezan.";
+            return BackendMessages.Message("validation.person.family.link.required");
         if (!dateFrom.HasValue)
-            return "Datum početka povezanosti je obavezan.";
+            return BackendMessages.Message("validation.registry.start.required");
         if (!dateTo.HasValue)
-            return "Datum završetka povezanosti je obavezan.";
+            return BackendMessages.Message("validation.person.end.required");
         return ValidateDateRange(dateFrom, dateTo);
     }
 

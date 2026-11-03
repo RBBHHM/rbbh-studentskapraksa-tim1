@@ -53,8 +53,8 @@ public class ReportService : IReportService
 
     public async Task<ReportDTO> GenerateMonthlyReportAsync(int year, int month, string createdBy)
     {
-        if (year < 2000 || year > DateTime.UtcNow.Year) throw new ValidationException("year", "Godina nije ispravna.");
-        if (month is < 1 or > 12) throw new ValidationException("month", "Mjesec mora biti između 1 i 12.");
+        if (year < 2000 || year > DateTime.UtcNow.Year) throw new ValidationException("year", BackendMessages.Message("errors.report.year.invalid"));
+        if (month is < 1 or > 12) throw new ValidationException("month", BackendMessages.Message("errors.report.month.range"));
         var reportDate = new DateTime(year, month, 1);
         var snapshot = await BuildExposureSnapshotAsync(year, month);
 
@@ -115,7 +115,7 @@ public class ReportService : IReportService
     public async Task<byte[]> ExportClientByIdAsync(string identifier)
     {
         if (string.IsNullOrWhiteSpace(identifier) || identifier.Length > 50)
-            throw new ValidationException("identifier", "Identifikator je obavezan.");
+            throw new ValidationException("identifier", BackendMessages.Message("validation.report.identifier.required"));
 
         var id = identifier.Trim().ToLower();
 
@@ -130,13 +130,13 @@ public class ReportService : IReportService
 
         if (legalEntity is null)
             throw new ValidationException("identifier",
-                $"Pravno lice s identifikatorom '{identifier.Trim()}' nije pronađeno.");
+                BackendMessages.Message("validation.report.legal.missing", identifier.Trim()));
 
         var rows = await GetLimitExportRowsAsync(legalEntity.Id);
 
         if (rows.Count == 0)
             throw new ValidationException("identifier",
-                $"Klijent '{legalEntity.Name}' nema definisanih limita.");
+                BackendMessages.Message("validation.report.limits.missing", legalEntity.Name));
 
         return BuildLimitsExcel(rows);
     }
@@ -150,11 +150,11 @@ public class ReportService : IReportService
     public async Task<byte[]> ExportGeneratedReportAsync(Guid reportId)
     {
         var report = await _context.Reports.AsNoTracking().FirstOrDefaultAsync(item => item.Id == reportId && item.IsActive)
-            ?? throw new ValidationException("reportId", "Izvještaj nije pronađen.");
+            ?? throw new ValidationException("reportId", BackendMessages.Message("validation.report.missing"));
         var snapshot = string.IsNullOrWhiteSpace(report.DataSnapshot)
             ? []
             : JsonSerializer.Deserialize<List<ExposureSnapshotRow>>(report.DataSnapshot) ?? [];
-        return GenerateExposureExcel(snapshot, $"{(report.ReportType == "DAILY" ? "Dnevni" : "Mjesečni")} izvještaj — {report.ReportDate:dd.MM.yyyy}");
+        return GenerateExposureExcel(snapshot, BackendMessages.Message("workbook.report.title", BackendMessages.Message(report.ReportType == "DAILY" ? "labels.report.daily" : "labels.report.monthly"), report.ReportDate));
     }
 
     // ─── Privatne metode ────────────────────────────────────────────────────
@@ -259,7 +259,7 @@ public class ReportService : IReportService
         ws.Row(1).Height = 34;
         ws.Range(1, 1, 1, 7).Merge();
 
-        ws.Cell(2, 1).Value = $"Generisano: {DateTime.Now:dd.MM.yyyy HH:mm}";
+        ws.Cell(2, 1).Value = BackendMessages.Message("workbook.generated.at", DateTime.Now);
         ws.Cell(2, 1).Style.Font.Italic = true;
         ws.Cell(2, 1).Style.Font.FontName = "Amalia";
         ws.Cell(2, 1).Style.Font.FontColor = XLColor.FromArgb(0x55, 0x55, 0x55);

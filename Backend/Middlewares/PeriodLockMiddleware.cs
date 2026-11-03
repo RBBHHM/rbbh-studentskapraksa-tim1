@@ -34,6 +34,23 @@ public class PeriodLockMiddleware
             context.Response.StatusCode = StatusCodes.Status423Locked;
             context.Response.ContentType = "application/json";
 
+            const string resourceKey = "errors.period.locked";
+            var message = BackendMessages.Message(resourceKey);
+            try
+            {
+                var catalog = context.RequestServices?.GetService<BL.Services.RuntimeLocalizationCatalog>();
+                if (catalog is not null)
+                {
+                    var translated = await catalog.Text(resourceKey, context.Request.Headers.AcceptLanguage.ToString(), context.RequestAborted);
+                    if (translated != resourceKey)
+                    {
+                        if (System.Text.CompositeFormat.Parse(translated).MinimumArgumentCount != 0) throw new FormatException();
+                        message = translated;
+                    }
+                }
+            }
+            catch (Exception error) when (error is not OperationCanceledException)
+            { _logger.LogWarning("Period lock localization unavailable. FailureType {FailureType}", error.GetType().Name); }
             var response = new
             {
                 errors = new[]
@@ -41,7 +58,7 @@ public class PeriodLockMiddleware
                     new
                     {
                         field = (string?)null,
-                        message = "Unos podataka je zaključan za ovaj period."
+                        message
                     }
                 }
             };
