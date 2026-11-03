@@ -113,7 +113,7 @@ h1[tabindex="-1"]:focus, h1:focus-visible { outline: none; }
 .registry-controls { display: flex; flex-direction: column; gap: .75rem; margin-block-end: 1.25rem; }
 @media (min-width: 640px) { .registry-controls { flex-direction: row; align-items: flex-start; } }
 .registry-search { display: flex; flex: 1; max-width: 28rem; align-items: center; gap: .5rem; border: 1px solid var(--border-subtle); border-radius: var(--radii-sm, .25rem); background: var(--surface-default); padding-inline: .75rem; }
-.registry-search:focus-within { border-color: var(--border-brand); }
+.registry-search:focus-within { border-color: var(--border-brand); box-shadow: 0 0 0 1px var(--border-brand); }
 .registry-search__icon { width: 1rem; height: 1rem; flex-shrink: 0; color: var(--text-tertiary); }
 .registry-search .rbi-control, .registry-search input { width: 100%; height: 2.75rem; min-height: 0; padding-block: 0; border: 0; background: transparent; box-shadow: none; outline: none; padding-inline: 0; font-size: var(--font-size-sm); }
 .registry-surface { overflow: hidden; border: 1px solid var(--border-subtle); border-radius: var(--radii-sm, .25rem); background: var(--surface-default); }
