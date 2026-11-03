@@ -33,7 +33,7 @@ else
     }
     @if (TotalPages > 1)
     {
-        <p role="status">@T.Format("audit.page-summary", _page, TotalPages, _result.Total)</p>
+        <p class="page-total" role="status">@T.Format("audit.page-summary", _page, TotalPages, _result.Total)</p>
     <RbiPagination CurrentPage="_page" CurrentPageChanged="ChangePageAsync" TotalPages="TotalPages" AccessibleLabel="@T["audit.pages"]" PreviousLabel="@T["common.back"]" PreviousAccessibleLabel="@T["legal.previous"]" NextLabel="@T["common.actions.continue"]" NextAccessibleLabel="@T["legal.next"]" PageAccessibleLabel="@(page => T.Format("legal.page", page))" />
     }
 }

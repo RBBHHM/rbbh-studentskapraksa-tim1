@@ -55,15 +55,25 @@ test("permission-service outage invents no grants or guide sections and explicit
   await expect(page.getByText("Aplikacijske dozvole trenutno nisu dostupne.", { exact: true })).toBeVisible(); await expect(page.getByRole("main").getByText("Efektivna ovlaštenja", { exact: true })).toHaveCount(0);
   await expect(page.getByText(/private-fixture/)).toHaveCount(0); expect((await request.post("/__fixtures/profile-available", { headers })).status()).toBe(204); await page.getByRole("button", { name: "Pokušaj ponovo", exact: true }).click(); await expect(page.getByRole("main").getByText("Efektivna ovlaštenja", { exact: true })).toBeVisible();
   await request.post("/__fixtures/profile-unavailable", { headers }); await visit(page, "/app/guide"); await expect(page.locator("details")).toHaveCount(0); await expect(page.getByText("Aplikacijske dozvole trenutno nisu dostupne.", { exact: true })).toBeVisible();
-  expect((await request.post("/__fixtures/profile-available", { headers })).status()).toBe(204); await page.getByRole("button", { name: "Pokušaj ponovo", exact: true }).click(); await expect(page.locator("details")).toHaveCount(admin ? 5 : 4);
+  expect((await request.post("/__fixtures/profile-available", { headers })).status()).toBe(204); await page.getByRole("button", { name: "Pokušaj ponovo", exact: true }).click(); await expect(page.locator("details")).toHaveCount(admin ? 6 : 5);
 });
 test("business guide is permission-aware, keyboard accessible and documents approved reporting distinction", async ({ page, request }) => {
-  await request.post("/__fixtures/forge-provider-admin", { headers }); await visit(page, "/app/guide"); await expect(page.locator("details")).toHaveCount(admin ? 5 : 4);
+  await request.post("/__fixtures/forge-provider-admin", { headers }); await visit(page, "/app/guide"); await expect(page.locator("details")).toHaveCount(admin ? 6 : 5);
   await expect(page.locator("summary").filter({ hasText: "Administracija" })).toHaveCount(admin ? 1 : 0);
   const first = page.locator("details").first(); await expect(first).toHaveAttribute("open", ""); await first.locator("summary").focus(); await page.keyboard.press("Space"); await expect(first).not.toHaveAttribute("open", ""); await page.keyboard.press("Enter"); await expect(first).toHaveAttribute("open", "");
   const reporting = page.locator("details").filter({ hasText: "Generisanje, preuzimanje i kontrola izvještajnog perioda." }); await reporting.locator("summary").click();
   await expect(reporting.getByText("Autentificirani korisnici koji nisu deaktivirani mogu pregledati i preuzimati postojeće izvještaje. Bez eksplicitne aplikacijske role efektivni pristup je Guest.", { exact: true })).toBeVisible(); await expect(reporting.getByText(/Nije read-only radnja/)).toBeVisible();
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
+});
+test("guide explains four-eyes, live validation and keyboard use; Tab leaves an open section and Enter/Space only toggle it", async ({ page, request }) => {
+  await request.post("/__fixtures/forge-provider-admin", { headers }); await visit(page, "/app/guide");
+  const general = page.locator("details").filter({ hasText: "Rad u aplikaciji" }); await general.locator("summary").click();
+  await expect(general.getByText(/Tab prelazi na sljedeći element/)).toBeVisible();
+  const physical = page.locator("details").filter({ hasText: "ne može ga i verifikovati" }); await physical.locator("summary").focus(); if (!(await physical.evaluate(element => (element as HTMLDetailsElement).open))) await page.keyboard.press("Enter"); await expect(physical.getByText(/ne može ga i verifikovati/)).toBeVisible();
+  const second = page.locator("details").nth(1); const before = await second.evaluate(element => (element as HTMLDetailsElement).open);
+  await second.locator("summary").focus(); await page.keyboard.press("Tab");
+  expect(await second.evaluate(element => (element as HTMLDetailsElement).open)).toBe(before);
+  expect(await page.evaluate(() => document.activeElement?.tagName === "SUMMARY" && document.activeElement.parentElement === document.querySelectorAll("details")[1])).toBe(false);
 });
 test("dashboard/profile/guide remain readable at375px without page overflow", async ({ page }, info) => {
   await page.setViewportSize({ width: 375, height: 812 });
