@@ -31,6 +31,7 @@ public class Report
 
     /// <summary>Snapshot podataka u JSON formatu (za arhivske potrebe).</summary>
     public string? DataSnapshot { get; set; }
+    [StringLength(100)] public string? DataSource { get; set; }
 
     // ── Audit polja ───────────────────────────────────────────────────────────
 

@@ -988,6 +988,10 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<string>("DataSnapshot")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("DataSource")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 

@@ -5,6 +5,8 @@ namespace RBBH.ConnectedParties.DL.DTO.Report;
 /// <summary>DTO za prikaz jednog izvještaja u listi.</summary>
 public class ReportDTO
 {
+    public string DataSource { get; set; } = "legacy.unspecified";
+    public bool IsAuthoritative => DataSource == "finance.monthlyhistory";
     public Guid Id { get; set; }
     public string ReportType { get; set; } = string.Empty;
     public DateTime ReportDate { get; set; }

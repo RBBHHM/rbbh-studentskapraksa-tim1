@@ -59,6 +59,8 @@ namespace RBBH.ConnectedParties.IoC
             services.AddOptions<BankReferenceOptions>().Bind(configuration.GetSection("BankReference"));
             services.AddScoped<IBankReferenceSource, SqlBankReferenceSource>();
             services.AddScoped<ILegalEntityService, LegalEntityService>();
+            services.AddOptions<FinanceMonthlyOptions>().Bind(configuration.GetSection("FinanceMonthly"));
+            services.AddScoped<IFinanceMonthlySource, SqlFinanceMonthlySource>();
             services.AddScoped<IReportService, ReportService>();
             services.AddScoped<ILimitService, LimitService>();
             services.AddScoped<ICapitalService, CapitalService>();
