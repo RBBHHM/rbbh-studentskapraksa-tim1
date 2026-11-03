@@ -15,12 +15,13 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Controllers
                 {
                     var errors = context.ModelState
                         .Where(item => item.Value?.Errors.Count > 0)
-                        .ToDictionary(
-                            item => FriendlyFieldName(item.Key),
-                            item => item.Value!.Errors
-                                .Select(error => FriendlyValidationMessage(error.ErrorMessage, item.Key))
-                                .Distinct()
-                                .ToArray());
+                        .SelectMany(item => item.Value!.Errors.Select(error => new
+                        {
+                            Field = FriendlyFieldName(item.Key),
+                            Message = FriendlyValidationMessage(error.ErrorMessage, item.Key)
+                        }))
+                        .GroupBy(error => error.Field, StringComparer.OrdinalIgnoreCase)
+                        .ToDictionary(group => group.Key, group => group.Select(error => error.Message).Distinct().ToArray());
                     var problem = new Microsoft.AspNetCore.Mvc.ValidationProblemDetails(errors)
                     {
                         Status = StatusCodes.Status400BadRequest,
@@ -47,6 +48,9 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Controllers
 
         private static string FriendlyValidationMessage(string message, string key)
         {
+            if (!string.IsNullOrWhiteSpace(message) && message.Contains("missing required properties", StringComparison.OrdinalIgnoreCase))
+                return BackendMessages.Message(message.Contains("isResident", StringComparison.OrdinalIgnoreCase)
+                    ? "validation.person.residency.required" : "errors.model.form.required");
             if (string.IsNullOrWhiteSpace(message) ||
                 message.Contains("JSON value could not be converted", StringComparison.OrdinalIgnoreCase) ||
                 message.Contains("System.", StringComparison.OrdinalIgnoreCase) ||

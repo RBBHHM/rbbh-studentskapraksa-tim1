@@ -123,4 +123,31 @@ public sealed class ControllerResourcesSqlTests : RoleCatalogFixture
         await InDatabase(async db => { Assert.Empty(db.CapitalRevisions); Assert.Empty(db.AuditLogs); });
     }
 
+    [SqlServerFact]
+    public async Task LegalResidencyMustBeExplicitInJsonAndMissingValueNeverDefaultsToNonresident()
+    {
+        Client.DefaultRequestHeaders.Add("Accept-Language", "EN");
+        var missing = new { name = "Residency fixture", fbaId = "1234567890", basisOfConnection = "basis",
+            connectionDescription = "description", connectedWithBank = true, dateFrom = "2026-10-01" };
+        var rejected = await Client.PostAsJsonAsync("/api/legal-entities", missing);
+        Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
+        var validation = await rejected.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Contains(validation.GetProperty("errors").EnumerateObject().SelectMany(row => row.Value.EnumerateArray()).Select(value => value.GetString()),
+            text => text == "Residency is required.");
+        Assert.DoesNotContain("CreateLegalEntityDTO", await rejected.Content.ReadAsStringAsync());
+        await InDatabase(async db => { Assert.Empty(db.LegalEntities); Assert.Empty(db.AuditLogs); });
+        var created = await Client.PostAsJsonAsync("/api/legal-entities", new { isResident = false, missing.name, missing.fbaId,
+            missing.basisOfConnection, missing.connectionDescription, missing.connectedWithBank, missing.dateFrom });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var body = await created.Content.ReadFromJsonAsync<JsonElement>(); var id = body.GetProperty("id").GetGuid();
+        var update = await Client.PutAsJsonAsync($"/api/legal-entities/{id}", missing);
+        Assert.Equal(HttpStatusCode.BadRequest, update.StatusCode);
+        Assert.DoesNotContain("UpdateLegalEntityDTO", await update.Content.ReadAsStringAsync());
+        await InDatabase(async db =>
+        {
+            var row = await db.LegalEntities.SingleAsync(); Assert.False(row.IsResident); Assert.Null(row.ModifiedAt);
+            Assert.Single(db.AuditLogs);
+        });
+    }
+
 }

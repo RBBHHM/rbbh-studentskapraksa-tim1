@@ -9,6 +9,7 @@ public class CreateLegalEntityDTO
 {
     /// <summary>true = rezidentno (zahtijeva TaxNumber), false = nerezidentno (zahtijeva FbaId).</summary>
     [Required]
+    [System.Text.Json.Serialization.JsonRequired]
     public bool IsResident { get; set; }
 
     /// <summary>Porezni broj — obavezan za rezidente. Format: 13 cifara.</summary>
@@ -48,6 +49,7 @@ public class CreateLegalEntityDTO
 /// <summary>DTO za ažuriranje postojećeg pravnog lica.</summary>
 public class UpdateLegalEntityDTO
 {
+    [System.Text.Json.Serialization.JsonRequired]
     public bool IsResident { get; set; }
 
     [StringLength(13)]
@@ -91,6 +93,7 @@ public class LegalEntityDTO
 {
     public string? GccName { get; set; }
     public Guid Id { get; set; }
+    [System.Text.Json.Serialization.JsonRequired]
     public bool IsResident { get; set; }
     public string? TaxNumber { get; set; }
     public string? MaticniBroj { get; set; }
@@ -140,6 +143,7 @@ public class LegalEntityLookupDTO
 public class LegalEntityLimitFormDataDTO
 {
     public Guid Id { get; set; }
+    [System.Text.Json.Serialization.JsonRequired]
     public bool IsResident { get; set; }
     public string? FbaId { get; set; }
     public string? TaxNumber { get; set; }

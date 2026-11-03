@@ -132,3 +132,7 @@ Apply `AddControllerAndValidationResources` after the business-error resource mi
 ### Service/import and period-lock messages
 
 Apply `AddServiceValidationAndWorkbookResources` after controller/field resources. Existing service validation, detailed import errors and report presentation titles now use the same runtime pack; statuses, field/code keys, row diagnostics and financial/identity rules are unchanged. Period-lock423 honors Accept-Language before MVC and keeps its existing errors-array shape. Workbook schemas/accepted headers, boolean codes and bank-format dates remain canonical compatibility values; localization translates feedback around them, not the import/export protocol. New resource labels use positional placeholders and existing translations are retained.
+
+### Explicit legal residency
+
+Create/update legal-person JSON must explicitly include `isResident:true` or `isResident:false`; omission is400 rather than silently becoming nonresident. The wire property remains boolean. Current RBI transport retains explicitfalse (only null is omitted). Model errors keep the current errors shape, group duplicate root keys safely and do not expose formatter type names. Imports already supply parsed residency; existing tax/checksum rules remain unchanged.
