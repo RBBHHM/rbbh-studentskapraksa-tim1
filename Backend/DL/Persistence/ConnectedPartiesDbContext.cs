@@ -29,6 +29,14 @@ public partial class ConnectedPartiesDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // Provider subjects are opaque, case-sensitive identifiers. Apply the same
+        // indexed SQL comparison to identity resolution and every owner-scoped query.
+        const string subjectCollation = "Latin1_General_100_BIN2";
+        modelBuilder.Entity<AppUser>().Property(row => row.KeycloakId).UseCollation(subjectCollation);
+        modelBuilder.Entity<DL.Entities.Authorization.RoleRequest>().Property(row => row.RequesterSubject).UseCollation(subjectCollation);
+        modelBuilder.Entity<DL.Entities.Notifications.ApplicationNotification>().Property(row => row.RecipientSubject).UseCollation(subjectCollation);
+        modelBuilder.Entity<DL.Entities.PeriodLock.UnlockRequest>().Property(row => row.RequestedBySubject).UseCollation(subjectCollation);
+
         modelBuilder.Entity<DL.Entities.Authorization.RoleRequest>(entity =>
         {
             entity.HasIndex(row => new { row.RequesterSubject, row.ClientRequestId }).IsUnique();

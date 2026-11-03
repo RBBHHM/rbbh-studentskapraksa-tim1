@@ -6,8 +6,7 @@ public static class AuthenticatedActor
 {
     public const string ApplicationUserIdClaim = "rbbh.app_user_id";
 
-    // Keep the raw provider value; callers such as identity binding normalize it
-    // explicitly, while self protection historically compares it verbatim.
+    // Provider subjects are opaque. Never trim, case-fold or otherwise normalize them.
     public static string? Subject(ClaimsPrincipal principal) =>
         principal.FindFirst("sub")?.Value ?? principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 

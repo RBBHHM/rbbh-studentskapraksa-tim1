@@ -13,12 +13,14 @@ public sealed class ApplicationIdentityResolver(ConnectedPartiesDbContext db, IC
     public async Task<ApplicationIdentity> ResolveAsync(ClaimsPrincipal principal)
     {
         if (principal.Identity?.IsAuthenticated != true) return new(null, true);
-        var subject = RBBH.ConnectedParties.Helpers.AuthenticatedActor.Subject(principal)?.Trim();
+        var subject = RBBH.ConnectedParties.Helpers.AuthenticatedActor.Subject(principal);
+        if (subject is not null && (string.IsNullOrWhiteSpace(subject) || subject.Length > 100 || subject != subject.Trim())) return new(null, true);
         if (!string.IsNullOrEmpty(subject))
         {
             var confirmed = await db.AppUsers.IgnoreQueryFilters().SingleOrDefaultAsync(user =>
                 user.KeycloakSubjectConfirmed && user.KeycloakId == subject);
-            if (confirmed is not null) return new(confirmed, !confirmed.IsActive);
+            if (confirmed is not null) return string.Equals(confirmed.KeycloakId, subject, StringComparison.Ordinal)
+                ? new(confirmed, !confirmed.IsActive) : new(null, true);
             // A historical disabled identifier is a deny marker, never proof of a role grant.
             if (await db.AppUsers.IgnoreQueryFilters().AnyAsync(user => !user.IsActive && user.KeycloakId == subject))
                 return new(null, true);

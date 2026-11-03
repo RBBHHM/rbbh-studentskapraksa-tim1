@@ -145,7 +145,8 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<string>("RequesterSubject")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_BIN2");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -386,7 +387,8 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<string>("RecipientSubject")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_BIN2");
 
                     b.Property<string>("Route")
                         .IsRequired()
@@ -568,7 +570,8 @@ namespace RBBH.ConnectedParties.Migrations
 
                     b.Property<string>("RequestedBySubject")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_BIN2");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -1343,7 +1346,8 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<string>("KeycloakId")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_BIN2");
 
                     b.Property<bool>("KeycloakSubjectConfirmed")
                         .HasColumnType("bit");

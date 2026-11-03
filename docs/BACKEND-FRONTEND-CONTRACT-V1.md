@@ -97,3 +97,7 @@ Apply `AddPeriodConcurrencyAndNotificationResources` before deployment: nullable
 Apply reviewed additive migrations before upgraded API deployment. No automatic production DDL; preserve backups and rehearse a populated disposable copy. Creator/request-owner provenance columns remain null for historical rows; no inferred email-based backfill. Subject-link production migration requires real realm export and approval. SQL uniqueness additions require duplicate/orphan preflight. No UAT/PROD data migration is executed locally.
 
 External owners must supply bank/finance mappings and samples, real Keycloak verified-email/audience/redirect/refresh behavior, mail delivery configuration, approved OCP/3scale/proxy/SQL/TLS values, shared sessions/DP keys, drain/scheduler/backup/retention operations. These do not block independent backend implementation, but they block production verification.
+
+### Exact subject comparison prerequisite
+
+Keycloak `sub` is opaque and case-sensitive. Apply `EnforceOpaqueSubjectComparisons` before this backend version: identity and owner indexes compare subjects using BIN2, preserving stored values. No frontend DTO or route changes. Never trim/case-fold a subject or use email as a substitute owner ID. Distinct case variants do not share grants, requests, inbox items or period responses. Malformed subjects cannot obtain an explicit application identity; existing virtual Guest behavior remains as documented.
