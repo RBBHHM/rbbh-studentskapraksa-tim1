@@ -113,8 +113,9 @@ and [final handoff](docs/REACT-TO-BLAZOR-FINAL-HANDOFF.md). Source delivery does
 resolve those external prerequisites.
 
 
-Backend consumers: see the [API/configuration handoff](docs/BACKEND-FRONTEND-CONTRACT-V1.md)
-and [current verification matrix](docs/BACKEND-FINALIZATION.md). Application grants
+Backend consumers: see the [final API contract](docs/BACKEND-FRONTEND-CONTRACT-FINAL.md),
+[integration handoff](docs/INTEGRATION-HANDOFF-CODEX.md) and
+[current verification matrix](docs/BACKEND-FINALIZATION.md). Application grants
 remain database-owned; unknown authenticated identities receive only the approved
 virtual Guest baseline. Runtime language packs and role choices come from the
 application codebooks/catalog. Apply reviewed additive migrations before traffic;

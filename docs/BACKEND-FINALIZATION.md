@@ -517,3 +517,24 @@ Implementation head tested: `d2689de9bddb0acc7229df06cb3d603ca21da457`; subseque
 ### Integration/deployment handoff
 
 Share `docs/BACKEND-FRONTEND-CONTRACT-V1.md` and this matrix with the frontend owner. Integrate the frontend-owned BrowserHost fix and coordinated consumers through the agreed process, then run the complete .NET/native browser/role/accessibility/viewport gate. Retire legacy GET logout only with consumer coordination. Apply reviewed migrations through deployment, after DB-02 backup/history/preflight reconciliation. Reconcile bank spreadsheets/sources and real realm identities before enabling production sources or first-link settings. No missing production value or historical identity is inferred locally.
+
+## Final integration and contract review — 2026-11-03
+
+Input HEAD `82760bb513f6fa2efe2f9b970bb612b79d509e77` rechecked against controller/service/DTO/policy source, POPRAVKE and the existing20-page PDF extraction. This batch changes documentation only. Definitive consumer contracts are now in [BACKEND-FRONTEND-CONTRACT-FINAL.md](BACKEND-FRONTEND-CONTRACT-FINAL.md); branch ancestry, all backend commits, migration order, frontend actions and exact commands are in [INTEGRATION-HANDOFF-CODEX.md](INTEGRATION-HANDOFF-CODEX.md). Earlier audit/checkpoint statements above are historical.
+
+- Fresh unit **337 passed /0 failed /0 skipped**; integration **392 passed /0 failed /0 skipped**. Of integration, **83 SQL-classified tests PASS**, including **6 last-Admin SQL tests**, three concurrent races and populated disposable upgrades. These are subsets, not extra totals.
+- Backend Release analyzer build **0 warnings/0 errors**; fresh Release publish PASS. Published Development/InMemory smoke at5372: live/ready/profile/legal-list/inbox200, Guest write403, unconfigured bank503, empty unseeded language pack404. The owned smoke process was stopped; other hosts untouched. No real SSO/bank/finance success or shared SQL startup was inferred.
+- Fresh solution build **0 warnings/3 errors**: BrowserHostProgram.cs25/26/192. Both projects are named DATA_CORE in this checkout. Claude's existing frontend-owned `59b8d382ce5cd192e32e9a3a51c472adf8ea960a` removes the frontend override. No duplicate backend/harness fix was made. Browser gate remains unexecuted here.
+- Read-only Git inspection: frontend branch4d49c8a shares48cf8da; separate integration/frontend-backend atb3e5e9e already merges frontend4d49c8a/backend82760bb. Codex did not create/change that branch or merge anything. README and two modify/delete onboarding guides need semantic resolution, not a blind choice of one side.
+- Final catalog documents **108 operations/66 named schemas** from the published OpenAPI, corrected with actual policies, service checks, anonymous payloads and redirect/binary behavior. All local source links resolve. No route/DTO alias was invented to match frontend proposals.
+
+The previous closure's VERIFIED rows describe tested backend behavior, not every end-to-end presentation requirement. Precise integration review additionally records:
+
+| Item | Current classification | Action / owner |
+| --- | --- | --- |
+| DOC-02: server-side GitHub release-notes API | MISSING | No controller/DTO/source exists. Separate product/frontend/backend contract needed; this handoff explicitly forbids speculative new features. |
+| LOC-02: remaining legacy display values | PARTIAL | Audit/email-preview choose EN versus BS; module/person-type labels and some legacy scalar validation text remain fixed. Core runtime error/resources are implemented. No claim of universal DE/display-text completion. |
+| FE-02: requested consumer shapes | PARTIAL | Actual role-request IDs/replay/version, inbox unreadCount/route, GCC route, capital PUT/history, import details and localization pack differ from frontend proposals; exact actions in the final handoff. No frontend code changed. |
+| LEG-06: identifier-update comment | PARTIAL (documentation/policy clarification) | Controller summary says immutable identifiers; service currently validates/assigns replacement residency/tax/FBA. Final contract states actual behavior; any new immutability policy must be coordinated, not silently introduced. |
+
+Production prerequisites and TAX-01 remain as documented. This handoff establishes local backend integration readiness with explicit gaps; it does not certify a complete production application. No push, rebase, cherry-pick or merge was performed. Existing migrations, business rules, frontend/browser sources and user launchSettings remain unchanged.

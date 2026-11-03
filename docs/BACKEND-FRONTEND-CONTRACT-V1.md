@@ -1,5 +1,7 @@
 # Backend → Claude frontend contract, v1
 
+Historical implementation handoff. The source-checked [final contract](BACKEND-FRONTEND-CONTRACT-FINAL.md) supersedes incomplete/proposed details here; use the [integration handoff](INTEGRATION-HANDOFF-CODEX.md) for current branch, migration and frontend actions. Original checkpoint content below is preserved.
+
 Backend branch: `feat/codex-backend-finalization`; frontend owner: `feat/claude-frontend-finalization`.
 Approved direction: user instruction dated2026-11-02. This contract freezes additive wire shapes before implementation. Sections identify availability; do not assume a planned endpoint is already deployed. No frontend file is changed by backend work. Backend does not duplicate Claude's BrowserHost assembly fix.
 
