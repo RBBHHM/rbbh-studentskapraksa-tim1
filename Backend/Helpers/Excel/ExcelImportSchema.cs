@@ -27,6 +27,10 @@ public static class ExcelImportSchema
         }
     }
 
+    public static string CellText(IXLCell cell) => cell.DataType == XLDataType.DateTime
+        ? cell.GetDateTime().ToString("yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture)
+        : cell.GetString().Trim();
+
     public sealed record Column(string DisplayName, params string[] AcceptedHeaders);
 
     public static IReadOnlyList<string> Validate(IXLWorksheet worksheet, IReadOnlyList<Column> columns)
@@ -47,7 +51,9 @@ public static class ExcelImportSchema
 
         for (var index = 0; index < columns.Count; index++)
         {
-            var actual = worksheet.Cell(1, index + 1).GetString().Trim();
+            var header = worksheet.Cell(1, index + 1);
+            if (header.HasFormula) { errors.Add("Zaglavlje ne smije sadržavati formule."); continue; }
+            var actual = header.GetString().Trim();
             var expected = columns[index];
             if (expected.AcceptedHeaders.Any(alias => Normalize(alias) == Normalize(actual)))
                 continue;
@@ -63,6 +69,9 @@ public static class ExcelImportSchema
         else if (dataRows > MaximumDataRows)
             errors.Add($"Excel datoteka sadrži {dataRows} redova. Dozvoljeno je najviše {MaximumDataRows} redova po uvozu.");
 
+        if (lastUsedRow <= MaximumDataRows + 1 && lastUsedColumn <= columns.Count &&
+            worksheet.CellsUsed().Any(cell => cell.HasFormula))
+            errors.Add("Predložak za uvoz ne smije sadržavati formule. Unesite vrijednosti polja.");
         return errors;
     }
 

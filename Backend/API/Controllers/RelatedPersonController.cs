@@ -83,9 +83,9 @@ public class RelatedPersonController(
         if (!result.IsSuccessful) return HTTPExceptiontFromResult(result).Result!;
         var bytes = RegistryExcelExporter.Create(
             "Fizička lica",
-            ["Tip", "Ime", "Prezime", "Rezidentnost", "JMBG", "Pasoš", "FBA ID", "Osnov povezanosti", "Osnov posebnog odnosa", "Povezano lice", "Datum od", "Datum do", "Status"],
+            ["Ime", "Prezime", "Rezidentnost", "JMBG", "Broj pasoša", "FBA ID", "Osnov povezanosti", "Osnov posebnog odnosa", "Datum od", "Datum do", "Izjava bez članova porodice", "Povezano lice s Bankom", "Poseban odnos s Bankom", "Poseban ugovor", "Malus & Clawback", "Opis povezanosti", "Identifikovani zaposlenik", "JMBG povezanog lica", "Pasoš povezanog lica", "FBA ID povezanog lica", "Status", "Kreirao", "Kreirano", "Izmijenio", "Izmijenjeno"],
             result.Value.Select(item => (IReadOnlyList<object?>)
-            [item.PersonTypeLabel, item.FirstName, item.LastName, item.ResidencyLabel, item.JMBG, item.PassportNumber, item.FBAId, item.RelationBasis, item.SpecialRelationBasis, item.RelatedToPersonName, item.DateFrom, item.DateTo, item.StatusLabel]));
+            [item.FirstName, item.LastName, item.ResidencyLabel, item.JMBG, item.PassportNumber, item.FBAId, item.RelationBasis, item.SpecialRelationBasis, item.DateFrom, item.DateTo, item.DeclarationNoFamilyMembers, item.ConnectedWithBank, item.SpecialRelationshipWithBank, item.SpecialContract, item.MalusClawback, item.RelationDescription, item.IsIdentifiedStaff, item.RelatedToPersonJmbg, item.RelatedToPersonPassport, item.RelatedToPersonFbaId, item.StatusLabel, item.CreatedBy, item.CreatedAt, item.ModifiedBy, item.ModifiedAt]));
         return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"fizicka-lica-{DateTime.UtcNow:yyyyMMdd-HHmm}.xlsx");
     }
 
@@ -105,21 +105,6 @@ public class RelatedPersonController(
 
         if (result.IsSuccessful)
         {
-            await _auditService.LogAsync(new AuditEntry
-            {
-                TableName = "RelatedPerson",
-                RecordId = result.Value.Id.ToString(),
-                Action = "INSERT",
-                NewValues = System.Text.Json.JsonSerializer.Serialize(new
-                {
-                    firstName = result.Value.FirstName,
-                    lastName = result.Value.LastName,
-                    status = result.Value.StatusLabel
-                }),
-                UserId = korisnik,
-                Username = korisnik,
-                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-            });
             return Created($"{Request.Path}/{result.Value.Id}", result.Value);
         }
 
@@ -139,21 +124,6 @@ public class RelatedPersonController(
 
         if (result.IsSuccessful)
         {
-            await _auditService.LogAsync(new AuditEntry
-            {
-                TableName = "RelatedPerson",
-                RecordId = id.ToString(),
-                Action = "UPDATE",
-                NewValues = System.Text.Json.JsonSerializer.Serialize(new
-                {
-                    firstName = result.Value.FirstName,
-                    lastName = result.Value.LastName,
-                    status = result.Value.StatusLabel
-                }),
-                UserId = korisnik,
-                Username = korisnik,
-                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-            });
         }
 
         return HandleResult(result);
@@ -171,17 +141,6 @@ public class RelatedPersonController(
 
         if (result.IsSuccessful)
         {
-            await _auditService.LogAsync(new AuditEntry
-            {
-                TableName = "RelatedPerson",
-                RecordId = id.ToString(),
-                Action = "DELETE",
-                OldValues = System.Text.Json.JsonSerializer.Serialize(new { isActive = true }),
-                NewValues = System.Text.Json.JsonSerializer.Serialize(new { isActive = false }),
-                UserId = korisnik,
-                Username = korisnik,
-                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-            });
             return Ok(new { message = "Povezano fizičko lice je uspješno obrisano." });
         }
 
@@ -240,21 +199,6 @@ public class RelatedPersonController(
 
         if (result.IsSuccessful)
         {
-            await _auditService.LogAsync(new AuditEntry
-            {
-                TableName = "FamilyMember",
-                RecordId = result.Value.Id.ToString(),
-                Action = "INSERT",
-                NewValues = System.Text.Json.JsonSerializer.Serialize(new
-                {
-                    relatedPersonId = id,
-                    firstName = result.Value.FirstName,
-                    lastName = result.Value.LastName
-                }),
-                UserId = korisnik,
-                Username = korisnik,
-                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-            });
             return Created($"{Request.Path}/{result.Value.Id}", result.Value);
         }
 
@@ -277,21 +221,6 @@ public class RelatedPersonController(
 
         if (result.IsSuccessful)
         {
-            await _auditService.LogAsync(new AuditEntry
-            {
-                TableName = "FamilyMember",
-                RecordId = familyMemberId.ToString(),
-                Action = "UPDATE",
-                NewValues = System.Text.Json.JsonSerializer.Serialize(new
-                {
-                    relatedPersonId = id,
-                    firstName = result.Value.FirstName,
-                    lastName = result.Value.LastName
-                }),
-                UserId = korisnik,
-                Username = korisnik,
-                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-            });
         }
 
         return HandleResult(result);
@@ -310,17 +239,6 @@ public class RelatedPersonController(
 
         if (result.IsSuccessful)
         {
-            await _auditService.LogAsync(new AuditEntry
-            {
-                TableName = "FamilyMember",
-                RecordId = familyMemberId.ToString(),
-                Action = "DELETE",
-                OldValues = System.Text.Json.JsonSerializer.Serialize(new { isActive = true, relatedPersonId = id }),
-                NewValues = System.Text.Json.JsonSerializer.Serialize(new { isActive = false }),
-                UserId = korisnik,
-                Username = korisnik,
-                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-            });
             return Ok(new { message = "Član porodice je uspješno obrisan." });
         }
 
@@ -356,22 +274,6 @@ public class RelatedPersonController(
         var korisnik = GetKorisnik();
         var result = await _relatedPersonService.ImportFromExcelAsync(stream, korisnik);
 
-        await _auditService.LogAsync(new AuditEntry
-        {
-            TableName = "RelatedPerson",
-            RecordId = "-",
-            Action = "IMPORT",
-            NewValues = System.Text.Json.JsonSerializer.Serialize(new
-            {
-                fileName = file.FileName,
-                imported = result.Imported,
-                failed = result.Failed
-            }),
-            UserId = korisnik,
-            Username = korisnik,
-            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-        });
-
         return Ok(result);
     }
 
@@ -382,6 +284,6 @@ public class RelatedPersonController(
     /// </summary>
     private string GetKorisnik()
     {
-        return RBBH.ConnectedParties.Helpers.AuthenticatedActor.Email(User);
+        return RBBH.ConnectedParties.Helpers.AuthenticatedActor.Username(User);
     }
 }

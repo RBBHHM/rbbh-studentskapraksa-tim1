@@ -48,6 +48,15 @@ public sealed class RegistryGccHttpTests : AuthenticatedApiFixture
         await InDatabase(async db => { Assert.Empty(await db.LegalEntities.ToListAsync()); Assert.Empty(await db.AuditLogs.ToListAsync()); });
     }
     [Fact]
+    public async Task ConfiguredBankSourceRequiresGccOnNewRecords()
+    {
+        _source.SetupGet(source => source.IsConfigured).Returns(true);
+        var response = await Client.PostAsJsonAsync("/api/legal-entities", Legal(null)); Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("registry.gcc_required", await response.Content.ReadAsStringAsync());
+        await InDatabase(async db => { Assert.Empty(db.LegalEntities); Assert.Empty(db.AuditLogs); });
+    }
+
+    [Fact]
     public async Task LegacyCreateWithoutGccDoesNotInventSourceValuesAndPagedLookupIsStable()
     {
         var response = await Client.PostAsJsonAsync("/api/legal-entities", Legal(null, null)); Assert.Equal(HttpStatusCode.Created, response.StatusCode);

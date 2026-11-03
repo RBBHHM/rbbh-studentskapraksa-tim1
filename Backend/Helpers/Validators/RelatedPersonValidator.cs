@@ -124,7 +124,10 @@ public static class RelatedPersonValidator
     /// </summary>
     public static string? Validate(CreateFamilyMemberDTO dto)
     {
-        return ValidateIdentification(dto.Residency, dto.JMBG, dto.PassportNumber, dto.FBAId);
+        return ValidatePersonFields(dto.FirstName, dto.LastName, dto.PassportNumber)
+            ?? ValidateIdentification(dto.Residency, dto.JMBG, dto.PassportNumber, dto.FBAId)
+            ?? (!string.IsNullOrWhiteSpace(dto.FBAId) && !System.Text.RegularExpressions.Regex.IsMatch(dto.FBAId.Trim(), @"^[0-9]{1,10}$")
+                ? "FBA ID mora sadržavati najviše 10 cifara." : null);
     }
 
     /// <summary>
@@ -132,7 +135,10 @@ public static class RelatedPersonValidator
     /// </summary>
     public static string? Validate(UpdateFamilyMemberDTO dto)
     {
-        return ValidateIdentification(dto.Residency, dto.JMBG, dto.PassportNumber, dto.FBAId);
+        return ValidatePersonFields(dto.FirstName, dto.LastName, dto.PassportNumber)
+            ?? ValidateIdentification(dto.Residency, dto.JMBG, dto.PassportNumber, dto.FBAId)
+            ?? (!string.IsNullOrWhiteSpace(dto.FBAId) && !System.Text.RegularExpressions.Regex.IsMatch(dto.FBAId.Trim(), @"^[0-9]{1,10}$")
+                ? "FBA ID mora sadržavati najviše 10 cifara." : null);
     }
 
     private static string? ValidateMainNonResident(ResidencyType residency, string? passportNumber, string? fbaId)
@@ -140,7 +146,7 @@ public static class RelatedPersonValidator
         if (residency != ResidencyType.NonResident) return null;
         if (string.IsNullOrWhiteSpace(passportNumber)) return "Broj pasoša je obavezan za nerezidenta.";
         if (string.IsNullOrWhiteSpace(fbaId)) return "FBA ID je obavezan za nerezidenta.";
-        if (!System.Text.RegularExpressions.Regex.IsMatch(fbaId.Trim(), @"^\d{1,10}$"))
+        if (!System.Text.RegularExpressions.Regex.IsMatch(fbaId.Trim(), @"^[0-9]{1,10}$"))
             return "FBA ID mora sadržavati najviše 10 cifara.";
         return null;
     }
@@ -161,6 +167,8 @@ public static class RelatedPersonValidator
         string? relationDescription, string? specialRelationBasis, bool isIdentifiedStaff, Guid? relatedToPersonId,
         DateTime? dateFrom, DateTime? dateTo)
     {
+        if (relationBasis?.Length > 500 || relationDescription?.Length > 1000 || specialRelationBasis?.Length > 500)
+            return "Osnovi smiju imati najviše 500, a opis najviše 1.000 znakova.";
         if (string.IsNullOrWhiteSpace(relationBasis))
             return "Osnov povezanosti je obavezan.";
         if (string.IsNullOrWhiteSpace(relationDescription))

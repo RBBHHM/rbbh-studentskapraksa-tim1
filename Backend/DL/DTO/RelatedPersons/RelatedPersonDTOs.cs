@@ -154,6 +154,9 @@ public class RelatedPersonResponseDTO
 
     public Guid? RelatedToPersonId { get; set; }
     public string? RelatedToPersonName { get; set; }
+    public string? RelatedToPersonJmbg { get; set; }
+    public string? RelatedToPersonPassport { get; set; }
+    public string? RelatedToPersonFbaId { get; set; }
 
     public RelatedPersonStatus Status { get; set; }
     public string StatusLabel => Status.ToString();

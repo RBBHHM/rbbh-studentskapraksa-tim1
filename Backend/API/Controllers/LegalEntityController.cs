@@ -31,7 +31,7 @@ public class LegalEntityController : ControllerBase
     }
 
     private string CurrentUser() =>
-        RBBH.ConnectedParties.Helpers.AuthenticatedActor.Email(User);
+        RBBH.ConnectedParties.Helpers.AuthenticatedActor.Username(User);
 
     /// <summary>
     /// Vraća paginiranu listu svih aktivnih pravnih lica.
@@ -59,9 +59,9 @@ public class LegalEntityController : ControllerBase
         var items = await _legalEntityService.GetAllForExportAsync();
         var bytes = RegistryExcelExporter.Create(
             "Pravna lica",
-            ["Naziv", "Rezidentnost", "Porezni broj", "Matični broj", "FBA ID", "Osnov povezanosti", "Opis povezanosti", "Povezano s bankom", "Datum od", "Datum do", "Status"],
+            ["Naziv", "Rezidentnost", "Porezni broj", "FBA ID", "Matbroj", "Osnov povezanosti", "Opis povezanosti", "Povezano lice s Bankom", "Datum od", "Datum do", "Matični broj registracije", "GCC broj", "GCC naziv", "Velika izloženost", "Status", "Kreirao", "Kreirano", "Izmijenio", "Izmijenjeno"],
             items.Select(item => (IReadOnlyList<object?>)
-            [item.Name, item.IsResident ? "Rezident" : "Nerezident", item.TaxNumber, item.MaticniBroj, item.FbaId, item.BasisOfConnection, item.ConnectionDescription, item.ConnectedWithBank, item.DateFrom, item.DateTo, item.Status]));
+            [item.Name, item.IsResident ? "Rezident" : "Nerezident", item.TaxNumber, item.FbaId, item.Matbroj, item.BasisOfConnection, item.ConnectionDescription, item.ConnectedWithBank, item.DateFrom, item.DateTo, item.MaticniBroj, item.GccNumber, item.GccName, item.IsLargeExposure, item.Status, item.CreatedBy, item.CreatedAt, item.ModifiedBy, item.ModifiedAt]));
         return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"pravna-lica-{DateTime.UtcNow:yyyyMMdd-HHmm}.xlsx");
     }
 
@@ -139,24 +139,6 @@ public class LegalEntityController : ControllerBase
 
         var created = await _legalEntityService.CreateAsync(dto, CurrentUser());
 
-        await _auditService.LogAsync(new AuditEntry
-        {
-            TableName = "LegalEntity",
-            RecordId = created.Id.ToString(),
-            Action = "INSERT",
-            NewValues = System.Text.Json.JsonSerializer.Serialize(new
-            {
-                name = created.Name,
-                isResident = created.IsResident,
-                taxNumber = created.TaxNumber,
-                fbaId = created.FbaId,
-                status = created.Status
-            }),
-            UserId = CurrentUser(),
-            Username = CurrentUser(),
-            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-        });
-
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
@@ -179,22 +161,6 @@ public class LegalEntityController : ControllerBase
 
         var updated = await _legalEntityService.UpdateAsync(id, dto, CurrentUser());
 
-        await _auditService.LogAsync(new AuditEntry
-        {
-            TableName = "LegalEntity",
-            RecordId = id.ToString(),
-            Action = "UPDATE",
-            NewValues = System.Text.Json.JsonSerializer.Serialize(new
-            {
-                name = updated.Name,
-                status = updated.Status,
-                modifiedBy = updated.ModifiedBy
-            }),
-            UserId = CurrentUser(),
-            Username = CurrentUser(),
-            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-        });
-
         return Ok(updated);
     }
 
@@ -210,18 +176,6 @@ public class LegalEntityController : ControllerBase
     public async Task<IActionResult> Delete(Guid id)
     {
         await _legalEntityService.DeleteAsync(id, CurrentUser());
-
-        await _auditService.LogAsync(new AuditEntry
-        {
-            TableName = "LegalEntity",
-            RecordId = id.ToString(),
-            Action = "DELETE",
-            OldValues = System.Text.Json.JsonSerializer.Serialize(new { isActive = true }),
-            NewValues = System.Text.Json.JsonSerializer.Serialize(new { isActive = false }),
-            UserId = CurrentUser(),
-            Username = CurrentUser(),
-            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-        });
 
         return Ok(new { message = "Pravno lice uspješno deaktivirano." });
     }
@@ -250,22 +204,6 @@ public class LegalEntityController : ControllerBase
         using var stream = file.OpenReadStream();
         var username = CurrentUser();
         var result = await _legalEntityService.ImportFromExcelAsync(stream, username);
-
-        await _auditService.LogAsync(new AuditEntry
-        {
-            TableName = "LegalEntity",
-            RecordId = "-",
-            Action = "IMPORT",
-            NewValues = System.Text.Json.JsonSerializer.Serialize(new
-            {
-                fileName = file.FileName,
-                imported = result.Imported,
-                failed = result.Failed
-            }),
-            UserId = username,
-            Username = username,
-            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-        });
 
         return Ok(result);
     }

@@ -31,6 +31,15 @@ public class LegalEntityService : ILegalEntityService
         new("Datum od / Date from", "Datum od", "Date from"),
         new("Datum do / Date to", "Datum do", "Date to")
     ];
+    private static readonly ExcelImportSchema.Column[] V2Columns =
+    [
+        .. ImportColumns,
+        new("Matični broj registracije", "Matični broj registracije", "Registration number"),
+        new("GCC broj", "GCC broj", "GCC number"), new("GCC naziv", "GCC naziv", "GCC name"),
+        new("Velika izloženost", "Velika izloženost", "Large exposure"),
+        new("Status", "Status"), new("Kreirao", "Kreirao", "Created by"), new("Kreirano", "Kreirano", "Created at"),
+        new("Izmijenio", "Izmijenio", "Modified by"), new("Izmijenjeno", "Izmijenjeno", "Modified at")
+    ];
     private readonly ConnectedPartiesDbContext _context;
     private readonly ILogger<LegalEntityService> _logger;
     private readonly IHttpContextAccessor? _actor;
@@ -135,7 +144,8 @@ public class LegalEntityService : ILegalEntityService
         };
 
         _context.LegalEntities.Add(entity);
-        await _context.SaveChangesAsync();
+        _context.AuditLogs.Add(Helpers.BusinessAudit.Create("LegalEntity", entity.Id.ToString(), "INSERT", createdBy, _actor, newValues: MapToDto(entity)));
+        await _context.SaveChangesAsync(_actor?.HttpContext?.RequestAborted ?? default);
 
         _logger.LogInformation("Legal entity created.");
 
@@ -154,7 +164,7 @@ public class LegalEntityService : ILegalEntityService
 
         ValidateUpdateDto(dto);
         // Omitted additive fields preserve previous source-backed values during rollout.
-        var gcc = dto.GccNumber is null ? null : await ResolveGcc(dto.GccNumber);
+        var gcc = dto.GccNumber is null && entity.GccNumber is not null ? null : await ResolveGcc(dto.GccNumber);
         await ValidateUniqueIdentifierAsync(dto.IsResident, dto.TaxNumber, dto.FbaId, id);
 
         if (dto.ConnectedWithBank is null)
@@ -164,6 +174,7 @@ public class LegalEntityService : ILegalEntityService
         if (!string.IsNullOrWhiteSpace(dto.Status) && !string.Equals(dto.Status.Trim(), entity.Status, StringComparison.Ordinal))
             throw new BusinessRuleException(400, "verification.status_owned", "Status se mijenja isključivo kroz verifikaciju.");
 
+        var before = MapToDto(entity);
         if (dto.GccNumber is not null) { entity.GccNumber = gcc?.Number; entity.GccName = gcc?.Name; }
         if (dto.IsLargeExposure.HasValue) entity.IsLargeExposure = dto.IsLargeExposure.Value;
         entity.IsResident = dto.IsResident;
@@ -180,7 +191,8 @@ public class LegalEntityService : ILegalEntityService
         entity.ModifiedBy = modifiedBy;
         entity.ModifiedAt = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        _context.AuditLogs.Add(Helpers.BusinessAudit.Create("LegalEntity", entity.Id.ToString(), "UPDATE", modifiedBy, _actor, oldValues: before, newValues: MapToDto(entity)));
+        await _context.SaveChangesAsync(_actor?.HttpContext?.RequestAborted ?? default);
 
         _logger.LogInformation("Legal entity updated.");
 
@@ -201,7 +213,9 @@ public class LegalEntityService : ILegalEntityService
         entity.ModifiedBy = deletedBy;
         entity.ModifiedAt = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        _context.AuditLogs.Add(Helpers.BusinessAudit.Create("LegalEntity", entity.Id.ToString(), "DELETE", deletedBy, _actor,
+            oldValues: new { isActive = true }, newValues: new { isActive = false }));
+        await _context.SaveChangesAsync(_actor?.HttpContext?.RequestAborted ?? default);
 
         _logger.LogInformation("Legal entity deactivated.");
     }
@@ -285,7 +299,11 @@ public class LegalEntityService : ILegalEntityService
 
     private async Task<BankGroup?> ResolveGcc(string? number)
     {
-        if (string.IsNullOrWhiteSpace(number)) return null;
+        if (string.IsNullOrWhiteSpace(number))
+        {
+            if (_bank?.IsConfigured == true) throw new BusinessRuleException(400, "registry.gcc_required", "Odaberite GCC iz bankovnog izvora.");
+            return null;
+        }
         if (number.Length > 50 || number.Any(character => character is < '0' or > '9'))
             throw new BusinessRuleException(400, "registry.invalid_gcc", "GCC broj smije sadržavati najviše 50 cifara.");
         if (_bank is null) throw new BusinessRuleException(503, "bank_reference.unavailable", "Bankovni referentni podaci trenutno nisu dostupni.");
@@ -411,7 +429,8 @@ public class LegalEntityService : ILegalEntityService
         var lastRow = ws.LastRowUsed()?.RowNumber() ?? 1;
 
         var result = new ImportResultDTO();
-        var schemaErrors = ExcelImportSchema.Validate(ws, ImportColumns);
+        var isV2 = ws.LastColumnUsed()?.ColumnNumber() == V2Columns.Length;
+        var schemaErrors = ExcelImportSchema.Validate(ws, isV2 ? V2Columns : ImportColumns);
         if (schemaErrors.Count > 0)
         {
             result.Failed = Math.Max(lastRow - 1, 1);
@@ -429,20 +448,21 @@ public class LegalEntityService : ILegalEntityService
 
         for (int row = 2; row <= lastRow; row++)
         {
+            _actor?.HttpContext?.RequestAborted.ThrowIfCancellationRequested();
             try
             {
-                var name           = ws.Cell(row, 1).GetString().Trim();
-                var tipStr         = ws.Cell(row, 2).GetString().Trim();
-                var taxNumber      = ws.Cell(row, 3).GetString().Trim();
-                var fbaId          = ws.Cell(row, 4).GetString().Trim();
-                var matbroj        = ws.Cell(row, 5).GetString().Trim();
-                var basisOfConn    = ws.Cell(row, 6).GetString().Trim();
-                var connDesc       = ws.Cell(row, 7).GetString().Trim();
-                var connBankStr    = ws.Cell(row, 8).GetString().Trim();
-                var dateFromStr    = ws.Cell(row, 9).GetString().Trim();
-                var dateToStr      = ws.Cell(row, 10).GetString().Trim();
+                var name           = ExcelImportSchema.CellText(ws.Cell(row, 1));
+                var tipStr         = ExcelImportSchema.CellText(ws.Cell(row, 2));
+                var taxNumber      = ExcelImportSchema.CellText(ws.Cell(row, 3));
+                var fbaId          = ExcelImportSchema.CellText(ws.Cell(row, 4));
+                var matbroj        = ExcelImportSchema.CellText(ws.Cell(row, 5));
+                var basisOfConn    = ExcelImportSchema.CellText(ws.Cell(row, 6));
+                var connDesc       = ExcelImportSchema.CellText(ws.Cell(row, 7));
+                var connBankStr    = ExcelImportSchema.CellText(ws.Cell(row, 8));
+                var dateFromStr    = ExcelImportSchema.CellText(ws.Cell(row, 9));
+                var dateToStr      = ExcelImportSchema.CellText(ws.Cell(row, 10));
 
-                if (ws.Row(row).Cells(1, ImportColumns.Length).All(cell => string.IsNullOrWhiteSpace(cell.GetString())))
+                if (ws.Row(row).Cells(1, isV2 ? 14 : ImportColumns.Length).All(cell => string.IsNullOrWhiteSpace(cell.GetString())))
                     continue; // Ignore only entirely empty rows, never an incomplete record.
 
                 if (string.IsNullOrWhiteSpace(basisOfConn))
@@ -479,9 +499,13 @@ public class LegalEntityService : ILegalEntityService
                     ConnectionDescription = string.IsNullOrWhiteSpace(connDesc) ? null : connDesc,
                     ConnectedWithBank  = connectedWithBank,
                     DateFrom           = dateFrom,
-                    DateTo             = dateTo
+                    DateTo             = dateTo,
+                    MaticniBroj = isV2 ? ExcelImportSchema.CellText(ws.Cell(row, 11)) : null,
+                    GccNumber = isV2 ? ExcelImportSchema.CellText(ws.Cell(row, 12)) : null,
+                    IsLargeExposure = isV2 ? ParseExposure(ExcelImportSchema.CellText(ws.Cell(row, 14))) : null
                 };
                 ValidateCreateDto(dto);
+                var gcc = await ResolveGcc(dto.GccNumber);
                 if (dto.ConnectedWithBank is null)
                     throw new ValidationException("Kolona 'Povezano lice s Bankom' mora sadržavati DA/NE ili YES/NO.");
                 var identifier = isResident ? taxNumber : fbaId;
@@ -498,6 +522,8 @@ public class LegalEntityService : ILegalEntityService
                     FbaId = dto.IsResident ? null : dto.FbaId,
                     Name = dto.Name,
                     Matbroj = dto.Matbroj,
+                    MaticniBroj = dto.MaticniBroj,
+                    GccNumber = gcc?.Number, GccName = gcc?.Name, IsLargeExposure = dto.IsLargeExposure ?? false,
                     BasisOfConnection = dto.BasisOfConnection,
                     ConnectionDescription = dto.ConnectionDescription,
                     ConnectedWithBank = dto.ConnectedWithBank,
@@ -517,20 +543,35 @@ public class LegalEntityService : ILegalEntityService
             {
                 result.Failed++;
                 result.Errors.Add($"Red {row}: {exception.ErrorMessage}");
+                result.Details.Add(new(row, exception.Field ?? "row", "validation.invalid", exception.ErrorMessage));
             }
-            catch (Exception exception) when (exception is not OperationCanceledException and not OutOfMemoryException)
+            catch (BusinessRuleException exception) when (exception.Status < 500)
+            {
+                result.Failed++; result.Errors.Add($"Red {row}: {exception.Message}");
+                result.Details.Add(new(row, "gccNumber", exception.Code, exception.Message));
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException and not OutOfMemoryException and not BusinessRuleException)
             {
                 result.Failed++;
                 result.Errors.Add($"Red {row}: Podatke nije moguće pročitati. Provjerite format i vrijednosti polja.");
+                result.Details.Add(new(row, "row", "import.invalid_row", "Provjerite format i vrijednosti polja."));
                 _logger.LogWarning("Legal import row could not be read. Row {Row}. FailureType {FailureType}", row, exception.GetType().Name);
             }
         }
 
         if (result.Imported > 0)
-            await _context.SaveChangesAsync();
+        {
+            _context.AuditLogs.Add(Helpers.BusinessAudit.Create("LegalEntity", "-", "IMPORT", createdBy, _actor, newValues: new { result.Imported, result.Failed }));
+            await _context.SaveChangesAsync(_actor?.HttpContext?.RequestAborted ?? default);
+        }
 
         return result;
     }
+
+    private static bool? ParseExposure(string value) => string.IsNullOrWhiteSpace(value) ? null
+        : value.Equals("DA", StringComparison.OrdinalIgnoreCase) || value.Equals("YES", StringComparison.OrdinalIgnoreCase) ? true
+        : value.Equals("NE", StringComparison.OrdinalIgnoreCase) || value.Equals("NO", StringComparison.OrdinalIgnoreCase) ? false
+        : throw new ValidationException("isLargeExposure", "Velika izloženost mora sadržavati DA/NE ili YES/NO.");
 
     private static DateTime? ParseOptionalDate(string value, string field)
     {

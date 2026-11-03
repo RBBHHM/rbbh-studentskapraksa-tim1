@@ -11,9 +11,9 @@ public sealed class BankReferenceOptions
     public bool Enabled { get; set; }
     public string ConnectionString { get; set; } = "";
     public string CustomerTable { get; set; } = "kod.dbo.komitent";
-    // The actual tax/name columns require bank-owner confirmation; no guessed mapping.
-    public string CustomerTaxColumn { get; set; } = "";
-    public string CustomerNameColumn { get; set; } = "";
+    // Column names come from POPRAVKE.txt; real schema/access still needs bank-owner reconciliation.
+    public string CustomerTaxColumn { get; set; } = "porez_broj";
+    public string CustomerNameColumn { get; set; } = "naziv";
     public string CustomerMatbrojColumn { get; set; } = "matbroj";
     public string GccTable { get; set; } = "glava.dbo.grupekom";
     public string GccNumberColumn { get; set; } = "brojg";

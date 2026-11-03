@@ -23,6 +23,13 @@ public static class AuthenticatedActor
         return subject;
     }
 
+    public static string Username(ClaimsPrincipal principal)
+    {
+        var subject = RequireSubject(principal);
+        var name = principal.FindFirst("preferred_username")?.Value ?? principal.FindFirst(ClaimTypes.Name)?.Value;
+        return !string.IsNullOrWhiteSpace(name) && name.Length <= 100 ? name : subject;
+    }
+
     public static string Email(ClaimsPrincipal principal)
     {
         var email = (principal.FindFirst(ClaimTypes.Email)?.Value ?? principal.FindFirst("email")?.Value)?.Trim();

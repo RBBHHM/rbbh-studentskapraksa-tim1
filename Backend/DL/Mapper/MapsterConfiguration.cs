@@ -16,7 +16,10 @@ namespace RBBH.ConnectedParties.DL.Mapper
                 .Map(dest => dest.FamilyMemberCount,
                      src => src.RelatedFamilyMembers.Count(fm => fm.IsActive))
                 .Map(dest => dest.RelatedToPersonName,
-                     src => src.RelatedToPerson == null ? null : src.RelatedToPerson.FirstName + " " + src.RelatedToPerson.LastName);
+                     src => src.RelatedToPerson == null ? null : src.RelatedToPerson.FirstName + " " + src.RelatedToPerson.LastName)
+                .Map(dest => dest.RelatedToPersonJmbg, src => src.RelatedToPerson == null ? null : src.RelatedToPerson.JMBG)
+                .Map(dest => dest.RelatedToPersonPassport, src => src.RelatedToPerson == null ? null : src.RelatedToPerson.PassportNumber)
+                .Map(dest => dest.RelatedToPersonFbaId, src => src.RelatedToPerson == null ? null : src.RelatedToPerson.FBAId);
 
             // RelatedPerson => RelatedPersonSummaryDTO
             TypeAdapterConfig<RelatedPerson, RelatedPersonSummaryDTO>
