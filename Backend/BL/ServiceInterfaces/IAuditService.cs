@@ -16,6 +16,13 @@ public class AuditEntry
             NewValues = newValues
         };
 
+    public static AuditEntry ForActor(string table, string recordId, string action,
+        Helpers.ActorIdentity actor, string? ipAddress, string? oldValues = null, string? newValues = null) => new()
+        {
+            TableName = table, RecordId = recordId, Action = action, UserId = actor.Subject ?? actor.Email,
+            Username = actor.DisplayName, IpAddress = ipAddress, OldValues = oldValues, NewValues = newValues
+        };
+
     public string TableName { get; set; } = string.Empty;
     public string RecordId { get; set; } = string.Empty;
     public string Action { get; set; } = string.Empty;

@@ -12,7 +12,8 @@ public static class AuthenticatedActor
 
     public static ActorIdentity Capture(ClaimsPrincipal principal) => new(
         Subject(principal), Email(principal),
-        Guid.TryParse(principal.FindFirst(ApplicationUserIdClaim)?.Value, out var id) ? id : null);
+        Guid.TryParse(principal.FindFirst(ApplicationUserIdClaim)?.Value, out var id) ? id : null,
+        principal.FindFirst("preferred_username")?.Value ?? principal.FindFirst(ClaimTypes.Name)?.Value);
 
     public static string RequireSubject(ClaimsPrincipal principal)
     {
@@ -39,6 +40,9 @@ public static class AuthenticatedActor
 }
 
 /// <summary>Trusted identity data only; application rules remain in services.</summary>
-public sealed record ActorIdentity(string? Subject, string Email, Guid? ApplicationUserId);
+public sealed record ActorIdentity(string? Subject, string Email, Guid? ApplicationUserId, string? Username = null)
+{
+    public string DisplayName => !string.IsNullOrWhiteSpace(Username) && Username.Length <= 100 ? Username : Subject ?? Email;
+}
 
 public sealed class MissingActorIdentityException() : Exception("Authenticated actor email is required.");

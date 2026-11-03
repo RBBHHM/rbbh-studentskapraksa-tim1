@@ -105,3 +105,7 @@ Keycloak `sub` is opaque and case-sensitive. Apply `EnforceOpaqueSubjectComparis
 ### Operational contract
 
 `/metrics` requires the existing administrative read permission (401/403 otherwise); liveness/readiness remain public status-only probes. SQL readiness is 503 for pending migrations and never applies DDL. Release operations must migrate before traffic. Production email requires a real configured HTTPS HTTP API or TLS SMTP transport, valid administration recipient/sender and HTTPS application URL; `demo` is Development/Testing only. HR mailbox is no longer a startup prerequisite. No frontend DTO change.
+
+### Audit actor convention
+
+New users/role-approval/subject-link audit rows use stable authenticated `sub` as `UserId` and trusted username as the display snapshot (subject fallback), rather than an email identity. Existing audit history and HTTP shapes stay unchanged. Frontend should treat audit actor fields as server-owned and display the supplied snapshot; it must not infer identity from email.

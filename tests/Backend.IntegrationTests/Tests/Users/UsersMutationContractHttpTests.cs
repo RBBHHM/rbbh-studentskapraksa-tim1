@@ -102,8 +102,8 @@ public sealed class UsersMutationContractHttpTests : UsersHttpFixture
         Assert.Equal("AppUser", audit.TableName);
         Assert.Equal(subject, audit.RecordId);
         Assert.Equal("ROLE_REMOVE", audit.Action);
-        Assert.Equal(Email, audit.UserId);
-        Assert.Equal(Email, audit.Username);
+        Assert.Equal(Subject, audit.UserId);
+        Assert.Equal("admin-fixture", audit.Username);
         Assert.Null(audit.OldValues);
         Assert.Equal("{\"Roles\":[]}", audit.NewValues);
     }

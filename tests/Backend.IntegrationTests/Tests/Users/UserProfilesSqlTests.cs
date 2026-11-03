@@ -21,6 +21,38 @@ public sealed class UserProfilesSqlTests : AuthenticatedApiFixture
     }
 
     [SqlServerFact]
+    public async Task AllUserAdministrationWritesAuditStableSubjectAndUsernameDespiteChangedEmail()
+    {
+        Client.DefaultRequestHeaders.Add("X-Email", "changed-claim@external.example");
+        var role = Guid.Empty;
+        await InDatabase(async db => role = (await db.Roles.SingleAsync(row => row.Name == RBBH.ConnectedParties.Helpers.Constants.ApplicationAccessRoles.LegalPersons)).Id);
+        var created = await Client.PostAsJsonAsync("/api/users", new
+        { username = "audit-target", firstName = "Fixture", lastName = "User", email = "audit-target@example.test", roleIds = new[] { role } });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var user = await created.Content.ReadFromJsonAsync<RBBH.ConnectedParties.DL.DTO.Users.UserDTO>();
+        var id = user!.Id;
+        Assert.Equal(HttpStatusCode.OK, (await Client.PutAsJsonAsync($"/api/users/{id}", new
+        { username = "audit-target-updated", firstName = "Updated", lastName = "User", email = "audit-updated@example.test", modifiedBy = "forged", actorSubject = "forged" })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await Client.PostAsJsonAsync($"/api/users/{id}/roles", new { roleIds = new[] { role } })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await Client.DeleteAsync($"/api/users/{id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await Client.PostAsync($"/api/users/{id}/reactivate", null)).StatusCode);
+        await InDatabase(async db =>
+        {
+            var row = await db.AppUsers.SingleAsync(row => row.Id == id);
+            Assert.Equal("creator", row.CreatedBy); Assert.Equal("creator", row.ModifiedBy);
+            Assert.All(await db.UserRoles.Where(row => row.UserId == id).ToListAsync(), row => Assert.Equal("creator", row.CreatedBy));
+        });
+        Assert.Equal(HttpStatusCode.OK, (await Client.DeleteAsync($"/api/users/{id}/permanent")).StatusCode);
+        await InDatabase(async db =>
+        {
+            var audit = await db.AuditLogs.OrderBy(row => row.Timestamp).ToListAsync();
+            Assert.Equal(new[] { "CREATE", "UPDATE", "ROLE_ASSIGN", "DEACTIVATE", "REACTIVATE", "DELETE" }, audit.Select(row => row.Action));
+            Assert.All(audit, row => { Assert.Equal("creator", row.UserId); Assert.Equal("creator", row.Username); });
+            Assert.False(await db.AppUsers.AnyAsync(row => row.Id == id));
+        });
+    }
+
+    [SqlServerFact]
     public async Task ConcurrentNormalizedRegistrationCreatesExactlyOnePendingIdentityAndAudit()
     {
         using var second = NewClient("reviewer");

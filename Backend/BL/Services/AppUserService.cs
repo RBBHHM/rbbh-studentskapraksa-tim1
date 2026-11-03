@@ -84,6 +84,9 @@ public partial class AppUserService(ConnectedPartiesDbContext dbContext, Keycloa
             .Distinct()
             .ToArray();
         var ct = accessor?.HttpContext?.RequestAborted ?? CancellationToken.None;
+        var actor = accessor?.HttpContext?.User is { Identity.IsAuthenticated: true } principal
+            ? Helpers.AuthenticatedActor.Capture(principal) : new Helpers.ActorIdentity(null, createdBy, null);
+        createdBy = actor.DisplayName;
         var normalizedEmail = dto.Email.Trim().ToLowerInvariant();
         if (!System.Net.Mail.MailAddress.TryCreate(normalizedEmail, out var email) || email.Address != normalizedEmail || normalizedEmail.Length > 200)
             return Result<UserDTO>.ValidationError("Email adresa nije ispravna.");
@@ -147,7 +150,7 @@ public partial class AppUserService(ConnectedPartiesDbContext dbContext, Keycloa
             Action = "CREATE",
             NewValues = System.Text.Json.JsonSerializer.Serialize(new
             { user.Username, user.Email, user.IsActive, Roles = roleNames }),
-            UserId = createdBy,
+            UserId = actor.Subject ?? createdBy,
             Username = createdBy,
             IpAddress = ipAddress
         });

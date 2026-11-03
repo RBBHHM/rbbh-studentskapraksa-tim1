@@ -115,7 +115,7 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
                         throw Conflict("identity.reconciliation_required");
                     user = new AppUser { KeycloakId = row.RequesterSubject, KeycloakSubjectConfirmed = true,
                         KeycloakSubjectLinkedAt = DateTime.UtcNow, Username = row.Username, FirstName = row.FirstName,
-                        LastName = row.LastName, Email = row.Email, CreatedBy = AuthenticatedActor.Email(Principal) };
+                        LastName = row.LastName, Email = row.Email, CreatedBy = AuthenticatedActor.Username(Principal) };
                     db.AppUsers.Add(user);
                 }
                 var existing = await db.UserRoles.Where(item => item.UserId == user.Id).Include(item => item.Role).ToListAsync(ct);
@@ -127,8 +127,8 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
                     throw Conflict("users.final_admin");
                 foreach (var assignment in existing) assignment.IsActive = targets.Contains(assignment.RoleId);
                 foreach (var roleId in targets.Except(existing.Select(item => item.RoleId)))
-                    db.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = roleId, CreatedBy = AuthenticatedActor.Email(Principal) });
-                user.ModifiedAt = DateTime.UtcNow; user.ModifiedBy = AuthenticatedActor.Email(Principal);
+                    db.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = roleId, CreatedBy = AuthenticatedActor.Username(Principal) });
+                user.ModifiedAt = DateTime.UtcNow; user.ModifiedBy = AuthenticatedActor.Username(Principal);
             }
             row.Status = outcome; row.DecisionId = input.DecisionId; row.DecisionNote = input.Note?.Trim();
             row.ProcessedAt = DateTime.UtcNow; row.ProcessedBy = Subject; row.Version++;

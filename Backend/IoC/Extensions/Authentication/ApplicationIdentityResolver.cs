@@ -60,7 +60,7 @@ public sealed class ApplicationIdentityResolver(ConnectedPartiesDbContext db, IC
             row.KeycloakSubjectConfirmed = true;
             row.KeycloakSubjectLinkedAt = DateTime.UtcNow;
             row.ModifiedAt = DateTime.UtcNow;
-            row.ModifiedBy = Helpers.AuthenticatedActor.Email(principal);
+            row.ModifiedBy = Helpers.AuthenticatedActor.Username(principal);
             await db.SaveChangesAsync();
             await new AuditService(db).LogAsync(new()
             {
