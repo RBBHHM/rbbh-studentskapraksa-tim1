@@ -121,3 +121,8 @@ virtual Guest baseline. Runtime language packs and role choices come from the
 application codebooks/catalog. Apply reviewed additive migrations before traffic;
 startup/readiness does not apply production DDL. Backend verification is separate
 from the coordinated frontend/browser and real-environment release gates.
+
+Publication reviewers: read the [sanitized release/security handoff](docs/BACKEND-RELEASE-PUBLICATION.md)
+for the source-to-review commit map, credential rotation requirement, requirements
+document access and informational PR disposition. Existing public main/history
+still needs owner-managed exposure remediation; this review branch does not authorize deployment.
