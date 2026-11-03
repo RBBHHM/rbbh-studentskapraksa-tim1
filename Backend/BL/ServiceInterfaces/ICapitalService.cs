@@ -4,13 +4,15 @@ using RBBH.ConnectedParties.Exceptions.Validations;
 namespace RBBH.ConnectedParties.BL.ServiceInterfaces;
 
 /// <summary>
-/// Modul Kapital — jedan globalni (nije po pravnom licu) zapis regulatornog/osnovnog/dopunskog kapitala.
+/// Modul Kapital — globalni kapital banke po datumu važenja, s nepromjenjivim revizijama.
 /// </summary>
 public interface ICapitalService
 {
-    /// <summary>Vraća globalni zapis kapitala, ili null ako još nije postavljen.</summary>
+    /// <summary>Vraća poznati kapital koji važi danas, ili null ako nije poznat.</summary>
     Task<Result<CapitalDTO?>> Get();
+    Task<Result<CapitalDTO?>> AsOf(DateTime date, CancellationToken ct);
+    Task<BL.Services.ReferencePage<CapitalHistoryDTO>> History(int page, int pageSize, CancellationToken ct);
 
-    /// <summary>Kreira ili ažurira globalni zapis kapitala.</summary>
+    /// <summary>Dodaje novu nepromjenjivu reviziju kapitala.</summary>
     Task<Result<CapitalDTO>> Upsert(UpdateCapitalDTO dto, string korisnik);
 }

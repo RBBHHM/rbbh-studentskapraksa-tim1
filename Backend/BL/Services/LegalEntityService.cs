@@ -292,7 +292,7 @@ public class LegalEntityService : ILegalEntityService
             return null;
 
         // Kapital je jedan globalni zapis (nije po pravnom licu) — čita se odvojeno.
-        var capital = await _context.Capitals.AsNoTracking().FirstOrDefaultAsync();
+        var capital = await CapitalHistory.AsOf(_context, DateTime.UtcNow.Date, _actor?.HttpContext?.RequestAborted ?? default);
         result.RegulatoryCapital = capital?.RegulatoryCapital;
         result.CoreCapital = capital?.CoreCapital;
 

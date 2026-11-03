@@ -24,15 +24,16 @@ public class LimitController(ILimitService limitService, IAuditService auditServ
     [HttpGet]
     [Authorize(Policy = ApplicationPolicies.LimitsRead)]
     [ProducesResponseType(typeof(List<LimitResponseDTO>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<LimitResponseDTO>>> GetAll([FromQuery] Guid? legalEntityId = null, [FromQuery] string? matbroj = null)
+    public async Task<ActionResult<List<LimitResponseDTO>>> GetAll([FromQuery] Guid? legalEntityId = null, [FromQuery] string? matbroj = null, [FromQuery] DateTime? asOf = null)
     {
-        var result = await _limitService.GetAll(legalEntityId, matbroj);
+        var result = asOf.HasValue ? await _limitService.GetAsOf(legalEntityId, matbroj, asOf.Value, HttpContext.RequestAborted)
+            : await _limitService.GetAll(legalEntityId, matbroj);
         return HandleResult(result);
     }
 
     [HttpGet("page"), Authorize(Policy = ApplicationPolicies.LimitsRead)]
-    public Task<BL.Services.ReferencePage<LimitResponseDTO>> Page(CancellationToken ct, Guid? legalEntityId = null, string? search = null, int page = 1, int pageSize = 20) =>
-        _limitService.Page(legalEntityId, search, page, pageSize, ct);
+    public Task<BL.Services.ReferencePage<LimitResponseDTO>> Page(CancellationToken ct, Guid? legalEntityId = null, string? search = null, int page = 1, int pageSize = 20, DateTime? asOf = null) =>
+        _limitService.Page(legalEntityId, search, page, pageSize, ct, asOf);
 
     /// <summary>
     /// Izvoz limita u Excel. Ako je zadan legalEntityId/matbroj, izvozi samo tog klijenta;
@@ -40,9 +41,10 @@ public class LimitController(ILimitService limitService, IAuditService auditServ
     /// </summary>
     [HttpGet("export")]
     [Authorize(Policy = ApplicationPolicies.LimitsRead)]
-    public async Task<IActionResult> Export([FromQuery] Guid? legalEntityId = null, [FromQuery] string? matbroj = null)
+    public async Task<IActionResult> Export([FromQuery] Guid? legalEntityId = null, [FromQuery] string? matbroj = null, [FromQuery] DateTime? asOf = null)
     {
-        var result = await _limitService.GetAll(legalEntityId, matbroj);
+        var result = asOf.HasValue ? await _limitService.GetAsOf(legalEntityId, matbroj, asOf.Value, HttpContext.RequestAborted)
+            : await _limitService.GetAll(legalEntityId, matbroj);
         if (!result.IsSuccessful) return HTTPExceptiontFromResult(result).Result!;
         var bytes = RegistryExcelExporter.Create(
             "Limiti",

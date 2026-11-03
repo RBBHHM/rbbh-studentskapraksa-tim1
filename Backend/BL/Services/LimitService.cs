@@ -12,14 +12,17 @@ namespace RBBH.ConnectedParties.BL.Services;
 /// <summary>
 /// Implementacija CRUD operacija nad limitima.
 /// </summary>
-public class LimitService(ConnectedPartiesDbContext dbContext) : ILimitService
+public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAccessor? actor = null) : ILimitService
 {
     private readonly ConnectedPartiesDbContext _dbContext = dbContext;
 
     // ─── READ ───────────────────────────────────────────────────────────────
 
     /// <inheritdoc/>
-    public async Task<Result<List<LimitResponseDTO>>> GetAll(Guid? legalEntityId = null, string? matbroj = null)
+    public Task<Result<List<LimitResponseDTO>>> GetAll(Guid? legalEntityId = null, string? matbroj = null) =>
+        GetAsOf(legalEntityId, matbroj, DateTime.UtcNow.Date, actor?.HttpContext?.RequestAborted ?? default);
+
+    public async Task<Result<List<LimitResponseDTO>>> GetAsOf(Guid? legalEntityId, string? matbroj, DateTime asOf, CancellationToken ct)
     {
         var query = BaseQuery();
 
@@ -28,12 +31,12 @@ public class LimitService(ConnectedPartiesDbContext dbContext) : ILimitService
         else if (!string.IsNullOrWhiteSpace(matbroj))
             query = query.Where(x => x.Entity.MaticniBroj == matbroj.Trim() || x.Entity.Matbroj == matbroj.Trim());
 
-        var capital = await GetGlobalCapitalAsync();
+        var capital = await GetGlobalCapitalAsync(asOf, ct);
 
         var items = await query
             .OrderBy(x => x.Entity.Name).ThenBy(x => x.Limit.Id)
             .Select(x => ToResponseDto(x.Limit, x.Entity))
-            .ToListAsync();
+            .ToListAsync(ct);
 
         foreach (var item in items)
             ApplyCapital(item, capital);
@@ -41,7 +44,7 @@ public class LimitService(ConnectedPartiesDbContext dbContext) : ILimitService
         return Result<List<LimitResponseDTO>>.Success(items);
     }
 
-    public async Task<ReferencePage<LimitResponseDTO>> Page(Guid? legalEntityId, string? search, int page, int pageSize, CancellationToken ct)
+    public async Task<ReferencePage<LimitResponseDTO>> Page(Guid? legalEntityId, string? search, int page, int pageSize, CancellationToken ct, DateTime? asOf = null)
     {
         if (search?.Length > 200) throw new RBBH.ConnectedParties.Exceptions.BusinessRuleException(400, "registry.invalid_search", "Pretraga smije imati najviše 200 znakova.");
         page = Math.Clamp(page, 1, 1_000_000); pageSize = Math.Clamp(pageSize, 1, 100);
@@ -54,7 +57,7 @@ public class LimitService(ConnectedPartiesDbContext dbContext) : ILimitService
         var total = await query.CountAsync(ct);
         var items = await query.OrderBy(row => row.Entity.Name).ThenBy(row => row.Limit.Id).Skip((page - 1) * pageSize).Take(pageSize)
             .Select(row => ToResponseDto(row.Limit, row.Entity)).ToListAsync(ct);
-        var capital = await GetGlobalCapitalAsync(); foreach (var item in items) ApplyCapital(item, capital);
+        var capital = await GetGlobalCapitalAsync(asOf, ct); foreach (var item in items) ApplyCapital(item, capital);
         return new(items, total, page, pageSize);
     }
 
@@ -172,10 +175,10 @@ public class LimitService(ConnectedPartiesDbContext dbContext) : ILimitService
         select new LimitJoinRow { Limit = limit, Entity = entity };
 
     /// <summary>Kapital je jedan globalni zapis — čita se odvojeno i primjenjuje na svaki Limit red.</summary>
-    private async Task<Capital?> GetGlobalCapitalAsync() =>
-        await _dbContext.Capitals.AsNoTracking().FirstOrDefaultAsync();
+    private Task<DL.DTO.Report.CapitalDTO?> GetGlobalCapitalAsync(DateTime? asOf = null, CancellationToken ct = default) =>
+        CapitalHistory.AsOf(_dbContext, asOf ?? DateTime.UtcNow.Date, ct);
 
-    private static void ApplyCapital(LimitResponseDTO dto, Capital? capital)
+    private static void ApplyCapital(LimitResponseDTO dto, DL.DTO.Report.CapitalDTO? capital)
     {
         dto.RegulatorniKapital = capital?.RegulatoryCapital;
         dto.OsnovniKapital = capital?.CoreCapital;

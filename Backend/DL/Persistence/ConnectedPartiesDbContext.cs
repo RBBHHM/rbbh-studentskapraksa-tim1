@@ -131,7 +131,26 @@ public partial class ConnectedPartiesDbContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
+        modelBuilder.Entity<DL.Entities.Report.CapitalRevision>(entity =>
+        {
+            entity.ToTable("CapitalRevisions", table => table.UseSqlOutputClause(false));
+            entity.HasKey(row => row.Id);
+            entity.Property(row => row.Revision).UseIdentityColumn(); entity.HasIndex(row => row.Revision).IsUnique();
+            entity.Property(row => row.EffectiveDate).HasColumnType("date");
+            entity.Property(row => row.RegulatoryCapital).HasPrecision(18, 2);
+            entity.Property(row => row.CoreCapital).HasPrecision(18, 2);
+            entity.Property(row => row.SupplementaryCapital).HasPrecision(18, 2);
+            entity.HasIndex(row => new { row.EffectiveDate, row.Revision });
+        });
         OnModelCreatingPartial(modelBuilder);
+    }
+
+    public DbSet<DL.Entities.Report.CapitalRevision> CapitalRevisions => Set<DL.Entities.Report.CapitalRevision>();
+
+    private void ProtectCapitalRevisions()
+    {
+        if (ChangeTracker.Entries<DL.Entities.Report.CapitalRevision>().Any(entry => entry.State is EntityState.Modified or EntityState.Deleted))
+            throw new Exceptions.BusinessRuleException(409, "capital.immutable_revision", "Historijsku reviziju kapitala nije moguće promijeniti. Unesite novu reviziju.");
     }
 
     private void ProtectCreatorIdentity()
@@ -148,6 +167,7 @@ public partial class ConnectedPartiesDbContext : DbContext
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
         ProtectCreatorIdentity();
+        ProtectCapitalRevisions();
         TouchCodebookVersions();
         return base.SaveChanges(acceptAllChangesOnSuccess);
     }
@@ -156,6 +176,7 @@ public partial class ConnectedPartiesDbContext : DbContext
     {
         cancellationToken.ThrowIfCancellationRequested();
         ProtectCreatorIdentity();
+        ProtectCapitalRevisions();
         var categories = ChangedCodebookCategories();
         if (categories.Length > 0 || ChangeTracker.Entries<CodeListDefinition>().Any(entry => entry.State is EntityState.Added or EntityState.Modified))
         {
