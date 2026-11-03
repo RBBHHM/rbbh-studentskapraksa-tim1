@@ -33,6 +33,7 @@ public sealed class PeriodLockCoverageTests
         ["PUT api/legal-entities/{id}"] = (Locked, "edits legal person"),
         ["DELETE api/legal-entities/{id}"] = (Locked, "removes legal person"),
         ["POST api/legal-entities/import"] = (Locked, "bulk creates legal persons"),
+        ["POST api/limiti/import"] = (Locked, "bulk creates limits"),
         ["POST api/limiti"] = (Locked, "creates limit"),
         ["PUT api/limiti/{id}"] = (Locked, "edits limit"),
         ["DELETE api/limiti/{id}"] = (Locked, "removes limit"),

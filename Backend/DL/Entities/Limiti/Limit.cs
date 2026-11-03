@@ -11,6 +11,7 @@ public class Limit
 {
     [Key]
     public int Id { get; set; }
+    [StringLength(64)] public string? ImportFingerprint { get; internal set; }
 
     /// <summary>Pravno lice na koje se limit odnosi.</summary>
     [Required]

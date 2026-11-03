@@ -306,6 +306,10 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("ImportFingerprint")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<string>("Komentar")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
@@ -335,6 +339,10 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ImportFingerprint")
+                        .IsUnique()
+                        .HasFilter("[ImportFingerprint] IS NOT NULL");
 
                     b.HasIndex("LegalEntityId");
 
