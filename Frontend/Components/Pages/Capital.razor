@@ -31,6 +31,7 @@ else
 {
     @if (_canEdit && _periodLocked) { <RbiAlert Title="@T[_periodError ?? "errors.locked"]" /> }
     @if (_notice) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@T["toast.capital"]" /></div> }
+    <h2 class="capital-section">@T["capital.active"]</h2>
     <RbiTable AccessibleLabel="@T["capital.title"]" Class="registry-table registry-capital-table">
         <thead><tr><th scope="col">@T["limit.core"]</th><th scope="col">@T["limit.regulatory"]</th><th scope="col">@T["capital.supplementary"]</th><th scope="col">@T["capital.date"]</th></tr></thead>
         <tbody>
@@ -38,18 +39,60 @@ else
             else { <tr><td colspan="4" role="status">@T["capital.empty"]</td></tr> }
         </tbody>
     </RbiTable>
+    <section class="capital-asof" aria-labelledby="capital-asof-title">
+        <h2 id="capital-asof-title" class="capital-section">@T["capital.asof"]</h2>
+        <div class="capital-asof__controls">
+            <label class="app-label" for="capital-asof-date">@T["capital.asof-date"]</label>
+            <input id="capital-asof-date" class="rbi-input" type="date" @bind="_asOfDate" @bind:format="yyyy-MM-dd" />
+            <RbiButton Variant="RbiButtonVariant.Secondary" Disabled="@(_asOfDate is null || _refreshing)" OnClick="AsOfAsync">@T["capital.asof-show"]</RbiButton>
+        </div>
+        @if (_asOfShown) { <p role="status" class="capital-asof__result">@(_asOf is { } asOf ? T.Format("capital.asof-result", CapitalDay(_asOfDate!.Value), Money(asOf.CoreCapital), Money(asOf.RegulatoryCapital), Money(asOf.SupplementaryCapital), CapitalDay(asOf.CapitalDate)) : T.Format("capital.asof-none", CapitalDay(_asOfDate!.Value)))</p> }
+    </section>
+    <section class="capital-history" aria-labelledby="capital-history-title">
+        <h2 id="capital-history-title" class="capital-section">@T["capital.history"]</h2>
+        <p class="app-hint">@T["capital.history-help"]</p>
+        @if (_history.Count == 0) { <p role="status">@T["capital.history-empty"]</p> }
+        else
+        {
+            <RbiTable AccessibleLabel="@T["capital.history"]" Class="registry-table registry-capital-history">
+                <thead><tr><th scope="col">@T["capital.valid-from"]</th><th scope="col">@T["capital.valid-to"]</th><th scope="col">@T["limit.core"]</th><th scope="col">@T["limit.regulatory"]</th><th scope="col">@T["capital.supplementary"]</th><th scope="col">@T["capital.recorded-by"]</th><th scope="col">@T["capital.recorded-at"]</th><th scope="col">@T["capital.state"]</th></tr></thead>
+                <tbody>
+                @foreach (var row in _history)
+                {
+                    <tr @key="row.Version.Id" data-state="@row.State">
+                        <td>@CapitalDay(row.Version.EffectiveDate)</td><td>@(row.ValidTo is { } to ? CapitalDay(to) : T["capital.open-ended"])</td>
+                        <td>@Money(row.Version.CoreCapital)</td><td>@Money(row.Version.RegulatoryCapital)</td><td>@Money(row.Version.SupplementaryCapital)</td>
+                        <td>@(string.IsNullOrEmpty(row.Version.RecordedBy) ? "—" : row.Version.RecordedBy)</td><td>@AppFormat.Timestamp(row.Version.RecordedAt)</td>
+                        <td><span class="capital-state capital-state--@row.State">@T["capital.state." + row.State]</span></td>
+                    </tr>
+                }
+                </tbody>
+            </RbiTable>
+            @if (HistoryPages > 1)
+            {
+                <p class="page-total" role="status">@T.Format("legal.page-summary", _historyPage, HistoryPages, _historyTotal)</p>
+                <RbiPagination CurrentPage="_historyPage" CurrentPageChanged="ChangeHistoryPageAsync" TotalPages="HistoryPages" AccessibleLabel="@T["capital.history-pages"]" PreviousLabel="@T["common.back"]" PreviousAccessibleLabel="@T["legal.previous"]" NextLabel="@T["common.actions.continue"]" NextAccessibleLabel="@T["legal.next"]" PageAccessibleLabel="@(number => T.Format("legal.page", number))" />
+            }
+        }
+    </section>
 }
 @if (_draft is { } draft)
 {
     <RbiDialog Open Class="app-form-dialog app-form-dialog--sm" Title="@T["capital.edit"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseEditor">
-        <DialogBody><CapitalForm MutationBlocked="_periodLocked" @key="draft" Model="draft" Save="SaveAsync" Cancel="() => CloseEditor(false)" /></DialogBody>
+        <DialogBody><p class="app-hint">@T["capital.revision-help"]</p><CapitalForm MutationBlocked="_periodLocked" @key="draft" Model="draft" Save="SaveAsync" Cancel="() => CloseEditor(false)" /></DialogBody>
     </RbiDialog>
 }
 @code {
     private readonly CancellationTokenSource _lifetime = new();
     private readonly CancellationToken _token;
     public Capital() => _token = _lifetime.Token;
-    private CapitalRecord? _record;
+    private CapitalRecord? _record, _asOf;
+    private sealed record HistoryRow(CapitalVersion Version, DateTime? ValidTo, string State);
+    private List<HistoryRow> _history = [];
+    private DateTime? _asOfDate = DateTime.UtcNow.Date;
+    private int _historyPage = 1, _historyTotal;
+    private bool _asOfShown;
+    private int HistoryPages => Math.Max(1, (int)Math.Ceiling(_historyTotal / 100d));
     private CapitalDraft? _draft;
     private string? _error;
     private string? _periodError;
@@ -70,11 +113,39 @@ else
             if (!_canRead) return;
             try { _periodLocked = (await Period.CurrentAsync(_token)).IsLocked; _periodError = null; }
             catch (RegistryApiException) { _periodLocked = true; _periodError = "period.state-unavailable"; }
-            _record = await Api.GetAsync(_token); _loaded = true;
+            _record = await Api.GetAsync(_token); await LoadHistoryAsync(); _loaded = true;
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         catch (RegistryApiException exception) { _error = exception.MessageKey; }
         finally { _loading = false; _refreshing = false; }
+    }
+    // Rows arrive newest effective date first. A row is valid until the day before the nearest later effective date;
+    // the first row of a later page needs the last row of the previous page for that boundary.
+    private async Task LoadHistoryAsync()
+    {
+        var page = await Api.HistoryAsync(_historyPage, 100, _token);
+        DateTime? later = null;
+        if (_historyPage > 1) later = (await Api.HistoryAsync(_historyPage - 1, 100, _token)).Items.LastOrDefault()?.EffectiveDate;
+        var today = DateTime.UtcNow.Date; DateTime? activeDate = null; var rows = new List<HistoryRow>();
+        DateTime? previousDate = later;
+        foreach (var version in page.Items)
+        {
+            var date = version.EffectiveDate.Date;
+            if (previousDate is { } seen && date < seen) later = seen;
+            previousDate = date;
+            var state = date > today ? "future" : (_historyPage > 1 && activeDate is null) ? "previous" : activeDate is null ? "active" : activeDate == date ? "corrected" : "previous";
+            if (state == "active") activeDate = date;
+            rows.Add(new HistoryRow(version, later is { } next && next.Date > date ? next.Date.AddDays(-1) : null, state));
+        }
+        _history = rows; _historyTotal = page.Total;
+    }
+    private async Task ChangeHistoryPageAsync(int number) { if (_refreshing || number < 1 || number > HistoryPages) return; _historyPage = number; await LoadAsync(); }
+    private async Task AsOfAsync()
+    {
+        if (_asOfDate is not { } date || _refreshing) return;
+        try { _asOf = await Api.AsOfAsync(DateOnly.FromDateTime(date), _token); _asOfShown = true; }
+        catch (RegistryApiException exception) { _error = exception.MessageKey; }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
     }
     private void Edit() { if (!_authenticated || !_canEdit || _periodLocked || _busy || _refreshing) return; _draft = CapitalDraft.From(_record); }
     private void CloseEditor(bool open) { if (!open && !_busy) _draft = null; }

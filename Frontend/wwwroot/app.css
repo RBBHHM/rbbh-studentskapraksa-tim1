@@ -421,3 +421,9 @@ h1[tabindex="-1"]:focus, h1:focus-visible { outline: none; }
 .profile-actions { display: flex; gap: .75rem; margin-block: 1rem; }
 .profile-requests__list { margin: .5rem 0 0; padding-inline-start: 1.25rem; }
 @media (max-width: 40rem) { .app-role-request { display: none; } }
+.capital-section { margin: 1.5rem 0 .5rem; font-size: var(--font-size-lg, 1.125rem); }
+.capital-asof__controls { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+.capital-asof__result { margin: .75rem 0 0; }
+.capital-state { display: inline-block; padding: .1rem .6rem; border-radius: 999px; border: 1px solid var(--border-subtle); font-size: var(--font-size-sm); }
+.capital-state--active { background: var(--surface-brand-subtle); border-color: var(--border-brand); font-weight: 700; }
+.capital-state--corrected { text-decoration: line-through; }
