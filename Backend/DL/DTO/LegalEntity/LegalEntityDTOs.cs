@@ -29,6 +29,8 @@ public class CreateLegalEntityDTO
 
     [StringLength(50)]
     public string? Matbroj { get; set; }
+    [StringLength(50)] public string? GccNumber { get; set; }
+    public bool? IsLargeExposure { get; set; }
 
     [Required(ErrorMessage = "Osnov povezanosti je obavezan.")]
     [StringLength(100)]
@@ -65,6 +67,8 @@ public class UpdateLegalEntityDTO
 
     [StringLength(50)]
     public string? Matbroj { get; set; }
+    [StringLength(50)] public string? GccNumber { get; set; }
+    public bool? IsLargeExposure { get; set; }
 
     [Required(ErrorMessage = "Osnov povezanosti je obavezan.")]
     [StringLength(100)]
@@ -85,6 +89,7 @@ public class UpdateLegalEntityDTO
 /// <summary>DTO za prikaz pravnog lica u listi i detaljima.</summary>
 public class LegalEntityDTO
 {
+    public string? GccName { get; set; }
     public Guid Id { get; set; }
     public bool IsResident { get; set; }
     public string? TaxNumber { get; set; }
@@ -92,6 +97,8 @@ public class LegalEntityDTO
     public string? FbaId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? Matbroj { get; set; }
+    [StringLength(50)] public string? GccNumber { get; set; }
+    public bool? IsLargeExposure { get; set; }
     public string BasisOfConnection { get; set; } = string.Empty;
     public string? ConnectionDescription { get; set; }
     public bool? ConnectedWithBank { get; set; }

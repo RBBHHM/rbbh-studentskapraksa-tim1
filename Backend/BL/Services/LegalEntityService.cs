@@ -34,18 +34,20 @@ public class LegalEntityService : ILegalEntityService
     private readonly ConnectedPartiesDbContext _context;
     private readonly ILogger<LegalEntityService> _logger;
     private readonly IHttpContextAccessor? _actor;
+    private readonly IBankReferenceSource? _bank;
 
-    public LegalEntityService(ConnectedPartiesDbContext context, ILogger<LegalEntityService> logger, IHttpContextAccessor? actor = null)
+    public LegalEntityService(ConnectedPartiesDbContext context, ILogger<LegalEntityService> logger, IHttpContextAccessor? actor = null, IBankReferenceSource? bank = null)
     {
         _context = context;
         _logger = logger;
         _actor = actor;
+        _bank = bank;
     }
 
     /// <inheritdoc />
     public async Task<LegalEntityListDTO> GetAllAsync(int page, int pageSize, string? search)
     {
-        page = Math.Max(page, 1);
+        page = Math.Clamp(page, 1, 1_000_000);
         pageSize = Math.Clamp(pageSize, 1, 200);
         var query = _context.LegalEntities.AsNoTracking().Where(e => e.IsActive);
 
@@ -53,10 +55,10 @@ public class LegalEntityService : ILegalEntityService
         {
             var term = search.Trim();
             query = _context.Database.IsRelational()
-                ? query.Where(e => EF.Functions.Like(e.Name, $"%{term}%")
+                ? query.Where(e => EF.Functions.Like(EF.Functions.Collate(e.Name, "Latin1_General_100_CI_AS"), $"%{term}%")
                     || (e.TaxNumber != null && e.TaxNumber.Contains(term))
                     || (e.MaticniBroj != null && e.MaticniBroj.Contains(term))
-                    || (e.FbaId != null && EF.Functions.Like(e.FbaId, $"%{term}%")))
+                    || (e.FbaId != null && EF.Functions.Like(EF.Functions.Collate(e.FbaId, "Latin1_General_100_CI_AS"), $"%{term}%")))
                 : query.Where(e => e.Name.ToLower().Contains(term.ToLower())
                     || (e.TaxNumber != null && e.TaxNumber.Contains(term))
                     || (e.MaticniBroj != null && e.MaticniBroj.Contains(term))
@@ -66,7 +68,7 @@ public class LegalEntityService : ILegalEntityService
         var total = await query.CountAsync();
 
         var items = await query
-            .OrderByDescending(e => e.CreatedAt)
+            .OrderByDescending(e => e.CreatedAt).ThenBy(e => e.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(e => MapToDto(e))
@@ -103,6 +105,7 @@ public class LegalEntityService : ILegalEntityService
     public async Task<LegalEntityDTO> CreateAsync(CreateLegalEntityDTO dto, string createdBy)
     {
         ValidateCreateDto(dto);
+        var gcc = await ResolveGcc(dto.GccNumber);
         await ValidateUniqueIdentifierAsync(dto.IsResident, dto.TaxNumber, dto.FbaId);
 
         if (dto.ConnectedWithBank is null)
@@ -115,6 +118,9 @@ public class LegalEntityService : ILegalEntityService
             MaticniBroj = dto.MaticniBroj?.Trim(),
             FbaId = !dto.IsResident ? dto.FbaId?.Trim() : null,
             Name = dto.Name.Trim(),
+            GccNumber = gcc?.Number,
+            GccName = gcc?.Name,
+            IsLargeExposure = dto.IsLargeExposure ?? false,
             Matbroj = string.IsNullOrWhiteSpace(dto.Matbroj) ? null : dto.Matbroj.Trim(),
             BasisOfConnection = dto.BasisOfConnection.Trim(),
             ConnectionDescription = dto.ConnectionDescription?.Trim(),
@@ -147,6 +153,8 @@ public class LegalEntityService : ILegalEntityService
             throw new ValidationException("id", $"Pravno lice s ID-om {id} nije pronađeno.");
 
         ValidateUpdateDto(dto);
+        // Omitted additive fields preserve previous source-backed values during rollout.
+        var gcc = dto.GccNumber is null ? null : await ResolveGcc(dto.GccNumber);
         await ValidateUniqueIdentifierAsync(dto.IsResident, dto.TaxNumber, dto.FbaId, id);
 
         if (dto.ConnectedWithBank is null)
@@ -156,6 +164,8 @@ public class LegalEntityService : ILegalEntityService
         if (!string.IsNullOrWhiteSpace(dto.Status) && !string.Equals(dto.Status.Trim(), entity.Status, StringComparison.Ordinal))
             throw new BusinessRuleException(400, "verification.status_owned", "Status se mijenja isključivo kroz verifikaciju.");
 
+        if (dto.GccNumber is not null) { entity.GccNumber = gcc?.Number; entity.GccName = gcc?.Name; }
+        if (dto.IsLargeExposure.HasValue) entity.IsLargeExposure = dto.IsLargeExposure.Value;
         entity.IsResident = dto.IsResident;
         entity.TaxNumber = dto.IsResident ? dto.TaxNumber?.Trim() : null;
         entity.FbaId = dto.IsResident ? null : dto.FbaId?.Trim();
@@ -224,33 +234,23 @@ public class LegalEntityService : ILegalEntityService
         return MapToDto(entity);
     }
         /// <inheritdoc />
-    public async Task<List<LegalEntityLookupDTO>> SearchForLimitsAsync(string? search)
-    {
-        var query = _context.LegalEntities
-            .AsNoTracking()
-            .Where(e => e.IsActive);
+    public async Task<List<LegalEntityLookupDTO>> SearchForLimitsAsync(string? search) =>
+        (await SearchForLimitsPageAsync(search, 1, 20, _actor?.HttpContext?.RequestAborted ?? default)).Items.ToList();
 
+    public async Task<ReferencePage<LegalEntityLookupDTO>> SearchForLimitsPageAsync(string? search, int page, int pageSize, CancellationToken ct)
+    {
+        if (search?.Length > 200) throw new BusinessRuleException(400, "registry.invalid_search", "Pretraga smije imati najviše 200 znakova.");
+        page = Math.Clamp(page, 1, 1_000_000); pageSize = Math.Clamp(pageSize, 1, 100);
+        var query = _context.LegalEntities.AsNoTracking();
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var term = search.Trim();
-            query = _context.Database.IsRelational()
-                ? query.Where(e => EF.Functions.Like(e.Name, $"%{term}%")
-                    || (e.MaticniBroj != null && e.MaticniBroj.Contains(term)))
-                : query.Where(e => e.Name.ToLower().Contains(term.ToLower())
-                    || (e.MaticniBroj != null && e.MaticniBroj.Contains(term)));
+            var term = search.Trim().ToUpperInvariant();
+            query = query.Where(row => row.Name.ToUpper().Contains(term) || row.MaticniBroj != null && row.MaticniBroj.Contains(term) || row.TaxNumber != null && row.TaxNumber.Contains(term));
         }
-
-        return await query
-            .OrderBy(e => e.Name)
-            .Take(20)
-            .Select(e => new LegalEntityLookupDTO
-            {
-                Id = e.Id,
-                Name = e.Name,
-                MaticniBroj = e.MaticniBroj,
-                TaxNumber = e.TaxNumber
-            })
-            .ToListAsync();
+        var total = await query.CountAsync(ct);
+        var items = await query.OrderBy(row => row.Name).ThenBy(row => row.Id).Skip((page - 1) * pageSize).Take(pageSize)
+            .Select(row => new LegalEntityLookupDTO { Id = row.Id, Name = row.Name, TaxNumber = row.TaxNumber, MaticniBroj = row.MaticniBroj }).ToListAsync(ct);
+        return new(items, total, page, pageSize);
     }
 
     /// <inheritdoc />
@@ -282,6 +282,19 @@ public class LegalEntityService : ILegalEntityService
     }
 
     // ── Privatni pomoćni metodi ───────────────────────────────────────────────
+
+    private async Task<BankGroup?> ResolveGcc(string? number)
+    {
+        if (string.IsNullOrWhiteSpace(number)) return null;
+        if (number.Length > 50 || number.Any(character => character is < '0' or > '9'))
+            throw new BusinessRuleException(400, "registry.invalid_gcc", "GCC broj smije sadržavati najviše 50 cifara.");
+        if (_bank is null) throw new BusinessRuleException(503, "bank_reference.unavailable", "Bankovni referentni podaci trenutno nisu dostupni.");
+        var group = await _bank.Group(number, _actor?.HttpContext?.RequestAborted ?? default)
+            ?? throw new BusinessRuleException(400, "registry.unknown_gcc", "Odabrani GCC nije pronađen u bankovnom izvoru.");
+        if (group.Number != number || string.IsNullOrWhiteSpace(group.Name) || group.Name.Length > 200)
+            throw new BusinessRuleException(503, "bank_reference.invalid_record", "Bankovni referentni podatak zahtijeva provjeru izvora.");
+        return group;
+    }
 
     private static void ValidateCreateDto(CreateLegalEntityDTO dto)
     {
@@ -372,7 +385,7 @@ public class LegalEntityService : ILegalEntityService
     {
         if (isResident && !string.IsNullOrWhiteSpace(taxNumber))
         {
-            var exists = await _context.LegalEntities
+            var exists = await _context.LegalEntities.IgnoreQueryFilters()
                 .AsNoTracking()
                 .AnyAsync(e => e.TaxNumber == taxNumber.Trim() && (!excludedId.HasValue || e.Id != excludedId));
 
@@ -381,7 +394,7 @@ public class LegalEntityService : ILegalEntityService
         }
         else if (!isResident && !string.IsNullOrWhiteSpace(fbaId))
         {
-            var exists = await _context.LegalEntities
+            var exists = await _context.LegalEntities.IgnoreQueryFilters()
                 .AsNoTracking()
                 .AnyAsync(e => e.FbaId == fbaId.Trim() && (!excludedId.HasValue || e.Id != excludedId));
 
@@ -405,11 +418,11 @@ public class LegalEntityService : ILegalEntityService
             result.Errors.AddRange(schemaErrors);
             return result;
         }
-        var usedTaxNumbers = (await _context.LegalEntities.AsNoTracking()
+        var usedTaxNumbers = (await _context.LegalEntities.IgnoreQueryFilters().AsNoTracking()
             .Where(entity => entity.TaxNumber != null)
             .Select(entity => entity.TaxNumber!)
             .ToListAsync()).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var usedFbaIds = (await _context.LegalEntities.AsNoTracking()
+        var usedFbaIds = (await _context.LegalEntities.IgnoreQueryFilters().AsNoTracking()
             .Where(entity => entity.FbaId != null)
             .Select(entity => entity.FbaId!)
             .ToListAsync()).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -536,6 +549,7 @@ public class LegalEntityService : ILegalEntityService
         MaticniBroj = e.MaticniBroj,
         FbaId = e.FbaId,
         Name = e.Name,
+        GccNumber = e.GccNumber, GccName = e.GccName, IsLargeExposure = e.IsLargeExposure,
         Matbroj = e.Matbroj,
         BasisOfConnection = e.BasisOfConnection,
         ConnectionDescription = e.ConnectionDescription,

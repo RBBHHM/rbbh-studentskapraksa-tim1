@@ -44,6 +44,9 @@ public class LegalEntity
     /// <summary>Matični broj — neobavezno, numerički string; izvor: kod.dbo.komitent.matbroj.</summary>
     [StringLength(50)]
     public string? Matbroj { get; set; }
+    [StringLength(50)] public string? GccNumber { get; set; }
+    [StringLength(200)] public string? GccName { get; set; }
+    public bool? IsLargeExposure { get; set; }
 
     // ── Osnov i opis povezanosti ──────────────────────────────────────────────
 

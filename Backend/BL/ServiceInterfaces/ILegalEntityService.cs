@@ -32,6 +32,7 @@ public interface ILegalEntityService
 
     /// <summary>Pretražuje pravna lica za potrebe forme Limita po nazivu i matičnom broju.</summary>
     Task<List<LegalEntityLookupDTO>> SearchForLimitsAsync(string? search);
+    Task<BL.Services.ReferencePage<LegalEntityLookupDTO>> SearchForLimitsPageAsync(string? search, int page, int pageSize, CancellationToken ct);
 
     /// <summary>Vraća podatke pravnog lica potrebne za automatsko popunjavanje forme Limita.</summary>
     Task<LegalEntityLimitFormDataDTO?> GetLimitFormDataAsync(Guid legalEntityId);

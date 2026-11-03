@@ -98,6 +98,10 @@ public class LegalEntityController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("limits/lookup"), Authorize(Policy = ApplicationPolicies.LimitsRead)]
+    public async Task<IActionResult> PagedLookup(CancellationToken ct, string? search = null, int page = 1, int pageSize = 20) =>
+        Ok(await _legalEntityService.SearchForLimitsPageAsync(search, page, pageSize, ct));
+
     /// <summary>
     /// Vraća podatke pravnog lica potrebne za automatsko popunjavanje forme Limita.
     /// </summary>

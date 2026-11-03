@@ -17,6 +17,7 @@ public static class ExcelImportSchema
     {
         try
         {
+            WorkbookEnvelope.Validate(stream);
             return new XLWorkbook(stream);
         }
         catch (Exception exception) when (exception is not OperationCanceledException and not OutOfMemoryException)

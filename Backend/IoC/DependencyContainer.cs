@@ -56,6 +56,8 @@ namespace RBBH.ConnectedParties.IoC
             services.AddScoped<IPeriodLockRepository, PeriodLockRepository>();
             services.AddScoped<IUnlockRequestRepository, UnlockRequestRepository>();
             services.AddScoped<IPeriodLockService, PeriodLockService>();
+            services.AddOptions<BankReferenceOptions>().Bind(configuration.GetSection("BankReference"));
+            services.AddScoped<IBankReferenceSource, SqlBankReferenceSource>();
             services.AddScoped<ILegalEntityService, LegalEntityService>();
             services.AddScoped<IReportService, ReportService>();
             services.AddScoped<ILimitService, LimitService>();
