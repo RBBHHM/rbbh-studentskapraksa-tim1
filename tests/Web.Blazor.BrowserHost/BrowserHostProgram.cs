@@ -84,6 +84,20 @@ internal static class BrowserHostProgram
         builder.Services.AddScoped<IReportService, ReportService>();
         builder.Services.AddScoped<IAppUserService, AppUserService>();
         builder.Services.AddScoped<IRoleService, RoleService>();
+        // Backend services added by the finalization; the real controllers resolve them.
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddScoped<PeriodWorkflow>();
+        builder.Services.AddScoped<RoleRequestService>();
+        builder.Services.AddScoped<RoleCatalogService>();
+        builder.Services.AddScoped<NotificationDispatcher>();
+        builder.Services.AddSingleton<RuntimeLocalizationCache>();
+        builder.Services.AddOptions<RuntimeLocalizationOptions>().Bind(builder.Configuration.GetSection("Localization"));
+        builder.Services.AddScoped<RuntimeLocalizationCatalog>();
+        builder.Services.AddScoped<RBBH.ConnectedParties.Localization.BackendLocalizationFilter>();
+        builder.Services.AddOptions<BankReferenceOptions>().Bind(builder.Configuration.GetSection("BankReference"));
+        builder.Services.AddScoped<IBankReferenceSource, SqlBankReferenceSource>();
+        builder.Services.AddOptions<FinanceMonthlyOptions>().Bind(builder.Configuration.GetSection("FinanceMonthly"));
+        builder.Services.AddScoped<IFinanceMonthlySource, SqlFinanceMonthlySource>();
         builder.Configuration["KeycloakSettings:Enabled"] = "false";
         builder.Services.AddHttpClient<KeycloakAdminService>().ConfigurePrimaryHttpMessageHandler(() => new NoIdentityNetwork());
         builder.Services.AddScoped(_ => database.MailStore);
@@ -669,7 +683,7 @@ internal static class BrowserHostProgram
                             await using (var scope = backend.Services.CreateAsyncScope())
                             {
                                 var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
-                                foreach (var person in db.RelatedPersons.IgnoreQueryFilters()) person.CreatedBy = "fixture-author";
+                                foreach (var person in db.RelatedPersons.IgnoreQueryFilters()) { person.CreatedBy = "fixture-author"; var creator = db.Entry(person).Property("CreatorSubject"); creator.CurrentValue = "fixture-author-subject"; creator.OriginalValue = "fixture-author-subject"; creator.IsModified = true; }
                                 await db.SaveChangesAsync();
                             }
                             break;
