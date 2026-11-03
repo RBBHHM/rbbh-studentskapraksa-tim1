@@ -34,10 +34,11 @@ public class AutoLockHostedService : BackgroundService
             if (stoppingToken.IsCancellationRequested)
                 break;
 
-            try { await CheckAndLockCurrentPeriodAsync(stoppingToken); }
+            try { await CheckAndLockCurrentPeriodAsync(stoppingToken); BackgroundOperationsMetrics.RecordSchedulerSuccess(); }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
             catch (Exception error)
             {
+                BackgroundOperationsMetrics.RecordSchedulerFailure();
                 _logger.LogError("AutoLock check failed. FailureType {FailureType}", error.GetType().Name);
             }
         }

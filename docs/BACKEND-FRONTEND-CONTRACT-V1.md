@@ -101,3 +101,7 @@ External owners must supply bank/finance mappings and samples, real Keycloak ver
 ### Exact subject comparison prerequisite
 
 Keycloak `sub` is opaque and case-sensitive. Apply `EnforceOpaqueSubjectComparisons` before this backend version: identity and owner indexes compare subjects using BIN2, preserving stored values. No frontend DTO or route changes. Never trim/case-fold a subject or use email as a substitute owner ID. Distinct case variants do not share grants, requests, inbox items or period responses. Malformed subjects cannot obtain an explicit application identity; existing virtual Guest behavior remains as documented.
+
+### Operational contract
+
+`/metrics` requires the existing administrative read permission (401/403 otherwise); liveness/readiness remain public status-only probes. SQL readiness is 503 for pending migrations and never applies DDL. Release operations must migrate before traffic. Production email requires a real configured HTTPS HTTP API or TLS SMTP transport, valid administration recipient/sender and HTTPS application URL; `demo` is Development/Testing only. HR mailbox is no longer a startup prerequisite. No frontend DTO change.

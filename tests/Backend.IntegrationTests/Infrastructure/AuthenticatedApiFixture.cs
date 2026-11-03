@@ -33,6 +33,7 @@ public abstract class AuthenticatedApiFixture : IAsyncLifetime
     private string? _connection;
     protected virtual void ConfigureDatabase(DbContextOptionsBuilder options) { }
     protected virtual void ConfigureServices(IServiceCollection services) { }
+    protected virtual void ConfigureEndpoints(WebApplication app) { }
 
     public async Task InitializeAsync()
     {
@@ -69,7 +70,7 @@ public abstract class AuthenticatedApiFixture : IAsyncLifetime
         builder.Services.AddSingleton(Mock.Of<IEmailService>());
         ConfigureServices(builder.Services);
         App = builder.Build(); App.UseExceptionHandler(); App.UseAuthentication(); App.UseAuthorization();
-        App.UseMiddleware<PeriodLockMiddleware>(); App.MapControllers();
+        App.UseMiddleware<PeriodLockMiddleware>(); App.MapControllers(); ConfigureEndpoints(App);
         await App.StartAsync(); Client = NewClient("creator");
         await InDatabase(async db =>
         {
@@ -111,6 +112,7 @@ public abstract class AuthenticatedApiFixture : IAsyncLifetime
     {
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
+            if (Request.Headers.ContainsKey("X-Fixture-Anonymous")) return Task.FromResult(AuthenticateResult.NoResult());
             var subject = Request.Headers["X-Subject"].FirstOrDefault() ?? "creator";
             if (Request.Headers.ContainsKey("X-Fixture-Empty-Subject")) subject = "";
             if (subject == "anonymous") return Task.FromResult(AuthenticateResult.NoResult());

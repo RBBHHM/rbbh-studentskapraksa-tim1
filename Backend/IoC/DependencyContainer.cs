@@ -67,13 +67,8 @@ namespace RBBH.ConnectedParties.IoC
             services.AddScoped<ICapitalService, CapitalService>();
             // ── Email ─────────────────────────────────────────────────────────
             services.AddOptions<EmailSettings>().Bind(configuration.GetSection("Email"))
-                .Validate(settings => settings.Provider.Equals("demo", StringComparison.OrdinalIgnoreCase) ||
-                    (!string.IsNullOrWhiteSpace(settings.AdminEmail) && !string.IsNullOrWhiteSpace(settings.HrEmail) &&
-                     (settings.Provider.Equals("httpapi", StringComparison.OrdinalIgnoreCase)
-                         ? !string.IsNullOrWhiteSpace(settings.From) && Uri.TryCreate(settings.SendEmailWithHtmlBodyUrl, UriKind.Absolute, out var url) && url.Scheme == Uri.UriSchemeHttps
-                         : settings.Provider.Equals("smtp", StringComparison.OrdinalIgnoreCase) &&
-                           !string.IsNullOrWhiteSpace(settings.Smtp.Host) && !string.IsNullOrWhiteSpace(settings.Smtp.FromAddress))),
-                    "Email transport, sender and required recipients must be explicitly configured.")
+                .Validate(settings => settings.IsConfiguredFor(env),
+                    "Email transport, secure application URL, sender and administration recipient must be explicitly configured; demo delivery is local/test only.")
                 .ValidateOnStart();
             services.AddSingleton<EmailLogStore>();
 

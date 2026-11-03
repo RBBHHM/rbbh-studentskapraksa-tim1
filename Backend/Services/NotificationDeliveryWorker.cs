@@ -15,6 +15,10 @@ public sealed class NotificationDeliveryWorker(IServiceScopeFactory scopes, ILog
                 {
                     await using var scope = scopes.CreateAsyncScope();
                     await scope.ServiceProvider.GetRequiredService<NotificationDispatcher>().DeliverBatchAsync(stoppingToken);
+                    var backlog = await BackgroundOperationsMetrics.ObserveBacklog(
+                        scope.ServiceProvider.GetRequiredService<DL.Persistence.ConnectedPartiesDbContext>(), stoppingToken);
+                    if (backlog.Exhausted > 0)
+                        logger.LogWarning("Notification retry budget exhausted. Count {Count}", backlog.Exhausted);
                 }
                 catch (Exception error) when (error is not OperationCanceledException)
                 { logger.LogWarning("Notification batch failed. FailureType {FailureType}", error.GetType().Name); }

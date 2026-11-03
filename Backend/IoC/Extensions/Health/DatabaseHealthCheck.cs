@@ -15,13 +15,17 @@ public sealed class DatabaseHealthCheck(ConnectedPartiesDbContext database) : IH
             if (!database.Database.IsRelational())
                 return HealthCheckResult.Healthy("Lokalna in-memory baza je dostupna.");
 
-            return await database.Database.CanConnectAsync(cancellationToken)
-                ? HealthCheckResult.Healthy("Konfigurisana baza je dostupna.")
-                : HealthCheckResult.Unhealthy("Konfigurisana baza nije dostupna.");
+            if (!await database.Database.CanConnectAsync(cancellationToken))
+                return HealthCheckResult.Unhealthy("Konfigurisana baza nije dostupna.");
+            // Inspection only: readiness never creates tables or applies DDL.
+            if ((await database.Database.GetPendingMigrationsAsync(cancellationToken)).Any())
+                return HealthCheckResult.Unhealthy("Baza zahtijeva odobrenu migraciju prije pokretanja saobraćaja.");
+            return HealthCheckResult.Healthy("Konfigurisana baza i migracije su dostupne.");
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (Exception exception)
         {
-            return HealthCheckResult.Unhealthy("Provjera baze nije uspjela.", exception);
+            return HealthCheckResult.Unhealthy("Provjera baze nije uspjela.", data: new Dictionary<string, object> { ["failureType"] = exception.GetType().Name });
         }
     }
 }
