@@ -420,6 +420,16 @@ internal static class BrowserHostProgram
                         using var response = await client.PostAsJsonAsync($"/api/period-lock/unlock-requests/{input!.Id}/respond", new { message = input.Message });
                         await context.Response.WriteAsJsonAsync(new { status = (int)response.StatusCode }); return;
                     }
+                    if (context.Request.Path == "/__fixtures/role-requests-state" && HttpMethods.IsGet(context.Request.Method))
+                    {
+                        await using var scope = backend.Services.CreateAsyncScope();
+                        var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                        var requests = await db.RoleRequests.AsNoTracking().OrderBy(item => item.CreatedAt).Select(item => new { item.Username, item.Status, item.Purpose, roles = item.RequestedRoles.Select(r => r.Role.Name).ToArray() }).ToArrayAsync();
+                        var requester = await db.AppUsers.AsNoTracking().Where(item => item.KeycloakId == "requester-subject").Select(item => item.Id).SingleOrDefaultAsync();
+                        var granted = await db.UserRoles.AsNoTracking().Where(item => item.IsActive && item.UserId == requester).Select(item => item.Role.Name).ToArrayAsync();
+                        var notices = await db.Notifications.AsNoTracking().Where(item => item.RecipientSubject == "requester-subject").Select(item => item.TitleKey).ToArrayAsync();
+                        await context.Response.WriteAsJsonAsync(new { requests, granted, notices }); return;
+                    }
                     if (context.Request.Path == "/__fixtures/users-status" && HttpMethods.IsGet(context.Request.Method))
                     {
                         using var client = backend.GetTestClient();
@@ -548,6 +558,20 @@ internal static class BrowserHostProgram
                                 for (var index = 0; index < count; index++)
                                     db.UnlockRequests.Add(new UnlockRequest { RequestedBy = $"requester{index:D3}", RequestedByEmail = "fixture@example.test", Year = now.Year, Month = now.Month, Reason = "Fixture request for clarification", Status = count == 1 ? "NEEDS_INFO" : "PENDING", CreatedBy = "fixture", CreatedAt = now.AddSeconds(-index) });
                                 if (count == 1) db.Entry(db.UnlockRequests.Local.Single()).Property("RequestedBySubject").CurrentValue = "fixture-user";
+                                await db.SaveChangesAsync();
+                            }
+                            break;
+                        case "/__fixtures/role-requests-seed":
+                            await using (var scope = backend.Services.CreateAsyncScope())
+                            {
+                                var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                                var admin = new AppUser { Username = "second-admin", Email = "second-admin@fixture.test", FirstName = "Second", LastName = "Admin", KeycloakSubjectConfirmed = true, KeycloakId = "second-admin-subject" };
+                                db.AppUsers.Add(admin);
+                                db.UserRoles.Add(new UserRole { UserId = admin.Id, RoleId = (await db.Roles.SingleAsync(item => item.Name == "admin")).Id });
+                                var fl = await db.Roles.SingleAsync(item => item.Name == "FL");
+                                var request = new RBBH.ConnectedParties.DL.Entities.Authorization.RoleRequest { ClientRequestId = Guid.NewGuid(), RequesterSubject = "requester-subject", Username = "requester", FirstName = "Re", LastName = "Quester", Email = "requester@fixture.test", Purpose = "new", Note = "Need FL for onboarding" };
+                                request.RequestedRoles = [new RBBH.ConnectedParties.DL.Entities.Authorization.RequestedRole { Role = fl, RoleId = fl.Id, RequestId = request.Id }];
+                                db.RoleRequests.Add(request);
                                 await db.SaveChangesAsync();
                             }
                             break;
@@ -743,7 +767,7 @@ internal static class BrowserHostProgram
     {
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
-            var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, "fixture-user"), new(ClaimTypes.Email, user.Email), new(ClaimTypes.Name, user.Email) };
+            var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, "fixture-user"), new(ClaimTypes.Email, user.Email), new(ClaimTypes.Name, user.Email), new("email_verified", "true"), new("preferred_username", user.Email) };
             if (database.ForgeAdmin) claims.AddRange([new(ClaimTypes.Role, "admin"), new("permission", "ADMINISTRATION_MANAGE"), new("rct_done", "1")]);
             return Task.FromResult(AuthenticateResult.Success(new(new ClaimsPrincipal(new ClaimsIdentity(claims, "BrowserFixture")), "BrowserFixture")));
         }

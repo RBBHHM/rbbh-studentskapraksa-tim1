@@ -1,0 +1,19 @@
+<RbiButton Variant="Variant" Class="@Class" OnClick="() => _open = true">@T[Purpose == "change" ? "roles.change" : "roles.request"]</RbiButton>
+<RoleRequestDialog Purpose="@Purpose" Open="_open" OpenChanged="value => _open = value" Submitted="OnSubmitted" />
+@if (_sent) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@T["roles.sent"]" /></div> }
+@code {
+    [Parameter] public string Purpose { get; set; } = "new";
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public RbiButtonVariant Variant { get; set; } = RbiButtonVariant.Secondary;
+    [Parameter] public EventCallback Submitted { get; set; }
+    private bool _open, _sent;
+    private async Task OnSubmitted()
+    {
+        _sent = true; await Submitted.InvokeAsync();
+        _ = HideLaterAsync();
+    }
+    private async Task HideLaterAsync()
+    {
+        await Task.Delay(TimeSpan.FromSeconds(6)); _sent = false; await InvokeAsync(StateHasChanged);
+    }
+}

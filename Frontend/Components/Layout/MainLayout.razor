@@ -1,3 +1,4 @@
+@using RBBH.RelatedPartiesRegister.Web.Components.Registry
 @inherits LayoutComponentBase
 @implements IDisposable
 @inject NavigationManager Navigation
@@ -16,6 +17,7 @@
                 <RBI.DesignSystem.Components.Theme.RbiThemePicker Label="@T["theme.toggle"]" LightLabel="@T["theme.light"]" DarkLabel="@T["theme.dark"]" SystemLabel="@T["theme.system"]" />
                 <div class="app-header__language"><LanguageSwitcher /></div>
                 <AuthorizeView><Authorized>
+                    <RoleRequestButton Class="app-role-request" />
                     <NotificationBell />
                     <a class="app-user" href="/app/profile" title="@T["nav.profile"]" aria-label="@T["nav.profile"]">
                         <RbiIcon Name="RbiIconName.UserRound" />

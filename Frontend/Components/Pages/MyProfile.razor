@@ -1,9 +1,11 @@
+@using RBBH.RelatedPartiesRegister.Web.Components.Registry
 @page "/profile"
 @page "/app/profile"
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Components.Authorization
 @inject AuthenticationStateProvider AuthenticationState
 @inject IProfileApi Profile
+@inject IRoleRequestsApi RoleRequests
 @implements IDisposable
 
 <PageTitle>@T["profile.title"]</PageTitle>
@@ -36,6 +38,17 @@ else if (_user?.Identity?.IsAuthenticated == true)
                 </div>
             }
         </dl>
+        @if (_profile is not null)
+        {
+            <div class="profile-actions"><RoleRequestButton Purpose="change" Variant="RbiButtonVariant.Primary" Submitted="LoadRequestsAsync" /></div>
+            @if (_requests.Count > 0)
+            {
+                <section class="profile-requests" aria-labelledby="profile-requests-title">
+                    <h2 id="profile-requests-title" class="profile-card__title">@T["roles.mine"]</h2>
+                    <ul class="profile-requests__list">@foreach (var request in _requests) { <li @key="request.Id"><strong>@T["roles.purpose." + request.Purpose]</strong>: @RoleNames(request.RoleNames) <span class="profile-role">@T["roles.status." + request.Status]</span>@if (request.DecisionNote is { Length: > 0 }) { <span class="app-hint"> — @request.DecisionNote</span> }</li> }</ul>
+                </section>
+            }
+        }
         @if (_profile is not null) { <div class="profile-note"><AppIcon Name="AppIconName.ShieldCheck" /><span>@T["profile.note"]</span></div> }
         @if (_error) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T["profile.unavailable"]" /><RbiButton OnClick="LoadAsync">@T["state.retry"]</RbiButton> }
     </section>
@@ -47,6 +60,7 @@ else { <HeroBar Title="@T["profile.title"]" Description="@T["profile.description
     private bool _loading = true;
     private ApplicationProfile? _profile;
     private bool _error;
+    private IReadOnlyList<RoleRequest> _requests = [];
     private readonly CancellationTokenSource _lifetime = new();
     private readonly CancellationToken _token;
     public MyProfile() => _token = _lifetime.Token;
@@ -57,12 +71,19 @@ else { <HeroBar Title="@T["profile.title"]" Description="@T["profile.description
         _user = (await AuthenticationState.GetAuthenticationStateAsync()).User;
         if (_user.Identity?.IsAuthenticated == true)
         {
-            try { _profile = await Profile.GetAsync(_token); }
+            try { _profile = await Profile.GetAsync(_token); await LoadRequestsAsync(); }
             catch (RegistryApiException) { _error = true; }
             catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         }
         _loading = false;
     }
+    private async Task LoadRequestsAsync()
+    {
+        try { _requests = (await RoleRequests.MineAsync(1, "", _token)).Items; }
+        catch (RegistryApiException) { _requests = []; }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+    }
+    private string RoleNames(IEnumerable<string> names) => string.Join(", ", names.Select(name => T.Role(name)));
     private string? Claim(string type) => _user?.FindFirst(type)?.Value;
     private string? DisplayName => Claim(ClaimTypes.Name) ?? Claim("name") ?? _user?.Identity?.Name;
     private string? Username => Claim(ClaimTypes.Upn) ?? Claim("preferred_username") ?? _profile?.Username;
