@@ -136,3 +136,7 @@ Apply `AddServiceValidationAndWorkbookResources` after controller/field resource
 ### Explicit legal residency
 
 Create/update legal-person JSON must explicitly include `isResident:true` or `isResident:false`; omission is400 rather than silently becoming nonresident. The wire property remains boolean. Current RBI transport retains explicitfalse (only null is omitted). Model errors keep the current errors shape, group duplicate root keys safely and do not expose formatter type names. Imports already supply parsed residency; existing tax/checksum rules remain unchanged.
+
+### New snapshot metadata
+
+New report DataSnapshot rows additionally retain nullable `GccNumber`, `GccName`, `IsLargeExposure` at generation. Existing snapshot JSON is unchanged. This is registry provenance metadata, not a new finance threshold or authority claim; no report XLSX column is added without the approved bank mapping. Public report routes/DTOs and download format remain unchanged.

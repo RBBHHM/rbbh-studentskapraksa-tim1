@@ -12,6 +12,32 @@ public sealed class ReportFinalizationSqlTests : ReportFinalizationFixture
 {
     protected override bool UseSql => true;
     [SqlServerFact]
+    public async Task NewSnapshotRetainsRegistryGccAndExposureMetadataAfterSourceEditsWithoutChangingAmounts()
+    {
+        await SeedExposure();
+        await InDatabase(async db =>
+        {
+            var entity = await db.LegalEntities.SingleAsync(); entity.GccNumber = "42"; entity.GccName = "Fixture GCC"; entity.IsLargeExposure = true;
+            await db.SaveChangesAsync();
+        });
+        Assert.Equal(HttpStatusCode.Created, (await Client.PostAsync("/api/reports/daily", null)).StatusCode);
+        string saved = ""; Guid reportId = Guid.Empty;
+        await InDatabase(async db =>
+        {
+            var report = await db.Reports.SingleAsync(); saved = report.DataSnapshot!; reportId = report.Id;
+            using var snapshot = System.Text.Json.JsonDocument.Parse(saved); var row = snapshot.RootElement[0];
+            Assert.Equal("42", row.GetProperty("GccNumber").GetString()); Assert.Equal("Fixture GCC", row.GetProperty("GccName").GetString());
+            Assert.True(row.GetProperty("IsLargeExposure").GetBoolean()); Assert.Equal(1m, row.GetProperty("CurrentExposure").GetDecimal());
+            Assert.False(row.GetProperty("IsLimitBreached").GetBoolean()); Assert.Equal(0, report.ClientsWithBreachedLimit);
+            Assert.Equal(1m, report.TotalExposure); Assert.Equal("local.clientlimits", report.DataSource);
+            var entity = await db.LegalEntities.SingleAsync(); entity.GccNumber = "99"; entity.GccName = "Changed source"; entity.IsLargeExposure = false;
+            await db.SaveChangesAsync();
+        });
+        Assert.Equal(HttpStatusCode.OK, (await Client.GetAsync($"/api/reports/export/generated/{reportId}")).StatusCode);
+        await InDatabase(async db => Assert.Equal(saved, (await db.Reports.SingleAsync()).DataSnapshot));
+    }
+
+    [SqlServerFact]
     public async Task SnapshotAndProvenanceRollbackWhenGenerationAuditFails()
     {
         await SeedExposure();

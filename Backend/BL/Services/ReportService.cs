@@ -164,7 +164,9 @@ public class ReportService : IReportService
         var rows = await (from capital in _context.ClientLimits.AsNoTracking()
             join entity in _context.LegalEntities.AsNoTracking() on capital.LegalEntityId equals entity.Id
             orderby entity.Name, entity.Id
-            select new ExposureSnapshotRow { Naziv = entity.Name, Matbroj = entity.Matbroj, ExposureLimit = capital.ExposureLimit,
+            select new ExposureSnapshotRow { Naziv = entity.Name, Matbroj = entity.Matbroj,
+                GccNumber = entity.GccNumber, GccName = entity.GccName, IsLargeExposure = entity.IsLargeExposure,
+                ExposureLimit = capital.ExposureLimit,
                 CurrentExposure = capital.CurrentExposure, Currency = capital.Currency, IsLimitBreached = capital.IsLimitBreached,
                 RegulatoryCapital = capital.RegulatoryCapital, CoreCapital = capital.CoreCapital, CreatedBy = capital.CreatedBy }).Take(20_001).ToListAsync(Cancellation);
         if (rows.Count > 20_000) throw new BusinessRuleException(503, "report.resource_limit");
@@ -345,6 +347,10 @@ public class ReportService : IReportService
     /// <summary>Snapshot reda izloženosti/kapitala klijenta — koristi se za DataSnapshot izvještaja (Kapital modul).</summary>
     private sealed class ExposureSnapshotRow
     {
+        // Registry metadata captured at generation, not a new finance classification rule.
+        public string? GccNumber { get; set; }
+        public string? GccName { get; set; }
+        public bool? IsLargeExposure { get; set; }
         public string? Matbroj { get; set; }
         public string Naziv { get; set; } = string.Empty;
         public decimal ExposureLimit { get; set; }
