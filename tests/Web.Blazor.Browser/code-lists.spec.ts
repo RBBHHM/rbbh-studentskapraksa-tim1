@@ -3,7 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { interactive, chooseLanguage } from "./readiness";
 const headers = { "X-Fixture-Control": "true" };
 const fixtures = "../../artifacts/migration-browser-fixtures/";
-async function openCategory(page: Page, category: string) { await page.getByRole("button", { name: category, exact: true }).click(); await expect(page.locator("caption, .registry-category").first()).toBeVisible(); }
+async function openCategory(page: Page, category: string) { await page.getByRole("button", { name: category, exact: true }).click(); await expect(page.locator("caption, .registry-category").first()).toBeVisible(); await expect(page.locator("#code-file")).toBeEnabled(); }
 async function openFirst(page: Page) { await page.locator(".codes-card").first().click(); await expect(page.getByRole("button", { name: "Svi šifrarnici", exact: true })).toBeVisible(); }
 async function visit(page: Page, category?: string) { await page.goto("/app/admin/code-lists"); await interactive(page); if (category) await openCategory(page, category); }
 async function settled(dialog: Locator) {
@@ -88,10 +88,10 @@ test("real XLSX preview does not persist; confirmed valid-row import preserves d
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
   await dialog.getByRole("button", { name: "Odustani", exact: true }).click(); expect(await (await request.get("/__fixtures/codes-state", { headers })).json()).toEqual(before);
   await page.locator("#code-file").setInputFiles(fixtures + "code-values.xlsx"); dialog = page.getByRole("dialog"); await expect(dialog.getByRole("button", { name: "Uvezi ispravne redove", exact: true })).toBeEnabled();
-  await dialog.getByRole("button", { name: "Uvezi ispravne redove", exact: true }).click(); await expect(dialog).toHaveCount(0); await expect(page.getByText("Uvezeno: 1 od 2 kandidata; postojećih: 1; upozorenja: 2. Provjerite osvježenu listu.", { exact: true })).toBeVisible();
+  await dialog.getByRole("button", { name: "Uvezi ispravne redove", exact: true }).click(); await expect(dialog).toHaveCount(0); await expect(page.getByText("Uvezeno: 1 od 2 kandidata; postojećih: 1; upozorenja: 3. Provjerite osvježenu listu.", { exact: true })).toBeVisible();
   const state = await (await request.get("/__fixtures/codes-state", { headers })).json(); expect(state.values).toHaveLength(before.values.length + 1);
   expect(state.values.find((item: any) => item.kod === "NEW_IMPORTED")).toMatchObject({ naziv: "New imported", aktivan: true });
-  expect(state.values.filter((item: any) => item.kod === "A_B")).toHaveLength(1); expect(state.audit.map((item: any) => item.action)).toEqual(["IMPORT"]); expect(JSON.parse(state.audit[0].newValues)).toMatchObject({ imported: 1, failed: 2, kategorija: "MigrationCodes" });
+  expect(state.values.filter((item: any) => item.kod === "A_B")).toHaveLength(1); expect(state.audit.map((item: any) => item.action)).toEqual(["IMPORT"]); expect(JSON.parse(state.audit[0].newValues)).toMatchObject({ imported: 1, failed: 3 }); expect(state.audit[0].recordId).toBe("MigrationCodes");
 });
 test("invalid extension, corrupt workbook and invalid header remain safe and create no records", async ({ page, request }) => {
   await visit(page); await openFirst(page); const before = await (await request.get("/__fixtures/codes-state", { headers })).json();

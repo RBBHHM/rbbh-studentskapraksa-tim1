@@ -105,6 +105,19 @@ internal static class BrowserHostProgram
         builder.Services.Configure<EmailSettings>(_ => { });
         var app = builder.Build();
         app.UseExceptionHandler();
+        // Fault injection only: the backend now commits business state, audit and notices atomically, so the
+        // 'persisted but unconfirmed' case is simulated by losing the success response after the commit.
+        app.Use(async (context, next) =>
+        {
+            var path = context.Request.Path.Value ?? "";
+            var lose = HttpMethods.IsPost(context.Request.Method) && ((database.FailGenerationAudit && path.StartsWith("/api/reports/", StringComparison.OrdinalIgnoreCase)) ||
+                (database.FailPeriodAudit && path.StartsWith("/api/period-lock/", StringComparison.OrdinalIgnoreCase) && (path.EndsWith("/respond", StringComparison.OrdinalIgnoreCase) || path.EndsWith("/request-unlock", StringComparison.OrdinalIgnoreCase))));
+            if (!lose) { await next(); return; }
+            var original = context.Response.Body; using var buffer = new MemoryStream(); context.Response.Body = buffer;
+            try { await next(); } finally { context.Response.Body = original; }
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError; context.Response.ContentType = "application/problem+json";
+            await context.Response.WriteAsync("{\"status\":500}");
+        });
         app.Use(async (context, next) =>
         {
             if (database.DuplicateBarrier is { } barrier && context.Request.Path == "/api/related-persons/check-duplicate" && context.Request.Query.ContainsKey("fbaId"))
@@ -450,7 +463,7 @@ internal static class BrowserHostProgram
                     {
                         await using var scope = backend.Services.CreateAsyncScope();
                         var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
-                        await context.Response.WriteAsJsonAsync(await db.Capitals.AsNoTracking().Select(item => new { item.Id, item.RegulatoryCapital, item.CoreCapital, item.SupplementaryCapital, item.CapitalDate }).ToArrayAsync());
+                        await context.Response.WriteAsJsonAsync((await db.CapitalRevisions.AsNoTracking().OrderBy(item => item.Revision).ToArrayAsync()).Select(item => new { item.Id, item.Revision, item.RegulatoryCapital, item.CoreCapital, item.SupplementaryCapital, CapitalDate = item.EffectiveDate }).ToArray());
                         return;
                     }
                     if (context.Request.Path == "/__fixtures/reports" && HttpMethods.IsGet(context.Request.Method))
@@ -527,6 +540,7 @@ internal static class BrowserHostProgram
                                 var count = context.Request.Path == "/__fixtures/period-pages" ? 101 : 1;
                                 for (var index = 0; index < count; index++)
                                     db.UnlockRequests.Add(new UnlockRequest { RequestedBy = $"requester{index:D3}", RequestedByEmail = "fixture@example.test", Year = now.Year, Month = now.Month, Reason = "Fixture request for clarification", Status = count == 1 ? "NEEDS_INFO" : "PENDING", CreatedBy = "fixture", CreatedAt = now.AddSeconds(-index) });
+                                if (count == 1) db.Entry(db.UnlockRequests.Local.Single()).Property("RequestedBySubject").CurrentValue = "fixture-user";
                                 await db.SaveChangesAsync();
                             }
                             break;

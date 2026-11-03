@@ -84,7 +84,7 @@ test("post-persist failure warns about uncertainty and refresh does not duplicat
   await page.getByRole("button", { name: "Dostavi traženu dopunu", exact: true }).click(); const dialog = page.getByRole("dialog");
   await dialog.getByRole("textbox").fill("Potpuna trazena dopuna"); await dialog.getByRole("button", { name: "Potvrdi", exact: true }).click();
   await expect(dialog.getByText(/Promjena je možda već snimljena/)).toBeVisible();
-  let state = await (await request.get("/__fixtures/period-state", { headers })).json(); expect(state.requests).toHaveLength(2); expect(state.audit).toEqual([]);
+  let state = await (await request.get("/__fixtures/period-state", { headers })).json(); expect(state.requests).toHaveLength(2); expect(state.audit.map((entry: { action: string }) => entry.action)).toEqual(["UNLOCK_REQUEST"]); // state, audit and notice commit atomically; only the response is lost
   expect((await (await request.get("/__fixtures/counts", { headers })).json()).mutations).toBe(1);
   await request.post("/__fixtures/period-audit-restored", { headers }); await dialog.getByRole("button", { name: "Odustani", exact: true }).click();
   await page.reload(); await interactive(page); await expect(page.getByRole("row").filter({ hasText: "[ODGOVOR] Potpuna trazena dopuna" })).toBeVisible();

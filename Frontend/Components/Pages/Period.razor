@@ -98,8 +98,8 @@ else if (_current is { } current)
             _canRead = ApplicationAccess.IsAdministrator(profile) && profile.Permissions.Contains("KAPITAL_VIEW");
             _canWrite = _canRead && profile.Permissions.Any(code => code is "KAPITAL_CREATE" or "KAPITAL_EDIT" or "KAPITAL_DELETE");
             if (!_canRead) return;
-            _current = await Api.CurrentAsync(_token); _requests = await Api.RequestsAsync(_status, _page, _token);
-            if (_page > TotalPages) { _page = TotalPages; _requests = await Api.RequestsAsync(_status, _page, _token); }
+            _current = await Api.CurrentAsync(_token); _requests = await Api.RequestsAsync(_status, _page, _canWrite, _token);
+            if (_page > TotalPages) { _page = TotalPages; _requests = await Api.RequestsAsync(_status, _page, _canWrite, _token); }
             _loaded = true;
         }
         catch (RegistryApiException exception) { _error = exception.MessageKey; }
