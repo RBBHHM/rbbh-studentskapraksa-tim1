@@ -717,6 +717,18 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("NormalizedFbaId")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasComputedColumnSql("UPPER(LTRIM(RTRIM([FBAId])))", true);
+
+                    b.Property<string>("NormalizedPassport")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasComputedColumnSql("UPPER(LTRIM(RTRIM([PassportNumber])))", true);
+
                     b.Property<string>("PassportNumber")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -773,6 +785,14 @@ namespace RBBH.ConnectedParties.Migrations
                     b.HasIndex("JMBG")
                         .IsUnique()
                         .HasFilter("[IsActive] = 1 AND [JMBG] IS NOT NULL");
+
+                    b.HasIndex("NormalizedFbaId")
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1 AND [FBAId] IS NOT NULL");
+
+                    b.HasIndex("NormalizedPassport")
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1 AND [PassportNumber] IS NOT NULL");
 
                     b.HasIndex("PassportNumber")
                         .IsUnique()
@@ -1204,6 +1224,12 @@ namespace RBBH.ConnectedParties.Migrations
                         .IsUnicode(false)
                         .HasColumnType("varchar(100)");
 
+                    b.Property<string>("NormalizedName")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasComputedColumnSql("UPPER(LTRIM(RTRIM([Name])))", true);
+
                     b.Property<int>("Version")
                         .IsConcurrencyToken()
                         .HasColumnType("int");
@@ -1211,6 +1237,9 @@ namespace RBBH.ConnectedParties.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("NormalizedName")
                         .IsUnique();
 
                     b.ToTable("CodeListDefinitions");

@@ -92,13 +92,13 @@ public class LegalEntityService : ILegalEntityService
         };
     }
 
-    public async Task<List<LegalEntityDTO>> GetAllForExportAsync() =>
-        await _context.LegalEntities
-            .AsNoTracking()
-            .Where(entity => entity.IsActive)
-            .OrderBy(entity => entity.Name)
-            .Select(entity => MapToDto(entity))
-            .ToListAsync();
+    public async Task<List<LegalEntityDTO>> GetAllForExportAsync()
+    {
+        var items = await _context.LegalEntities.AsNoTracking().OrderBy(row => row.Name).ThenBy(row => row.Id).Take(5001)
+            .Select(row => MapToDto(row)).ToListAsync(_actor?.HttpContext?.RequestAborted ?? default);
+        if (items.Count > 5000) throw new ValidationException("file", "Dozvoljeno je najviše 5.000 redova po izvozu.");
+        return items;
+    }
 
     /// <inheritdoc />
     public async Task<LegalEntityDTO?> GetByIdAsync(Guid id)
@@ -114,6 +114,8 @@ public class LegalEntityService : ILegalEntityService
     public async Task<LegalEntityDTO> CreateAsync(CreateLegalEntityDTO dto, string createdBy)
     {
         ValidateCreateDto(dto);
+        (await Helpers.CodebookChoices.Load(_context, _actor?.HttpContext?.RequestAborted ?? default, "OsnovPovezanosti"))
+            .Check("OsnovPovezanosti", dto.BasisOfConnection, "basisOfConnection");
         var gcc = await ResolveGcc(dto.GccNumber);
         await ValidateUniqueIdentifierAsync(dto.IsResident, dto.TaxNumber, dto.FbaId);
 
@@ -163,6 +165,8 @@ public class LegalEntityService : ILegalEntityService
             throw new ValidationException("id", $"Pravno lice s ID-om {id} nije pronađeno.");
 
         ValidateUpdateDto(dto);
+        (await Helpers.CodebookChoices.Load(_context, _actor?.HttpContext?.RequestAborted ?? default, "OsnovPovezanosti"))
+            .Check("OsnovPovezanosti", dto.BasisOfConnection, "basisOfConnection");
         // Omitted additive fields preserve previous source-backed values during rollout.
         var gcc = dto.GccNumber is null && entity.GccNumber is not null ? null : await ResolveGcc(dto.GccNumber);
         await ValidateUniqueIdentifierAsync(dto.IsResident, dto.TaxNumber, dto.FbaId, id);
@@ -437,6 +441,7 @@ public class LegalEntityService : ILegalEntityService
             result.Errors.AddRange(schemaErrors);
             return result;
         }
+        var choices = await Helpers.CodebookChoices.Load(_context, _actor?.HttpContext?.RequestAborted ?? default, "OsnovPovezanosti");
         var usedTaxNumbers = (await _context.LegalEntities.IgnoreQueryFilters().AsNoTracking()
             .Where(entity => entity.TaxNumber != null)
             .Select(entity => entity.TaxNumber!)
@@ -505,6 +510,7 @@ public class LegalEntityService : ILegalEntityService
                     IsLargeExposure = isV2 ? ParseExposure(ExcelImportSchema.CellText(ws.Cell(row, 14))) : null
                 };
                 ValidateCreateDto(dto);
+                choices.Check("OsnovPovezanosti", dto.BasisOfConnection, "basisOfConnection");
                 var gcc = await ResolveGcc(dto.GccNumber);
                 if (dto.ConnectedWithBank is null)
                     throw new ValidationException("Kolona 'Povezano lice s Bankom' mora sadržavati DA/NE ili YES/NO.");

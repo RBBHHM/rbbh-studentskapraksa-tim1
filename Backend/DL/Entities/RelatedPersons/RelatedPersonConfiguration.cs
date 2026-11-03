@@ -38,6 +38,10 @@ public class RelatedPersonConfiguration : IEntityTypeConfiguration<RelatedPerson
         builder.HasIndex(e => e.JMBG).IsUnique().HasFilter("[IsActive] = 1 AND [JMBG] IS NOT NULL");
         builder.HasIndex(e => e.FBAId).IsUnique().HasFilter("[IsActive] = 1 AND [FBAId] IS NOT NULL");
         builder.HasIndex(e => e.PassportNumber).IsUnique().HasFilter("[IsActive] = 1 AND [PassportNumber] IS NOT NULL");
+        builder.Property<string>("NormalizedPassport").HasMaxLength(50).HasComputedColumnSql("UPPER(LTRIM(RTRIM([PassportNumber])))", stored: true);
+        builder.HasIndex("NormalizedPassport").IsUnique().HasFilter("[IsActive] = 1 AND [PassportNumber] IS NOT NULL");
+        builder.Property<string>("NormalizedFbaId").HasMaxLength(50).HasComputedColumnSql("UPPER(LTRIM(RTRIM([FBAId])))", stored: true);
+        builder.HasIndex("NormalizedFbaId").IsUnique().HasFilter("[IsActive] = 1 AND [FBAId] IS NOT NULL");
         builder.HasIndex(e => e.Status);
         builder.HasIndex(e => e.RelatedToPersonId);
 

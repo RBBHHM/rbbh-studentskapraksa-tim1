@@ -31,7 +31,7 @@ public class LimitService(ConnectedPartiesDbContext dbContext) : ILimitService
         var capital = await GetGlobalCapitalAsync();
 
         var items = await query
-            .OrderBy(x => x.Entity.Name)
+            .OrderBy(x => x.Entity.Name).ThenBy(x => x.Limit.Id)
             .Select(x => ToResponseDto(x.Limit, x.Entity))
             .ToListAsync();
 
@@ -39,6 +39,23 @@ public class LimitService(ConnectedPartiesDbContext dbContext) : ILimitService
             ApplyCapital(item, capital);
 
         return Result<List<LimitResponseDTO>>.Success(items);
+    }
+
+    public async Task<ReferencePage<LimitResponseDTO>> Page(Guid? legalEntityId, string? search, int page, int pageSize, CancellationToken ct)
+    {
+        if (search?.Length > 200) throw new RBBH.ConnectedParties.Exceptions.BusinessRuleException(400, "registry.invalid_search", "Pretraga smije imati najviše 200 znakova.");
+        page = Math.Clamp(page, 1, 1_000_000); pageSize = Math.Clamp(pageSize, 1, 100);
+        var query = BaseQuery();
+        if (legalEntityId.HasValue) query = query.Where(row => row.Entity.Id == legalEntityId);
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim().ToUpperInvariant(); query = query.Where(row => row.Entity.Name.ToUpper().Contains(term) || row.Limit.TipLimita.ToUpper().Contains(term));
+        }
+        var total = await query.CountAsync(ct);
+        var items = await query.OrderBy(row => row.Entity.Name).ThenBy(row => row.Limit.Id).Skip((page - 1) * pageSize).Take(pageSize)
+            .Select(row => ToResponseDto(row.Limit, row.Entity)).ToListAsync(ct);
+        var capital = await GetGlobalCapitalAsync(); foreach (var item in items) ApplyCapital(item, capital);
+        return new(items, total, page, pageSize);
     }
 
     /// <inheritdoc/>
@@ -209,7 +226,7 @@ public class LimitService(ConnectedPartiesDbContext dbContext) : ILimitService
 
         var kod = tipLimita.Trim().ToUpper();
         var tipLimitaPostoji = await _dbContext.CodeLists.AsNoTracking()
-            .AnyAsync(c => c.Kategorija == "VrstaLimita" && c.Kod == kod && c.Aktivan);
+            .AnyAsync(c => c.Kategorija == "VrstaLimita" && c.Kod == kod && c.Aktivan && (c.Definition == null || c.Definition.IsActive));
         if (!tipLimitaPostoji)
             return Result<LimitResponseDTO>.ValidationError($"Tip limita '{tipLimita}' ne postoji u šifarniku vrsta limita.");
 

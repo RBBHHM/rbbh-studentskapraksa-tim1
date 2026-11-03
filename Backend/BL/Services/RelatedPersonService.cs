@@ -63,11 +63,35 @@ public class RelatedPersonService(
         var items = await _dbContext.RelatedPersons
             .AsNoTracking()
             .Where(rp => rp.IsActive)
-            .OrderByDescending(rp => rp.CreatedAt)
+            .OrderByDescending(rp => rp.CreatedAt).ThenBy(rp => rp.Id)
             .ProjectToType<RelatedPersonSummaryDTO>()
             .ToListAsync();
 
         return Result<List<RelatedPersonSummaryDTO>>.Success(items);
+    }
+
+    public async Task<ReferencePage<RelatedPersonSummaryDTO>> Page(string? search, int page, int pageSize, CancellationToken ct)
+    {
+        if (search?.Length > 200) throw new RBBH.ConnectedParties.Exceptions.BusinessRuleException(400, "registry.invalid_search", "Pretraga smije imati najviše 200 znakova.");
+        page = Math.Clamp(page, 1, 1_000_000); pageSize = Math.Clamp(pageSize, 1, 100);
+        var query = _dbContext.RelatedPersons.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim().ToUpperInvariant();
+            query = query.Where(row => row.FirstName.ToUpper().Contains(term) || row.LastName.ToUpper().Contains(term) || row.JMBG != null && row.JMBG.Contains(term));
+        }
+        var total = await query.CountAsync(ct);
+        var items = await query.OrderBy(row => row.LastName).ThenBy(row => row.FirstName).ThenBy(row => row.Id)
+            .Skip((page - 1) * pageSize).Take(pageSize).ProjectToType<RelatedPersonSummaryDTO>().ToListAsync(ct);
+        return new(items, total, page, pageSize);
+    }
+
+    public async Task<Result<List<RelatedPersonResponseDTO>>> ExportData(CancellationToken ct)
+    {
+        var items = await _dbContext.RelatedPersons.AsNoTracking().OrderBy(row => row.LastName).ThenBy(row => row.FirstName).ThenBy(row => row.Id)
+            .Take(5001).ProjectToType<RelatedPersonResponseDTO>().ToListAsync(ct);
+        return items.Count > 5000 ? Result<List<RelatedPersonResponseDTO>>.ValidationError("Dozvoljeno je najviše 5.000 redova po izvozu.")
+            : Result<List<RelatedPersonResponseDTO>>.Success(items);
     }
 
     /// <inheritdoc/>
@@ -76,7 +100,7 @@ public class RelatedPersonService(
         var items = await _dbContext.RelatedPersons
             .AsNoTracking()
             .Where(rp => rp.IsActive)
-            .OrderByDescending(rp => rp.CreatedAt)
+            .OrderByDescending(rp => rp.CreatedAt).ThenBy(rp => rp.Id)
             .ProjectToType<RelatedPersonResponseDTO>()
             .ToListAsync();
 
@@ -180,6 +204,9 @@ public class RelatedPersonService(
         if (validationError is not null)
             return Result<RelatedPersonResponseDTO>.ValidationError(validationError);
 
+        var choices = await Helpers.CodebookChoices.Load(_dbContext, actor?.HttpContext?.RequestAborted ?? default, "OsnovPovezanosti", "OsnovPosebnogOdnosa");
+        choices.Check("OsnovPovezanosti", dto.RelationBasis, "relationBasis");
+        choices.Check("OsnovPosebnogOdnosa", dto.SpecialRelationBasis, "specialRelationBasis");
         var duplicate = await CheckDuplicateIdentity(dto.JMBG, dto.PassportNumber, dto.FBAId);
         if (duplicate.Exists)
             return Result<RelatedPersonResponseDTO>.ValidationError(duplicate.Message!);
@@ -200,6 +227,8 @@ public class RelatedPersonService(
         if (!string.IsNullOrWhiteSpace(entity.JMBG))
             entity.JMBG = entity.JMBG.Trim();
 
+        entity.PassportNumber = NormalizeIdentifier(entity.PassportNumber)?.ToUpperInvariant();
+        entity.FBAId = NormalizeIdentifier(entity.FBAId);
         _dbContext.RelatedPersons.Add(entity);
         _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("RelatedPerson", entity.Id.ToString(), "INSERT", korisnik, actor,
             newValues: entity.Adapt<RelatedPersonResponseDTO>()));
@@ -220,6 +249,9 @@ public class RelatedPersonService(
         if (validationError is not null)
             return Result<RelatedPersonResponseDTO>.ValidationError(validationError);
 
+        var choices = await Helpers.CodebookChoices.Load(_dbContext, actor?.HttpContext?.RequestAborted ?? default, "OsnovPovezanosti", "OsnovPosebnogOdnosa");
+        choices.Check("OsnovPovezanosti", dto.RelationBasis, "relationBasis");
+        choices.Check("OsnovPosebnogOdnosa", dto.SpecialRelationBasis, "specialRelationBasis");
         var duplicate = await CheckDuplicateIdentity(dto.JMBG, dto.PassportNumber, dto.FBAId, id);
         if (duplicate.Exists)
             return Result<RelatedPersonResponseDTO>.ValidationError(duplicate.Message!);
@@ -237,7 +269,9 @@ public class RelatedPersonService(
 
         var before = entity.Adapt<RelatedPersonResponseDTO>();
         dto.Adapt(entity);
-        entity.JMBG = string.IsNullOrWhiteSpace(entity.JMBG) ? entity.JMBG : entity.JMBG.Trim();
+        entity.JMBG = NormalizeIdentifier(entity.JMBG);
+        entity.PassportNumber = NormalizeIdentifier(entity.PassportNumber)?.ToUpperInvariant();
+        entity.FBAId = NormalizeIdentifier(entity.FBAId);
         entity.ModifiedAt = DateTime.UtcNow;
         entity.ModifiedBy = korisnik;
 
@@ -560,6 +594,7 @@ public class RelatedPersonService(
             result.Errors.AddRange(schemaErrors);
             return result;
         }
+        var choices = await Helpers.CodebookChoices.Load(_dbContext, actor?.HttpContext?.RequestAborted ?? default, "OsnovPovezanosti", "OsnovPosebnogOdnosa");
         var existing = await _dbContext.RelatedPersons.AsNoTracking().Select(person => new { person.Id, person.JMBG, person.PassportNumber, person.FBAId }).ToListAsync(actor?.HttpContext?.RequestAborted ?? default);
         var usedJmbgs = existing.Where(person => person.JMBG != null).Select(person => person.JMBG!).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var usedPassports = existing.Where(person => person.PassportNumber != null).Select(person => person.PassportNumber!).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -647,6 +682,8 @@ public class RelatedPersonService(
                     }
                 }
                 ImmediateFamilyPolicy.Apply(dto);
+                choices.Check("OsnovPovezanosti", dto.RelationBasis, "relationBasis");
+                choices.Check("OsnovPosebnogOdnosa", dto.SpecialRelationBasis, "specialRelationBasis");
                 var validationError = RelatedPersonValidator.Validate(dto);
                 if (validationError is not null) throw new RBBH.ConnectedParties.Exceptions.ValidationException(validationError);
                 if (!string.IsNullOrWhiteSpace(dto.JMBG) && usedJmbgs.Contains(dto.JMBG))

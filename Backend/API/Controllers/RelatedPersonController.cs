@@ -76,10 +76,14 @@ public class RelatedPersonController(
         [FromQuery] Guid? excludeId = null)
         => Ok(await _relatedPersonService.CheckDuplicateIdentity(jmbg, passportNumber, fbaId, excludeId));
 
+    [HttpGet("page")]
+    public Task<BL.Services.ReferencePage<RelatedPersonSummaryDTO>> Page(CancellationToken ct, string? search = null, int page = 1, int pageSize = 20) =>
+        _relatedPersonService.Page(search, page, pageSize, ct);
+
     [HttpGet("export")]
     public async Task<IActionResult> Export()
     {
-        var result = await _relatedPersonService.GetAllDetailed();
+        var result = await _relatedPersonService.ExportData(HttpContext.RequestAborted);
         if (!result.IsSuccessful) return HTTPExceptiontFromResult(result).Result!;
         var bytes = RegistryExcelExporter.Create(
             "Fizička lica",

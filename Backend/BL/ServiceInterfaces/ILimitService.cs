@@ -9,6 +9,7 @@ namespace RBBH.ConnectedParties.BL.ServiceInterfaces;
 public interface ILimitService
 {
     /// <summary>Vraća limite, opcionalno filtrirano po pravnom licu ili matičnom broju.</summary>
+    Task<BL.Services.ReferencePage<LimitResponseDTO>> Page(Guid? legalEntityId, string? search, int page, int pageSize, CancellationToken ct);
     Task<Result<List<LimitResponseDTO>>> GetAll(Guid? legalEntityId = null, string? matbroj = null);
 
     /// <summary>Vraća jedan limit po ID-u.</summary>

@@ -21,6 +21,8 @@ public static class RelatedPersonValidator
     /// </summary>
     public static string? ValidateIdentification(ResidencyType residency, string? jmbg, string? passportNumber, string? fbaId)
     {
+        if (!string.IsNullOrWhiteSpace(fbaId) && !System.Text.RegularExpressions.Regex.IsMatch(fbaId.Trim(), @"^[0-9]{1,10}$"))
+            return "FBA ID mora sadržavati najviše 10 cifara.";
         if (!Enum.IsDefined(residency) || residency is not (ResidencyType.Resident or ResidencyType.NonResident))
             return "Odaberite rezidentnost: rezident ili nerezident.";
 

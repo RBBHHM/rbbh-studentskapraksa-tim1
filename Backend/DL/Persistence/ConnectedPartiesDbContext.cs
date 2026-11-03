@@ -68,6 +68,8 @@ public partial class ConnectedPartiesDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.Name).IsUnique();
+            entity.Property<string>("NormalizedName").HasMaxLength(100).HasComputedColumnSql("UPPER(LTRIM(RTRIM([Name])))", stored: true);
+            entity.HasIndex("NormalizedName").IsUnique().HasFilter(null);
         });
 
         modelBuilder.Entity<AppUser>(entity =>

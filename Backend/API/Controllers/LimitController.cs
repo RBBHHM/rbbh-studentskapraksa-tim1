@@ -30,6 +30,10 @@ public class LimitController(ILimitService limitService, IAuditService auditServ
         return HandleResult(result);
     }
 
+    [HttpGet("page"), Authorize(Policy = ApplicationPolicies.LimitsRead)]
+    public Task<BL.Services.ReferencePage<LimitResponseDTO>> Page(CancellationToken ct, Guid? legalEntityId = null, string? search = null, int page = 1, int pageSize = 20) =>
+        _limitService.Page(legalEntityId, search, page, pageSize, ct);
+
     /// <summary>
     /// Izvoz limita u Excel. Ako je zadan legalEntityId/matbroj, izvozi samo tog klijenta;
     /// u suprotnom izvozi sve klijente koji imaju limite, sa svim podacima iz Regulatornog izvještavanja.
