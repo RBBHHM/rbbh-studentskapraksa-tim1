@@ -23,7 +23,7 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
     public async Task<object> Options(CancellationToken ct) => new
     {
         items = await db.Roles.AsNoTracking().Where(role => role.IsActive && role.Name != ApplicationAccessRoles.Guest)
-            .OrderBy(role => role.Name).Select(role => new { role.Id, role.Name }).ToListAsync(ct)
+            .OrderBy(role => role.Name).Select(role => new { role.Id, role.Name, displayName = role.DisplayName ?? role.Name }).ToListAsync(ct)
     };
 
     public Task<(RoleRequestDTO Request, bool Created)> Submit(CreateRoleRequestDTO input, CancellationToken ct)

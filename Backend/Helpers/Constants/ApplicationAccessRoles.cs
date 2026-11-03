@@ -1,7 +1,8 @@
 namespace RBBH.ConnectedParties.Helpers.Constants;
 
 /// <summary>
-/// Assignable contains the five explicit DB roles; Guest is a virtual effective baseline.
+/// Bootstrap names for the original catalog; runtime choices and grants come from the database.
+/// Guest and permission codes are technical invariants, not a fixed assignable-role allow-list.
 /// Tehničke Keycloak uloge se ne prikazuju niti mijenjaju kroz ovu aplikaciju.
 /// </summary>
 public static class ApplicationAccessRoles

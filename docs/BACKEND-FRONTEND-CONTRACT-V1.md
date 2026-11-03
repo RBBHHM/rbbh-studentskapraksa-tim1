@@ -109,3 +109,14 @@ Keycloak `sub` is opaque and case-sensitive. Apply `EnforceOpaqueSubjectComparis
 ### Audit actor convention
 
 New users/role-approval/subject-link audit rows use stable authenticated `sub` as `UserId` and trusted username as the display snapshot (subject fallback), rather than an email identity. Existing audit history and HTTP shapes stay unchanged. Frontend should treat audit actor fields as server-owned and display the supplied snapshot; it must not infer identity from email.
+
+### Administrative role catalog (additive)
+
+- `GET /api/role-catalog?page=1&pageSize=20&search=...`: `{items,total,page,pageSize}`, pageSize max100, stable name/ID order, includes inactive rows.
+- `GET /api/role-catalog/{id}`: one definition; creation Location resolves here.
+- `GET /api/role-catalog/permissions`: `{items:[{id,code,module,description}]}` from active DB permissions.
+- `POST /api/role-catalog`: `{name,displayName,description?,permissionIds:[]}` →201. Immutable name is ASCII letters/digits/underscore/hyphen/dot, max100; displayName required max100; description max500; distinct existing active permission IDs, max200.
+- `PUT /api/role-catalog/{id}`: `{displayName,description?,isActive,expectedVersion,permissionIds:[]}` →200. Names are immutable; deactivate through `isActive:false`, retaining history/assignments.
+- Definition shape: `{id,name,displayName,description,isActive,version,permissionIds,isProtected}`. Old roles use name as display fallback. Existing `/api/roles` shape is unchanged. Role-request options additionally return `displayName`.
+- Reads require administrative read. Writes require administrative management and current named Admin inside the serialized transaction. Technical Admin/Guest definitions are read-only (409 `roles.protected`); editing an actor's own assigned role is403 `roles.self_management_denied`. Duplicate name409, bad definition/permissions400, stale version409, unavailable mutation lock409, missing ID404. No Keycloak role mutation.
+- Apply `AddAdministrativeRoleCatalog` before backend rollout. Resolve any normalized duplicate names explicitly before migration; no automatic rename/merge. Display labels may be provided through language-pack keys by the frontend; do not treat technical names or permission codes as translated identity values.

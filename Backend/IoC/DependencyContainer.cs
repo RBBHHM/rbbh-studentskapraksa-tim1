@@ -40,6 +40,7 @@ namespace RBBH.ConnectedParties.IoC
 
             services.AddScoped<IRoleService, RoleService>();
             services.AddScoped<RoleRequestService>();
+            services.AddScoped<RoleCatalogService>();
             services.AddScoped<NotificationDispatcher>();
             services.AddSingleton<RuntimeLocalizationCache>();
             services.AddOptions<RuntimeLocalizationOptions>().Bind(configuration.GetSection("Localization"))
