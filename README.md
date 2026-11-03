@@ -67,7 +67,7 @@ dotnet run --project Backend/RelatedPartiesRegister.csproj --no-launch-profile -
 ```
 
 Absent SQL settings, Development uses an empty InMemory store; it does not provide
-the seeded demo. Startup does not apply migrations or seed a real database.
+the seeded demo. Startup defaults to no migrations and never seeds a real database. Migration opt-in is Development-only; production schema changes use the approved deployment workflow.
 
 In another terminal, configure the frontend's real backend and approved local OIDC
 client through user-secrets (do not put credentials in tracked files), then:
@@ -111,3 +111,12 @@ proxy/host/CA settings, SQL/SSO/mail validation, resource/drain/scheduler policy
 subject-link migration approval. See [production readiness](docs/PRODUCTION-READINESS.md)
 and [final handoff](docs/REACT-TO-BLAZOR-FINAL-HANDOFF.md). Source delivery does not
 resolve those external prerequisites.
+
+
+Backend consumers: see the [API/configuration handoff](docs/BACKEND-FRONTEND-CONTRACT-V1.md)
+and [current verification matrix](docs/BACKEND-FINALIZATION.md). Application grants
+remain database-owned; unknown authenticated identities receive only the approved
+virtual Guest baseline. Runtime language packs and role choices come from the
+application codebooks/catalog. Apply reviewed additive migrations before traffic;
+startup/readiness does not apply production DDL. Backend verification is separate
+from the coordinated frontend/browser and real-environment release gates.

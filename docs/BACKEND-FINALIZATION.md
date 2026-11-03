@@ -435,3 +435,85 @@ The remaining global period-lock warning now records method and matched route te
 Final workbook review found that the one-column codebook path validated ZIP/size/schema but could read formula cell values before rejecting them, unlike the registry imports. It now rejects actual header/data formulas before any GetString/evaluation or persistence, using the existing localized error contract. Literal string values are not classified as formulas. Added per-row/request cancellation checks; labels, generated-code rules, partial-success behavior and the one-column format remain unchanged.
 
 The real SQL HTTP regression submits both formula-header and formula-data workbooks with dryRun=false, asserts400 localized feedback and no definition/value/audit persistence. Affected workbook/localization integration set **11/11 PASS**; analyzer build0 warnings/errors and diff check PASS. This is an input-validation closure, not a new workbook format.
+
+
+## Current backend closure matrix — 2026-11-03
+
+This section supersedes baseline statuses above for the current backend scope; original audit/checkpoints remain historical evidence. **VERIFIED** means implemented and locally tested. **BLOCKED** identifies the stated real environment/data/other-owner dependency. **NOT_IMPLEMENTED: none for the independently implementable, approved backend scope.** An end-to-end BLOCKED row does not imply its tested backend part is missing. No production/full-application completion is claimed.
+
+| Requirement | Current status | Evidence / remaining boundary |
+| --- | --- | --- |
+| AUTH-01 | VERIFIED | Real-pipeline permission/denial tests; DB grants and virtual Guest, guarded catalog/requests, multi-role union, S1 signed-token audience validation. See the corresponding completed batches above. |
+| AUTH-02 | VERIFIED | Real-pipeline permission/denial tests; DB grants and virtual Guest, guarded catalog/requests, multi-role union, S1 signed-token audience validation. See the corresponding completed batches above. |
+| AUTH-03 | VERIFIED | Real-pipeline permission/denial tests; DB grants and virtual Guest, guarded catalog/requests, multi-role union, S1 signed-token audience validation. See the corresponding completed batches above. |
+| AUTH-04 | VERIFIED | Real-pipeline permission/denial tests; DB grants and virtual Guest, guarded catalog/requests, multi-role union, S1 signed-token audience validation. See the corresponding completed batches above. |
+| AUTH-05 | VERIFIED | Real-pipeline permission/denial tests; DB grants and virtual Guest, guarded catalog/requests, multi-role union, S1 signed-token audience validation. See the corresponding completed batches above. |
+| AUTH-06 | VERIFIED | Real-pipeline permission/denial tests; DB grants and virtual Guest, guarded catalog/requests, multi-role union, S1 signed-token audience validation. See the corresponding completed batches above. |
+| AUTH-07 | BLOCKED | Backend8h absolute cookie/no sliding, expiry and POST-CSRF logout verified. Real realm/refresh/browser acceptance and coordinated retirement of deprecated GET logout require frontend/realm owners. |
+| AUTH-08 | VERIFIED | Real-pipeline permission/denial tests; DB grants and virtual Guest, guarded catalog/requests, multi-role union, S1 signed-token audience validation. See the corresponding completed batches above. |
+| ID-01 | VERIFIED | Opaque subject-first/BIN2 owner binding, normalized identity uniqueness/preflight, no provider role grants or silent identity reassignment; profile/subject-link HTTP and SQL evidence above. |
+| ID-02 | BLOCKED | Opt-in verified unique email first-link is tested/audited and remains off by default. Real realm email_verified/export reconciliation and approved production subject-link/backfill are not performed. |
+| ID-03 | VERIFIED | Opaque subject-first/BIN2 owner binding, normalized identity uniqueness/preflight, no provider role grants or silent identity reassignment; profile/subject-link HTTP and SQL evidence above. |
+| ID-04 | BLOCKED | Read-only exact identity adapter/service-account selection/disposal/cancellation/failure fixtures verified. Actual realm service-account privileges and responses remain external. |
+| ID-05 | VERIFIED | Opaque subject-first/BIN2 owner binding, normalized identity uniqueness/preflight, no provider role grants or silent identity reassignment; profile/subject-link HTTP and SQL evidence above. |
+| SAFE-01 | VERIFIED | Approved S2/S3, immutable creator/server-owned status, historical409, self-management denial, final-Admin SQL application lock and races; atomic audit/rollback evidence. |
+| SAFE-02 | VERIFIED | Approved S2/S3, immutable creator/server-owned status, historical409, self-management denial, final-Admin SQL application lock and races; atomic audit/rollback evidence. |
+| DB-01 | VERIFIED | Normalized relations retained, additive metadata/FK/index/version/resource migrations with preflight and populated disposable SQL upgrades; no shared data changes or default startup DDL. |
+| DB-02 | BLOCKED | Applied history preserved. Real legacy backup/restore, duplicates/orphans, old destructive-history reconciliation and approved deployment baseline require actual production-shaped data and owners. |
+| DB-03 | VERIFIED | Normalized relations retained, additive metadata/FK/index/version/resource migrations with preflight and populated disposable SQL upgrades; no shared data changes or default startup DDL. |
+| LEG-01 | VERIFIED | Field/conditional identifier bounds and imports verified; instructed exact13/checksum behavior preserved. A max13 rule change remains TAX-01, not an invented implementation. |
+| LEG-02 | VERIFIED | Required dates/bank/basis/description and valid order preserved. Explicit JSON isResident required for create/update; missing values cannot silently become nonresident. Safe model grouping/type redaction verified. |
+| LEG-03 | BLOCKED | Additive GCC fields and safe read-only source adapter/local SQL fixtures verified. Real kod/glava types/keys/access/samples and required production source enablement remain external. |
+| LEG-04 | VERIFIED | Newfalse/historicalnull large-exposure flag, CRUD/workbook and new report-snapshot GCC/flag metadata verified. No backfill or invented threshold/grouping/export mapping; bank mapping remains REP-02. |
+| LEG-05 | VERIFIED | Shared HTTP/service/import field validation and required dates/bank/basis/description, explicit JSON residency, case-insensitive reads and preserved duplicate policy; GCC/flag evidence above. |
+| XLSX-01 | VERIFIED | Versioned legal19/physical25/limits18 workbooks and legacy compatibility; metadata/relationships roundtrip, field/row diagnostics, ZIP/file/row/expansion/formula guards, atomic batch rollback. |
+| XLSX-02 | VERIFIED | Versioned legal19/physical25/limits18 workbooks and legacy compatibility; metadata/relationships roundtrip, field/row diagnostics, ZIP/file/row/expansion/formula guards, atomic batch rollback. |
+| PHY-01 | VERIFIED | Preserved identification/family/date/cycle rules with S2; export/import description, linked identities, staff and audit metadata; current HTTP/workbook/SQL tests pass. |
+| PHY-02 | VERIFIED | Preserved identification/family/date/cycle rules with S2; export/import description, linked identities, staff and audit metadata; current HTTP/workbook/SQL tests pass. |
+| LIM-01 | VERIFIED | Bounded stable pages, active type/party references, validated transactional import/fingerprints/generated-ID audit and commit-ack recovery; as-of capital and retained legacy read contracts. |
+| LIM-02 | VERIFIED | Bounded stable pages, active type/party references, validated transactional import/fingerprints/generated-ID audit and commit-ack recovery; as-of capital and retained legacy read contracts. |
+| CAP-01 | VERIFIED | Immutable effective-date capital revisions, same-date ordering, as-of/null handling, SQL/EF mutation rejection, atomic audit/concurrent writes; no invented historical values. |
+| REP-01 | VERIFIED | Read/export authenticated Guest baseline; Capital/Admin generate-persist retained; bounded period/paging/amount validation, provenance and persisted snapshot retention after source edits. |
+| REP-02 | BLOCKED | Documented monthly source adapter/guards and snapshots verified locally. Actual spreadsheets, period-table/key mapping, samples/totals/currency/source access and daily-source reconciliation remain external; no finance formula invented. |
+| REP-03 | VERIFIED | Read/export authenticated Guest baseline; Capital/Admin generate-persist retained; bounded period/paging/amount validation, provenance and persisted snapshot retention after source edits. |
+| NOT-01 | VERIFIED | Recipient-only durable inbox/read state and leased retry outbox; retired HR flow, complete encoded role/period templates, canonical links, >200 recipients and no repeated grants on mail failure. |
+| NOT-02 | VERIFIED | Recipient-only durable inbox/read state and leased retry outbox; retired HR flow, complete encoded role/period templates, canonical links, >200 recipients and no repeated grants on mail failure. |
+| NOT-03 | VERIFIED | Recipient-only durable inbox/read state and leased retry outbox; retired HR flow, complete encoded role/period templates, canonical links, >200 recipients and no repeated grants on mail failure. |
+| PER-01 | VERIFIED | Exhaustive mutation route/HTTP lock matrix, Capital processing retained, owner-scoped requests/responses, 10–490+prefix and note/calendar bounds, atomic state/audit/notices and concurrency guards. |
+| PER-02 | VERIFIED | Exhaustive mutation route/HTTP lock matrix, Capital processing retained, owner-scoped requests/responses, 10–490+prefix and note/calendar bounds, atomic state/audit/notices and concurrency guards. |
+| PER-03 | VERIFIED | Exhaustive mutation route/HTTP lock matrix, Capital processing retained, owner-scoped requests/responses, 10–490+prefix and note/calendar bounds, atomic state/audit/notices and concurrency guards. |
+| CODE-01 | VERIFIED | Normalized definition/value integrity and references/system guards; metadata/version, normal CRUD, documented one-column label bulk import/export, detailed errors and atomic batch; runtime pack invalidation. |
+| CODE-02 | VERIFIED | Normal definition/value CRUD and metadata, documented one-column label bulk import/export, row errors, formula guards and atomic audit verified. This is a label-add workflow, not a full database backup format. |
+| CODE-03 | VERIFIED | Normalized definition/value integrity and references/system guards; metadata/version, normal CRUD, documented one-column label bulk import/export, detailed errors and atomic batch; runtime pack invalidation. |
+| LOC-01 | VERIFIED | Application-specific existing codebooks; BS/EN/DE semantic/legacy keys, labels/helpers/placeholders, runtime updates/fallback/cache/version; scoped DTO/controller/service/import/423 messages, format safety and source guards. |
+| AUD-01 | VERIFIED | Stable subject/username snapshots and state+audit atomicity across approved mutations/imports/verification/requests/periods/reports; replay/rollback tests, historical records unchanged. |
+| ERR-01 | VERIFIED | Safe localized global/fallback errors, no raw SQL/type/token leakage, grouped root model errors and valid control/Unicode JSON; existing statuses/field structures retained. |
+| OBS-01 | VERIFIED | Bounded correlation and structured method/route-template/status/type/trace logs, auth/mail/period redaction and sentinel privacy tests. |
+| OBS-02 | BLOCKED | SQL readiness and aggregate outbox/scheduler telemetry verified. Real authenticated scrape integration, SLOs, alert thresholds/routing, retention and failover drills require deployment owners. |
+| OPS-01 | VERIFIED | Actual DATA_CORE.dll entrypoint, backend Release analyzer build/publish and isolated published Development startup; no production DDL or fabricated environment settings. |
+| OPS-02 | BLOCKED | Real OCP/3scale/proxy/hosts/CA, shared session cache/protected persisted DP keys, resource/drain/scheduler calendar/ownership/overlap, SQL/mail/cert/failover and production vulnerability-feed confirmation remain prerequisites. |
+| PERF-01 | BLOCKED | Local paging/batching/cancellation/resource bounds and2,500-user/5,000-assignment production-option SQL measurement verified (10/9 commands). Production cardinality/load, bank network latency, allocation/SLO acceptance and frontend Lighthouse need real environment/owner data. |
+| TEST-01 | BLOCKED | Backend final337unit+392integration=729PASS, zero skipped; analyzer/publish/startup pass. Full solution/native browser gate remains blocked by the unchanged3 frontend-owned BrowserHost reference errors. |
+| DOC-01 | BLOCKED | Backend README/configuration/onboarding, shared contract and current matrix updated; evidence preserved. Repository-wide historical-doc consolidation and release-notes UI require cross-owner/frontend coordination. |
+| FE-01 | BLOCKED | Frontend-owned duplicate DATA_CORE/BrowserHost reference fix must come through coordinated integration. No frontend fix, branch merge, browser change or visual completion claim was made here. |
+
+**TAX-01 — BLOCKED (business clarification):** PDF maximum13 versus established exact13/checksum remains unresolved. The explicit instruction to preserve existing validated behavior is satisfied; no tax-rule change was invented.
+
+### Final backend gate and scope
+
+Implementation head tested: `d2689de9bddb0acc7229df06cb3d603ca21da457`; subsequent closure changes are documentation-only.
+
+- Unit **337/337**, integration **392/392**, combined **729/729 PASS**. TRX counters: failed0, skipped/notExecuted0. Local evidence is ignored under `artifacts/backend-finalization/closure-results/`; durable test sources are committed.
+- Dedicated `UsersLastAdminSqlServerTests`: **6/6 PASS**, including3 concurrent races, unconfirmed placeholder exclusion, lock release and production SQL-lock path. All SQL evidence uses owned disposable LocalDB GUID databases, never shared data.
+- Backend Release build with analyzers: **0 warnings/errors**. Release publish: PASS (`closure-publish/DATA_CORE.dll`).
+- Published artifact startup: explicit Development/InMemory at loopback5371, live200/ready200, existing local-development Guest read200/write403. It is not real SSO or a seeded Admin preview. The owned process was stopped with Ctrl+C; other hosts were unchanged.
+- Automatic execution policy rejected an additional combined SQL-startup-fixture/process-cleanup command before execution (no detailed reason; no operation/database created). The safer separate InMemory startup completed. SQL schema/readiness/migrations/concurrency were verified by integration tests, not misrepresented as a published SQL/OCP startup.
+- Startup emitted the existing EF required Limit→filtered LegalEntity navigation notice. Active limit reads use explicit parent joins; filter/navigation semantics were not altered merely to silence that notice. Compiler/analyzer0-warning results do not assert zero runtime diagnostics.
+- Full solution analyzer build: **FAIL**, same3 frontend-owned BrowserHostProgram.cs25/26/192 reference errors (frontend/RBI namespaces, duplicate DATA_CORE identity). No BrowserHost workaround, frontend edit, branch merge or browser/visual parity claim.
+- PKCS remains **9.0.21**; NU1900/NU1902/NU1903 are not suppressed. Production vulnerability-feed confirmation is external; no fresh vulnerability-free assertion is inferred from no-restore builds.
+- New migrations are additive metadata/constraints/resource seeds with populated SQL upgrade/preflight evidence. Applied history, historical reports/audits and identity links remain intact; no shared migration/backfill was run.
+- No frontend/browser file, existing user launchSettings file, Legacy/React content or other checkout was changed. No push/merge was performed. Backend onboarding/configuration links are current; cross-owner consolidation remains DOC-01.
+
+### Integration/deployment handoff
+
+Share `docs/BACKEND-FRONTEND-CONTRACT-V1.md` and this matrix with the frontend owner. Integrate the frontend-owned BrowserHost fix and coordinated consumers through the agreed process, then run the complete .NET/native browser/role/accessibility/viewport gate. Retire legacy GET logout only with consumer coordination. Apply reviewed migrations through deployment, after DB-02 backup/history/preflight reconciliation. Reconcile bank spreadsheets/sources and real realm identities before enabling production sources or first-link settings. No missing production value or historical identity is inferred locally.
