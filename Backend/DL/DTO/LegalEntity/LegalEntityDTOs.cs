@@ -16,14 +16,14 @@ public class CreateLegalEntityDTO
 
     /// <summary>Matični broj pravnog lica — opcionalan.</summary>
     [StringLength(50)]
-    [RegularExpression(@"^\d*$", ErrorMessage = "Matični broj smije sadržavati samo cifre.")]
+    [RegularExpression(@"^\d*$", ErrorMessageResourceType = typeof(BackendValidationMessages), ErrorMessageResourceName = nameof(BackendValidationMessages.RegistrationDigits))]
     public string? MaticniBroj { get; set; }
 
     /// <summary>FBA ID — obavezan za nerezidente.</summary>
-    [RegularExpression(@"^\d{1,10}$", ErrorMessage = "FBA ID mora sadržavati najviše 10 cifara.")]
+    [RegularExpression(@"^\d{1,10}$", ErrorMessageResourceType = typeof(BackendValidationMessages), ErrorMessageResourceName = nameof(BackendValidationMessages.FbaDigits))]
     public string? FbaId { get; set; }
 
-    [Required(ErrorMessage = "Naziv je obavezan.")]
+    [Required(ErrorMessageResourceType = typeof(BackendValidationMessages), ErrorMessageResourceName = nameof(BackendValidationMessages.NameRequired))]
     [StringLength(100)]
     public string Name { get; set; } = string.Empty;
 
@@ -32,7 +32,7 @@ public class CreateLegalEntityDTO
     [StringLength(50)] public string? GccNumber { get; set; }
     public bool? IsLargeExposure { get; set; }
 
-    [Required(ErrorMessage = "Osnov povezanosti je obavezan.")]
+    [Required(ErrorMessageResourceType = typeof(BackendValidationMessages), ErrorMessageResourceName = nameof(BackendValidationMessages.ConnectionRequired))]
     [StringLength(100)]
     public string BasisOfConnection { get; set; } = string.Empty;
 
@@ -54,15 +54,15 @@ public class UpdateLegalEntityDTO
     public string? TaxNumber { get; set; }
 
     [StringLength(10)]
-    [RegularExpression(@"^\d{1,10}$", ErrorMessage = "FBA ID mora sadržavati najviše 10 cifara.")]
+    [RegularExpression(@"^\d{1,10}$", ErrorMessageResourceType = typeof(BackendValidationMessages), ErrorMessageResourceName = nameof(BackendValidationMessages.FbaDigits))]
     public string? FbaId { get; set; }
 
-    [Required(ErrorMessage = "Naziv je obavezan.")]
+    [Required(ErrorMessageResourceType = typeof(BackendValidationMessages), ErrorMessageResourceName = nameof(BackendValidationMessages.NameRequired))]
     [StringLength(100)]
     public string Name { get; set; } = string.Empty;
     
     [StringLength(50)]
-    [RegularExpression(@"^\d*$", ErrorMessage = "Matični broj smije sadržavati samo cifre.")]
+    [RegularExpression(@"^\d*$", ErrorMessageResourceType = typeof(BackendValidationMessages), ErrorMessageResourceName = nameof(BackendValidationMessages.RegistrationDigits))]
     public string? MaticniBroj { get; set; }
 
     [StringLength(50)]
@@ -70,7 +70,7 @@ public class UpdateLegalEntityDTO
     [StringLength(50)] public string? GccNumber { get; set; }
     public bool? IsLargeExposure { get; set; }
 
-    [Required(ErrorMessage = "Osnov povezanosti je obavezan.")]
+    [Required(ErrorMessageResourceType = typeof(BackendValidationMessages), ErrorMessageResourceName = nameof(BackendValidationMessages.ConnectionRequired))]
     [StringLength(100)]
     public string BasisOfConnection { get; set; } = string.Empty;
 

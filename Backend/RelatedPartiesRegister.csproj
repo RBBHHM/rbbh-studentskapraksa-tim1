@@ -14,7 +14,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Localization\BackendErrorFallbacks.json" />
+    <EmbeddedResource Include="Localization\BackendMessages.json" />
     <Compile Remove="UnitTests\**\*.cs;IntegrationTests\**\*.cs" />
     <Content Remove="UnitTests\**;IntegrationTests\**" />
     <EmbeddedResource Remove="UnitTests\**;IntegrationTests\**" />

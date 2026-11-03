@@ -49,6 +49,7 @@ namespace RBBH.ConnectedParties.IoC
                     !string.IsNullOrWhiteSpace(options.LanguagePacksCodebook) && options.LanguagePacksCodebook.Length <= 100 &&
                     options.LanguagesCodebook != options.LanguagePacksCodebook).ValidateOnStart();
             services.AddScoped<RuntimeLocalizationCatalog>();
+            services.AddScoped<RBBH.ConnectedParties.Localization.BackendLocalizationFilter>();
             services.AddScoped<ICodeListService, CodeListService>();
             services.AddScoped<IRelatedPersonService, RelatedPersonService>();
             services.AddHttpClient<KeycloakAdminService>();

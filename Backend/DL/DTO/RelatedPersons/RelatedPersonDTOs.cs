@@ -10,15 +10,15 @@ namespace RBBH.ConnectedParties.DL.DTO.RelatedPersons;
 /// </summary>
 public class CreateRelatedPersonDTO
 {
-    [Required(ErrorMessage = "Ime je obavezno.")]
+    [Required(ErrorMessageResourceType = typeof(BackendValidationMessages), ErrorMessageResourceName = nameof(BackendValidationMessages.FirstNameRequired))]
     [StringLength(100)]
     public string FirstName { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Prezime je obavezno.")]
+    [Required(ErrorMessageResourceType = typeof(BackendValidationMessages), ErrorMessageResourceName = nameof(BackendValidationMessages.LastNameRequired))]
     [StringLength(100)]
     public string LastName { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Rezidentnost je obavezna.")]
+    [Required(ErrorMessageResourceType = typeof(BackendValidationMessages), ErrorMessageResourceName = nameof(BackendValidationMessages.ResidencyRequired))]
     public ResidencyType Residency { get; set; }
 
     /// <summary>
@@ -74,15 +74,15 @@ public class CreateRelatedPersonDTO
 /// </summary>
 public class UpdateRelatedPersonDTO
 {
-    [Required(ErrorMessage = "Ime je obavezno.")]
+    [Required(ErrorMessageResourceType = typeof(BackendValidationMessages), ErrorMessageResourceName = nameof(BackendValidationMessages.FirstNameRequired))]
     [StringLength(100)]
     public string FirstName { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Prezime je obavezno.")]
+    [Required(ErrorMessageResourceType = typeof(BackendValidationMessages), ErrorMessageResourceName = nameof(BackendValidationMessages.LastNameRequired))]
     [StringLength(100)]
     public string LastName { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Rezidentnost je obavezna.")]
+    [Required(ErrorMessageResourceType = typeof(BackendValidationMessages), ErrorMessageResourceName = nameof(BackendValidationMessages.ResidencyRequired))]
     public ResidencyType Residency { get; set; }
 
     [StringLength(13)]

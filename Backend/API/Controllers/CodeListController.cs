@@ -45,9 +45,9 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
     {
         var name = dto.Name?.Trim() ?? string.Empty;
         if (name.Length < 2 || name.Length > 100 || dto.Description?.Length > 500)
-            return BadRequest(new ProblemDetails { Title = "Naziv nije ispravan", Detail = "Naziv definicije mora imati između 2 i 100 znakova." });
+            return BadRequest(new ProblemDetails { Title = BackendMessages.Message("errors.codelist.name.invalid.title"), Detail = BackendMessages.Message("errors.codelist.name.length") });
         if (await db.CodeListDefinitions.AnyAsync(item => item.Name.Trim().ToUpper() == name.ToUpper()) || await db.CodeLists.IgnoreQueryFilters().AnyAsync(item => item.Kategorija.Trim().ToUpper() == name.ToUpper()))
-            return Conflict(new ProblemDetails { Title = "Definicija već postoji", Detail = $"Šifrarnik '{name}' već postoji." });
+            return Conflict(new ProblemDetails { Title = BackendMessages.Message("errors.codelist.duplicate.title"), Detail = BackendMessages.Message("errors.codelist.duplicate.detail", name) });
         var korisnik = GetKorisnik();
         var definition = new CodeListDefinition { Name = name, Description = dto.Description?.Trim(), CreatedBy = korisnik };
         db.CodeListDefinitions.Add(definition);
@@ -70,10 +70,10 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
     [HttpPut("categories/{name}"), Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
     public async Task<IActionResult> UpdateDefinition(string name, UpdateCodeListDefinitionDTO input, CancellationToken ct)
     {
-        if (input.Description?.Length > 500) return BadRequest(new ProblemDetails { Status = 400, Title = "Opis smije imati najviše 500 znakova." });
+        if (input.Description?.Length > 500) return BadRequest(new ProblemDetails { Status = 400, Title = BackendMessages.Message("errors.codelist.description.length") });
         var definition = await db.CodeListDefinitions.SingleOrDefaultAsync(row => row.Name == name, ct);
         if (definition is null) return NotFound();
-        if (definition.Version != input.ExpectedVersion) return Conflict(new ProblemDetails { Status = 409, Title = "Šifrarnik je u međuvremenu izmijenjen. Osvježite prikaz." });
+        if (definition.Version != input.ExpectedVersion) return Conflict(new ProblemDetails { Status = 409, Title = BackendMessages.Message("errors.codelist.concurrent.change") });
         var actor = GetKorisnik(); definition.Description = input.Description?.Trim(); definition.ModifiedBy = actor;
         db.AuditLogs.Add(new() { TableName = "CodeList", RecordId = definition.Id.ToString(), Action = "CODELIST_UPDATE",
             UserId = actor, Username = actor, Timestamp = DateTime.UtcNow });
@@ -96,7 +96,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
         // Return the HTTP result, not ActionResult<bool> as an object/HTTP 200.
         if (!result.IsSuccessful) return HandleResult(result).Result!;
 
-        return Ok(new { message = $"Šifrarnik '{name}' je uspješno obrisan." });
+        return Ok(new { message = BackendMessages.Message("messages.codelist.definition.deleted", name) });
     }
 
     // ─── Administracija ───────────────────────────────────────────────────────
@@ -174,7 +174,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
         [FromBody] SimpleValueRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Value))
-            return BadRequest(new { errors = new[] { new { field = "value", message = "Vrijednost je obavezna." } } });
+            return BadRequest(new { errors = new[] { new { field = "value", message = BackendMessages.Message("errors.codelist.value.required") } } });
 
         var korisnik = GetKorisnik();
 
@@ -252,7 +252,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
 
         if (result.IsSuccessful)
         {
-            return Ok(new { message = "Šifarnik je uspješno obrisan." });
+            return Ok(new { message = BackendMessages.Message("messages.codelist.deleted") });
         }
 
         return HTTPExceptiontFromResult(result);
@@ -263,11 +263,11 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
     public async Task<IActionResult> Export(string kategorija, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(kategorija) || kategorija.Length > 100)
-            return BadRequest(new ProblemDetails { Status = 400, Title = "Naziv šifrarnika nije ispravan." });
+            return BadRequest(new ProblemDetails { Status = 400, Title = BackendMessages.Message("errors.codelist.name.invalid") });
         var values = await db.CodeLists.AsNoTracking().Where(row => row.Kategorija == kategorija)
             .OrderBy(row => row.RedoslijedPrikaza).ThenBy(row => row.Naziv).ThenBy(row => row.ID)
             .Select(row => row.Naziv).Take(5001).ToListAsync(ct);
-        if (values.Count > 5000) return BadRequest(new ProblemDetails { Status = 400, Title = "Dozvoljeno je najviše 5.000 redova po izvozu." });
+        if (values.Count > 5000) return BadRequest(new ProblemDetails { Status = 400, Title = BackendMessages.Message("errors.workbook.export.limit") });
         var bytes = RBBH.ConnectedParties.Helpers.Excel.RegistryExcelExporter.Create("Šifrarnik", ["Vrijednost"],
             values.Select(value => (IReadOnlyList<object?>)[value]));
         return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "codebook.xlsx");
@@ -298,7 +298,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
         if (ext != ".xlsx")
             return BadRequest(new { error = "Prihvataju se samo .xlsx fajlovi." });
         if (file.Length > 10 * 1024 * 1024)
-            return BadRequest(new { error = "Excel datoteka smije imati najviše 10 MB." });
+            return BadRequest(new { error = BackendMessages.Message("errors.workbook.size") });
 
         var rawValues = new List<(int Row, string Value)>();
         var validationErrors = new List<string>();
@@ -369,7 +369,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
 
         var korisnik = GetKorisnik();
         var normalizedCategory = kategorija.Trim().ToUpperInvariant();
-        if (kategorija.Trim().Length is < 1 or > 100) return BadRequest(new { error = "Naziv šifrarnika nije ispravan." });
+        if (kategorija.Trim().Length is < 1 or > 100) return BadRequest(new { error = BackendMessages.Message("errors.codelist.name.invalid") });
         var definition = await db.CodeListDefinitions.SingleOrDefaultAsync(item => item.Name.ToUpper() == normalizedCategory, HttpContext.RequestAborted);
         if (definition is { IsActive: false }) return BadRequest(new { error = "Šifrarnik je deaktiviran." });
         if (definition is null)

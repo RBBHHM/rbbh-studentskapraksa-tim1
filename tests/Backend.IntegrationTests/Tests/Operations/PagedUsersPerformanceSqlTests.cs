@@ -20,7 +20,12 @@ public sealed class PagedUsersPerformanceSqlTests(ITestOutputHelper output) : Au
     private readonly QueryCounter _counter = new();
     protected override void ConfigureDatabase(DbContextOptionsBuilder options) => options.AddInterceptors(_counter);
     protected override void ConfigureServices(IServiceCollection services)
-    { services.AddScoped<IAppUserService, AppUserService>(); services.AddHttpClient<KeycloakAdminService>(); }
+    {
+        services.AddScoped<IAppUserService, AppUserService>(); services.AddHttpClient<KeycloakAdminService>();
+        RBBH.ConnectedParties.IoC.Extensions.Controllers.ControllersExtensions.AddControllersExtension(services);
+        services.AddSingleton<RuntimeLocalizationCache>(); services.AddOptions<RuntimeLocalizationOptions>();
+        services.AddScoped<RuntimeLocalizationCatalog>(); services.AddScoped<RBBH.ConnectedParties.Localization.BackendLocalizationFilter>();
+    }
 
     [SqlServerFact]
     public async Task PagedSqlReadsHaveBoundedQueryCountForOneAndOneHundredRowsWithMultipleRoles()

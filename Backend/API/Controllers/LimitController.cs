@@ -111,7 +111,7 @@ public class LimitController(ILimitService limitService, IAuditService auditServ
         if (result.IsSuccessful)
         {
             var korisnik = GetKorisnik();
-            return Ok(new { message = "Limit je uspješno obrisan." });
+            return Ok(new { message = BackendMessages.Message("messages.limits.deleted") });
         }
 
         return HTTPExceptiontFromResult(result);
@@ -121,7 +121,7 @@ public class LimitController(ILimitService limitService, IAuditService auditServ
     public async Task<IActionResult> Import(IFormFile file, CancellationToken ct)
     {
         if (file is null || file.Length is <= 0 or > 10 * 1024 * 1024 || !file.FileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
-            return BadRequest(new ProblemDetails { Status = 400, Title = "Priložite .xlsx datoteku do 10 MB." });
+            return BadRequest(new ProblemDetails { Status = 400, Title = BackendMessages.Message("errors.workbook.upload") });
         using var stream = file.OpenReadStream(); return Ok(await _limitService.Import(stream, GetKorisnik(), ct));
     }
 

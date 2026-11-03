@@ -72,16 +72,25 @@ public sealed class RuntimeLocalizationCatalog(ConnectedPartiesDbContext db, IOp
         return pack;
     }
 
+    public async Task<RuntimeResourcePack?> ForRequest(string? header, CancellationToken ct)
+    {
+        var language = (header?.Length <= 256 ? header : null)?.Split(',')[0].Split(';')[0].Split('-')[0].Trim().ToUpperInvariant() ?? DefaultLanguage;
+        if (string.IsNullOrEmpty(language)) language = DefaultLanguage;
+        try { return await Resources(language, ct); }
+        catch (BusinessRuleException error) when (error.Code == "localization.language_unavailable")
+        {
+            if (language == DefaultLanguage) return null;
+            try { return await Resources(DefaultLanguage, ct); }
+            catch (BusinessRuleException fallback) when (fallback.Code == "localization.language_unavailable") { return null; }
+        }
+    }
+
     public async Task<string> Text(string key, string? requestedLanguage, CancellationToken ct)
     {
-        var language = (requestedLanguage?.Length <= 256 ? requestedLanguage : null)?.Split(',')[0].Split(';')[0].Split('-')[0].Trim().ToUpperInvariant() ?? DefaultLanguage;
-        if (!await Supported(language, ct)) language = DefaultLanguage;
-        if (await Supported(language, ct))
-        {
-            var pack = await Resources(language, ct);
-            var resource = pack.Items.FirstOrDefault(row => row.ResourceKey.Equals(key, StringComparison.OrdinalIgnoreCase));
-            if (resource is not null) return resource.Label;
-        }
+        var pack = await ForRequest(requestedLanguage, ct);
+        var resource = pack?.Items.FirstOrDefault(row => row.ResourceKey.Equals(key, StringComparison.OrdinalIgnoreCase));
+        if (resource is not null) return resource.Label;
+        var language = pack?.Language ?? DefaultLanguage;
         var diagnostic = "missing:" + language + ":" + key;
         if (!cache.Values.TryGetValue(diagnostic, out _))
         {

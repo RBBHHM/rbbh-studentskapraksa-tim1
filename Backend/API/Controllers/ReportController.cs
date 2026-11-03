@@ -75,10 +75,10 @@ public class ReportController : ControllerBase
     public async Task<IActionResult> GenerateMonthlyReport(int year, int month)
     {
         if (month < 1 || month > 12)
-            return BadRequest(new { errors = new[] { new { field = "month", message = "Mjesec mora biti između 1 i 12." } } });
+            return BadRequest(new { errors = new[] { new { field = "month", message = BackendMessages.Message("errors.report.month.range") } } });
 
         if (year < 2000 || year > DateTime.UtcNow.Year)
-            return BadRequest(new { errors = new[] { new { field = "year", message = "Godina nije ispravna." } } });
+            return BadRequest(new { errors = new[] { new { field = "year", message = BackendMessages.Message("errors.report.year.invalid") } } });
 
         var currentUser = CurrentUser();
         var report = await _reportService.GenerateMonthlyReportAsync(year, month, currentUser);

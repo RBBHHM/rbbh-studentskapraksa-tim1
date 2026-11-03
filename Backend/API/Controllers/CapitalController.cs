@@ -33,7 +33,7 @@ public class CapitalController(ICapitalService capitalService, IAuditService aud
     [HttpGet("as-of"), Authorize(Policy = ApplicationPolicies.CapitalRead)]
     public async Task<ActionResult<CapitalDTO?>> AsOf([FromQuery] DateTime date, CancellationToken ct)
     {
-        if (!Request.Query.ContainsKey("date")) return BadRequest(new ProblemDetails { Status = 400, Title = "Datum je obavezan." });
+        if (!Request.Query.ContainsKey("date")) return BadRequest(new ProblemDetails { Status = 400, Title = BackendMessages.Message("errors.capital.date.required") });
         return HandleResult(await _capitalService.AsOf(date, ct));
     }
 

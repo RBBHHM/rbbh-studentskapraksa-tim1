@@ -145,7 +145,7 @@ public class RelatedPersonController(
 
         if (result.IsSuccessful)
         {
-            return Ok(new { message = "Povezano fizičko lice je uspješno obrisano." });
+            return Ok(new { message = BackendMessages.Message("messages.registry.person.deleted") });
         }
 
         return HTTPExceptiontFromResult(result).Result!;
@@ -243,7 +243,7 @@ public class RelatedPersonController(
 
         if (result.IsSuccessful)
         {
-            return Ok(new { message = "Član porodice je uspješno obrisan." });
+            return Ok(new { message = BackendMessages.Message("messages.registry.family.deleted") });
         }
 
         return HTTPExceptiontFromResult(result).Result!;
@@ -267,12 +267,12 @@ public class RelatedPersonController(
     public async Task<IActionResult> Import(IFormFile file)
     {
         if (file is null || file.Length == 0)
-            return BadRequest(new { message = "Fajl nije priložen ili je prazan." });
+            return BadRequest(new { message = BackendMessages.Message("errors.workbook.required") });
 
         if (!file.FileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
-            return BadRequest(new { message = "Dozvoljen je samo .xlsx format." });
+            return BadRequest(new { message = BackendMessages.Message("errors.workbook.format") });
         if (file.Length > 10 * 1024 * 1024)
-            return BadRequest(new { message = "Excel datoteka smije imati najviše 10 MB." });
+            return BadRequest(new { message = BackendMessages.Message("errors.workbook.size") });
 
         using var stream = file.OpenReadStream();
         var korisnik = GetKorisnik();

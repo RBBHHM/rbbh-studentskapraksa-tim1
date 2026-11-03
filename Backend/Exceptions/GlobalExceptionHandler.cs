@@ -29,10 +29,10 @@ namespace RBBH.ConnectedParties.Exceptions
             var problem = new ProblemDetails
             {
                 Status = statusCode,
-                Title = statusCode >= 500 ? RBBH.ConnectedParties.Localization.BackendErrorFallbacks.Text("request.unavailable.title") : RBBH.ConnectedParties.Localization.BackendErrorFallbacks.Text("request.invalid.title"),
+                Title = statusCode >= 500 ? RBBH.ConnectedParties.Localization.BackendMessages.Text("request.unavailable.title") : RBBH.ConnectedParties.Localization.BackendMessages.Text("request.invalid.title"),
                 Detail = statusCode >= 500
-                    ? RBBH.ConnectedParties.Localization.BackendErrorFallbacks.Text("request.unavailable.detail")
-                    : RBBH.ConnectedParties.Localization.BackendErrorFallbacks.Text("request.invalid.detail"),
+                    ? RBBH.ConnectedParties.Localization.BackendMessages.Text("request.unavailable.detail")
+                    : RBBH.ConnectedParties.Localization.BackendMessages.Text("request.invalid.detail"),
                 Instance = $"{httpContext.Request.Method} {httpContext.Request.Path}"
             };
             problem.Extensions["traceId"] = httpContext.TraceIdentifier;
@@ -49,7 +49,7 @@ namespace RBBH.ConnectedParties.Exceptions
                 // not raw exception text or submitted personal/business data.
                 problem.Extensions["errors"] = new Dictionary<string, string[]>
                 {
-                    [field] = [RBBH.ConnectedParties.Localization.BackendErrorFallbacks.Text("request.invalid.detail")]
+                    [field] = [RBBH.ConnectedParties.Localization.BackendMessages.Text("request.invalid.detail")]
                 };
             }
             // Resolve per request: the exception handler is singleton, while the catalog/database is scoped.

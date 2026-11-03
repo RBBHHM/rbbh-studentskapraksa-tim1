@@ -177,7 +177,7 @@ public class LegalEntityController : ControllerBase
     {
         await _legalEntityService.DeleteAsync(id, CurrentUser());
 
-        return Ok(new { message = "Pravno lice uspješno deaktivirano." });
+        return Ok(new { message = BackendMessages.Message("messages.registry.legal.deactivated") });
     }
 
     /// <summary>
@@ -194,12 +194,12 @@ public class LegalEntityController : ControllerBase
     public async Task<IActionResult> Import(IFormFile file)
     {
         if (file is null || file.Length == 0)
-            return BadRequest(Err("Fajl nije priložen ili je prazan."));
+            return BadRequest(Err(BackendMessages.Message("errors.workbook.required")));
 
         if (!file.FileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
-            return BadRequest(Err("Dozvoljen je samo .xlsx format."));
+            return BadRequest(Err(BackendMessages.Message("errors.workbook.format")));
         if (file.Length > 10 * 1024 * 1024)
-            return BadRequest(Err("Excel datoteka smije imati najviše 10 MB."));
+            return BadRequest(Err(BackendMessages.Message("errors.workbook.size")));
 
         using var stream = file.OpenReadStream();
         var username = CurrentUser();

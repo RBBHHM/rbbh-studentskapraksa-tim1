@@ -124,3 +124,7 @@ New users/role-approval/subject-link audit rows use stable authenticated `sub` a
 ### Business error resources
 
 Apply `AddBusinessErrorResources` to seed missing BS/EN/DE business-error labels (existing labels retained). Error `resourceKey` is still `errors.` plus the error code with underscores converted to dots. Details honor Accept-Language and runtime codebook updates; min/max messages are formatted server-side. Invalid runtime format strings safely retain the original message. HTTP status/code/error shapes are unchanged. An embedded BS manifest is a safe outage fallback only; editable runtime Language Packs remain authoritative. Legacy controller/field-validation text conversion is still in progress.
+
+### Controller/model message resources
+
+Apply `AddControllerAndValidationResources` after the business-error resource migration. Controller success/error and explicit/framework field validation now honor Accept-Language through the existing runtime pack. No header uses configured default BS. HTTP statuses, field keys and response shapes remain unchanged; default framework envelope text now follows that language contract. Runtime label updates are visible on the next request. Invalid format overrides fall back safely, and language scopes are isolated across concurrent requests. Keep placeholders compatible with the existing positional arguments (`{0}`, etc.); adding an unsupported argument is rejected for the override. New keys are lowercase dot notation; legacy key casing remains compatible. No frontend file changed.

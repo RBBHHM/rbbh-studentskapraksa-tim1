@@ -73,7 +73,7 @@ public sealed class BusinessErrorResourcesSqlTests : RoleCatalogFixture
             foreach (var language in new[] { "BS", "EN", "DE" })
             {
                 var keys = await db.CodeLists.Where(row => row.Kategorija == "LanguagePacks" && row.LanguageCode == language).Select(row => row.ResourceKey).ToArrayAsync();
-                Assert.Empty(BackendErrorFallbacks.All.Keys.Except(keys!));
+                Assert.Empty(BackendMessages.All.Keys.Except(keys!));
             }
             Assert.Equal("Approved existing label", (await db.CodeLists.SingleAsync(row => row.LanguageCode == "DE" && row.ResourceKey == "errors.roles.not.found")).ResourceLabel);
             Assert.Equal(3, await db.CodeLists.CountAsync(row => row.ResourceKey == "errors.roles.not.found"));

@@ -50,7 +50,7 @@ public class PeriodLockController(
         [FromQuery] int year, [FromQuery] int month)
     {
         if (month < 1 || month > 12 || year < 2020 || year > 9999)
-            return BadRequest(Err("Nevažeći period."));
+            return BadRequest(Err(BackendMessages.Message("errors.period.invalid")));
 
         var isLocked = await periodLockRepository.IsPeriodLockedAsync(year, month);
         var periodLock = await periodLockRepository.GetByPeriodAsync(year, month);
@@ -72,7 +72,7 @@ public class PeriodLockController(
     {
         var now = DateTime.UtcNow; var year = dto?.Year ?? now.Year; var month = dto?.Month ?? now.Month;
         return Command(() => workflow.SetLock(year, month, true, User, HttpContext.Connection.RemoteIpAddress?.ToString(), HttpContext.RequestAborted),
-            $"Period {periodLockService.GetMonthDisplayName(year, month)} uspješno zaključan.");
+            BackendMessages.Message("messages.period.locked", periodLockService.GetMonthDisplayName(year, month)));
     }
 
     [HttpPost("unlock"), Authorize(Policy = ApplicationPolicies.CapitalWrite)]
@@ -80,17 +80,17 @@ public class PeriodLockController(
     {
         var now = DateTime.UtcNow; var year = dto?.Year ?? now.Year; var month = dto?.Month ?? now.Month;
         return Command(() => workflow.SetLock(year, month, false, User, HttpContext.Connection.RemoteIpAddress?.ToString(), HttpContext.RequestAborted),
-            $"Period {periodLockService.GetMonthDisplayName(year, month)} uspješno otključan.");
+            BackendMessages.Message("messages.period.unlocked", periodLockService.GetMonthDisplayName(year, month)));
     }
 
     [HttpPost("request-unlock"), Authorize(Policy = ApplicationPolicies.CapitalWrite)]
     public Task<IActionResult> RequestUnlock([FromBody] RequestUnlockDto dto)
     {
         if (dto is null || string.IsNullOrWhiteSpace(dto.Reason) || dto.Reason.Length > 500 || dto.Reason.Trim().Length < 10)
-            return Task.FromResult<IActionResult>(BadRequest(Err("Razlog je obavezan, minimalno 10 i maksimalno 500 karaktera.", "reason")));
+            return Task.FromResult<IActionResult>(BadRequest(Err(BackendMessages.Message("errors.period.reason.required"), "reason")));
         var now = DateTime.UtcNow;
         return Command(() => workflow.Request(dto.Year ?? now.Year, dto.Month ?? now.Month, dto.Reason, User,
-            HttpContext.Connection.RemoteIpAddress?.ToString(), HttpContext.RequestAborted), "Zahtjev uspješno poslan administratoru.");
+            HttpContext.Connection.RemoteIpAddress?.ToString(), HttpContext.RequestAborted), BackendMessages.Message("messages.period.request.sent"));
     }
 
     /// <summary>Returns unlock requests. status="" returns ALL, status="PENDING" filters.</summary>
@@ -138,24 +138,24 @@ public class PeriodLockController(
     public Task<IActionResult> RejectRequest([FromRoute] Guid id, [FromBody] AdminActionDto dto)
     {
         if (dto is null || string.IsNullOrWhiteSpace(dto.Note) || dto.Note.Length > 1000 || dto.Note.Trim().Length < 10)
-            return Task.FromResult<IActionResult>(BadRequest(Err("Razlog odbijanja je obavezan (10–1000 karaktera).", "note")));
-        return Command(() => workflow.Process(id, true, dto.Note, User, HttpContext.Connection.RemoteIpAddress?.ToString(), HttpContext.RequestAborted), "Zahtjev je odbijen.");
+            return Task.FromResult<IActionResult>(BadRequest(Err(BackendMessages.Message("errors.period.rejection.note.required"), "note")));
+        return Command(() => workflow.Process(id, true, dto.Note, User, HttpContext.Connection.RemoteIpAddress?.ToString(), HttpContext.RequestAborted), BackendMessages.Message("messages.period.request.rejected"));
     }
 
     [HttpPost("unlock-requests/{id:guid}/request-info"), Authorize(Policy = ApplicationPolicies.CapitalWrite)]
     public Task<IActionResult> RequestMoreInfo([FromRoute] Guid id, [FromBody] AdminActionDto dto)
     {
         if (dto is null || string.IsNullOrWhiteSpace(dto.Note) || dto.Note.Length > 1000 || dto.Note.Trim().Length < 10)
-            return Task.FromResult<IActionResult>(BadRequest(Err("Poruka korisniku je obavezna (10–1000 karaktera).", "note")));
-        return Command(() => workflow.Process(id, false, dto.Note, User, HttpContext.Connection.RemoteIpAddress?.ToString(), HttpContext.RequestAborted), "Zahtjev za više informacija poslan.");
+            return Task.FromResult<IActionResult>(BadRequest(Err(BackendMessages.Message("errors.period.request.note.required"), "note")));
+        return Command(() => workflow.Process(id, false, dto.Note, User, HttpContext.Connection.RemoteIpAddress?.ToString(), HttpContext.RequestAborted), BackendMessages.Message("messages.period.information.requested"));
     }
 
     [HttpPost("unlock-requests/{id:guid}/respond"), Authorize(Policy = ApplicationPolicies.CapitalWrite)]
     public Task<IActionResult> RespondToRequest([FromRoute] Guid id, [FromBody] RespondDto dto)
     {
         if (dto is null || string.IsNullOrWhiteSpace(dto.Message) || dto.Message.Length > 490 || dto.Message.Trim().Length < 10)
-            return Task.FromResult<IActionResult>(BadRequest(Err("Dopuna mora sadržavati od 10 do 490 znakova.", "message")));
-        return Command(() => workflow.Respond(id, dto.Message, User, HttpContext.Connection.RemoteIpAddress?.ToString(), HttpContext.RequestAborted), "Odgovor je poslan administratoru.");
+            return Task.FromResult<IActionResult>(BadRequest(Err(BackendMessages.Message("errors.period.response.length"), "message")));
+        return Command(() => workflow.Respond(id, dto.Message, User, HttpContext.Connection.RemoteIpAddress?.ToString(), HttpContext.RequestAborted), BackendMessages.Message("messages.period.response.sent"));
     }
 
     private async Task<IActionResult> Command(Func<Task> command, string message)
@@ -166,9 +166,9 @@ public class PeriodLockController(
             var body = new { errors = new[] { new ErrField(null, error.Message) }, code = error.Code };
             return error.Status switch { 400 => BadRequest(body), 404 => NotFound(body), 409 => Conflict(body), _ => StatusCode(error.Status, body) };
         }
-        catch (DbUpdateConcurrencyException) { return Conflict(new { errors = new[] { new ErrField(null, "Zahtjev je u međuvremenu izmijenjen. Osvježite podatke.") }, code = "request.concurrent_change" }); }
+        catch (DbUpdateConcurrencyException) { return Conflict(new { errors = new[] { new ErrField(null, BackendMessages.Message("errors.period.request.changed")) }, code = "request.concurrent_change" }); }
         catch (DbUpdateException error) when (error.InnerException is Microsoft.Data.SqlClient.SqlException { Number: 2601 or 2627 })
-        { return Conflict(new { errors = new[] { new ErrField(null, "Zahtjev je u međuvremenu izmijenjen. Osvježite podatke.") }, code = "request.concurrent_change" }); }
+        { return Conflict(new { errors = new[] { new ErrField(null, BackendMessages.Message("errors.period.request.changed")) }, code = "request.concurrent_change" }); }
     }
 
     private static object Err(string message, string? field = null) =>
