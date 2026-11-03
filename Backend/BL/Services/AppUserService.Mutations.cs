@@ -14,14 +14,14 @@ public partial class AppUserService
     {
         var validation = new List<System.ComponentModel.DataAnnotations.ValidationResult>();
         if (!System.ComponentModel.DataAnnotations.Validator.TryValidateObject(dto, new(dto), validation, true))
-            throw new Exceptions.BusinessRuleException(400, "users.invalid_profile", "Provjerite ime, prezime, korisničko ime i email adresu.");
+            throw new Exceptions.BusinessRuleException(400, "users.invalid_profile");
         var row = await ResolveUser(userId, cancellationToken);
         if (row is null) return new(UserMutationStatus.NotFound);
         var username = dto.Username.Trim(); var email = dto.Email.Trim().ToLowerInvariant();
         var normalizedName = username.ToUpperInvariant(); var normalizedEmail = email.ToUpperInvariant();
         if (await _db.AppUsers.AnyAsync(user => user.Id != row.Id &&
             (user.Username.Trim().ToUpper() == normalizedName || user.Email.Trim().ToUpper() == normalizedEmail), cancellationToken))
-            throw new Exceptions.BusinessRuleException(409, "users.duplicate_identity", "Korisničko ime ili email adresa već su u upotrebi.");
+            throw new Exceptions.BusinessRuleException(409, "users.duplicate_identity");
         var before = JsonSerializer.Serialize(new { row.Username, row.FirstName, row.LastName, row.Email });
         row.Username = username; row.FirstName = dto.FirstName.Trim(); row.LastName = dto.LastName.Trim(); row.Email = email;
         row.ModifiedAt = DateTime.UtcNow; row.ModifiedBy = actor.DisplayName;

@@ -48,7 +48,7 @@ public sealed class KeycloakAdminService
             if (!response.IsSuccessStatusCode) throw Unavailable();
             var identities = await response.Content.ReadFromJsonAsync<List<KeycloakIdentity>>(ct) ?? [];
             var matches = identities.Where(item => string.Equals(item.Email?.Trim(), email.Trim(), StringComparison.OrdinalIgnoreCase)).Take(2).ToArray();
-            if (matches.Length > 1) throw new BusinessRuleException(409, "identity.ambiguous", "Identitet zahtijeva provjeru administratora.");
+            if (matches.Length > 1) throw new BusinessRuleException(409, "identity.ambiguous");
             var match = matches.SingleOrDefault();
             if (match is not null && (string.IsNullOrWhiteSpace(match.Subject) || match.Subject.Length > 100)) throw Unavailable();
             return match;
@@ -60,7 +60,7 @@ public sealed class KeycloakAdminService
         }
     }
 
-    private static BusinessRuleException Unavailable() => new(503, "identity.provider_unavailable", "Identitet trenutno nije moguće provjeriti. Pokušajte ponovo ili kontaktirajte podršku.");
+    private static BusinessRuleException Unavailable() => new(503, "identity.provider_unavailable");
 }
 
 public sealed record KeycloakIdentity([property: JsonPropertyName("id")] string Subject, string? Username,

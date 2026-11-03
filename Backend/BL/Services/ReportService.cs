@@ -167,17 +167,17 @@ public class ReportService : IReportService
             select new ExposureSnapshotRow { Naziv = entity.Name, Matbroj = entity.Matbroj, ExposureLimit = capital.ExposureLimit,
                 CurrentExposure = capital.CurrentExposure, Currency = capital.Currency, IsLimitBreached = capital.IsLimitBreached,
                 RegulatoryCapital = capital.RegulatoryCapital, CoreCapital = capital.CoreCapital, CreatedBy = capital.CreatedBy }).Take(20_001).ToListAsync(Cancellation);
-        if (rows.Count > 20_000) throw new BusinessRuleException(503, "report.resource_limit", "Opseg izvještaja prelazi podržanu veličinu obrade.");
+        if (rows.Count > 20_000) throw new BusinessRuleException(503, "report.resource_limit");
         if (year.HasValue && month.HasValue && _finance?.Enabled == true)
         {
             if (rows.Any(row => string.IsNullOrWhiteSpace(row.Matbroj) || row.Currency != "BAM") || rows.GroupBy(row => row.Matbroj).Any(group => group.Count() > 1))
-                throw new BusinessRuleException(409, "finance.registry_reconciliation", "Registar i finansijski identifikatori zahtijevaju usklađivanje.");
+                throw new BusinessRuleException(409, "finance.registry_reconciliation");
             var exposures = await _finance.Read(year.Value, month.Value, rows.Select(row => row.Matbroj!).ToArray(), Cancellation);
             var map = exposures.ToDictionary(row => row.CustomerKey, StringComparer.Ordinal);
-            if (rows.Any(row => !map.ContainsKey(row.Matbroj!))) throw new BusinessRuleException(503, "finance.incomplete_period", "Finansijski podaci za odabrani period nisu potpuni.");
+            if (rows.Any(row => !map.ContainsKey(row.Matbroj!))) throw new BusinessRuleException(503, "finance.incomplete_period");
             var date = new DateTime(year.Value, month.Value, DateTime.DaysInMonth(year.Value, month.Value));
             var capital = await CapitalHistory.AsOf(_context, date, Cancellation);
-            if (rows.Count > 0 && capital is null) throw new BusinessRuleException(409, "finance.capital_missing", "Kapital koji važi za odabrani period nije poznat.");
+            if (rows.Count > 0 && capital is null) throw new BusinessRuleException(409, "finance.capital_missing");
             foreach (var row in rows)
             {
                 row.CurrentExposure = map[row.Matbroj!].TotalExposure; row.IsLimitBreached = row.CurrentExposure > row.ExposureLimit;
@@ -201,7 +201,7 @@ public class ReportService : IReportService
         }
         catch (OverflowException)
         {
-            throw new BusinessRuleException(409, "report.amount_out_of_range", "Iznosi izvještaja zahtijevaju usklađivanje prije snimanja.");
+            throw new BusinessRuleException(409, "report.amount_out_of_range");
         }
     }
 

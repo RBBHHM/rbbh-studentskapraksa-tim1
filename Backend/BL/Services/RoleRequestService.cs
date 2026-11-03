@@ -35,12 +35,12 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
         var first = Principal.FindFirst("given_name")?.Value ?? "";
         var last = Principal.FindFirst("family_name")?.Value ?? "";
         if (!verified || !MailAddress.TryCreate(email, out var address) || address.Address != email)
-            throw new BusinessRuleException(403, "identity.verified_email_required", "Potrebna je potvrđena email adresa.");
+            throw new BusinessRuleException(403, "identity.verified_email_required");
         if (username.Length > 100 || first.Length > 100 || last.Length > 100 || email.Length > 200 ||
             input.ClientRequestId == Guid.Empty || input.Purpose is not ("new" or "change") ||
             input.RoleIds.Length > 20 || input.RoleIds.Distinct().Count() != input.RoleIds.Length ||
             (input.Purpose == "new" && input.RoleIds.Length == 0) || input.Note?.Length > 1000)
-            throw new BusinessRuleException(400, "role_request.invalid", "Provjerite podatke zahtjeva i odabrane role.");
+            throw new BusinessRuleException(400, "role_request.invalid");
 
         return Locked(async () =>
         {
@@ -58,7 +58,7 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
             var roles = await db.Roles.Where(role => input.RoleIds.Contains(role.Id) && role.IsActive && role.Name != ApplicationAccessRoles.Guest).ToListAsync(ct);
             if (roles.Count != input.RoleIds.Length) throw InvalidRoles();
             var admins = await ActiveAdmins().ToListAsync(ct);
-            if (admins.Count == 0) throw new BusinessRuleException(503, "role_request.approver_unavailable", "Obrada zahtjeva trenutno nije dostupna.");
+            if (admins.Count == 0) throw new BusinessRuleException(503, "role_request.approver_unavailable");
             var row = new RoleRequest { ClientRequestId = input.ClientRequestId, RequesterSubject = subject,
                 Username = username, FirstName = first, LastName = last, Email = email, Purpose = input.Purpose, Note = input.Note?.Trim() };
             row.RequestedRoles = roles.Select(role => new RequestedRole { Role = role, RoleId = role.Id, RequestId = row.Id }).ToList();
@@ -87,13 +87,13 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
     public Task<RoleRequestDTO> Decide(Guid id, bool approve, RoleRequestDecisionDTO input, CancellationToken ct)
     {
         if (input.DecisionId == Guid.Empty || input.ExpectedVersion < 1 || input.Note?.Length > 1000)
-            throw new BusinessRuleException(400, "role_request.invalid_decision", "Provjerite podatke odluke.");
+            throw new BusinessRuleException(400, "role_request.invalid_decision");
         return Locked(async () =>
         {
             await EnsureAdmin(ct); // Recheck current database grants inside the user-mutation lock.
             var row = await Query().SingleOrDefaultAsync(row => row.Id == id, ct)
-                ?? throw new BusinessRuleException(404, "request.not_found", "Zahtjev nije pronađen.");
-            if (row.RequesterSubject == Subject) throw new BusinessRuleException(403, "role_request.self_decision_denied", "Nije dozvoljena obrada vlastitog zahtjeva.");
+                ?? throw new BusinessRuleException(404, "request.not_found");
+            if (row.RequesterSubject == Subject) throw new BusinessRuleException(403, "role_request.self_decision_denied");
             var outcome = approve ? "approved" : "rejected";
             if (row.Status != "pending")
             {
@@ -148,18 +148,18 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
     {
         var subject = Subject;
         if (!await ActiveAdmins().AnyAsync(user => user.KeycloakId == subject, ct))
-            throw new BusinessRuleException(403, "authorization.admin_required", "Za ovu radnju su potrebne administratorske dozvole.");
+            throw new BusinessRuleException(403, "authorization.admin_required");
     }
     private async Task EnsureActiveApplicant(string subject, string email, CancellationToken ct)
     {
         var normalized = email.ToUpperInvariant();
         if (await db.AppUsers.AnyAsync(user => !user.IsActive && (user.KeycloakId == subject || user.Email.Trim().ToUpper() == normalized), ct))
-            throw new BusinessRuleException(403, "identity.inactive", "Pristup trenutno nije dozvoljen.");
+            throw new BusinessRuleException(403, "identity.inactive");
     }
     private Task<T> Locked<T>(Func<Task<T>> mutation, CancellationToken ct) => UsersMutationBoundary.ExecuteAsync(db, mutation,
         () => throw Conflict("request.busy"), ct);
-    private static BusinessRuleException Conflict(string code) => new(409, code, "Zahtjev je promijenjen ili zahtijeva provjeru. Osvježite podatke.");
-    private static BusinessRuleException InvalidRoles() => new(400, "role_request.invalid_roles", "Odabrane role nisu dostupne.");
+    private static BusinessRuleException Conflict(string code) => new(409, code);
+    private static BusinessRuleException InvalidRoles() => new(400, "role_request.invalid_roles");
     private static RoleRequestDTO Map(RoleRequest row, bool review) => new(row.Id, row.Purpose, row.Status,
         row.RequestedRoles.Select(item => item.RoleId).Order().ToArray(), row.RequestedRoles.Select(item => item.Role.Name).Order().ToArray(),
         row.Note, row.CreatedAt, row.ProcessedAt, row.ProcessedBy, row.DecisionNote, row.Version,

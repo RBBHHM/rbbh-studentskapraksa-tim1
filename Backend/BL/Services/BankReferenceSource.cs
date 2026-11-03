@@ -42,12 +42,12 @@ public sealed class SqlBankReferenceSource(IOptions<BankReferenceOptions> option
             throw Unavailable();
         return string.Join('.', parts.Select(part => "[" + part + "]"));
     }
-    private static BusinessRuleException Unavailable() => new(503, "bank_reference.unavailable", "Bankovni referentni podaci trenutno nisu dostupni.");
+    private static BusinessRuleException Unavailable() => new(503, "bank_reference.unavailable");
     private async Task<ReferencePage<T>> Read<T>(string table, string[] columns, string? search, int page, int size,
         bool exact, Func<SqlDataReader, T> map, CancellationToken ct)
     {
         if (!IsConfigured) throw Unavailable();
-        if (search?.Length > 100) throw new BusinessRuleException(400, "bank_reference.invalid_search", "Pretraga smije imati najviše 100 znakova.");
+        if (search?.Length > 100) throw new BusinessRuleException(400, "bank_reference.invalid_search");
         page = Math.Clamp(page, 1, 1_000_000); size = Math.Clamp(size, 1, 100);
         var source = Identifier(table); var fields = columns.Select(Identifier).ToArray();
         var projected = fields.Select(field => $"CONVERT(nvarchar(4000),{field})").ToArray();
@@ -84,7 +84,7 @@ public sealed class SqlBankReferenceSource(IOptions<BankReferenceOptions> option
     {
         var result = await Read(Settings.GccTable, [Settings.GccNumberColumn, Settings.GccNameColumn], number, 1, 2, true,
             reader => new BankGroup(Text(reader, 0), Text(reader, 1)), ct);
-        if (result.Total > 1) throw new BusinessRuleException(409, "bank_reference.ambiguous", "Referentni podatak zahtijeva provjeru izvora.");
+        if (result.Total > 1) throw new BusinessRuleException(409, "bank_reference.ambiguous");
         return result.Items.SingleOrDefault();
     }
 }

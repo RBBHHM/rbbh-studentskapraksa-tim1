@@ -30,8 +30,8 @@ namespace RBBH.ConnectedParties.IoC.Extensions.ExceptionHandling
             // Never copy exception messages, inner exceptions or stack traces to HTTP.
             if (exception is not null)
             {
-                context.ProblemDetails.Title = "Zahtjev trenutno nije moguće završiti.";
-                context.ProblemDetails.Detail = "Pokušajte ponovo. Ako se problem ponovi, podršci pošaljite navedeni ID.";
+                context.ProblemDetails.Title = RBBH.ConnectedParties.Localization.BackendErrorFallbacks.Text("request.unavailable.title");
+                context.ProblemDetails.Detail = RBBH.ConnectedParties.Localization.BackendErrorFallbacks.Text("request.unavailable.detail");
             }
             context.ProblemDetails.Extensions.TryAdd("traceId", context.HttpContext.TraceIdentifier);
 

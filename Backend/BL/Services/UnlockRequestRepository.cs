@@ -42,9 +42,9 @@ public class UnlockRequestRepository(ConnectedPartiesDbContext db) : IUnlockRequ
     public async Task RespondAsync(Guid id, string ownerSubject, UnlockRequest response, AuditEntry audit, CancellationToken cancellationToken)
     {
         var original = await db.UnlockRequests.SingleOrDefaultAsync(row => row.Id == id && row.RequestedBySubject == ownerSubject, cancellationToken)
-            ?? throw new Exceptions.BusinessRuleException(404, "request.not_found", "Zahtjev nije pronađen.");
+            ?? throw new Exceptions.BusinessRuleException(404, "request.not_found");
         if (original.Status != "NEEDS_INFO" || await db.UnlockRequests.AnyAsync(row => row.ParentRequestId == id, cancellationToken))
-            throw new Exceptions.BusinessRuleException(409, "request.invalid_state", "Zahtjev više ne očekuje dopunu.");
+            throw new Exceptions.BusinessRuleException(409, "request.invalid_state");
         original.ModifiedAt = DateTime.UtcNow;
         original.ModifiedBy = response.CreatedBy;
         response.ParentRequestId = original.Id;

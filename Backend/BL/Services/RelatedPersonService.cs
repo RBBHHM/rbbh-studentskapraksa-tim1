@@ -72,7 +72,7 @@ public class RelatedPersonService(
 
     public async Task<ReferencePage<RelatedPersonSummaryDTO>> Page(string? search, int page, int pageSize, CancellationToken ct)
     {
-        if (search?.Length > 200) throw new RBBH.ConnectedParties.Exceptions.BusinessRuleException(400, "registry.invalid_search", "Pretraga smije imati najviše 200 znakova.");
+        if (search?.Length > 200) throw new RBBH.ConnectedParties.Exceptions.BusinessRuleException(400, "registry.invalid_search");
         page = Math.Clamp(page, 1, 1_000_000); pageSize = Math.Clamp(pageSize, 1, 100);
         var query = _dbContext.RelatedPersons.AsNoTracking();
         if (!string.IsNullOrWhiteSpace(search))

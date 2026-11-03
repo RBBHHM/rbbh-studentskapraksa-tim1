@@ -33,7 +33,7 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
     public async Task<RoleCatalogDTO> Get(Guid id, CancellationToken ct)
     {
         var row = await db.Roles.AsNoTracking().Include(row => row.RolePermissions).SingleOrDefaultAsync(row => row.Id == id, ct)
-            ?? throw new BusinessRuleException(404, "roles.not_found", "Rola nije pronađena.");
+            ?? throw new BusinessRuleException(404, "roles.not_found");
         return Map(row);
     }
 
@@ -52,7 +52,7 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
         Validate(input.DisplayName, input.Description, input.PermissionIds);
         var normalized = name.ToUpperInvariant();
         if (await db.Roles.AnyAsync(row => row.Name.Trim().ToUpper() == normalized, ct))
-            throw new BusinessRuleException(409, "roles.duplicate_name", "Rola s odabranim nazivom već postoji.");
+            throw new BusinessRuleException(409, "roles.duplicate_name");
         await ValidatePermissions(input.PermissionIds, ct);
         var row = new Role { Name = name, DisplayName = input.DisplayName.Trim(), Description = input.Description?.Trim(),
             CreatedBy = AuthenticatedActor.Username(Actor) };
@@ -68,13 +68,13 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
         await EnsureAdmin(ct);
         Validate(input.DisplayName, input.Description, input.PermissionIds);
         var row = await db.Roles.Include(row => row.RolePermissions).SingleOrDefaultAsync(row => row.Id == id, ct)
-            ?? throw new BusinessRuleException(404, "roles.not_found", "Rola nije pronađena.");
-        if (Protected(row.Name)) throw new BusinessRuleException(409, "roles.protected", "Tehničku Admin ili Guest definiciju nije moguće mijenjati kroz katalog.");
+            ?? throw new BusinessRuleException(404, "roles.not_found");
+        if (Protected(row.Name)) throw new BusinessRuleException(409, "roles.protected");
         var subject = AuthenticatedActor.RequireSubject(Actor);
         if (await db.UserRoles.AnyAsync(assignment => assignment.RoleId == id && assignment.IsActive &&
             db.AppUsers.Any(user => user.Id == assignment.UserId && user.KeycloakSubjectConfirmed && user.KeycloakId == subject), ct))
-            throw new BusinessRuleException(403, "roles.self_management_denied", "Nije dozvoljeno mijenjati definiciju vlastite dodijeljene role.");
-        if (input.ExpectedVersion != row.Version) throw new BusinessRuleException(409, "request.concurrent_change", "Rola je promijenjena. Osvježite podatke.");
+            throw new BusinessRuleException(403, "roles.self_management_denied");
+        if (input.ExpectedVersion != row.Version) throw new BusinessRuleException(409, "request.concurrent_change");
         await ValidatePermissions(input.PermissionIds, ct);
         var before = new { row.Name, row.DisplayName, row.Description, row.IsActive, PermissionIds = row.RolePermissions.Select(grant => grant.PermissionId).ToArray() };
         var targets = input.PermissionIds.ToHashSet();
@@ -97,7 +97,7 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
             db.UserRoles.Any(assignment => assignment.UserId == user.Id && assignment.IsActive && assignment.Role.IsActive &&
                 assignment.Role.Name == ApplicationAccessRoles.Administrator && assignment.Role.RolePermissions.Any(grant =>
                     grant.Permission.IsActive && grant.Permission.Code == ApplicationPermissions.AdministrationManage)), ct))
-            throw new BusinessRuleException(403, "authorization.admin_required", "Za ovu radnju su potrebne administratorske dozvole.");
+            throw new BusinessRuleException(403, "authorization.admin_required");
     }
     private static void Validate(string? display, string? description, Guid[]? ids)
     {
@@ -107,11 +107,11 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
     private async Task ValidatePermissions(Guid[] ids, CancellationToken ct)
     {
         if (await db.Permissions.CountAsync(row => ids.Contains(row.Id) && row.IsActive, ct) != ids.Length)
-            throw new BusinessRuleException(400, "roles.invalid_permissions", "Odabrane dozvole nisu dostupne.");
+            throw new BusinessRuleException(400, "roles.invalid_permissions");
     }
     private Task<T> Locked<T>(Func<Task<T>> mutation, CancellationToken ct) => UsersMutationBoundary.ExecuteAsync(db, mutation,
-        () => throw new BusinessRuleException(409, "request.busy", "Izmjena je u toku. Pokušajte ponovo."), ct);
-    private static BusinessRuleException Invalid() => new(400, "roles.invalid_definition", "Provjerite naziv, opis i dozvole role.");
+        () => throw new BusinessRuleException(409, "request.busy"), ct);
+    private static BusinessRuleException Invalid() => new(400, "roles.invalid_definition");
     private static RoleCatalogDTO Map(Role row) => new(row.Id, row.Name, row.DisplayName ?? row.Name, row.Description,
         row.IsActive, row.Version, row.RolePermissions.Select(grant => grant.PermissionId).Order().ToArray(), Protected(row.Name));
 }

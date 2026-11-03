@@ -47,7 +47,7 @@ public sealed class RuntimeLocalizationCatalog(ConnectedPartiesDbContext db, IOp
     {
         language = language.Trim().ToUpperInvariant();
         if (language.Length > 10 || !await Supported(language, ct))
-            throw new BusinessRuleException(404, "localization.language_unavailable", "Odabrani jezik nije dostupan.");
+            throw new BusinessRuleException(404, "localization.language_unavailable");
         var versions = await db.CodeListDefinitions.AsNoTracking().Where(row => row.Name == Settings.LanguagesCodebook || row.Name == Settings.LanguagePacksCodebook)
             .OrderBy(row => row.Name).Select(row => new { row.Id, row.Version, row.IsActive }).ToListAsync(ct);
         var version = string.Join(':', versions.Select(row => $"{row.Id:N}.{row.Version}.{row.IsActive}"));
@@ -57,7 +57,7 @@ public sealed class RuntimeLocalizationCatalog(ConnectedPartiesDbContext db, IOp
         var rows = await db.CodeLists.AsNoTracking().Where(row => row.Kategorija == Settings.LanguagePacksCodebook &&
                 row.ResourceKey != null && row.LanguageCode != null && (row.LanguageCode == language || row.LanguageCode == fallback) &&
                 (row.Definition == null || row.Definition.IsActive)).Take(10_001).ToListAsync(ct);
-        if (rows.Count > 10_000) throw new BusinessRuleException(503, "localization.catalog_limit", "Jezički paket trenutno nije dostupan.");
+        if (rows.Count > 10_000) throw new BusinessRuleException(503, "localization.catalog_limit");
         var defaults = rows.Where(row => row.LanguageCode == fallback).ToDictionary(row => row.ResourceKey!, StringComparer.OrdinalIgnoreCase);
         var requested = rows.Where(row => row.LanguageCode == language).ToDictionary(row => row.ResourceKey!, StringComparer.OrdinalIgnoreCase);
         var keys = defaults.Keys.Concat(requested.Keys).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase);
@@ -94,18 +94,18 @@ public sealed class RuntimeLocalizationCatalog(ConnectedPartiesDbContext db, IOp
     public async Task Put(string language, string key, PutRuntimeResource input, string actor, CancellationToken ct)
     {
         language = language.Trim().ToUpperInvariant();
-        if (!await Supported(language, ct)) throw new BusinessRuleException(400, "localization.language_unavailable", "Odabrani jezik nije dostupan.");
+        if (!await Supported(language, ct)) throw new BusinessRuleException(400, "localization.language_unavailable");
         if (string.IsNullOrWhiteSpace(input.Label) || input.Label.Length > 4000 || input.Helper?.Length > 4000 || input.Placeholder?.Length > 500 || key.Length > 200)
-            throw new BusinessRuleException(400, "localization.invalid_resource", "Provjerite vrijednosti jezičkog resursa.");
+            throw new BusinessRuleException(400, "localization.invalid_resource");
         var normalized = key.ToUpperInvariant();
         var row = await db.CodeLists.IgnoreQueryFilters().SingleOrDefaultAsync(row => row.Kategorija == Settings.LanguagePacksCodebook &&
             row.LanguageCode == language && row.ResourceKey != null && row.ResourceKey.ToUpper() == normalized, ct);
         if (row is null && !Regex.IsMatch(key, "^[a-z][a-z0-9]*(\\.[a-z][a-z0-9]*)+$", RegexOptions.CultureInvariant))
-            throw new BusinessRuleException(400, "localization.invalid_key", "Novi ključ mora koristiti mala slova i semantičku dot notaciju.");
+            throw new BusinessRuleException(400, "localization.invalid_key");
         if (row?.IsSystemRequired == true && !input.IsActive)
-            throw new BusinessRuleException(409, "codelist.system_required", "Obavezni sistemski resurs nije moguće deaktivirati.");
+            throw new BusinessRuleException(409, "codelist.system_required");
         var definition = await db.CodeListDefinitions.SingleOrDefaultAsync(item => item.Name == Settings.LanguagePacksCodebook && item.IsActive, ct)
-            ?? throw new BusinessRuleException(503, "localization.setup_required", "Jezički šifrarnici nisu konfigurisani.");
+            ?? throw new BusinessRuleException(503, "localization.setup_required");
         var now = DateTime.UtcNow;
         definition.ModifiedBy = actor;
         if (row is null)

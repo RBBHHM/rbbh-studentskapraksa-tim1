@@ -17,9 +17,9 @@ internal static class RegistryVerification
     {
         var subject = CreatorSubject(accessor) ?? throw new MissingActorIdentityException();
         if (string.IsNullOrEmpty(creatorSubject))
-            throw new BusinessRuleException(409, "verification.provenance_required", "Identitet autora mora biti potvrđen prije verifikacije.");
+            throw new BusinessRuleException(409, "verification.provenance_required");
         if (string.Equals(creatorSubject, subject, StringComparison.Ordinal))
-            throw new BusinessRuleException(403, "verification.self_denied", "Nije dozvoljena verifikacija vlastitog zapisa.");
+            throw new BusinessRuleException(403, "verification.self_denied");
     }
 
     internal static AuditLog Audit(string table, Guid id, string displayActor, IHttpContextAccessor? accessor) => new()

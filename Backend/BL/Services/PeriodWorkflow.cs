@@ -18,14 +18,14 @@ public sealed class PeriodWorkflow(ConnectedPartiesDbContext db, IConfiguration 
     private static Actor Capture(ClaimsPrincipal principal, string? ip) => new(AuthenticatedActor.RequireSubject(principal),
         AuthenticatedActor.Username(principal), AuthenticatedActor.Email(principal), ip);
     private static void Period(int year, int month)
-    { if (year is < 2020 or > 9999 || month is < 1 or > 12) throw new BusinessRuleException(400, "period.invalid", "Nevažeći period."); }
+    { if (year is < 2020 or > 9999 || month is < 1 or > 12) throw new BusinessRuleException(400, "period.invalid"); }
     private static void Text(string? value, int minimum, int maximum, string code)
-    { if (string.IsNullOrWhiteSpace(value) || value.Length > maximum || value.Trim().Length < minimum) throw new BusinessRuleException(400, code, $"Unesite od {minimum} do {maximum} znakova."); }
+    { if (string.IsNullOrWhiteSpace(value) || value.Length > maximum || value.Trim().Length < minimum) throw new BusinessRuleException(400, code, new object?[] { minimum, maximum }); }
     private static bool Mailbox(string? email) => email is { Length: > 0 and <= 200 } && MailAddress.TryCreate(email, out var address) && address.Address == email;
     private string AdminMailbox()
     {
         var email = configuration["Email:AdminEmail"]?.Trim();
-        return Mailbox(email) ? email! : throw new BusinessRuleException(503, "period.notification_setup", "Obavijesti nisu konfigurisane. Zahtjev nije snimljen.");
+        return Mailbox(email) ? email! : throw new BusinessRuleException(503, "period.notification_setup");
     }
     private void Audit(string id, string action, Actor actor, object? before, object after) => db.AuditLogs.Add(new()
     { TableName = "PeriodLock", RecordId = id, Action = action, UserId = actor.Subject, Username = actor.Username,
@@ -65,11 +65,11 @@ public sealed class PeriodWorkflow(ConnectedPartiesDbContext db, IConfiguration 
         Period(year, month); var now = DateTime.UtcNow;
         var row = await db.PeriodLocks.IgnoreQueryFilters().SingleOrDefaultAsync(row => row.Year == year && row.Month == month, ct);
         if (row is not null && (!row.IsActive || row.Department is not null))
-            throw new BusinessRuleException(409, "period.reconciliation_required", "Historijsko stanje perioda zahtijeva administratorsko usklađivanje.");
+            throw new BusinessRuleException(409, "period.reconciliation_required");
         if (locked && row?.IsLocked == true)
-        { if (system) return; throw new BusinessRuleException(400, "period.already_locked", "Period je već zaključan."); }
+        { if (system) return; throw new BusinessRuleException(400, "period.already_locked"); }
         var past = year < now.Year || year == now.Year && month < now.Month;
-        if (!locked && row?.IsLocked != true && !past) throw new BusinessRuleException(400, "period.not_locked", "Period nije zaključan.");
+        if (!locked && row?.IsLocked != true && !past) throw new BusinessRuleException(400, "period.not_locked");
         var pending = !locked ? await db.UnlockRequests.Where(request => request.Year == year && request.Month == month && request.Status == "PENDING").ToListAsync(ct) : [];
         if (!locked && row is { IsLocked: false } && pending.Count == 0) return; // No false repeat audit/broadcast.
         bool? wasLocked = row?.IsLocked;
@@ -104,7 +104,7 @@ public sealed class PeriodWorkflow(ConnectedPartiesDbContext db, IConfiguration 
     {
         Text(note, 10, 1000, "period.invalid_note"); var actor = Capture(principal, ip);
         var request = await db.UnlockRequests.SingleOrDefaultAsync(row => row.Id == id && row.Status == "PENDING", ct)
-            ?? throw new BusinessRuleException(404, "period.request_not_pending", "Zahtjev nije pronađen ili nije u statusu Na čekanju.");
+            ?? throw new BusinessRuleException(404, "period.request_not_pending");
         request.Status = reject ? "REJECTED" : "NEEDS_INFO"; request.AdminNote = note.Trim(); request.ProcessedBy = actor.Username;
         request.ProcessedAt = DateTime.UtcNow; request.ModifiedAt = request.ProcessedAt; request.ModifiedBy = actor.Username;
         Audit(id.ToString(), reject ? "UNLOCK_REQUEST_REJECTED" : "UNLOCK_REQUEST_NEEDS_INFO", actor, new { status = "PENDING" }, new { request.Status, note, id });
@@ -115,9 +115,9 @@ public sealed class PeriodWorkflow(ConnectedPartiesDbContext db, IConfiguration 
     {
         Text(message, 10, 490, "period.invalid_response"); var actor = Capture(principal, ip); var mailbox = AdminMailbox();
         var original = await db.UnlockRequests.SingleOrDefaultAsync(row => row.Id == id && row.RequestedBySubject == actor.Subject, ct)
-            ?? throw new BusinessRuleException(404, "period.request_not_found", "Zahtjev nije pronađen.");
+            ?? throw new BusinessRuleException(404, "period.request_not_found");
         if (original.Status != "NEEDS_INFO" || await db.UnlockRequests.AnyAsync(row => row.ParentRequestId == id, ct))
-            throw new BusinessRuleException(409, "period.request_invalid_state", "Zahtjev više ne očekuje dopunu.");
+            throw new BusinessRuleException(409, "period.request_invalid_state");
         var now = DateTime.UtcNow;
         var response = new UnlockRequest { ParentRequestId = id, RequestedBySubject = actor.Subject, RequestedBy = actor.Username,
             RequestedByEmail = actor.Email, Year = original.Year, Month = original.Month, Reason = "[ODGOVOR] " + message.Trim(),

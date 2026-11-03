@@ -29,10 +29,10 @@ namespace RBBH.ConnectedParties.Exceptions
             var problem = new ProblemDetails
             {
                 Status = statusCode,
-                Title = statusCode >= 500 ? "Zahtjev trenutno nije moguće završiti." : "Zahtjev nije ispravan.",
+                Title = statusCode >= 500 ? RBBH.ConnectedParties.Localization.BackendErrorFallbacks.Text("request.unavailable.title") : RBBH.ConnectedParties.Localization.BackendErrorFallbacks.Text("request.invalid.title"),
                 Detail = statusCode >= 500
-                    ? "Pokušajte ponovo. Ako se problem ponovi, podršci pošaljite navedeni ID."
-                    : "Provjerite unesene podatke i pokušajte ponovo.",
+                    ? RBBH.ConnectedParties.Localization.BackendErrorFallbacks.Text("request.unavailable.detail")
+                    : RBBH.ConnectedParties.Localization.BackendErrorFallbacks.Text("request.invalid.detail"),
                 Instance = $"{httpContext.Request.Method} {httpContext.Request.Path}"
             };
             problem.Extensions["traceId"] = httpContext.TraceIdentifier;
@@ -49,7 +49,7 @@ namespace RBBH.ConnectedParties.Exceptions
                 // not raw exception text or submitted personal/business data.
                 problem.Extensions["errors"] = new Dictionary<string, string[]>
                 {
-                    [field] = ["Provjerite unesene podatke i pokušajte ponovo."]
+                    [field] = [RBBH.ConnectedParties.Localization.BackendErrorFallbacks.Text("request.invalid.detail")]
                 };
             }
             // Resolve per request: the exception handler is singleton, while the catalog/database is scoped.
@@ -67,7 +67,7 @@ namespace RBBH.ConnectedParties.Exceptions
                         var resourceKey = "errors." + rule.Code.Replace('_', '.');
                         problem.Extensions["resourceKey"] = resourceKey;
                         var translated = await catalog.Text(resourceKey, language, cancellationToken);
-                        if (translated != resourceKey) problem.Detail = translated;
+                        if (translated != resourceKey) problem.Detail = string.Format(System.Globalization.CultureInfo.InvariantCulture, translated, rule.Parameters.ToArray());
                         else if (!string.IsNullOrWhiteSpace(language) && !language.StartsWith("BS", StringComparison.OrdinalIgnoreCase))
                         {
                             var genericDetail = await catalog.Text(detailKey, language, cancellationToken);

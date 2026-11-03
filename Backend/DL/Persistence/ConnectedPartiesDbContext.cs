@@ -160,7 +160,7 @@ public partial class ConnectedPartiesDbContext : DbContext
     private void ProtectCapitalRevisions()
     {
         if (ChangeTracker.Entries<DL.Entities.Report.CapitalRevision>().Any(entry => entry.State is EntityState.Modified or EntityState.Deleted))
-            throw new Exceptions.BusinessRuleException(409, "capital.immutable_revision", "Historijsku reviziju kapitala nije moguće promijeniti. Unesite novu reviziju.");
+            throw new Exceptions.BusinessRuleException(409, "capital.immutable_revision");
     }
 
     private void ProtectCreatorIdentity()
@@ -170,7 +170,7 @@ public partial class ConnectedPartiesDbContext : DbContext
         {
             var creator = entry.Property("CreatorSubject");
             if (!Equals(creator.OriginalValue, creator.CurrentValue))
-                throw new Exceptions.BusinessRuleException(409, "verification.creator_immutable", "Identitet autora nije moguće promijeniti.");
+                throw new Exceptions.BusinessRuleException(409, "verification.creator_immutable");
         }
     }
 

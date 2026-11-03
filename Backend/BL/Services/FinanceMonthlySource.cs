@@ -33,7 +33,7 @@ public sealed class SqlFinanceMonthlySource(IOptions<FinanceMonthlyOptions> opti
 {
     private FinanceMonthlyOptions Settings => options.Value;
     public bool Enabled => Settings.Enabled;
-    private static BusinessRuleException Unavailable() => new(503, "finance.source_unavailable", "Finansijski izvor za odabrani period nije dostupan ili zahtijeva usklađivanje.");
+    private static BusinessRuleException Unavailable() => new(503, "finance.source_unavailable");
     private static string Identifier(string value)
     {
         var parts = value.Split('.');
@@ -42,7 +42,7 @@ public sealed class SqlFinanceMonthlySource(IOptions<FinanceMonthlyOptions> opti
     }
     public async Task<IReadOnlyList<FinanceExposure>> Read(int year, int month, IReadOnlyCollection<string> customers, CancellationToken ct)
     {
-        if (year is < 2000 or > 9999 || month is < 1 or > 12) throw new BusinessRuleException(400, "report.invalid_period", "Odabrani period nije ispravan.");
+        if (year is < 2000 or > 9999 || month is < 1 or > 12) throw new BusinessRuleException(400, "report.invalid_period");
         if (!Enabled || string.IsNullOrWhiteSpace(Settings.ConnectionString) || Settings.Currency != "BAM" ||
             !Settings.MonthlyTables.TryGetValue($"{year:D4}-{month:D2}", out var configuredTable)) throw Unavailable();
         var table = Identifier(configuredTable); var key = Identifier(Settings.CustomerKeyColumn);
@@ -69,7 +69,7 @@ public sealed class SqlFinanceMonthlySource(IOptions<FinanceMonthlyOptions> opti
                     if (decimal.Round(row.BalanceExposure, 2) != row.BalanceExposure || decimal.Round(row.OffBalanceExposure, 2) != row.OffBalanceExposure)
                         throw Unavailable(); // No unapproved rounding policy for bank source values.
                     _ = row.TotalExposure;
-                    if (!rows.TryAdd(customer, row)) throw new BusinessRuleException(409, "finance.ambiguous_customer", "Finansijski podaci zahtijevaju usklađivanje prije generisanja izvještaja.");
+                    if (!rows.TryAdd(customer, row)) throw new BusinessRuleException(409, "finance.ambiguous_customer");
                 }
             }
             if (keys.Any(customer => !rows.ContainsKey(customer))) throw Unavailable();

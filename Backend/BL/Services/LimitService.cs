@@ -56,7 +56,7 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
 
     public async Task<ReferencePage<LimitResponseDTO>> Page(Guid? legalEntityId, string? search, int page, int pageSize, CancellationToken ct, DateTime? asOf = null)
     {
-        if (search?.Length > 200) throw new RBBH.ConnectedParties.Exceptions.BusinessRuleException(400, "registry.invalid_search", "Pretraga smije imati najviše 200 znakova.");
+        if (search?.Length > 200) throw new RBBH.ConnectedParties.Exceptions.BusinessRuleException(400, "registry.invalid_search");
         page = Math.Clamp(page, 1, 1_000_000); pageSize = Math.Clamp(pageSize, 1, 100);
         var query = BaseQuery();
         if (legalEntityId.HasValue) query = query.Where(row => row.Entity.Id == legalEntityId);

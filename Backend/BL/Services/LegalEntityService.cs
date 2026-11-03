@@ -176,7 +176,7 @@ public class LegalEntityService : ILegalEntityService
 
         // Status is owned by verification, even if an old client sends it back.
         if (!string.IsNullOrWhiteSpace(dto.Status) && !string.Equals(dto.Status.Trim(), entity.Status, StringComparison.Ordinal))
-            throw new BusinessRuleException(400, "verification.status_owned", "Status se mijenja isključivo kroz verifikaciju.");
+            throw new BusinessRuleException(400, "verification.status_owned");
 
         var before = MapToDto(entity);
         if (dto.GccNumber is not null) { entity.GccNumber = gcc?.Number; entity.GccName = gcc?.Name; }
@@ -257,7 +257,7 @@ public class LegalEntityService : ILegalEntityService
 
     public async Task<ReferencePage<LegalEntityLookupDTO>> SearchForLimitsPageAsync(string? search, int page, int pageSize, CancellationToken ct)
     {
-        if (search?.Length > 200) throw new BusinessRuleException(400, "registry.invalid_search", "Pretraga smije imati najviše 200 znakova.");
+        if (search?.Length > 200) throw new BusinessRuleException(400, "registry.invalid_search");
         page = Math.Clamp(page, 1, 1_000_000); pageSize = Math.Clamp(pageSize, 1, 100);
         var query = _context.LegalEntities.AsNoTracking();
         if (!string.IsNullOrWhiteSpace(search))
@@ -305,16 +305,16 @@ public class LegalEntityService : ILegalEntityService
     {
         if (string.IsNullOrWhiteSpace(number))
         {
-            if (_bank?.IsConfigured == true) throw new BusinessRuleException(400, "registry.gcc_required", "Odaberite GCC iz bankovnog izvora.");
+            if (_bank?.IsConfigured == true) throw new BusinessRuleException(400, "registry.gcc_required");
             return null;
         }
         if (number.Length > 50 || number.Any(character => character is < '0' or > '9'))
-            throw new BusinessRuleException(400, "registry.invalid_gcc", "GCC broj smije sadržavati najviše 50 cifara.");
-        if (_bank is null) throw new BusinessRuleException(503, "bank_reference.unavailable", "Bankovni referentni podaci trenutno nisu dostupni.");
+            throw new BusinessRuleException(400, "registry.invalid_gcc");
+        if (_bank is null) throw new BusinessRuleException(503, "bank_reference.unavailable");
         var group = await _bank.Group(number, _actor?.HttpContext?.RequestAborted ?? default)
-            ?? throw new BusinessRuleException(400, "registry.unknown_gcc", "Odabrani GCC nije pronađen u bankovnom izvoru.");
+            ?? throw new BusinessRuleException(400, "registry.unknown_gcc");
         if (group.Number != number || string.IsNullOrWhiteSpace(group.Name) || group.Name.Length > 200)
-            throw new BusinessRuleException(503, "bank_reference.invalid_record", "Bankovni referentni podatak zahtijeva provjeru izvora.");
+            throw new BusinessRuleException(503, "bank_reference.invalid_record");
         return group;
     }
 
