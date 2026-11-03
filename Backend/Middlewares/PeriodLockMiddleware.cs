@@ -28,8 +28,9 @@ public class PeriodLockMiddleware
         if (isLocked)
         {
             _logger.LogWarning(
-                "Global period lock blocked request. Method: {Method}, Path: {Path}",
-                context.Request.Method, context.Request.Path);
+                "Global period lock blocked request. Method {Method}. Route {Route}",
+                context.Request.Method,
+                (context.GetEndpoint() as Microsoft.AspNetCore.Routing.RouteEndpoint)?.RoutePattern.RawText ?? "(unmatched)");
 
             context.Response.StatusCode = StatusCodes.Status423Locked;
             context.Response.ContentType = "application/json";
