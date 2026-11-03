@@ -13,6 +13,7 @@ using Moq;
 using RBBH.ConnectedParties.API.Controllers;
 using RBBH.ConnectedParties.BL.ServiceInterfaces;
 using RBBH.ConnectedParties.BL.Services;
+using RBBH.ConnectedParties.DL.Entities.Notifications;
 using RBBH.ConnectedParties.DL.Entities.Role;
 using RBBH.ConnectedParties.DL.Entities.Sifarnici;
 using RBBH.ConnectedParties.DL.Entities.Users;
@@ -281,6 +282,12 @@ internal static class BrowserHostProgram
                     .AddHttpMessageHandler<ApplicationCultureHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
                 services.AddRbiApiClient<ICodeListsApi, CodeListsApi>("BrowserCodeLists", options => options.BaseUrl = new("http://backend.fixture/"))
+                    .AddHttpMessageHandler<ApplicationCultureHandler>()
+                    .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
+                services.AddRbiApiClient<ILocalizationApi, LocalizationApi>("BrowserLocalization", options => options.BaseUrl = new("http://backend.fixture/"))
+                    .AddHttpMessageHandler<ApplicationCultureHandler>()
+                    .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
+                services.AddRbiApiClient<IRoleRequestsApi, RoleRequestsApi>("BrowserRoleRequests", options => options.BaseUrl = new("http://backend.fixture/"))
                     .AddHttpMessageHandler<ApplicationCultureHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
             });
@@ -560,17 +567,29 @@ internal static class BrowserHostProgram
                         case "/__fixtures/generated-downloads-unavailable": database.GeneratedDownloadUnavailable = true; break;
                         case "/__fixtures/generated-downloads-available": database.GeneratedDownloadUnavailable = false; break;
                         case "/__fixtures/generation-audit-fails": database.FailGenerationAudit = true; break;
-                        case "/__fixtures/email-existing":
-                            database.MailStore.Add(new EmailLogEntry
+                        case "/__fixtures/notifications-seed":
+                            await using (var scope = backend.Services.CreateAsyncScope())
                             {
-                                To = "fixture@example.test",
-                                Subject = "Fixture notification",
-                                Audience = "broadcast",
-                                HtmlBody = "<img src=x onerror=\"window.__notificationExecuted=true\">body-search-needle"
-                            });
+                                var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                                var languages = new CodeListDefinition { Name = "Languages", CreatedBy = "fixture" };
+                                var packs = new CodeListDefinition { Name = "LanguagePacks", CreatedBy = "fixture" };
+                                db.CodeListDefinitions.AddRange(languages, packs);
+                                db.CodeLists.AddRange(
+                                    new CodeList { Kategorija = "Languages", DefinitionId = languages.Id, Kod = "BS", Naziv = "Bosanski", KreiraoKorisnik = "fixture" },
+                                    new CodeList { Kategorija = "Languages", DefinitionId = languages.Id, Kod = "EN", Naziv = "English", KreiraoKorisnik = "fixture" });
+                                foreach (var (language, key, label) in new[] {
+                                    ("BS", "notifications.fixture.title", "Rola dodijeljena"), ("BS", "notifications.fixture.body", "Odobrena rola {role}."),
+                                    ("EN", "notifications.fixture.title", "Role granted"), ("EN", "notifications.fixture.body", "Role {role} was approved.") })
+                                    db.CodeLists.Add(new CodeList { Kategorija = "LanguagePacks", DefinitionId = packs.Id, Kod = language + ":" + key, Naziv = key, LanguageCode = language, ResourceKey = key, ResourceLabel = label, KreiraoKorisnik = "fixture" });
+                                var now = DateTime.UtcNow;
+                                db.Notifications.AddRange(
+                                    new ApplicationNotification { RecipientSubject = "fixture-user", RecipientEmail = "fixture@example.test", EventKey = "fixture.a", TitleKey = "notifications.fixture.title", BodyKey = "notifications.fixture.body", ParametersJson = "{\"role\":\"FL\"}", Route = "/app/profile", CreatedAt = now.AddMinutes(-1) },
+                                    new ApplicationNotification { RecipientSubject = "fixture-user", RecipientEmail = "fixture@example.test", EventKey = "fixture.b", TitleKey = "notifications.fixture.title", BodyKey = "notifications.fixture.body", ParametersJson = "{\"role\":\"PL\"}", Route = "//evil.example", CreatedAt = now.AddMinutes(-2) },
+                                    new ApplicationNotification { RecipientSubject = "fixture-user", RecipientEmail = "fixture@example.test", EventKey = "fixture.c", TitleKey = "notifications.fixture.title", BodyKey = "notifications.fixture.body", ParametersJson = "{\"role\":\"kapital\"}", CreatedAt = now.AddMinutes(-3), ReadAt = now.AddMinutes(-2) },
+                                    new ApplicationNotification { RecipientSubject = "another-user", RecipientEmail = "other@example.test", EventKey = "fixture.d", TitleKey = "notifications.fixture.title", BodyKey = "notifications.fixture.body", ParametersJson = "{\"role\":\"OTHERS-ONLY\"}", CreatedAt = now });
+                                await db.SaveChangesAsync();
+                            }
                             break;
-                        case "/__fixtures/email-smtp": backend.Configuration["Email:Provider"] = "smtp"; break;
-                        case "/__fixtures/email-demo": backend.Configuration["Email:Provider"] = "demo"; break;
                         case "/__fixtures/forge-provider-admin": database.ForgeAdmin = true; break;
                         case "/__fixtures/audit-existing":
                             await using (var scope = backend.Services.CreateAsyncScope())

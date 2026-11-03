@@ -7,7 +7,8 @@ namespace RBBH.RelatedPartiesRegister.Web.Components;
 public sealed class AppText
 {
     private readonly IRbiLocalizer _localizer;
-    public AppText(IRbiLocalizer localizer) => _localizer = localizer;
+    private readonly RuntimeResources? _runtime;
+    public AppText(IRbiLocalizer localizer, RuntimeResources? runtime = null) { _localizer = localizer; _runtime = runtime; }
     public string this[string key] => _localizer[key];
     /// <summary>Display name of an application role: the localized "users.role.{name}" entry when one exists, otherwise the role name the backend supplied.</summary>
     public string Role(string role)
@@ -15,6 +16,16 @@ public sealed class AppText
         var key = "users.role." + role.ToLowerInvariant();
         var text = _localizer[key];
         return text == key ? role : text;
+    }
+    /// <summary>Text for a key owned by either catalog: the static resources first, then the backend language pack; a missing key is returned unchanged.</summary>
+    public string Resolve(string key, System.Text.Json.JsonElement parameters = default)
+    {
+        if (!string.IsNullOrWhiteSpace(key) && System.Text.RegularExpressions.Regex.IsMatch(key, "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"))
+        {
+            var text = _localizer[key];
+            if (text != key) return RuntimeResources.Fill(text, parameters);
+        }
+        return _runtime is not null && _runtime.TryGet(key, out var runtime) ? RuntimeResources.Fill(runtime, parameters) : key;
     }
     public string Format(string key, params object?[] arguments) => _localizer[key, arguments];
 }

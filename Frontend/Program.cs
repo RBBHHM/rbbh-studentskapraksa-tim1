@@ -11,6 +11,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 builder.Services.AddRbiHosting();
+builder.Services.AddScoped<RuntimeResources>();
+builder.Services.AddScoped<NotificationState>();
 builder.Services.AddScoped<AppText>();
 builder.Services.AddScoped<FileDelivery>();
 builder.Services.AddRbiLocalization(options => options.DefaultCulture = "bs");

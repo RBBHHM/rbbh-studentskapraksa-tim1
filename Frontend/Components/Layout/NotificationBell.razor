@@ -1,0 +1,28 @@
+@implements IDisposable
+@inject NavigationManager Navigation
+@inject INotificationsApi Api
+@inject NotificationState State
+
+<a class="app-bell" href="/app/notifications" title="@T["notifications.title"]" aria-label="@Label">
+    <RbiIcon Name="RbiIconName.Bell" />
+    @if (State.Unread > 0) { <span class="app-bell__count" aria-hidden="true">@Count</span> }
+</a>
+@code {
+    private readonly CancellationTokenSource _lifetime = new();
+    private string Count => State.Unread > 99 ? "99+" : State.Unread.ToString();
+    private string Label => State.Unread > 0 ? T.Format("notifications.bell-unread", State.Unread) : T["notifications.title"];
+    protected override async Task OnInitializedAsync()
+    {
+        State.Changed += OnChanged; Navigation.LocationChanged += OnLocation;
+        await RefreshAsync();
+    }
+    private void OnChanged() => _ = InvokeAsync(StateHasChanged);
+    private void OnLocation(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs args) => _ = InvokeAsync(RefreshAsync);
+    private async Task RefreshAsync()
+    {
+        try { State.Set((await Api.InboxAsync(1, 1, true, _lifetime.Token)).UnreadCount); }
+        catch (RegistryApiException) { /* the bell is advisory; the inbox page reports failures */ }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+    }
+    public void Dispose() { State.Changed -= OnChanged; Navigation.LocationChanged -= OnLocation; _lifetime.Cancel(); _lifetime.Dispose(); }
+}
