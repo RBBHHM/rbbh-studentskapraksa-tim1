@@ -42,12 +42,12 @@ Status: VERIFIED (implemented and covered by unit or browser tests), PARTIAL (fr
 | 16 | Code-list import/export | PARTIAL | UI flow VERIFIED; business logic is backend |
 | 16 | Audit: dynamic coverage for every action | BACKEND | |
 | 16 | Audit: red/green/yellow badges and a details modal | VERIFIED | `AuditChangeTests`, audit spec |
-| 16 | User guide with more detail | PARTIAL | `guide.before-title` and sections added; extra detail text still to write |
+| 16 | User guide with more detail | VERIFIED | Guide gains four-eyes, legal residency rules, limit picker, audit colours and a general section (BS/EN); `shell-profile-guide.spec` and `GuideContentTests` |
 | 16-17 | Localization of all text, two code lists, runtime catalogue | PARTIAL | BS/EN JSON with key parity and no-literal-text guard VERIFIED; runtime localization code lists need the API |
 | 17 | Uniform API responses | BACKEND | |
 | 17 | Tests: unit, integration, E2E, permission matrix | PARTIAL | 223 unit tests and Playwright for six roles |
 | 17 | Monitoring and health | BACKEND | |
-| 18 | Single README and onboarding file | OPEN | Docs consolidation not done; many legacy documents remain |
+| 18 | Single README and onboarding file | VERIFIED | `README.md` and `docs/ONBOARDING.md` replace all legacy documents; no reference to the removed files remains |
 | 18 | Release notes page from GitHub | BLOCKED | Needs a server-side GitHub source |
 | 18 | Mapping server `bosnadb\HEAD` | BACKEND | |
 | 18 | Created/modified by as username | BACKEND | |
@@ -57,9 +57,29 @@ Status: VERIFIED (implemented and covered by unit or browser tests), PARTIAL (fr
 | 19 | No hardcoded select/checkbox options | VERIFIED | Guard test; two entries remain on a tracked allowlist (Period `Statuses`, Guide `States`) |
 | 19 | No hardcoded text | VERIFIED | `MarkupContainsNoLiteralVisibleText`, `EveryLiteralResourceKeyExistsInBothCatalogs` |
 | 19-20 | Enter toggles checkboxes | VERIFIED | `app.js` handler |
-| 19-20 | Enter toggles accordions | OPEN | Not yet checked against the RBI accordion |
-| 20 | Pagination footer: total records only, modern style | PARTIAL | Text shows total only; the visual restyle is still to do |
+| 19-20 | Enter and Space toggle accordions, Tab moves on | VERIFIED | Native `<details>`; `shell-profile-guide.spec` Space/Enter and Tab tests |
+| 20 | Pagination footer: total records only, modern style | VERIFIED | Pill style `.page-total`; `users.spec` asserts the style and absence of "Stranica x od y" |
 | - | Tracked Keycloak client secret | PARTIAL | Removed from the tracked config (`cf2f745`) and documented as a release blocker; it remains in git history, so the owner must rotate it |
 
-## Verification on `c3a2bbd`
-Unit 223/223 (also without the identity environment variables). Playwright, workers=1, retries=0: admin 108, FL 48, PL 46, kapital 51, limiti 43, gost 38, all passed. Axe runs in light and dark on every route.
+## Verification on `8d2d167` (no identity environment variables set)
+Unit 223/223. Playwright, workers=1, retries=0: admin 135, FL 57, PL 55, kapital 60, limiti 52, gost 47, all passed. Light and dark Axe runs plus a keyboard Tab-order and focus-indicator check on every route.
+
+## Contracts needed from the backend (BLOCKED items)
+Shapes below are requests for Codex to confirm or rename; the frontend adds no client until a contract exists. All routes follow the existing `api/...` convention and the existing `ProblemDetails` error shape.
+
+| Blocked requirement | Endpoints | DTOs / fields |
+|---|---|---|
+| Role requests and role change (pp. 5-6) | `POST api/role-requests`, `GET api/role-requests/mine`, `GET api/role-requests?status=&page=&pageSize=` (admin), `POST api/role-requests/{id}/approve`, `POST api/role-requests/{id}/reject`; roles offered by the existing `GET api/roles` | Request `{ type: "Request" or "Change", roles: string[], note?: string }`; `RoleRequestDto { id, requesterUsername, type, currentRoles, requestedRoles, note, status, createdAt, decidedBy, decidedAt, decisionNote }`. Approve must update the user record and send the mail |
+| 8-hour session (p. 5) | None | Keycloak realm SSO session lifetime 8 h and the cookie lifetime setting; the frontend needs the configuration key name |
+| Notifications page, bell, mails (p. 14) | `GET api/notifications?unreadOnly=&page=&pageSize=`, `GET api/notifications/unread-count`, `POST api/notifications/{id}/read`, `POST api/notifications/read-all` | `NotificationDto { id, type, titleKey, bodyKey, parameters, link, createdAt, readAt }` plus `{ items, total, unread }`; types for period lock and unlock, role request, decision, welcome, role changed |
+| GCC lookup (p. 8) | `GET api/lookups/gcc?search=&page=&pageSize=`, `GET api/lookups/gcc/{number}` | `GccDto { number, name }` from `glava.dbo.grupekom`; legal-entity DTO gains `gccNumber`, `gccName` |
+| Large-exposure flag (p. 10) | Existing legal-entity create, update, read, export and import | Boolean `isLargeExposure` |
+| Capital history and several dates (p. 12) | `GET api/capital/history?page=&pageSize=`; `POST api/capital` accepting a valid-from date | `CapitalVersionDto { id, validFrom, validTo, amounts..., createdBy, createdAt, isActive }` |
+| Release notes (p. 18) | `GET api/release-notes?environment=UAT or PROD` read server-side from GitHub (token stays on the server) | `{ version, tag, environment, publishedAt, entries: [{ title, body }] }` |
+| Runtime localization (p. 17, 19) | `GET api/localization/languages`, `GET api/localization/{culture}` | `LanguageDto { code, name, isDefault }`; a flat `{ key: value }` map. Backed by two code lists: languages and values |
+| Code-list created-by and last-modified (p. 16) | Existing `api/code-lists` definitions | `createdBy`, `createdAt`, `lastModifiedBy`, `lastModifiedAt` on the definition |
+| Excel import/export extras (pp. 8, 11, 16) | Existing `export` and `import` routes | Export columns created by, modified by, dates, related-person JMBG and basis description; import result `errors: [{ row, column, code, messageKey }]` with value validation |
+| Server-side four-eyes (p. 10) | Existing `api/verification/...` | 403 `ProblemDetails` with code `verification.same-user` when author and verifier match |
+| Period status and record-state lists (p. 19) | Existing `api/code-lists/dropdown/{category}` | Categories `PeriodRequestStatus` and `RecordState` replace the two allow-listed static lists |
+| Administrator detection without a role name (p. 5) | Existing profile endpoint | `isAdministrator: bool` or an explicit permission |
+| Regulatory reporting mapping (pp. 13-14) | Existing `api/reports` | Mapping of Finrep columns, owned by the backend |
