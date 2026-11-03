@@ -62,6 +62,9 @@ public abstract class AuthenticatedApiFixture : IAsyncLifetime
         builder.Services.AddScoped<IRelatedPersonService, RelatedPersonService>();
         builder.Services.AddScoped<IAuditService, AuditService>();
         builder.Services.AddScoped<IPeriodLockRepository, PeriodLockRepository>();
+        builder.Services.AddScoped<PeriodWorkflow>();
+        builder.Services.AddScoped<IUnlockRequestRepository, UnlockRequestRepository>();
+        builder.Services.AddScoped<IPeriodLockService, PeriodLockService>();
         builder.Services.AddOptions<EmailSettings>();
         builder.Services.AddSingleton(Mock.Of<IEmailService>());
         ConfigureServices(builder.Services);
@@ -109,6 +112,7 @@ public abstract class AuthenticatedApiFixture : IAsyncLifetime
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
             var subject = Request.Headers["X-Subject"].FirstOrDefault() ?? "creator";
+            if (Request.Headers.ContainsKey("X-Fixture-Empty-Subject")) subject = "";
             if (subject == "anonymous") return Task.FromResult(AuthenticateResult.NoResult());
             Claim[] claims = [new("sub", subject), new(ClaimTypes.Email, Request.Headers["X-Email"].FirstOrDefault() ?? subject + "@example.test"),
                 new("preferred_username", subject), new("email_verified", Request.Headers["X-Email-Verified"].FirstOrDefault() ?? "true")];

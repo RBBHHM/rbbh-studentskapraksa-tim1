@@ -39,7 +39,7 @@ public abstract class RoleRequestFixture : AuthenticatedApiFixture
                 db.CodeListDefinitions.AddRange(languages, packs);
                 db.CodeLists.Add(new() { Kategorija = "Languages", DefinitionId = languages.Id, Kod = "BS", Naziv = "Bosanski", KreiraoKorisnik = "fixture" });
                 foreach (var outcome in new[] { "submitted", "approved", "rejected" })
-                foreach (var part in new[] { "title", "body" })
+                foreach (var part in new[] { "title", "body", "detail" })
                 {
                     var key = $"notifications.role.request.{outcome}.{part}";
                     db.CodeLists.Add(new() { Kategorija = "LanguagePacks", DefinitionId = packs.Id, Kod = Guid.NewGuid().ToString("N"), Naziv = key,

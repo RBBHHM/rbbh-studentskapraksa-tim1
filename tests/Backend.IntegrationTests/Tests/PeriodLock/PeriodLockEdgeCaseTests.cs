@@ -39,11 +39,7 @@ namespace IntegrationTests.Tests.PeriodLock
                 new PeriodLockRepository(ctx),
                 new UnlockRequestRepository(ctx),
                 new PeriodLockService(),
-                auditService,
-                emailService.Object,
-                configuration.Object,
-                appUserService.Object,
-                logger.Object
+                new PeriodWorkflow(ctx, configuration.Object)
             ).WithHttpContext(AdminUser);
         }
 
@@ -60,11 +56,7 @@ namespace IntegrationTests.Tests.PeriodLock
                 new PeriodLockRepository(ctx),
                 new UnlockRequestRepository(ctx),
                 new PeriodLockService(),
-                auditService,
-                emailService.Object,
-                configuration.Object,
-                appUserService.Object,
-                logger.Object
+                new PeriodWorkflow(ctx, configuration.Object)
             ).WithHttpContext(RegularUser);
         }
 

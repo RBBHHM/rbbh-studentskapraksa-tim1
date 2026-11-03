@@ -1,4 +1,6 @@
 using System.Net;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using RBBH.ConnectedParties.BL.ServiceInterfaces;
@@ -39,8 +41,11 @@ public sealed class NotificationDispatcher(ConnectedPartiesDbContext db, IEmailS
                 var text = await localization.Text(bodyKey, null, ct);
                 // Missing setup/templates is retryable; sending raw keys would falsely mark delivery as successful.
                 if (title == titleKey || text == bodyKey) throw new InvalidOperationException("Notification resources unavailable.");
+                title = Render(title, row.Notification.ParametersJson); text = Render(text, row.Notification.ParametersJson);
+                if (title.Length > 500 || title.Any(character => character is '\r' or '\n')) throw new InvalidOperationException("Invalid notification title.");
                 var link = baseUrl.TrimEnd('/') + row.Notification.Route;
-                var html = $"<p>{WebUtility.HtmlEncode(text)}</p><a href=\"{WebUtility.HtmlEncode(link)}\">{WebUtility.HtmlEncode(title)}</a>";
+                var encodedText = WebUtility.HtmlEncode(text).Replace("\r\n", "\n").Replace("\n", "<br>");
+                var html = $"<p>{encodedText}</p><a href=\"{WebUtility.HtmlEncode(link)}\">{WebUtility.HtmlEncode(title)}</a>";
                 await mail.SendApplicationNotificationAsync(row.Notification.RecipientEmail, title, html, ct);
                 delivered++;
             }
@@ -65,6 +70,21 @@ public sealed class NotificationDispatcher(ConnectedPartiesDbContext db, IEmailS
             }
         }
         return delivered;
+    }
+
+    private static string Render(string template, string json)
+    {
+        if (json.Length > 32000) throw new InvalidOperationException("Notification parameters too large.");
+        using var document = JsonDocument.Parse(json, new JsonDocumentOptions { MaxDepth = 8 });
+        if (document.RootElement.ValueKind != JsonValueKind.Object) throw new InvalidOperationException("Invalid notification parameters.");
+        var result = Regex.Replace(template, @"\{([A-Za-z][A-Za-z0-9]*)\}", match =>
+        {
+            if (!document.RootElement.TryGetProperty(match.Groups[1].Value, out var value)) throw new InvalidOperationException("Notification parameter missing.");
+            return value.ValueKind switch { JsonValueKind.String => value.GetString() ?? "", JsonValueKind.Null => "",
+                JsonValueKind.Number or JsonValueKind.True or JsonValueKind.False => value.GetRawText(), _ => throw new InvalidOperationException("Invalid notification parameter value.") };
+        });
+        if (result.Length > 32000) throw new InvalidOperationException("Rendered notification too large.");
+        return result;
     }
 
     private async Task<bool> Claim(Guid id, Guid lease, CancellationToken ct)

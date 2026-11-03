@@ -10,7 +10,7 @@ public sealed class ApplicationNotification
     [MaxLength(200)] public string EventKey { get; set; } = "";
     [MaxLength(200)] public string TitleKey { get; set; } = "";
     [MaxLength(200)] public string BodyKey { get; set; } = "";
-    [MaxLength(8000)] public string ParametersJson { get; set; } = "{}";
+    [MaxLength(32000)] public string ParametersJson { get; set; } = "{}";
     [MaxLength(200)] public string Route { get; set; } = "/app/notifications";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ReadAt { get; set; }

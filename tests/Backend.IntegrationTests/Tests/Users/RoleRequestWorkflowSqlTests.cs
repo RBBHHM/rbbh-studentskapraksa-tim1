@@ -19,6 +19,27 @@ public sealed class RoleRequestWorkflowSqlTests : RoleRequestFixture
     protected override bool UseSql => true;
 
     [SqlServerFact]
+    public async Task DetailedRoleMailRendersCompleteUnicodeNotesAndRolesWithoutRawHtmlOrDuplicateGrants()
+    {
+        Guid[] roles = [];
+        await InDatabase(async db =>
+        {
+            var additions = Enumerable.Range(0, 20).Select(index => new Role { Name = new string('Č', 90) + index, CreatedBy = "fixture" }).ToArray();
+            db.Roles.AddRange(additions); await db.SaveChangesAsync(); roles = additions.Select(role => role.Id).ToArray();
+        });
+        using var guest = NewClient("unicode-user"); var note = "<img src=x onerror=evil()>" + new string('ć', 950);
+        var response = await guest.PostAsJsonAsync("/api/role-requests", new { clientRequestId = Guid.NewGuid(), purpose = "new", roleIds = roles, note });
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        await InDatabase(async db => { Assert.All(db.Notifications, row => Assert.True(row.ParametersJson.Length > 8000)); Assert.Equal("pending", (await db.RoleRequests.SingleAsync()).Status); });
+        var html = new List<string>();
+        _mail.Setup(mail => mail.SendApplicationNotificationAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, string, CancellationToken>((_, _, body, _) => html.Add(body)).Returns(Task.CompletedTask);
+        await using (var scope = App.Services.CreateAsyncScope()) Assert.Equal(3, await scope.ServiceProvider.GetRequiredService<NotificationDispatcher>().DeliverBatchAsync(default));
+        Assert.Equal(3, html.Count); Assert.All(html, body => { Assert.Contains("unicode-user", body); Assert.Contains("&lt;img", body); Assert.DoesNotContain("<img", body); });
+        await InDatabase(async db => { Assert.False(await db.AppUsers.AnyAsync(user => user.KeycloakId == "unicode-user")); Assert.Equal("pending", (await db.RoleRequests.SingleAsync()).Status); });
+    }
+
+    [SqlServerFact]
     public async Task CompetingApprovalAndRejectionCommitOneDecisionAndNoDuplicateGrants()
     {
         using var guest = NewClient("new-user"); var row = await Submit(guest); var id = row.GetProperty("id").GetGuid();

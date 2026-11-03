@@ -372,7 +372,7 @@ namespace RBBH.ConnectedParties.Migrations
 
                     b.Property<string>("ParametersJson")
                         .IsRequired()
-                        .HasMaxLength(8000)
+                        .HasMaxLength(32000)
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("ReadAt")
@@ -493,6 +493,11 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<string>("UnlockedBy")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<int>("Year")
                         .HasColumnType("int");
