@@ -16,6 +16,11 @@ public sealed class LegalEntityDraft
     public bool? ConnectedWithBank { get; set; }
     public DateTime? DateFrom { get; set; }
     public DateTime? DateTo { get; set; }
+    /// <summary>Bank GCC number chosen from the lookup; the server resolves and stores the name. Null keeps the optional link empty.</summary>
+    public string? GccNumber { get; set; }
+    public string? GccName { get; set; }
+    /// <summary>Unknown (null) for historical records; the backend defaults new records to false.</summary>
+    public bool? IsLargeExposure { get; set; }
     // This is NOT MaticniBroj. It is not an editable field in the source UI.
     // Retain the latest server value on update rather than clearing it silently.
     public string? PreservedMatbroj { get; private set; }
@@ -31,6 +36,9 @@ public sealed class LegalEntityDraft
         ConnectedWithBank = entity.ConnectedWithBank,
         DateFrom = entity.DateFrom,
         DateTo = entity.DateTo,
+        GccNumber = entity.GccNumber,
+        GccName = entity.GccName,
+        IsLargeExposure = entity.IsLargeExposure,
         PreservedMatbroj = entity.Matbroj
     };
     public void ResidencyChanged()
@@ -50,6 +58,7 @@ public sealed class LegalEntityDraft
         if (string.IsNullOrWhiteSpace(BasisOfConnection) || BasisOfConnection.Length > 100) Error(nameof(BasisOfConnection), "validation.required");
         if (string.IsNullOrWhiteSpace(ConnectionDescription) || ConnectionDescription.Length > 500) Error(nameof(ConnectionDescription), "validation.required");
         if (ConnectedWithBank is null) Error(nameof(ConnectedWithBank), "validation.required");
+        if (!string.IsNullOrEmpty(GccNumber) && !Regex.IsMatch(GccNumber.Trim(), "^[0-9]{1,50}$")) Error(nameof(GccNumber), "legal.validation.gcc");
         if (DateFrom is null) Error(nameof(DateFrom), "validation.date");
         if (DateFrom.HasValue && DateTo.HasValue && DateTo < DateFrom) Error(nameof(DateTo), "validation.date-order");
         return errors;
@@ -60,7 +69,7 @@ public sealed class LegalEntityDraft
         static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
         return new(IsResident!.Value, IsResident == true ? Clean(TaxNumber) : null, Clean(MaticniBroj),
             IsResident == false ? Clean(FbaId) : null, Name!.Trim(), PreservedMatbroj, BasisOfConnection!,
-            ConnectionDescription, ConnectedWithBank, DateFrom, DateTo);
+            ConnectionDescription, ConnectedWithBank, DateFrom, DateTo, Clean(GccNumber), IsLargeExposure);
     }
     public static bool ValidTaxNumber(string? value)
     {

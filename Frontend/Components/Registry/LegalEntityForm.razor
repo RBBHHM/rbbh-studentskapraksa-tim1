@@ -13,6 +13,10 @@
             <RbiField TValue="string" Label="@T["legal.tax"]" Required="@(Model.IsResident == true)" Disabled="@(Model.IsResident == false)" For="@(() => Model.TaxNumber)"><RbiInput @bind-Value="Model.TaxNumber" maxlength="13" inputmode="numeric" /></RbiField>
             <RbiField TValue="string" Label="@T["legal.registration"]" For="@(() => Model.MaticniBroj)"><RbiInput @bind-Value="Model.MaticniBroj" maxlength="50" inputmode="numeric" /></RbiField>
             <RbiField TValue="string" Label="@T["person.fba"]" Required="@(Model.IsResident == false)" Disabled="@(Model.IsResident == true)" For="@(() => Model.FbaId)"><RbiInput @bind-Value="Model.FbaId" maxlength="10" inputmode="numeric" /></RbiField>
+            <RbiField TValue="string" Id="legal-gcc" Label="@T["legal.gcc"]" For="@(() => Model.GccNumber)"><GccPicker Id="legal-gcc" Value="@Model.GccNumber" GccName="@Model.GccName" Selected="GccSelected" /></RbiField>
+            <RbiRadioGroup TValue="bool?" Label="@T["legal.large-exposure"]" @bind-Value="Model.IsLargeExposure">
+                <RbiRadio TValue="bool?" Value="@((bool?)true)">@T["common.yes"]</RbiRadio><RbiRadio TValue="bool?" Value="@((bool?)false)">@T["common.no"]</RbiRadio>
+            </RbiRadioGroup>
             <RbiField TValue="string" Label="@T["person.basis"]" Required For="@(() => Model.BasisOfConnection)">
                 <RbiSelect TValue="string" @bind-Value="Model.BasisOfConnection" @bind-Value:after="BasisChanged"><option value="">@T["common.select"]</option>
                     @foreach (var option in Bases) { <option value="@option.Kod">@option.Naziv</option> }
@@ -54,6 +58,7 @@
     {
         if (_focusErrors) { _focusErrors = false; await _summary.FocusAsync(); }
     }
+    private void GccSelected(GccOption? item) { Model.GccNumber = item?.Number; Model.GccName = item?.Name; _context.NotifyFieldChanged(new(Model, nameof(Model.GccNumber))); }
     private void BasisChanged() => Model.ConnectionDescription = Bases.FirstOrDefault(item => item.Kod == Model.BasisOfConnection)?.Opis;
     private async Task SubmitAsync() => await _submission.SubmitAsync(async () =>
     {

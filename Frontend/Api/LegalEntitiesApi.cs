@@ -6,7 +6,7 @@ public sealed record LegalEntity(Guid Id, bool IsResident, string? TaxNumber, st
     string? FbaId, string Name, string? Matbroj, string BasisOfConnection, string? ConnectionDescription,
     bool? ConnectedWithBank, DateTime? DateFrom, DateTime? DateTo, string Status,
     string CreatedBy, DateTime CreatedAt, string? ModifiedBy, DateTime? ModifiedAt,
-    string? VerifiedBy, DateTime? VerifiedAt)
+    string? VerifiedBy, DateTime? VerifiedAt, string? GccNumber = null, string? GccName = null, bool? IsLargeExposure = null)
 {
     // Existing UI searches scalar response metadata too. Keep that behavior
     // explicit; the narrower server search is not a drop-in replacement.
@@ -15,7 +15,7 @@ public sealed record LegalEntity(Guid Id, bool IsResident, string? TaxNumber, st
         if (string.IsNullOrWhiteSpace(search)) return true;
         var term = search.Trim();
         object?[] values = [Id, IsResident, TaxNumber, MaticniBroj, FbaId, Name, Matbroj,
-            BasisOfConnection, ConnectionDescription, ConnectedWithBank, DateFrom?.ToString("O"),
+            BasisOfConnection, ConnectionDescription, ConnectedWithBank, GccNumber, GccName, IsLargeExposure, DateFrom?.ToString("O"),
             DateTo?.ToString("O"), Status, CreatedBy, CreatedAt.ToString("O"), ModifiedBy,
             ModifiedAt?.ToString("O"), VerifiedBy, VerifiedAt?.ToString("O")];
         return values.Any(value => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture)?.Contains(term, StringComparison.OrdinalIgnoreCase) == true);
@@ -24,7 +24,9 @@ public sealed record LegalEntity(Guid Id, bool IsResident, string? TaxNumber, st
 public sealed record LegalEntityPage(IReadOnlyList<LegalEntity> Items, int Total, int Page, int PageSize);
 public sealed record LegalEntityRequest(bool IsResident, string? TaxNumber, string? MaticniBroj,
     string? FbaId, string Name, string? Matbroj, string BasisOfConnection, string? ConnectionDescription,
-    bool? ConnectedWithBank, DateTime? DateFrom, DateTime? DateTo);
+    bool? ConnectedWithBank, DateTime? DateFrom, DateTime? DateTo, string? GccNumber = null, bool? IsLargeExposure = null);
+public sealed record GccOption(string? Number, string? Name);
+public sealed record GccPage(IReadOnlyList<GccOption> Items, int Total, int Page, int PageSize);
 
 public interface ILegalEntitiesApi
 {
@@ -35,6 +37,8 @@ public interface ILegalEntitiesApi
     Task DeleteAsync(Guid id, CancellationToken token = default);
     Task<RbiApiFile> ExportAsync(CancellationToken token = default);
     Task<ImportResult> ImportAsync(Stream file, string name, CancellationToken token = default);
+    /// <summary>Paged bank GCC list; 503 means the bank source is not configured or reachable (no placeholder rows are ever returned).</summary>
+    Task<GccPage> GccAsync(string search = "", CancellationToken token = default);
 }
 
 public sealed class LegalEntitiesApi(IRbiApiFileTransport transport) : ILegalEntitiesApi
@@ -67,6 +71,11 @@ public sealed class LegalEntitiesApi(IRbiApiFileTransport transport) : ILegalEnt
         multipart.Add(content, "file", name);
         return Value(await transport.PostMultipartAsync<ImportResult>("api/legal-entities/import", multipart, token), token);
     }
+    public async Task<GccPage> GccAsync(string search = "", CancellationToken token = default)
+    {
+        var page = Value(await transport.GetAsync<GccPage>($"api/bank-reference/gcc?search={Uri.EscapeDataString(search)}&page=1&pageSize=20", token), token);
+        return page.Items is null ? throw new RegistryApiException() : page;
+    }
     private static T Value<T>(RbiApiResult<T> result, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
@@ -84,4 +93,5 @@ internal sealed class UnconfiguredLegalEntitiesApi : ILegalEntitiesApi
     public Task DeleteAsync(Guid id, CancellationToken token = default) => Unavailable<object>();
     public Task<RbiApiFile> ExportAsync(CancellationToken token = default) => Unavailable<RbiApiFile>();
     public Task<ImportResult> ImportAsync(Stream file, string name, CancellationToken token = default) { file.Dispose(); return Unavailable<ImportResult>(); }
+    public Task<GccPage> GccAsync(string search = "", CancellationToken token = default) => Unavailable<GccPage>();
 }

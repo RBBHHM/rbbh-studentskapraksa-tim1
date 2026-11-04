@@ -96,7 +96,7 @@ internal static class BrowserHostProgram
         builder.Services.AddScoped<RuntimeLocalizationCatalog>();
         builder.Services.AddScoped<RBBH.ConnectedParties.Localization.BackendLocalizationFilter>();
         builder.Services.AddOptions<BankReferenceOptions>().Bind(builder.Configuration.GetSection("BankReference"));
-        builder.Services.AddScoped<IBankReferenceSource, SqlBankReferenceSource>();
+        builder.Services.AddSingleton<IBankReferenceSource>(new FixtureBankSource(database)); // test-only stand-in; the real source needs bank access
         builder.Services.AddOptions<FinanceMonthlyOptions>().Bind(builder.Configuration.GetSection("FinanceMonthly"));
         builder.Services.AddScoped<IFinanceMonthlySource, SqlFinanceMonthlySource>();
         builder.Configuration["KeycloakSettings:Enabled"] = "false";
@@ -294,6 +294,21 @@ internal static class BrowserHostProgram
         }
     }
 
+    /// <summary>Test-only bank reference source. Disabled it behaves like an unconfigured production source (503); enabled it serves two synthetic groups.</summary>
+    private sealed class FixtureBankSource(FixtureDatabase database) : IBankReferenceSource
+    {
+        private static readonly BankGroup[] Known = [new("1001", "Fixture Group A"), new("1002", "Fixture Group B")];
+        public bool IsConfigured => database.BankSourceEnabled;
+        private void Require() { if (!database.BankSourceEnabled) throw new RBBH.ConnectedParties.Exceptions.BusinessRuleException(503, "bank_reference.unavailable"); }
+        public Task<ReferencePage<BankCustomer>> Customers(string? search, int page, int pageSize, CancellationToken ct) { Require(); return Task.FromResult(new ReferencePage<BankCustomer>([], 0, page, pageSize)); }
+        public Task<ReferencePage<BankGroup>> Groups(string? search, int page, int pageSize, CancellationToken ct)
+        {
+            Require();
+            var items = Known.Where(item => string.IsNullOrWhiteSpace(search) || item.Number.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase) || item.Name.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase)).ToArray();
+            return Task.FromResult(new ReferencePage<BankGroup>(items, items.Length, page, pageSize));
+        }
+        public Task<BankGroup?> Group(string number, CancellationToken ct) { Require(); return Task.FromResult<BankGroup?>(Known.FirstOrDefault(item => item.Number == number)); }
+    }
     private sealed record FixtureUser(string Email, string Role);
     private sealed class FixtureDatabase
     {
@@ -306,6 +321,7 @@ internal static class BrowserHostProgram
         public bool PeriodUnavailable { get; set; }
         public bool GeneratedDownloadUnavailable { get; set; }
         public bool FailGenerationAudit { get; set; }
+        public bool BankSourceEnabled { get; set; }
         public bool FailPeriodAudit { get; set; }
         public TaskCompletionSource? DuplicateBarrier { get; set; }
         public int ReportGenerationAttempts { get; set; }
@@ -500,7 +516,7 @@ internal static class BrowserHostProgram
                         case "/__fixtures/reset":
                             // Fresh unique InMemory store; never delete an existing database.
                             database.Name = "browser-" + Guid.NewGuid(); database.Unavailable = database.CodebooksUnavailable = false;
-                            database.ProfileUnavailable = database.GeneratedDownloadUnavailable = database.FailGenerationAudit = false;
+                            database.ProfileUnavailable = database.GeneratedDownloadUnavailable = database.FailGenerationAudit = database.BankSourceEnabled = false;
                             database.FailPeriodAudit = database.PeriodUnavailable = false;
                             database.DuplicateBarrier?.TrySetResult(); database.DuplicateBarrier = null;
                             database.ReportGenerationAttempts = 0;
@@ -591,6 +607,8 @@ internal static class BrowserHostProgram
                         case "/__fixtures/generated-downloads-unavailable": database.GeneratedDownloadUnavailable = true; break;
                         case "/__fixtures/generated-downloads-available": database.GeneratedDownloadUnavailable = false; break;
                         case "/__fixtures/generation-audit-fails": database.FailGenerationAudit = true; break;
+                        case "/__fixtures/bank-source-on": database.BankSourceEnabled = true; break;
+                        case "/__fixtures/bank-source-off": database.BankSourceEnabled = false; break;
                         case "/__fixtures/notifications-seed":
                             await using (var scope = backend.Services.CreateAsyncScope())
                             {
@@ -723,7 +741,7 @@ internal static class BrowserHostProgram
                                     IsResident = false,
                                     FbaId = (100000 + index).ToString(System.Globalization.CultureInfo.InvariantCulture),
                                     MaticniBroj = "12345",
-                                    Matbroj = "SERVER-ONLY-789",
+                                    Matbroj = "789456123",
                                     BasisOfConnection = "ZOB-2-V-5",
                                     ConnectionDescription = "Fixture relationship description",
                                     ConnectedWithBank = true,
@@ -733,6 +751,7 @@ internal static class BrowserHostProgram
                                     IsActive = true,
                                     CreatedAt = new DateTime(2026, 1, 1).AddMinutes(index)
                                 });
+                                foreach (var seeded in db.ChangeTracker.Entries<RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntity>().ToArray()) seeded.Property("CreatorSubject").CurrentValue = "fixture-author-subject"; // a proven creator other than the fixture user, so four-eyes verification can succeed
                                 await db.SaveChangesAsync();
                             }
                             break;

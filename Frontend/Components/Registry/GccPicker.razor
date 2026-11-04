@@ -1,0 +1,88 @@
+@implements IDisposable
+@inject ILegalEntitiesApi Api
+
+@* Type-ahead over the bank GCC list (GET api/bank-reference/gcc). The server resolves the name from the number; this control only
+   chooses a number. An unavailable source is shown as such and never replaced by invented options. *@
+<div class="app-typeahead">
+    <input type="text" id="@Id" class="rbi-control rbi-input app-typeahead__input" autocomplete="off" data-app-combobox
+           role="combobox" aria-autocomplete="list" aria-expanded="@(_open ? "true" : "false")" aria-controls="@(Id + "-list")" aria-activedescendant="@ActiveId"
+           disabled="@Disabled" placeholder="@T["legal.gcc-placeholder"]"
+           value="@_query" @oninput="TypedAsync" @onfocus="OpenList" @onblur="CloseList" @onkeydown="KeyAsync" />
+    @if (_open)
+    {
+        <ul id="@(Id + "-list")" role="listbox" class="app-typeahead__list" aria-label="@T["legal.gcc-search"]">
+            @if (_searching) { <li class="app-typeahead__note" role="presentation">@T["limit.searching"]</li> }
+            else if (_results.Count == 0) { <li class="app-typeahead__note" role="presentation">@T["limit.no-results"]</li> }
+            @for (var index = 0; index < _results.Count; index++)
+            {
+                var item = _results[index]; var position = index;
+                <li id="@(Id + "-option-" + position)" role="option" aria-selected="@(position == _active ? "true" : "false")" class="app-typeahead__option" data-active="@(position == _active ? "true" : "false")"
+                    @onmousedown:preventDefault @onclick="() => SelectAsync(item)">@item.Number — @item.Name</li>
+            }
+        </ul>
+    }
+</div>
+@if (_unavailable) { <p class="app-hint" role="status">@T["legal.gcc-unavailable"]</p> }
+@if (Value is { Length: > 0 } && GccName is { Length: > 0 }) { <p class="app-hint">@T["legal.gcc-name"]: <strong>@GccName</strong></p> }
+@code {
+    [Parameter, EditorRequired] public string Id { get; set; } = "";
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<GccOption?> Selected { get; set; }
+    /// <summary>Name the server resolved for the stored number (read-only display).</summary>
+    [Parameter] public string? GccName { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    private readonly CancellationTokenSource _lifetime = new();
+    private CancellationTokenSource? _typing;
+    private IReadOnlyList<GccOption> _results = [];
+    private string _query = string.Empty;
+    private bool _open, _searching, _unavailable;
+    private int _active = -1;
+    private string? ActiveId => _open && _active >= 0 && _active < _results.Count ? Id + "-option-" + _active : null;
+    protected override void OnInitialized() => _query = Value ?? string.Empty;
+
+    private void OpenList() { _open = true; if (_results.Count == 0 && !_searching) _ = SearchAsync(); }
+    private void CloseList() { _open = false; _active = -1; }
+    private async Task TypedAsync(ChangeEventArgs args)
+    {
+        _query = args.Value?.ToString() ?? string.Empty; _open = true; _active = -1;
+        // A cleared box clears the link; typing alone never changes the stored number until an option is chosen.
+        if (_query.Trim().Length == 0 && Value is not null) { Value = null; GccName = null; await Selected.InvokeAsync(null); }
+        _ = SearchAsync();
+    }
+    private async Task SearchAsync()
+    {
+        _typing?.Cancel(); _typing?.Dispose(); _typing = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
+        var token = _typing.Token; var term = _query.Trim(); _searching = true;
+        try
+        {
+            if (term.Length > 0) await Task.Delay(250, token);
+            var page = await Api.GccAsync(term, token);
+            token.ThrowIfCancellationRequested();
+            _results = page.Items; _unavailable = false; _active = -1;
+        }
+        catch (RegistryApiException exception)
+        {
+            if (token.IsCancellationRequested) return;
+            _results = []; _unavailable = (int?)exception.StatusCode == 503;
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { return; }
+        _searching = false; await InvokeAsync(StateHasChanged);
+    }
+    private async Task KeyAsync(KeyboardEventArgs args)
+    {
+        switch (args.Key)
+        {
+            case "ArrowDown": _open = true; if (_results.Count > 0) _active = (_active + 1) % _results.Count; break;
+            case "ArrowUp": if (_results.Count > 0) _active = _active <= 0 ? _results.Count - 1 : _active - 1; break;
+            case "Enter": if (_open && _active >= 0 && _active < _results.Count) await SelectAsync(_results[_active]); break;
+            case "Escape": CloseList(); break;
+        }
+    }
+    private async Task SelectAsync(GccOption item)
+    {
+        if (Disabled) return;
+        _open = false; _active = -1; _query = item.Number ?? ""; GccName = item.Name; Value = item.Number;
+        await Selected.InvokeAsync(item);
+    }
+    public void Dispose() { _lifetime.Cancel(); _typing?.Cancel(); _typing?.Dispose(); _lifetime.Dispose(); }
+}

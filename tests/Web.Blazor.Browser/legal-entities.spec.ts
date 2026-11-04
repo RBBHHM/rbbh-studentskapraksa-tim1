@@ -78,7 +78,7 @@ test("edit retains hidden Matbroj, verifies and soft deactivates through real ba
   await dialog.getByLabel("Matični broj", { exact: false }).fill("98765");
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).not.toBeVisible();
   let record = (await (await request.get("/__fixtures/legal-record", { headers })).json())[0];
-  expect(record.matbroj).toBe("SERVER-ONLY-789"); expect(record.maticniBroj).toBe("98765");
+  expect(record.matbroj).toBe("789456123"); expect(record.maticniBroj).toBe("98765");
   row = page.getByRole("row", { name: /Updated Company/ });
   await row.getByRole("button", { name: "Verificiraj", exact: true }).click();
   await expect(page.getByRole("alertdialog")).not.toBeVisible();
@@ -88,7 +88,7 @@ test("edit retains hidden Matbroj, verifies and soft deactivates through real ba
   await row.getByRole("button", { name: "Uredi", exact: true }).click();
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).not.toBeVisible();
   record = (await (await request.get("/__fixtures/legal-record", { headers })).json())[0];
-  expect(record.status).toBe("Verified"); expect(record.matbroj).toBe("SERVER-ONLY-789");
+  expect(record.status).toBe("Verified"); expect(record.matbroj).toBe("789456123");
   await row.getByRole("button", { name: "Obriši", exact: true }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Obriši", exact: true }).click();
   await expect(row).toHaveCount(0);
@@ -179,4 +179,24 @@ test("legal BS/EN copy persists with backend culture propagation", async ({ page
   await page.keyboard.press("Escape"); await page.reload(); await interactive(page);
   await expect(page.getByRole("heading", { name: "Legal entities", exact: true })).toBeVisible();
   expect((await (await request.get("/__fixtures/culture", { headers })).json()).language).toBe("en");
+});
+test("GCC lookup: unavailable source is stated honestly; an available source offers numbers, the server resolves the name, large exposure is saved", async ({ page, request }) => {
+  await open(page); await page.getByRole("button", { name: "Novi zapis", exact: true }).click();
+  let dialog = page.getByRole("dialog"); await fill(dialog, "Gcc Company");
+  await dialog.getByLabel("GCC", { exact: true }).focus();
+  await expect(dialog.getByText("Izvor GCC podataka trenutno nije dostupan", { exact: false })).toBeVisible(); // 503 from the unconfigured source
+  await expect(dialog.getByRole("listbox", { name: "GCC rezultati" }).getByRole("option")).toHaveCount(0); // nothing is invented
+  await dialog.getByRole("button", { name: "Odustani", exact: true }).click();
+  expect((await request.post("/__fixtures/bank-source-on", { headers })).status()).toBe(204);
+  await page.getByRole("button", { name: "Novi zapis", exact: true }).click(); dialog = page.getByRole("dialog"); await fill(dialog, "Gcc Company");
+  const gcc = dialog.getByLabel("GCC", { exact: true }); await gcc.focus();
+  await expect(dialog.getByRole("listbox", { name: "GCC rezultati" }).getByRole("option")).toHaveCount(2);
+  await gcc.fill("1002"); await expect(dialog.getByRole("listbox", { name: "GCC rezultati" }).getByRole("option")).toHaveCount(1);
+  await dialog.getByRole("listbox", { name: "GCC rezultati" }).getByRole("option", { name: /1002/ }).click();
+  await expect(dialog.getByText("Fixture Group B", { exact: false })).toBeVisible();
+  await dialog.getByRole("radiogroup", { name: "Velika izloženost", exact: false }).getByRole("radio", { name: "Da", exact: true }).check();
+  expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
+  await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).not.toBeVisible();
+  const row = page.getByRole("row", { name: /Gcc Company/ });
+  await expect(row).toContainText("1002 — Fixture Group B"); await expect(row.getByRole("cell", { name: "Da", exact: true })).toBeVisible();
 });

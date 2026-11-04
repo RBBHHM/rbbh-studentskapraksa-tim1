@@ -21,7 +21,7 @@ test("empty state and native entity picker use accessible labels", async ({ page
   await open(page); await expect(page.getByRole("heading", { name: "Nema zapisa", exact: true })).toBeVisible();
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
   const dialog = await begin(page);
-  await expect(dialog.getByText("SERVER-ONLY-789", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("789456123", { exact: true })).toBeVisible();
   await expect(dialog.getByText("BAM 1,234,567.89", { exact: true })).toBeVisible();
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
 });
