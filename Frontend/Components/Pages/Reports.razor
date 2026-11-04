@@ -50,10 +50,10 @@ else if (_authenticated)
     else
     {
         <div class="registry-surface"><RbiTable AccessibleLabel="@T["reports.title"]" Class="registry-table registry-reports-table">
-            <thead><tr><th scope="col">@T["reports.type"]</th><th scope="col">@T["reports.date"]</th><th scope="col">@T["reports.clients"]</th><th scope="col">@T["reports.breached"]</th><th scope="col">@T["reports.exposure"]</th><th scope="col">@T["reports.author"]</th><th scope="col">@T["reports.file"]</th></tr></thead>
+            <thead><tr><th scope="col">@T["reports.type"]</th><th scope="col">@T["reports.date"]</th><th scope="col">@T["reports.clients"]</th><th scope="col">@T["reports.breached"]</th><th scope="col">@T["reports.exposure"]</th><th scope="col">@T["reports.author"]</th><th scope="col">@T["reports.source"]</th><th scope="col">@T["reports.file"]</th></tr></thead>
             <tbody>@foreach (var report in Records)
             {
-                <tr @key="report.Id"><td>@TypeLabel(report.ReportType)</td><td>@AppFormat.RawTimestamp(report.ReportDate)</td><td>@report.TotalClients</td><td>@report.ClientsWithBreachedLimit</td><td>@report.TotalExposure.ToString(System.Globalization.CultureInfo.InvariantCulture)</td><td>@report.CreatedBy</td><td class="registry-center"><RbiButton Size="RbiButtonSize.Small" Disabled="_busy" OnClick="() => DownloadSnapshotAsync(report.Id)" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.Download" />@T["reports.download"]</RbiButton></td></tr>
+                <tr @key="report.Id"><td>@TypeLabel(report.ReportType)</td><td>@AppFormat.RawTimestamp(report.ReportDate)</td><td>@report.TotalClients</td><td>@report.ClientsWithBreachedLimit</td><td>@report.TotalExposure.ToString(System.Globalization.CultureInfo.InvariantCulture)</td><td>@report.CreatedBy</td><td data-authoritative="@(report.IsAuthoritative ? "true" : "false")">@SourceLabel(report)</td><td class="registry-center"><RbiButton Size="RbiButtonSize.Small" Disabled="_busy" OnClick="() => DownloadSnapshotAsync(report.Id)" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.Download" />@T["reports.download"]</RbiButton></td></tr>
             }</tbody>
         </RbiTable></div>
         @if (DailyPages > 1)
@@ -84,6 +84,13 @@ else { <div role="status">@T["state.loading"]</div> }
     private bool ValidIdentifier => ReportsApi.ValidIdentifier(_identifier);
     private string TypeLabel(string? value) => value?.ToUpperInvariant() switch { "DAILY" => T["reports.daily"], "MONTHLY" => T["reports.monthly"], _ => string.IsNullOrWhiteSpace(value) ? "—" : value };
     private IEnumerable<ReportEntry> Records => _daily.Items.Concat(_monthly.Items).OrderByDescending(item => item.CreatedAt);
+    // The origin flag says where the numbers came from; it is not a statement that the report was reconciled with the bank.
+    private string SourceLabel(ReportEntry report) => report.DataSource switch
+    {
+        "finance.monthlyhistory" => T["reports.source.finance"],
+        "local.clientlimits" => T["reports.source.local"],
+        _ => T["reports.source.unknown"]
+    };
     protected override Task OnInitializedAsync() => LoadAsync();
     private async Task LoadAsync()
     {

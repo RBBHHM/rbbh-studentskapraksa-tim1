@@ -11,8 +11,13 @@ public sealed record CreateCodeValue(string Kategorija, string Kod, string Naziv
 public sealed record UpdateCodeValue(string Naziv, string? Opis, int? RedoslijedPrikaza, bool Aktivan);
 public sealed record CodeImportPreview(int TotalRows, IReadOnlyList<string> ToImport, IReadOnlyList<string> Duplicates,
     IReadOnlyList<string> Errors, int Imported);
+/// <summary>Administrative metadata of a code list definition (who created it and who changed it last).</summary>
+public sealed record CodeListDefinition(Guid Id, string Name, string? Description, bool IsActive, bool IsSystemRequired, int Version,
+    DateTime? CreatedAt, string? CreatedBy, DateTime? ModifiedAt, string? ModifiedBy);
+public sealed record CodeListDefinitions(IReadOnlyList<CodeListDefinition> Items);
 public interface ICodeListsApi
 {
+    Task<CodeListDefinitions> DefinitionsAsync(CancellationToken token = default);
     Task<CodeCategories> CategoriesAsync(CancellationToken token = default);
     Task<CodeValues> ValuesAsync(string category, CancellationToken token = default);
     Task CreateCategoryAsync(string name, string? description, CancellationToken token = default);
@@ -28,6 +33,11 @@ public sealed class CodeListsApi(IRbiApiFileTransport transport) : ICodeListsApi
     {
         var value = Value(await transport.GetAsync<CodeCategories>("api/code-lists", token), token);
         return value.Categories is null ? throw new RegistryApiException() : value;
+    }
+    public async Task<CodeListDefinitions> DefinitionsAsync(CancellationToken token = default)
+    {
+        var value = Value(await transport.GetAsync<CodeListDefinitions>("api/code-lists/categories/definitions", token), token);
+        return value.Items is null ? throw new RegistryApiException() : value;
     }
     public async Task<CodeValues> ValuesAsync(string category, CancellationToken token = default)
     {
@@ -62,6 +72,7 @@ internal sealed class UnconfiguredCodeListsApi : ICodeListsApi
 {
     private static Task Unavailable() => Task.FromException(new RegistryApiException());
     public Task<CodeCategories> CategoriesAsync(CancellationToken token = default) => Task.FromException<CodeCategories>(new RegistryApiException());
+    public Task<CodeListDefinitions> DefinitionsAsync(CancellationToken token = default) => Task.FromException<CodeListDefinitions>(new RegistryApiException());
     public Task<CodeValues> ValuesAsync(string category, CancellationToken token = default) => Task.FromException<CodeValues>(new RegistryApiException());
     public Task CreateCategoryAsync(string name, string? description, CancellationToken token = default) => Unavailable();
     public Task DeleteCategoryAsync(string category, CancellationToken token = default) => Unavailable();

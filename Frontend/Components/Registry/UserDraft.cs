@@ -25,10 +25,15 @@ public sealed class UserDraft
         _suggestedEmail = Username.Trim().Length == 0 ? "" : Username.Trim() + EmailDomain;
         Email = _suggestedEmail;
     }
+    private (string Username, string FirstName, string LastName, string Email) _original;
+    /// <summary>True when an existing user's profile fields differ from what the server returned.</summary>
+    public bool ProfileChanged => Id is not null && (Username.Trim(), FirstName.Trim(), LastName.Trim(), Email.Trim()) != _original;
+    public bool RolesChanged(ApplicationUser current) => !current.Roles.Order(StringComparer.OrdinalIgnoreCase).SequenceEqual(Roles.Where(role => role.Selected).Select(role => role.Name).Order(StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase);
     public List<UserRoleChoice> Roles { get; init; } = [];
     public Guid[] SelectedRoles => Roles.Where(role => role.Selected).Select(role => role.Id).ToArray();
     public static UserDraft From(ApplicationUser? user, RolesCatalog catalog) => new()
     {
+        _original = (user?.Username.Trim() ?? "", user?.FirstName.Trim() ?? "", user?.LastName.Trim() ?? "", user?.Email.Trim() ?? ""),
         Id = user?.Id,
         Username = user?.Username ?? "",
         FirstName = user?.FirstName ?? "",
@@ -40,10 +45,10 @@ public sealed class UserDraft
     public Dictionary<string, string[]> Validate()
     {
         var errors = new Dictionary<string, string[]>();
-        if (Id is not null) return errors; // Empty edit deliberately preserves removal/Guest semantics, subject to backend safety.
         foreach (var (field, value) in new[] { (nameof(Username), Username), (nameof(FirstName), FirstName), (nameof(LastName), LastName) })
             if (string.IsNullOrWhiteSpace(value) || value.Trim().Length > 100) errors[field] = ["users.name-invalid"];
-        if (!new EmailAddressAttribute().IsValid(Email.Trim()) || !Email.Trim().EndsWith(EmailDomain, StringComparison.OrdinalIgnoreCase))
+        // The corporate domain is only a suggestion; any valid address is accepted (people outside the domain exist).
+        if (Email.Trim().Length > 200 || !new EmailAddressAttribute().IsValid(Email.Trim()))
             errors[nameof(Email)] = ["users.email-invalid"];
         return errors;
     }

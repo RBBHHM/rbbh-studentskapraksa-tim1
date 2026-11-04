@@ -65,16 +65,16 @@ test("Enter toggles a focused checkbox and Tab moves on without submitting", asy
   await fl.press("Tab"); await expect(fl).not.toBeFocused();
   expect((await (await request.get("/__fixtures/counts", { headers })).json()).mutations).toBe(0);
 });
-test("required names and corporate email block requests; Guest needs no checkbox", async ({ page, request }) => {
+test("required names and a well-formed email block requests; Guest needs no checkbox", async ({ page, request }) => {
   await visit(page); await page.getByRole("button", { name: "Dodaj korisnika", exact: true }).click();
   let dialog = page.getByRole("dialog"); await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
   await expect(dialog.getByRole("checkbox", { name: "Gost", exact: true })).toHaveCount(0);
   await expect(dialog.locator("[aria-invalid=true]").first()).toBeVisible();
   expect((await (await request.get("/__fixtures/counts", { headers })).json()).mutations).toBe(0);
-  await dialog.getByRole("button", { name: "Odustani", exact: true }).click(); dialog = await createFields(page, "invalid@example.test");
+  await dialog.getByRole("button", { name: "Odustani", exact: true }).click(); dialog = await createFields(page, "not-an-email");
   await access(dialog, "FL", true); await dialog.getByLabel("Email", { exact: false }).blur();
   await expect(dialog.getByRole("button", { name: "Sačuvaj", exact: true })).toBeDisabled();
-  await expect(dialog.getByText("Unesite ispravnu email adresu s domenom @raiffeisengroup.ba.", { exact: true }).first()).toBeVisible();
+  await expect(dialog.getByText("Unesite ispravnu email adresu.", { exact: true }).first()).toBeVisible();
   expect((await (await request.get("/__fixtures/counts", { headers })).json()).mutations).toBe(0);
 });
 test("role replacement and non-final empty roles preserve the existing mapping-removal workflow", async ({ page, request }) => {

@@ -4,8 +4,7 @@
 
 <EditForm EditContext="_context" OnSubmit="SubmitAsync" FormName="application-user" class="registry-user-form" novalidate>
     <fieldset disabled="@_submission.IsSubmitting">
-        <legend class="app-visually-hidden">@T[Model.Id is null ? "users.create" : "users.roles-edit"]</legend>
-        @if (Model.Id is null)
+        <legend class="app-visually-hidden">@T[Model.Id is null ? "users.create" : "users.edit"]</legend>
         {
             <div class="registry-form-grid">
                 <RbiField TValue="string" Id="user-username" Label="@T["users.username"]" Required For="@(() => Model.Username)"><RbiInput Id="user-username" @bind-Value="Model.Username" @bind-Value:after="Model.UsernameChanged" maxlength="100" /></RbiField>

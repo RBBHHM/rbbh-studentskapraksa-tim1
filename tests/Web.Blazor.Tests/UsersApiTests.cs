@@ -22,14 +22,19 @@ public sealed class UsersApiTests
     };
 
     [Theory]
-    [InlineData("invalid@example.test")]
     [InlineData("not-an-email")]
     [InlineData("x@y@raiffeisengroup.ba")]
-    public void CreateRequiresActualCorporateEmail(string email)
+    public void CreateRequiresAWellFormedEmail(string email)
     {
         var draft = Draft(); draft.Email = email;
         Assert.Contains(nameof(UserDraft.Email), draft.Validate().Keys);
         Assert.Throws<InvalidOperationException>(() => draft.ToRequest());
+    }
+    [Fact]
+    public void CreateAcceptsAnyValidEmailDomainBecauseTheCorporateOneIsOnlyASuggestion()
+    {
+        var draft = Draft(); draft.Email = "someone@example.test";
+        Assert.DoesNotContain(nameof(UserDraft.Email), draft.Validate().Keys); Assert.Equal("someone@example.test", draft.ToRequest().Email);
     }
     [Fact]
     public void CreateRequiresNamesAndNormalizesOnlySubmittedValuesWhileRolesAreOptional()
@@ -105,6 +110,29 @@ public sealed class UsersApiTests
         if (operation == "roles") await api.UpdateRolesAsync(id, []);
         else if (operation == "delete") await api.DeleteAsync(id);
         else await api.SetActiveAsync(id, operation == "reactivate");
+    }
+    [Fact]
+    public async Task ProfileUpdateSendsOnlyTheFourEditableFieldsToTheUserRoute()
+    {
+        var id = Guid.NewGuid();
+        await using var provider = Client(async request =>
+        {
+            Assert.Equal(HttpMethod.Put, request.Method); Assert.Equal($"/api/users/{id}", request.RequestUri!.AbsolutePath);
+            using var body = JsonDocument.Parse(await request.Content!.ReadAsStringAsync());
+            Assert.Equal(["email", "firstName", "lastName", "username"], body.RootElement.EnumerateObject().Select(item => item.Name).Order().ToArray());
+            return Json(HttpStatusCode.OK, new { message = "fixture" });
+        });
+        await provider.GetRequiredService<IUsersApi>().UpdateProfileAsync(id, "new.name", "First", "Last", "new.name@example.test");
+    }
+    [Fact]
+    public void EditDetectsProfileAndRoleChangesAndValidatesTheProfileFields()
+    {
+        var user = new ApplicationUser(Guid.NewGuid(), "u", "First", "Last", "u@example.test", ["FL"], [], true, true);
+        var draft = UserDraft.From(user, new([new(RoleId, "FL", 1)]));
+        Assert.False(draft.ProfileChanged); Assert.False(draft.RolesChanged(user));
+        draft.Email = "other@elsewhere.test"; Assert.True(draft.ProfileChanged); Assert.Empty(draft.Validate());
+        draft.Email = "broken"; Assert.Contains(nameof(UserDraft.Email), draft.Validate().Keys);
+        draft.Roles[0].Selected = false; Assert.True(draft.RolesChanged(user));
     }
     [Theory]
     [InlineData(400)]

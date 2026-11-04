@@ -33,6 +33,8 @@ public interface ILimitsApi
     Task<LimitRecord> SaveAsync(int? id, LimitRequest request, CancellationToken token = default);
     Task DeleteAsync(int id, CancellationToken token = default);
     Task<RbiApiFile> ExportAsync(Guid? entity = null, CancellationToken token = default);
+    /// <summary>Workbook import (needs the limits create permission; blocked with 423 while the period is locked). Always inspect Imported/Failed: HTTP 200 does not mean every row was imported.</summary>
+    Task<ImportResult> ImportAsync(Stream file, string name, CancellationToken token = default);
 }
 public sealed class LimitsApi(IRbiApiFileTransport transport) : ILimitsApi
 {
@@ -56,6 +58,14 @@ public sealed class LimitsApi(IRbiApiFileTransport transport) : ILimitsApi
     }
     public async Task<RbiApiFile> ExportAsync(Guid? entity = null, CancellationToken token = default) =>
         Value(await transport.DownloadAsync("api/limiti/export" + Filter(entity), cancellationToken: token), token);
+    public async Task<ImportResult> ImportAsync(Stream file, string name, CancellationToken token = default)
+    {
+        using var multipart = new MultipartFormDataContent();
+        var content = new StreamContent(file);
+        content.Headers.ContentType = new("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        multipart.Add(content, "file", name);
+        return Value(await transport.PostMultipartAsync<ImportResult>("api/limiti/import", multipart, token), token);
+    }
     private static T Value<T>(RbiApiResult<T> result, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
@@ -73,4 +83,5 @@ internal sealed class UnconfiguredLimitsApi : ILimitsApi
     public Task<LimitRecord> SaveAsync(int? id, LimitRequest request, CancellationToken token = default) => Unavailable<LimitRecord>();
     public Task DeleteAsync(int id, CancellationToken token = default) => Unavailable<object>();
     public Task<RbiApiFile> ExportAsync(Guid? entity = null, CancellationToken token = default) => Unavailable<RbiApiFile>();
+    public Task<ImportResult> ImportAsync(Stream file, string name, CancellationToken token = default) { file.Dispose(); return Unavailable<ImportResult>(); }
 }

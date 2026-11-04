@@ -33,7 +33,7 @@ else
             <thead><tr><th scope="col">@T["users.user"]</th><th scope="col">@T["users.email"]</th><th scope="col">@T["users.col-accesses"]</th><th scope="col" class="registry-center">@T["users.status"]</th>@if (_canWrite) { <th scope="col" class="registry-center registry-actions-cell">@T["users.actions"]</th> }</tr></thead>
             <tbody>@foreach (var user in _result.Users)
             {
-                <tr @key="user.Id"><td><strong>@user.FirstName @user.LastName</strong><br /><span class="registry-sub">@user.Username</span></td><td>@user.Email</td><td>@(user.IsActive && user.Roles.Count == 0 ? RoleLabel("gost") : string.Join(", ", user.Roles.Select(RoleLabel)))</td><td class="registry-center"><Indicator Kind="@(user.IsActive ? "active" : "inactive")" Label="@T[user.IsActive ? "users.active" : "users.inactive"]" /></td>
+                <tr @key="user.Id"><td><strong>@user.FirstName @user.LastName</strong><br /><span class="registry-sub">@user.Username</span></td><td>@user.Email</td><td>@(user.IsActive && user.Roles.Count == 0 ? RoleLabel("gost") : string.Join(", ", user.Roles.Select(RoleLabel)))@if (!user.IdentityConfirmed) { <br /><span class="registry-sub" data-identity="unconfirmed">@T["users.identity-unconfirmed"]</span> }</td><td class="registry-center"><Indicator Kind="@(user.IsActive ? "active" : "inactive")" Label="@T[user.IsActive ? "users.active" : "users.inactive"]" /></td>
                 @if (_canWrite)
                 {
                     <td class="registry-actions-cell"><div class="registry-row-actions">
@@ -107,7 +107,12 @@ else
         if (_busy) return; _busy = true;
         try
         {
-            if (draft.Id is { } id) await Api.UpdateRolesAsync(id, draft.SelectedRoles, _token);
+            if (draft.Id is { } id)
+            {
+                var current = _result.Users.Single(user => user.Id == id);
+                if (draft.ProfileChanged) await Api.UpdateProfileAsync(id, draft.Username.Trim(), draft.FirstName.Trim(), draft.LastName.Trim(), draft.Email.Trim(), _token);
+                if (draft.RolesChanged(current)) await Api.UpdateRolesAsync(id, draft.SelectedRoles, _token);
+            }
             else await Api.CreateAsync(draft.ToRequest(), _token);
             _notice = draft.Id is null ? "toast.user-created" : "toast.user-role"; await LoadAsync(); _draft = null;
         }

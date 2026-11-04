@@ -41,7 +41,7 @@ else
                 <ul class="codes-cards" aria-label="@T["codes.title"]">
                     @foreach (var category in FilteredCategories)
                     {
-                        <li><button type="button" class="codes-card" disabled="@(_busy || _refreshing)" @onclick="() => OpenCategoryAsync(category)"><AppIcon Name="AppIconName.BookOpen" /><span class="codes-card__name">@category</span></button></li>
+                        <li><button type="button" class="codes-card" disabled="@(_busy || _refreshing)" @onclick="() => OpenCategoryAsync(category)"><AppIcon Name="AppIconName.BookOpen" /><span class="codes-card__name">@category</span>@if (Meta(category) is { Length: > 0 } meta) { <span class="codes-card__meta">@meta</span> }</button></li>
                     }
                 </ul>
             }
@@ -50,6 +50,7 @@ else
         {
             <div class="registry-category">
                 <RbiButton Disabled="@(_busy || _refreshing)" OnClick="BackToOverviewAsync" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.ArrowLeft" />@T["codes.all"]</RbiButton>
+                @if (Meta(_category) is { Length: > 0 } openMeta) { <p class="codes-meta" role="status">@openMeta</p> }
                 @if (_canWrite)
                 {
                     <RbiButton Disabled="@(_busy || _refreshing)" OnClick="() => _deleteCategory = _category" Variant="RbiButtonVariant.Destructive"><RbiIcon Name="RbiIconName.Trash2" />@T["codes.delete-category"]</RbiButton>
@@ -103,6 +104,14 @@ else
     public CodeLists() => _token = _lifetime.Token;
     private bool _disposed, _authenticated, _canRead, _canWrite, _busy, _loading = true, _refreshing, _loaded;
     private IReadOnlyList<string> _categories = [];
+    private Dictionary<string, CodeListDefinition> _definitions = new(StringComparer.OrdinalIgnoreCase);
+    private string Meta(string category)
+    {
+        if (!_definitions.TryGetValue(category, out var definition)) return "";
+        var created = string.IsNullOrEmpty(definition.CreatedBy) ? "" : T.Format("codes.created-by", definition.CreatedBy);
+        var modified = string.IsNullOrEmpty(definition.ModifiedBy) ? "" : T.Format("codes.modified-by", definition.ModifiedBy, definition.ModifiedAt is { } at ? AppFormat.Timestamp(at) : "—");
+        return string.Join(" · ", new[] { created, modified }.Where(part => part.Length > 0));
+    }
     private IReadOnlyList<CodeValue> _values = [];
     private string _category = "", _pendingCategory = "", _fileName = "";
     private string? _error, _notice, _toastError, _deleteCategory;
@@ -124,6 +133,9 @@ else
             _canWrite = _canRead && profile.Permissions.Contains("ADMINISTRATION_MANAGE");
             if (!_canRead) return;
             _categories = (await Api.CategoriesAsync(_token)).Categories;
+            // Created-by / last-modified are advisory metadata: a failure here must not hide the lists themselves.
+            try { _definitions = (await Api.DefinitionsAsync(_token)).Items.ToDictionary(item => item.Name, StringComparer.OrdinalIgnoreCase); }
+            catch (RegistryApiException) { _definitions = new(StringComparer.OrdinalIgnoreCase); }
             if (!_categories.Contains(_category)) _category = "";
             _values = _category.Length == 0 ? [] : (await Api.ValuesAsync(_category, _token)).Items;
             _loaded = true;
