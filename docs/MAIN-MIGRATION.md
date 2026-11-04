@@ -49,4 +49,11 @@ Nothing here was executed. It needs repository-admin rights.
 Real Keycloak realm/audience configuration and the 8-hour session, bank reference and Finrep sources, a mail provider, shared session/data-protection keys on the platform, a deployed-API plus SQL browser smoke test, release-notes route, and the gaps listed in `docs/FINAL-REQUIREMENTS-COVERAGE.md`.
 
 ## Final state of `main` after the update PR
-`main` keeps its full history (including the commit that exposed the credential, which is therefore still reachable from `main` and from this PR branch). The PR replaces the **content** of the tree with the tested candidate: application source, configuration, tests, migrations and the consolidated documentation. Legacy documents folded into `README.md`/`docs/ONBOARDING.md` and root helper files (`env-variables.md`, `schema-overview.md`, `Frontend/README.md`, the `docs/*` legacy set) are removed from the tree and remain available in history. Because history is preserved, **rotating the credential remains mandatory**.
+`main` keeps its full history (including the commit that exposed the credential, which is therefore still reachable from `main` and from this PR branch). The PR replaces the **content** of the tree with the tested candidate: application source, configuration, tests, migrations and current documentation.
+
+Legacy documentation was compared with the final documentation:
+* **Restored as current**: `docs/PRODUCTION-READINESS.md` and `docs/configuration/ENVIRONMENT-VARIABLES.md` (from Codex's sanitized backend branch, not `main`'s edited copies), plus the still-valid `docs/database/DB-CHANGE-WORKFLOW.md`, `docs/database/SQL-SERVER.md` (one sentence updated: Development may migrate only with an explicit `Database__ApplyMigrations=true`), `docs/testing/TEST-DATA-AND-SCENARIOS.md`, `docs/development/LOCAL-DEVELOPMENT.md`, `docs/deployment/OCP-IIS.md`, `Frontend/README.md`, `env-variables.md`.
+* **Rewritten to match the current system** (old text referenced React and the retired OpenAPI client): `docs/architecture/README.md`, `docs/CONVENTIONS.md`, `schema-overview.md`.
+* **Archived verbatim as history**: the 29 React-to-Blazor migration, hardening, handoff and inventory reports now live in `docs/archive/blazor-migration/` with a banner stating they are evidence, not instructions.
+
+Because history is preserved, **rotating the credential remains mandatory**.
