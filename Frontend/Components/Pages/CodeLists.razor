@@ -41,7 +41,7 @@ else
                 <ul class="codes-cards" aria-label="@T["codes.title"]">
                     @foreach (var category in FilteredCategories)
                     {
-                        <li><button type="button" class="codes-card" disabled="@(_busy || _refreshing)" @onclick="() => OpenCategoryAsync(category)"><AppIcon Name="AppIconName.BookOpen" /><span class="codes-card__name">@category</span>@if (Meta(category) is { Length: > 0 } meta) { <span class="codes-card__meta">@meta</span> }</button></li>
+                        <li><button type="button" class="codes-card" disabled="@(_busy || _refreshing)" aria-describedby="@(Meta(category).Length > 0 ? MetaId(category) : null)" @onclick="() => OpenCategoryAsync(category)"><AppIcon Name="AppIconName.BookOpen" /><span class="codes-card__name">@category</span></button>@if (Meta(category) is { Length: > 0 } meta) { <p class="codes-card__meta" id="@MetaId(category)">@meta</p> }</li>
                     }
                 </ul>
             }
@@ -105,6 +105,7 @@ else
     private bool _disposed, _authenticated, _canRead, _canWrite, _busy, _loading = true, _refreshing, _loaded;
     private IReadOnlyList<string> _categories = [];
     private Dictionary<string, CodeListMeta> _definitions = new(StringComparer.OrdinalIgnoreCase);
+    private static string MetaId(string category) => "codes-meta-" + Convert.ToHexString(System.Text.Encoding.UTF8.GetBytes(category));
     private string Meta(string category)
     {
         if (!_definitions.TryGetValue(category, out var definition)) return "";

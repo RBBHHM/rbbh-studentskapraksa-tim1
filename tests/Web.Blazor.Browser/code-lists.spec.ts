@@ -114,3 +114,11 @@ test("375px editor, focus return and English resources remain usable", async ({ 
   await chooseLanguage(nav, "en");
   await expect(page.getByRole("heading", { name: "Code lists", exact: true })).toBeVisible(); await page.locator(".codes-card").first().click(); await page.getByRole("button", { name: "New value", exact: true }).click(); await expect(page.getByRole("dialog").getByRole("textbox", { name: /^Name/ })).toBeVisible();
 });
+test("category cards show who created the list, without changing the button's accessible name", async ({ page, request }) => {
+  await request.post("/__fixtures/codes-reference", { headers });
+  await visit(page);
+  const card = page.getByRole("button", { name: "MigrationCodes", exact: true });
+  await expect(card).toBeVisible();
+  await expect(page.locator(".codes-card__meta").filter({ hasText: "Kreirao: fixture" }).first()).toBeVisible();
+  await expect(card).toHaveAccessibleDescription(/Kreirao: fixture/);
+});

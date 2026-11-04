@@ -145,3 +145,16 @@ test("375px user table/form and BS/EN owned copy remain usable", async ({ page }
   await expect(page.getByRole("heading", { name: "User management", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Add user", exact: true }).click(); await expect(page.getByRole("dialog").getByText("Functional accesses", { exact: true })).toBeVisible();
 });
+test("profile fields of an existing user are editable and persisted through the profile endpoint", async ({ page, request }) => {
+  await request.post("/__fixtures/users-reference", { headers }); await visit(page);
+  const other = page.getByRole("row").filter({ hasText: "other-FL@fixture.test" });
+  await other.getByRole("button", { name: "Promijeni ulogu", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^Ime/).fill("Renamed");
+  await dialog.getByLabel("Email", { exact: false }).fill("other-FL@elsewhere.example"); // any valid domain is accepted
+  await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).toHaveCount(0);
+  const row = page.getByRole("row").filter({ hasText: "other-FL@elsewhere.example" });
+  await expect(row).toContainText("Renamed");
+  const state = await (await request.get("/__fixtures/users-state", { headers })).json();
+  expect(state.users.some((user: { email: string }) => user.email.toLowerCase() === "other-fl@elsewhere.example")).toBe(true);
+});

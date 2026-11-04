@@ -135,3 +135,14 @@ test("BS/EN limit copy persists and reaches the backend", async ({ page, request
   await expect(page.getByRole("heading", { name: "Limits", exact: true })).toBeVisible();
   expect((await (await request.get("/__fixtures/culture", { headers })).json()).language).toBe("en");
 });
+test("workbook import rejects non-xlsx files locally and reports imported/failed counts for a real workbook", async ({ page }, info) => {
+  await open(page);
+  await page.locator("#limit-import").setInputFiles({ name: "limiti.txt", mimeType: "text/plain", buffer: Buffer.from("x") });
+  await expect(page.getByRole("dialog")).toBeVisible(); await page.getByRole("dialog").getByRole("button", { name: "Zatvori", exact: true }).first().click();
+  const pending = page.waitForEvent("download"); await page.getByRole("button", { name: "Izvezi Excel", exact: true }).click();
+  const target = info.outputPath("roundtrip.xlsx"); await (await pending).saveAs(target);
+  await page.locator("#limit-import").setInputFiles(target);
+  const dialog = page.getByRole("dialog"); await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText(/\d/); // the result is stated from the backend response, never assumed successful
+  expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
+});

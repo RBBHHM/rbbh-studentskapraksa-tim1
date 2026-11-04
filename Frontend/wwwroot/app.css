@@ -427,4 +427,4 @@ h1[tabindex="-1"]:focus, h1:focus-visible { outline: none; }
 .capital-state { display: inline-block; padding: .1rem .6rem; border-radius: 999px; border: 1px solid var(--border-subtle); font-size: var(--font-size-sm); }
 .capital-state--active { background: var(--surface-brand-subtle); border-color: var(--border-brand); font-weight: 700; }
 .capital-state--corrected { text-decoration: line-through; }
-.codes-card__meta, .codes-meta { display: block; color: var(--text-secondary); font-size: var(--font-size-sm); font-weight: 400; }
+.codes-card__meta, .codes-meta { margin: .25rem .25rem 0; display: block; color: var(--text-secondary); font-size: var(--font-size-sm); font-weight: 400; }

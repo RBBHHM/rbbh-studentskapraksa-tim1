@@ -15,7 +15,8 @@ test("ordinary authenticated user reads and downloads existing reports, but cann
   const state = await (await request.get("/__fixtures/reports", { headers })).json(); expect(state.records).toHaveLength(1); expect(state.attempts).toBe(0);
   // Existing read/download audit writes are preserved, not confused with new
   // persisted business report generation.
-  expect((await (await request.get("/__fixtures/counts", { headers })).json()).audit).toBe(3);
+  // 3 download audits by this user + 1 GENERATE audit written by the fixture seeding through the real report service.
+  expect((await (await request.get("/__fixtures/counts", { headers })).json()).audit).toBe(4);
 });
 test("profile lookup failure fails closed for Reports and explicit retry restores known Guest access", async ({ page, request }) => {
   await request.post("/__fixtures/profile-unavailable", { headers }); await page.goto("/app/reports"); await interactive(page);
