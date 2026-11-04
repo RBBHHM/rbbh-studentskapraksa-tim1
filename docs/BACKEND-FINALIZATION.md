@@ -1,0 +1,540 @@
+# Backend finalization: audit and proposed contract
+
+Audit date: 2026-11-02. Repository: `RBBHHM/rbbh-studentskapraksa-tim1`.
+Baseline: `origin/main` = `48cf8da8f0bb77129ea0b14ad5366c7cea7ce14b`.
+Working branch: `feat/codex-backend-finalization`. No production environment was accessed.
+
+Sources: all 20 pages of `[Related Parties Register] Dokumentacija.pdf`, including the embedded screenshots, and `docs/POPRAVKE.txt`. The current main is authoritative for implemented behavior. Earlier migration handoffs are historical evidence, not verification of this baseline.
+
+## Phase 0: scope and baseline
+
+The file inventory covers all tracked Backend files, backend tests and workflow configuration (257 entries across those areas, including generated migrations). A local audit ledger with hashes, signatures and persistence/security markers is under ignored `artifacts/backend-finalization/`. Review follows controller → permission → service → persistence → test paths; generated migration designers are treated as schema history, not rewritten runtime code.
+
+Fresh baseline results:
+
+- Solution restore: PASS.
+- Release solution build with analyzers: FAIL, three BrowserHost reference errors (`RBBH.RelatedPartiesRegister` and `RBI` namespaces). Frontend and backend now both use the `DATA_CORE` assembly identity. Frontend ownership must resolve this integration defect; backend-only validation remains possible.
+- Backend unit tests: 269 PASS, 9 FAIL, 278 total. All failures are existing `JwtAudienceConfigurationTests` expectations. Main sets `ValidateAudience = false` in every environment.
+- Backend integration tests: 162/162 PASS, no skipped tests, with `RBBH_TEST_SQLSERVER` set to LocalDB. This includes disposable SQL identity-upgrade and last-Admin concurrency coverage. Passing existing tests does not prove the missing requirements below.
+
+No frontend file, existing migration, production database or identity record is changed by this audit.
+
+### Requirement-to-code matrix
+
+Status describes the audited baseline. DONE means the stated narrow requirement exists with local evidence; PARTIAL means a route or implementation exists but does not satisfy the full requirement; MISSING means no implementation was found; BLOCKED identifies an external input or approval dependency. P0 blocks secure release, P1 functional correctness, P2 maintenance/performance. Paths below are relative to the repository; `S` = `Backend/BL/Services`, `C` = `Backend/API/Controllers`, `E` = `Backend/DL/Entities`, `A` = `Backend/IoC/Extensions/Authentication`, `UT`/`IT` = existing backend unit/integration test projects. These aliases identify affected paths without repeating long prefixes.
+
+| ID | Source | Status | Existing implementation / gap | Required change; affected files | Dependency | Required evidence | Priority |
+|---|---|---|---|---|---|---|---|
+| AUTH-01 | PDF 5; corrections security | PARTIAL | Controllers have authentication and application policies; reference-data/modules require authentication only; health is deliberately anonymous | Complete endpoint/verb matrix, include minimal auth routes and metrics; C, Program, IT | Approved public endpoint exceptions | Real-pipeline 401/403/423 matrix, no mutation on denial | P0 |
+| AUTH-02 | PDF 5 | DONE | Provider role/permission claims stripped; active local role-permission grants authoritative | Preserve `A/RoleClaimsTransformation.cs` | None | Existing transformation/HTTP tests | P0 |
+| AUTH-03 | PDF 5; Phase 3 | DONE | Unknown authenticated identities get virtual `gost` without AppUser creation; inactive users denied | Preserve resolver and baseline; correct obsolete known-user-only comments | Latest requirement supersedes older unknown!=Guest decisions | `SubjectLinkAndVirtualGuestTests`, transformation tests | P0 |
+| AUTH-04 | PDF 5 | PARTIAL | Roles and grants persisted; assignable-name allow-list and Guest grant matrix are code constants | Catalog-backed display/configurable choices; stable permission keys stay technical invariants; A, S/RoleService, role entities | C1 contract approval | Active/inactive roles, multi-role union, provider forgery | P1 |
+| AUTH-05 | PDF 5 | DONE | Multi-role create/replace persists UserRoles; self-management/final Admin guards | Preserve `AppUserService.Mutations`, `UsersMutationBoundary` | None | Existing users HTTP and SQL races | P0 |
+| AUTH-06 | PDF 5 | MISSING | No role-request entity, approval endpoint or assignment workflow | Implement C1 request/approval transaction and notifications in existing projects | C1 + security decision S3 | Owner/approver IDOR, duplicate approval, atomic roles+audit, rejection | P1 |
+| AUTH-07 | PDF 5 | PARTIAL | Cookie/OIDC exist; no explicit eight-hour app session; server token/cookie expiry differ | Agree C2 lifetime/refresh contract, then configure backend cookie and coordinate frontend session | C2 + realm policy | 8h/expiry/refresh failures and restart behavior | P1 |
+| AUTH-08 | Phase 3/8; PDF 5 | BLOCKED | JWT Audience disabled unconditionally; nine baseline tests fail | S1: restore configured audience and fail-closed startup outside Development; A/AuthenticationServiceExtensions | Security-policy approval | Existing audience suite plus real bearer HTTP rejection | P0 |
+| ID-01 | PDF 6 | DONE | Confirmed subject-first resolution survives email/username changes without matching new privileged identities by email | Preserve `A/ApplicationIdentityResolver` | None | Changed claims/new subject/missing claims/conflicts tests | P0 |
+| ID-02 | PDF 6 | PARTIAL | Verified unique email first-link is opt-in, persisted and audited; legacy backfill not performed | Keep switch off until approved reconciliation; normalized uniqueness and account recreation runbook | Real realm/export + approved backfill | SQL upgrade and parallel first-link; new-sub does not inherit roles | P0 |
+| ID-03 | PDF 6, 15 | PARTIAL | Normalized schema supports multiple roles; username/email unique indexes; input prechecks can race or differ from SQL collation | Keep relational identity tables; normalize prechecks, safe duplicate result, creation audit atomic; S/AppUserService | C1; database collation/duplicate preflight for any index change | Duplicate/trim/case/concurrent create on SQL | P1 |
+| ID-04 | PDF 15 | PARTIAL | AppUser creation optionally calls Keycloak Admin; wrong AdminClientId selection; unused KC role mutation surface | Separate identity lookup from application grants; disposal/exact lookup; S/KeycloakAdminService | Real service-account permissions; no invented secret | Stub HTTP failure/cancel/disposal; real SSO external | P1 |
+| ID-05 | PDF 14–15 | PARTIAL | Create/roles/deactivate/delete/reactivate exist; no general profile edit API; corporate email restriction contradicts editable other domains | Add explicit edit DTO/endpoint; C/Users, S/AppUserService | C1 and accepted email-domain policy | Unique email/username edits, no subject/privilege reassignment | P1 |
+| SAFE-01 | PDF 10 | BLOCKED | Both Verify methods allow creator verification; Legal Update accepts arbitrary Status | S2: enforce four-eyes and server-owned status; S/LegalEntityService, RelatedPersonService, VerificationController | Security-policy approval; stable actor semantics | Creator denied, other verifier allowed, update cannot bypass Verify, period lock | P0 |
+| SAFE-02 | PDF 5 | DONE | Own deactivate/delete/role changes denied; SQL application lock serializes final active confirmed Admin reduction | Preserve mutation boundary | None | Existing HTTP denials, rollback audit, SQL mutual races | P0 |
+| DB-01 | PDF 7, 16 | PARTIAL | Mapping/history inspected; soft filters, Restrict and unique indexes exist; audit lengths/names mixed; role UserId has no AppUser FK | Preflight orphan users and field-length mismatches; additive constraints only after review | Data inventory/backup | Disposable migration upgrade with data and rollback rehearsal | P1 |
+| DB-02 | Phase 4 | BLOCKED | Historical migrations drop GCC/limit columns; limits migration adds empty Guid FK; fresh upgrade tests use empty tables | Do not rewrite applied history or run against populated DB without approved data plan | Production backup, legacy mapping | Representative nonempty upgrade tests; restore proof | P0 |
+| DB-03 | PDF 4, 17 | PARTIAL | Program now runs MigrateAsync unconditionally in Development, ignores ApplyMigrations; InMemory path cannot migrate | Respect explicit startup migration configuration and relational provider; Program | Deployment migration contract, no production DDL | Development no-SQL startup; no unexpected DDL | P1 |
+| LEG-01 | PDF 7–8 | PARTIAL | HTTP validation exists; imports bypass annotations; service does not bound name/Matbroj/description; FBA regex accepts Unicode digits | Share service validation across HTTP/import without changing DTO shape; S/LegalEntityService, DTO/LegalEntity | Tax rule clarification: PDF max13 vs implemented exact13 checksum | Direct service + HTTP + XLSX boundary values | P1 |
+| LEG-02 | PDF 8 | DONE | DateFrom required and DateTo consistency enforced; bank-related flag/basis/description validated | Preserve service guards; residency bool omission needs contract review | C3 for required bool omission | Existing validation tests plus import rows | P1 |
+| LEG-03 | PDF 8, 18 | BLOCKED | No GCC fields/lookups; prior migration removed them | C3 additive GCC fields and bank lookup source adapter | `bosnadb\HEAD`, kod/glava access + approved schema/API | Authorized source contract tests, missing/unavailable source rejects safely | P1 |
+| LEG-04 | PDF 10 | MISSING | No large-exposure boolean | Add field only after C3 agreement | Meaning/default/backfill and report mapping | Create/edit/export/report inclusion | P1 |
+| LEG-05 | PDF 8 | PARTIAL | LIKE depends on SQL collation; active-only duplicate checks conflict with legal unfiltered unique indexes | Confirm case-insensitive collation and inactive duplicate policy; no silent index relaxation | Data/business decision | SQL case tests, concurrent/inactive duplicates | P1 |
+| XLSX-01 | PDF 8–11 | PARTIAL | Header/5000-row/10MB checks; valid rows batched; legal export11 vs import10 columns and differing order | C3 document versioned round-trip format incl metadata; maintain legacy import aliases | Shared workbook contract | Export→import, mixed invalid rows, exact counts | P1 |
+| XLSX-02 | PDF 8–11 | PARTIAL | Legal/physical malformed workbook can escape as 500; missing-name nonempty rows skipped; catch-all exposes exception text | Safe malformed-file/row errors; field-level validation; define partial success and preserve transaction boundary | Existing shape retained; C3 for new format | Corrupt ZIP/XLSX, formulas/values/long fields, duplicates/resource limits | P1 |
+| PHY-01 | PDF 10–11 | PARTIAL | CRUD/family graph/duplicate identifiers/validation exist; verification not four-eyes; DateTo required for physical | Preserve graph and cycle checks; align approved requirements | S2; do not apply legal optional-DateTo rule blindly | Existing validator/tree/HTTP plus self-verification tests | P1 |
+| PHY-02 | PDF 11 | PARTIAL | Physical export lacks requested created/modified metadata and linked-person JMBG/description; import15 columns differs | C3 versioned format, batch resolve references | Contract approval | Family identifier/export description/round-trip | P1 |
+| LIM-01 | PDF 12 | PARTIAL | DB-backed limit types and joined legal lookups; blank search Take20 lacks paging | C3 paged searchable lookup; preserve current consumers | Frontend contract coordination | Blank first page, page2, search, inactive types | P1 |
+| LIM-02 | PDF 12 | PARTIAL | CRUD/export available, import missing; global capital used for all dates | Agree history-aware capital resolution + import format | C3/C4 | Dated limits/capital, import and authorization | P1 |
+| CAP-01 | PDF 12 | MISSING | Single mutable global capital upsert; no effective-date history | C4 additive capital revisions with as-of selection, no invented historical values | Contract and data backfill approval | Multi-date/as-of, immutable history, duplicate/concurrent effective date | P1 |
+| REP-01 | PDF 13–14 | DONE | Read/export Guest baseline; generate/persist restricted Capital/Admin with audit | Preserve side-effecting generate workflow and policies | None | Existing reporting HTTP authorization tests | P0 |
+| REP-02 | PDF 13–14,18 | BLOCKED | Reports persist local ClientLimits snapshot; no authoritative finance integration | Read-only source contract; Finrep_db Monthlyhistory date tables and approved two-column mapping | Missing finance spreadsheets, SQL access, approved reconciliation | Finance examples/total reconciliation, timeout/source outage | P0 |
+| REP-03 | Phase 7/9 | PARTIAL | Report paging not bounded/stable; arbitrary month/year can throw | Validate period and clamp paging without changing response shape; S/ReportService, C/ReportController | None | Invalid ranges/overflow, stable ordering, existing export regression | P1 |
+| NOT-01 | PDF 14 | MISSING | Email preview queue is not durable recipient-scoped in-app notifications; no unread state/role notices | C1 notification/inbox + mail delivery state, recipient ownership | Schema/API + security S3 | Owner-only list/read/unread; retries/delivery failure | P1 |
+| NOT-02 | PDF 14 | PARTIAL | HR emails still sent after physical changes; requirement says retire until redesigned | Explicitly retire HR flow as specified, coordinate existing tests | Confirm replacement recipient/workflow requirements | No HR message for create/expiry; business response remains correct | P1 |
+| NOT-03 | PDF 14 | PARTIAL | Email links use old /admin/period and /notifikacije; template fields unencoded; broadcasts request500 but users clamp200 | Encode dynamic HTML; canonical authenticated links; page all recipients | None for encoding/routes; delivery idempotency C1 | Injection payload, encoded href, >200 recipients, no recipient PII logs | P1 |
+| PER-01 | Phase 7 | DONE | Global middleware locks physical/legal/limits/capital/verification mutations; reports persist exempt by established policy | Preserve routes and policies | None | Existing route/unit + HTTP lock matrix | P0 |
+| PER-02 | Phase 7 | PARTIAL | Unlock response10–490+prefix guarded; other period inputs unbounded; state/audit/mail not atomic | Validate calendar/note bounds; C/PeriodLock, repositories; transactional workflow | S3 for owner/status rules | Boundary/invalid input, no persistence, correct audit | P1 |
+| PER-03 | Phase 3/7 | BLOCKED | Request lists visible through CapitalRead baseline; response lacks requester ownership; process permissions need review | S3 owner-scoped requests, explicit approver grant, transitions/replay rules | Security-policy approval | Cross-user request IDs denied, duplicate approval, status/owner checks | P0 |
+| CODE-01 | PDF 16 | PARTIAL | Definition/value CRUD; deletion checks references; no category FK/composite unique index; Update deactivation bypasses Delete checks | Align all disable paths, normalized uniqueness, system-value protection | C1 codebook integrity contract + duplicate preflight | In-use update/delete/category, inactive duplicates/races | P1 |
+| CODE-02 | PDF 16 | PARTIAL | Import exists; some service failures not added to preview; category definition update/metadata incomplete; export missing | Complete defined format/errors/audit and CRUD | C1/C3 | Row errors/atomicity/import-export, definition updates | P1 |
+| CODE-03 | PDF 16 | PARTIAL | Backend uncached reads are fresh; no central versioning/invalidation for consumers | Add bounded versioned cache only with mutation invalidation; no speculative cache | Frontend cache contract | Update immediately visible, inactive values excluded | P2 |
+| LOC-01 | PDF 19 | MISSING | No Languages/LanguagePacks backend; current business/error labels literal BS/EN | C5 two logical codebooks + stable semantic keys/fallback/version, backend API error localization | Shared language-pack contract | Runtime edit, fallback, missing key diagnostics, Accept-Language | P1 |
+| AUD-01 | PDF 16,18 | PARTIAL | Manual audits widespread; user reductions atomic; many controllers save data before separate audit; actor uses email | Stable subject + username snapshot, service transaction for data+audit; avoid global interceptor logging secrets | C1 actor contract and field backfill | Successful writes exactly once, rejected writes none, audit failure rollback | P1 |
+| ERR-01 | PDF 17 | PARTIAL | Safe global handler exists; competing ProblemDetails customization exposes exception/innerException; Period UnsafeStringConverter bypasses JSON validation | Keep existing response shapes; remove internal detail leakage and unsafe raw JSON | C5 before uniform localized envelope | Real handler/fallback error redaction and valid Unicode/control JSON | P0 |
+| OBS-01 | PDF 6,17 | PARTIAL | Correlation middleware accepts arbitrary header; Console logs duplicate JWT/PII; mail operational logs include recipients | Bounded correlation + route-template/status/trace logs; no raw subject/email/claims/exception text | No permission/DTO changes | Captured logs with sentinel PII/tokens, auth failures and 403 | P0 |
+| OBS-02 | PDF 17 | PARTIAL | Prometheus, liveness/readiness SQL exist; no mail/KC/cache/scheduler health contract or failure alerts | Define readiness vs telemetry/dependency degradation, slow-query metrics | Deployment telemetry/retention policy | Outages, redaction, SLO/alert evidence | P2 |
+| OPS-01 | PDF 4,17 | PARTIAL | Trusted proxies/cookie HTTPS/CORS fail closed; backend Docker entrypoint differs from actual DATA_CORE.dll | Fix backend entrypoint only; validate artifact startup | Container registry access for real image | Release publish + entry assembly startup; OCP external | P0 |
+| OPS-02 | PDF 4,17 | BLOCKED | No verified real OCP/3scale, shared sessions, persisted DP keys, resources/drain/scheduler overlap | Keep deployment prerequisites explicit; no invented infrastructure values | RBBH infrastructure/SSO/SQL/mail/cert owners | Real route, proxy, failover, backups/restore/load | P0 |
+| PERF-01 | PDF 4,17 | PARTIAL | Several joins/AsNoTracking and batched imports; users all-candidate materialization, KC lookup N+1, unpaged physical/limits | Measure realistic authorized dataset before optimization; batch exact KC identity lookup | Representative data and contracts | Query count/latency/allocation/cancellation, no change to permission sets | P2 |
+| TEST-01 | PDF 17 | PARTIAL | Existing278 unit+162 integration; SQL tests execute with explicit LocalDB; new main fails full build and JWT tests | Preserve real-path tests; add discovered boundaries; restore full gate after coordinated fixes | Frontend build + S1 | Backend/SQL/full .NET/browser/build/publish actual totals | P0 |
+| DOC-01 | PDF 18 | PARTIAL | Root README/onboarding exist; many historical audit reports remain | Consolidation must preserve evidence; this single working report combines matrix/contract/results | Cross-owner documentation review | Accurate startup/config links; no fake production claims | P2 |
+| FE-01 | PDF 9–11,15,19–20 | BLOCKED | Placeholder/focus/validation-summary, contrast, navigation, release notes, keyboard/pager rendering are frontend ownership | Handoff only; no changes under Frontend | Frontend agent | Frontend/browser acceptance | P1 |
+
+### Architecture and schema findings
+
+Keep the existing small controller/service/EF structure. Moving every query behind another repository or merging normalized identity/role tables into generic codebook text would reduce safety and readability. Specific demonstrated problems are split data/audit commits, identity lookup coupled to KC realm-role calls, mixed Result/exception handling, manual string JSON serialization, missing cancellation, stale scaffolding (`JsonPlaceholder`, Temenos and transaction helpers), and permission duplication in module navigation. Do not remove a helper merely because its only caller is a test until the integration/ownership review confirms it is obsolete.
+
+Key schema risks: unfiltered legal unique IDs conflict with active-only checks; physical IDs have active-filtered unique indexes; CodeList category/code has no composite uniqueness or definition FK; UserRoles.UserId lacks FK; historical applied migrations have irreversible data drops; effective-date capital history does not exist. Email/username indexes rely on deployment collation and do not encode normalized identity rules. `CodeListDefinition` lacks modified metadata. Account/audit fields allow only100 characters while email allows200. Do not silently truncate or relax indexes. PKCS9.0.21 is preserved; no NU1900/NU1902/NU1903 suppression is proposed.
+
+## Phase 1: proposed shared architecture contract (not yet agreed)
+
+Existing route/DTO formats stay unchanged until frontend coordination. This proposal is reviewable guidance, not an announcement that new endpoints already exist.
+
+**C1 — Identity, authorization, requests and catalogs.** Keep normalized AppUsers, Roles, Permissions, UserRoles and RolePermissions. Present business role definitions through codebook administration if desired, with one authoritative role catalog rather than a second generic copy. Keycloak owns authentication; only the application database owns privileged grants. An unprovisioned authenticated identity receives virtual Guest without an AppUser insert. Confirmed subject is the durable key; names/emails are mutable profile attributes. First-link remains explicitly opt-in and restricted to unique verified email/unconfirmed records; new subjects never inherit a confirmed user's grants by matching email. Reject ambiguous/inactive identity matches. A role request stores trusted subject, display-name/email snapshots, requested role IDs, optional note, purpose(new/change), state, timestamps and version. Never accept applicant/approver identity from a request body. Proposed additive routes: authenticated `GET /api/role-requests/options`, `POST /api/role-requests`, owner-scoped `GET /api/role-requests/mine`, approver-scoped `GET /api/role-requests`, `POST /api/role-requests/{id}/approve` or `/reject`. Approval uses a version/idempotency key and one SQL transaction for request transition, identity provisioning/link verification, role changes and audit, under the existing final-Admin mutation boundary where applicable. Self-approval denied. Reject stale/replayed incompatible decisions with409. Replaying an identical successful decision must not grant or notify twice. A durable pending-delivery/outbox record is committed with business state; mail failure does not roll back a completed approval or pretend delivery succeeded. Email links navigate to authenticated pages; they never approve by GET or carry bearer tokens. These routes and entities require agreement before implementation.
+
+**C2 — Session.** Propose an absolute eight-hour application session with explicit cookie expiry and no sliding extension beyond that ceiling. Access-token expiry remains enforced; server-side refresh may continue only while both the app session and real realm refresh policy permit it. Central Keycloak SSO/access/refresh lifetimes cannot be extended locally. Logout/session revoke must clear server state. The Blazor token session is frontend/platform ownership: do not configure only the backend cookie and claim the complete8h UX works. Agree refresh/re-authentication behavior and shared cache/DataProtection persistence first.
+
+**C3 — Registry and workbook contracts.** Agree additive legal GCC number/name and large-exposure flag, define null/default/backfill semantics, preserve existing Matbroj/MaticniBroj fields until a reviewed migration resolves duplication. Confirm tax-number max13 versus current exact13+checksum. Bank customer/GCC source is `kod.dbo.komitent` and `glava.dbo.grupekom` on the supplied server name; connectivity and authoritative examples are unavailable. No fabricated fallback data. Version the import/export format with common ordered business columns and optional read-only created/modified metadata columns; import must ignore declared metadata rather than trust it as actor data. Keep legacy header aliases during transition. Define partial success as individually validated rows staged then committed once; failed validation rows are counted, blank entire rows ignored, storage failure commits no rows. Add resource limits before workbook expansion where practicable. Paged legal lookup is additive until consumers adopt it.
+
+**C4 — Capital and finance.** Add immutable capital revisions with effective date and audit/version, plus an explicit as-of read contract. Do not infer past capital from the current mutable row. Agree duplicate-date/version/correction semantics and initial-data reconciliation. Report snapshots remain persisted; generate remains a privileged mutation. Authoritative finance mapping requires the missing referenced spreadsheets, connection permissions and sample reconciled totals; do not compose arbitrary dynamic table names from input or claim the present local snapshot is a real bank report.
+
+**C5 — Codebooks/localization/errors.** Provide two logical codebooks in the application's standard administrative area: supported languages (BS,EN,DE) and language-pack resources. Names are application-specific; no DP_ prefix requirement. Pack records have active, language, resourceKey, label, helper and placeholder, with unique normalized language+key. New keys use lowercase semantic dot notation. DataProducts ID1/12/13/18/19/20 is a reference mapping only, not an imposed SQL model. Proposed additive read API returns language, version and resources; authenticated reads, administrative writes, bounded caching with version/invalidation. Fallback requestedlanguage→configured default→stable key, with rate-limited missing-key diagnostics without submitted data. Error responses retain status and field compatibility, add stable error/resource keys and safe parameters; no raw SQL/exception/identity data. Agree the localized error extension before unifying existing ProblemDetails and `errors[]` consumers.
+
+**Migration strategy.** No destructive migration or production backfill is authorized. Start with read-only duplicate/orphan/length/collation and subject-export reconciliation. Backup and prove restore; rehearse against a masked production-shaped copy. Apply reviewed additive migrations as a deployment step with an expand/contract rollout. Do not automatically run DDL just by starting an app against a configured database. Backfill only approved mappings in batches with counts and audit; add validated constraints afterwards. New code must tolerate pre-backfill state; rollback the application while retaining additive data, and restore backup for destructive rollback. Never rewrite already-applied migrations or delete old production identity links.
+
+### Approval boundary and next order
+
+The task's execution rule requires approval before security-policy changes and incompatible contracts. Outstanding concrete decisions:
+
+1. **S1:** configured JWT Audience validated in every environment; missing Audience rejected outside Development; only unconfigured local Development retains the existing documented exception. Existing tests already describe this behavior, but current main explicitly disables it.
+2. **S2:** four-eyes verification (creator cannot verify own legal/physical record), server-owned verification status, and durable actor binding for this check. Existing historical audit emails alone are not immutable identity proof.
+3. **S3:** role-request approver grant, request/inbox ownership, period-request visibility and processing authority; current read baseline exposes broad request/email-preview data. C1 defines the proposed direction, not a silently applied permission change.
+4. **C1–C5:** approve/coordinate new shared request, localization, history, workbook and registry contracts; agree external email domains/tax-number rule and populated-data migration before changing consumers.
+
+Independently implementable first batch: safe operational logging and error redaction, HTML encoding/canonical mail links, backend image entrypoint alignment and compatible validation fixes. No permission grant, shared DTO or schema needs to change for these. Remaining functionality follows the approved contracts, then migrations, then real-path tests, then measured performance and environment acceptance. External bank/realm/OCP verification stays BLOCKED until real inputs are supplied.
+
+### Concrete S2/S3 proposal for approval (not implemented)
+
+**S2: four-eyes and server-owned verification status.**
+
+- New legal/physical records and imports store a server-populated creator subject, separate from the existing display/email audit fields. The value comes from the validated identity, never a DTO, submitted local user ID or an email comparison. Keep it immutable through updates. Add nullable subject columns through an additive migration; do not drop or reinterpret historical fields.
+- Reject verification by the same creator subject with403 and a safe business message. Other authorized verifiers keep the existing application permission and period-lock checks. Verified status can change only through the verification operation; legacy Update.Status may repeat the current status for compatibility but a submitted transition is rejected with400. A normal edit must not become a status-grant bypass.
+- Historical records without proven creator subject cannot safely pass four-eyes by comparing today's email. Proposed default:409 requiring creator-identity reconciliation; no unlogged administrator override. Apply an approved per-record historical mapping only after evidence/backup review. This can temporarily block verification of old records and needs explicit acceptance before deployment.
+- Commit verification mutation and its audit atomically; rejected attempts create no success audit. Test creator/noncreator with changed email/username, forged body fields, missing provenance, repeated verification, status-overposting and locked periods through the actual HTTP pipeline, plus a SQL upgrade retaining existing records.
+
+**S3: request ownership, approver authority and notification privacy.**
+
+| Operation | Proposed authority and scope | Failure behavior |
+|---|---|---|
+| Submit/request own role changes | Authenticated subject, verified usable email; virtual Guest may request without pre-existing AppUser | Missing trusted identity401/validation400; applicant identity ignored/rejected in body |
+| View own role requests/inbox | Current authenticated subject owns record | Cross-owner ID404; no recipient/body disclosure |
+| Review/approve/reject role requests | Active application Admin (new stable permission seeded only to Admin) | Nonapprover403; self-approval403; stale/incompatible replay409 |
+| Period request creation/list/response | Existing write permission for submission retained; owner-only view/response; Admin additionally reviews all | Cross-owner404; response only to NEEDS_INFO, otherwise409 |
+| Period lock/unlock/reject/request-more-info | Proposed Admin-only processing, replacing current broad CapitalWrite processing where applicable | Capital without Admin403; this is a policy change, not a bug fix to apply silently |
+| Notification/email preview | Recipient-scoped inbox; raw global HTML email preview restricted to isolated Development test/demo; Admin production delivery metadata excludes message body/recipient detail unless separately approved | Nonowner404; no broad CapitalRead access to other recipients' messages |
+
+Approval is one conditional transition with a request version; role replacement, final-Admin check and audit share one transaction. Competing approve/reject produces one winner and409 for the other. An identical successful idempotency-key replay returns the prior result without second mutation/mail. Do not rebind a confirmed subject or transfer privileges to a recreated Keycloak account by email. Role-request approval must use the same explicit subject-link procedure as C1. Delivery records are committed atomically; retry only pending mail deliveries, with deduplication and bounded attempts. This needs the additive C1 contracts/schema and frontend coordination; it is not covered by S1 approval.
+
+Required S3 HTTP/SQL tests: anonymous401; Guest/functional-role/Admin matrix; owner/nonowner IDs; forged applicant/approver; inactive/ambiguous identities; self-approval; duplicated/racing decisions; final-Admin protection on change requests; no audit/role mutation on failure; notification isolation; failed mail without duplicate grants. Existing Capital period-processing behavior remains unchanged until this proposal is approved.
+
+## Implementation and fresh verification
+
+The first backend implementation batch is complete locally; overall backend finalization is **PARTIAL**, pending S2/S3 and shared-contract decisions plus external dependencies. S1 was explicitly approved by the user during this task. Baseline matrix statuses above remain historical; the following records the implemented deltas.
+
+| Area | Delivered delta | Remaining limit |
+|---|---|---|
+| AUTH-08/S1 | Configured API Audience validated everywhere; missing audience fails startup outside Development; unconfigured Development exception preserved. OIDC code+PKCE/client identity retained. | Real realm audience mapper, browser OIDC and UAT/PROD tokens require environment verification. |
+| OBS-01/ERR-01 | Removed raw console JWT/identity logs; route-template/status/elapsed/trace diagnostics include auth short-circuits; exception fallback no longer emits messages/inner exceptions/stack traces. Correlation IDs bounded and malformed/multiple headers replaced; response includes correlation even on handled500. Mail and legal operational logs exclude recipient/subject/actor/business-name payloads. | Broader telemetry/retention, framework/dependency configuration and S3 notification privacy remain open. |
+| NOT-03/ERR-01 | Eight mail templates HTML-encode dynamic values and use existing canonical /app routes; period error strings use a proper JSON writer for all32 control characters, preserving Unicode. | Durable recipient inbox/outbox, ownership and delivery semantics await C1/S3. |
+| OPS-01/DB-03 | Backend image runs actual DATA_CORE.dll. Startup migration is off by default, explicit Development opt-in only, relational-provider guarded; no production migration at startup. Warning no longer claims nonexistent seeded data. | Duplicate frontend/backend assembly identity prevents BrowserHost build; coordinate with frontend owner. Real image/OCP acceptance not performed. |
+| LEG-01/XLSX-02 | Shared service validation enforces name100, description500, basis100 and optional numeric50 bounds through create/update/import; non-ASCII numeric input rejected safely. Missing-name/nonempty rows counted as failures. Corrupt legal/physical XLSX returns safe file validation; row parser internals not exposed. Validated rows retain existing batch/partial-success model. | Versioned round-trip workbook/metadata, ZIP expansion limits, physical complete field parity, inactive/concurrent duplicate handling, tax-rule decision and bank mapping remain PARTIAL. Exact13+checksum tax behavior is preserved. |
+| CODE-01 | Duplicate key precheck normalizes case/whitespace and includes inactive values; Update deactivation obeys Delete reference guard; service field lengths match persisted limits. | Concurrent-create SQL uniqueness, definition FK/system protection/versioned cache need reviewed constraints/contracts. |
+
+No shared frontend DTO, frontend source, frontend localization, database entity/model or existing migration was edited. No new migration was created. No production data was read or modified. The tracked Backend project .user file is unchanged (only IDE debug-profile metadata); it is a repository-hygiene finding, not a secret leak. PKCS remains9.0.21 and no NuGet vulnerability/feed warnings were suppressed.
+
+### Commands and actual results
+
+Run from the dedicated backend-finalization checkout, in Release with no restore after the initial solution restore:
+
+| Check | Exact command or scope | Result |
+|---|---|---|
+| Restore | `dotnet restore RelatedPartiesRegister.slnx --disable-parallel -m:1` | PASS |
+| Backend build/analyzers | `dotnet build Backend/RelatedPartiesRegister.csproj -c Release --no-restore -p:RunAnalyzers=true -m:1 -nr:false` | PASS,0 warnings,0 errors |
+| Full backend unit | `dotnet test tests/Backend.UnitTests/UnitTests.csproj -c Release --no-restore -m:1 -nr:false --logger trx --results-directory artifacts/backend-finalization/final-tests` | **310/310 PASS**,0 skipped |
+| Full backend integration | `dotnet test tests/Backend.IntegrationTests/IntegrationTests.csproj -c Release --no-restore -m:1 -nr:false --logger trx --results-directory artifacts/backend-finalization/final-tests` with `RBBH_TEST_SQLSERVER=Server=(localdb)\MSSQLLocalDB;Integrated Security=true;TrustServerCertificate=true` | **219/219 PASS**,0 skipped, including8 actual SQL tests |
+| S1 configuration regression | `--filter FullyQualifiedName~JwtAudienceConfigurationTests` | 11/11 PASS, including all9 prior failures |
+| S1 real bearer HTTP | `--filter FullyQualifiedName~JwtAudienceHttpTests` | 9/9 PASS: exact/multiple audiences, wrong, absent, empty, whitespace, numeric and empty-array cases; OIDC configuration assertions retained |
+| Safe diagnostics HTTP | `--filter FullyQualifiedName~SafeDiagnosticsHttpTests` | 7/7 PASS |
+| Correlation middleware | `--filter FullyQualifiedName~IncludeCorrelationIDMiddlewareTests` | 9/9 PASS |
+| Encoding + existing period response + safe diagnostics | `--filter 'FullyQualifiedName~BusinessMessageEncodingTests\|FullyQualifiedName~UnlockResponseHttpTests\|FullyQualifiedName~SafeDiagnosticsHttpTests'` | 59/59 PASS |
+| Import field/parser/tax and physical tests | `--filter 'FullyQualifiedName~PhysicalImportValidationTests\|FullyQualifiedName~LegalImportValidationTests\|FullyQualifiedName~TaxNumberValidatorTests'` | 26/26 PASS |
+| Legal validation HTTP | `--filter FullyQualifiedName~LegalEntityHttpValidationTests` | 4/4 PASS, including malformed file400/no persistence |
+| Codebook service | `--filter FullyQualifiedName~CodeListServiceTests` | 25/25 PASS |
+| Email operational diagnostics | `--filter FullyQualifiedName~EmailDiagnosticsTests` | 4/4 PASS |
+| Release publish | `dotnet publish Backend/RelatedPartiesRegister.csproj -c Release --no-restore -p:RunAnalyzers=true -m:1 -nr:false -o artifacts/backend-finalization/publish` | PASS |
+| Published startup | DATA_CORE.dll in isolated Development/InMemory/demo-mail mode; ApplyMigrations=false and true tested separately | PASS both; /health/live and /health/ready each200/Healthy; owned smoke processes stopped afterwards |
+| Whole solution build | `dotnet build RelatedPartiesRegister.slnx -c Release --no-restore -p:RunAnalyzers=true -m:1 -nr:false` | FAIL with the same3 baseline BrowserHost namespace/reference errors; no claim of full .NET/browser success |
+| Whitespace | `git diff --check` and `git diff --check origin/main...HEAD` | PASS |
+
+Backend total: **529/529**, no skips. Focused results are subsets, not additional tests to add to529. The8 SQL cases cover actual SQL provider use, mutual Admin removal, demotion/deactivation, deactivate/delete, released locks, unconfirmed placeholder exclusion, subject-link migration/persistence/audit and readiness. These tests use uniquely named disposable databases, never the application database.
+
+The initial published startup attempt correctly failed missing real email configuration. Successful smoke probes explicitly selected `Email:Provider=demo`; they do not prove real email or SSO works. The pre-fix InMemory startup failed even with ApplyMigrations=false; the post-fix two-mode probe confirms that regression is removed.
+
+Startup command from the publish directory (random free port, no additional saved script):
+
+```powershell
+dotnet DATA_CORE.dll --environment Development --urls http://127.0.0.1:0 --Email:Provider demo --KeycloakSettings:Enabled false --Database:ServerName "" --Database:Name "" --Database:ApplyMigrations false
+```
+
+Repeating with `--Database:ApplyMigrations true` must warn/skip migration for InMemory. Real SQL migrations remain an explicit reviewed deployment action; no migration command against a populated database was executed here.
+
+### Commits and handoff
+
+Local implementation commits (before this evidence update):
+
+- `4367061`: requirement audit and proposed shared contracts.
+- `2bb9b9a`: safe request/auth/exception diagnostics and correlation IDs.
+- `292acba`: approved S1 Audience validation and HTTP evidence/configuration.
+- `42a13d5`: mail HTML encoding, canonical routes and safe period JSON.
+- `e491a6e`: startup migration opt-in and actual backend entrypoint.
+- `9275326`: import field bounds, incomplete rows and malformed workbooks.
+- `99ccca1`: stable codebook keys and referenced-deactivation guard.
+- `872ddaa`: mail/business operational log redaction.
+
+Migration instructions for this batch: no schema upgrade/backfill is needed. Configure the approved API audience before UAT/PROD startup. Default startup does not run migrations; opt in only in isolated Development when intentionally applying reviewed relational migrations. Keep first-link fallback disabled until real export/identity reconciliation is approved. Do not run historical destructive migrations on populated data on the strength of fresh-database tests.
+
+Frontend handoff: current HTTP DTO/route shapes remain compatible; no new role-request/history/localization routes are available yet. Coordinate the duplicate DATA_CORE assembly identity and approve C1–C5 before frontend implements proposed contracts. Error responses no longer expose internal exception details; correlation header is additive. Permission sets and Guest semantics are unchanged except for the explicitly approved S1 token audience enforcement.
+
+Release is not ready: S2/S3 security findings, populated-data migration decisions, bank finance/GCC contracts,8h shared session policy and real Keycloak/OCP/3scale/SQL/mail/TLS/proxy/cache/DP-key/retention/backup operations remain open. No credentials or infrastructure values were invented. No push was performed.
+
+### Exact changed files
+
+
+- `Backend/API/Controllers/PeriodLockController.cs`
+- `Backend/BL/Services/CodeListService.cs`
+- `Backend/BL/Services/EmailTemplates.cs`
+- `Backend/BL/Services/HttpApiEmailService.cs`
+- `Backend/BL/Services/LegalEntityService.cs`
+- `Backend/BL/Services/MockEmailService.cs`
+- `Backend/BL/Services/RelatedPersonService.cs`
+- `Backend/BL/Services/SmtpEmailService.cs`
+- `Backend/Dockerfile`
+- `Backend/Exceptions/GlobalExceptionHandler.cs`
+- `Backend/Helpers/Excel/ExcelImportSchema.cs`
+- `Backend/Helpers/Validators/TaxNumberValidator.cs`
+- `Backend/IoC/Extensions/Authentication/AuthenticationServiceExtensions.cs`
+- `Backend/IoC/Extensions/Databases/DatabaseExtensions.cs`
+- `Backend/IoC/Extensions/ExceptionHandling/ProblemDetailsConfig.cs`
+- `Backend/IoC/Middleware/IncludeCorrelationIDMiddleware.cs`
+- `Backend/IoC/Middleware/RequestOutcomeLoggingMiddleware.cs`
+- `Backend/Program.cs`
+- `Backend/appsettings.json`
+- `docs/BACKEND-FINALIZATION.md`
+- `docs/configuration/ENVIRONMENT-VARIABLES.md`
+- `tests/Backend.IntegrationTests/Tests/LegalEntity/LegalEntityHttpValidationTests.cs`
+- `tests/Backend.IntegrationTests/Tests/Operations/BusinessMessageEncodingTests.cs`
+- `tests/Backend.IntegrationTests/Tests/Operations/JwtAudienceHttpTests.cs`
+- `tests/Backend.IntegrationTests/Tests/Operations/SafeDiagnosticsHttpTests.cs`
+- `tests/Backend.UnitTests/Helpers/Validators/TaxNumberValidatorTests.cs`
+- `tests/Backend.UnitTests/Middleware/IncludeCorrelationIDMiddlewareTests.cs`
+- `tests/Backend.UnitTests/RelatedPersons/PhysicalImportValidationTests.cs`
+- `tests/Backend.UnitTests/Services/CodeListServiceTests/CodeListServiceTests.cs`
+- `tests/Backend.UnitTests/Services/EmailDiagnosticsTests.cs`
+- `tests/Backend.UnitTests/Services/LegalEntityServiceTests/LegalImportValidationTests.cs`
+
+## Continued implementation after 05b63b4 (approved S2/S3, 2026-11-02)
+
+The user approved S2/S3 and additive C1–C5 implementation. Preserve Capital period-processing permissions; the earlier Admin-only period-processing proposal is superseded and is **not applied**. New contract handoff: [BACKEND-FRONTEND-CONTRACT-V1.md](BACKEND-FRONTEND-CONTRACT-V1.md).
+
+- `7f2585d` (SAFE-01/S2): server-derived immutable CreatorSubject, additive nullable provenance and SQL rowversion on legal/physical records; creator403, ownerless historical409; legal Update cannot transition status; physical overposting ignored; verification+audit saved atomically.310/310 unit PASS;23/23 affected HTTP/SQL/period/subject-link tests PASS, including real SQL racing verification and audit-trigger rollback. No historical provenance invented.
+- `5735ba0` (PER-03/S3 initial): owner-only period-request list; additive CapitalWrite `/review` queue; response subject/state checks; one-response parent key and rowversion; response/audit atomic; production raw-mail preview disabled and isolated Development preview recipient-filtered.310/310 unit PASS;34/34 affected HTTP/SQL/period tests PASS. Original NEEDS_INFO→new PENDING child workflow retained, including the original record status; duplicate child blocked409. Existing Capital processing grants preserved.
+
+Additive migrations `AddRegistryCreatorProvenance` and `AddPeriodRequestOwnership` are local source changes, tested only on disposable SQL databases. Apply before upgraded API rollout; leave historical creator/requester subjects null until an approved reconciliation. Never use current email to invent historical ownership. Generated Down operations remove the new fields: do not run a data-losing downgrade in shared environments without explicit approval/backup; application rollback can retain additive columns.
+
+These batches do not complete role-request/inbox/localization/history/registry/reporting scope. Continue the dependency-ordered backlog; final statuses must be VERIFIED / BLOCKED / NOT_IMPLEMENTED after complete backend regression.
+
+
+## Continued C1/C2/C5 implementation, 2026-11-03
+
+This section supersedes pending implementation descriptions from the historical baseline above. It does not declare the overall backend finished.
+
+- C1/AUTH-04/USR/NOT-01: `6ababe7`, `2f6da19` implement database-owned multi-role request/change/approval/rejection, trusted subject/verified email, virtual Guest, owner-scoped inbox, atomic audit/grants/outbox and idempotent replay. SQL application-lock boundary preserves final active Admin access; own decisions denied. HTTP/SQL approval races, rollback and concurrent delivery are covered. No provider role grants are trusted. Mail retries never repeat grants; exactly-once external email is not claimed.
+- C2: `b27a6d4` enforces an absolute8h application cookie cap without sliding, honors earlier token expiry, and provides CSRF-protected POST logout with an additive antiforgery token endpoint.19/19 focused session+JWT HTTP cases PASS. Existing GET logout is explicitly deprecated but retained until frontend adopts POST; end-to-end Keycloak/Blazor refresh/logout is still BLOCKED on coordinated browser/realm acceptance.
+- C1 user management/DB-01/PERF-01: `96cca27` adds profile edits, normalized uniqueness with duplicate/orphan preflight and UserRoles FK, transactional create/reactivation/profile audit, exact read-only Keycloak identity adapter, opaque subjects and SQL-first pagination.317/317 unit PASS;54/54 user HTTP checks and17/17 migration/admin/SQL subset PASS (subsets are not cumulative totals). Populated duplicate preflight preserves source rows. Missing real Keycloak service-account access remains external; no email-based takeover/backfill is performed.
+- C5/CODE-01/02/03/LOC-01: runtime languages/packs reside in the existing codebook area. Configurable names; default migration adds BS/EN/DE and safe initial error/notification labels without overwriting historical rows. Semantic new keys, legacy case compatibility, per-field fallback, bounded missing-key diagnostics, SQL versioned cross-request/cache freshness, administrator-only mutation, recipient email template resolution and safe exception localization are implemented. Generic label-only Excel export/import is compatible with the established one-column contract, bounded before ZIP expansion, batches valid rows+audit atomically and reports collisions. Definition metadata updates use expectedVersion. Required/default resources and in-use values cannot be removed through alternate CRUD paths.
+
+C5 deployment: apply additive `AddRuntimeLocalizationCodebooks` before upgraded API. Its first step rejects normalized category/code duplicates without deleting/merging rows. The optional DefinitionId FK leaves historical records unassigned rather than inventing associations. Default seeds are additive and do not reactivate/replace pre-existing data. Custom codebook names must be provisioned alongside the application's other codebooks through its normal administration flow. Generic import/export is a label workflow, not a backup/restore of runtime resource or audit metadata. Retain additive schema for application rollback; destructive Down/removal of new runtime resources is not authorized for shared data. All SQL tests use disposable GUID databases, never shared UAT/PROD.
+
+Remaining independent batches: C3 registry/GCC/roundtrip workbooks, C4 capital/limits, reporting/period atomic delivery, remaining audit/operations/performance gaps and final full backend regression. External bank/finance/SSO/deployment inputs block only their own acceptance. No frontend/browser files changed and no push performed.
+
+C5 gate: backend analyzer build PASS (0 warnings/errors); full backend unit321/321 PASS; affected localization/codebook/role-notification HTTP+SQL40/40 PASS with no skips, including5 new localization SQL cases, populated preflight, audit-trigger rollback, cross-scope cache versions and concurrent normalized-key creation. Migration model check reports no pending changes; git diff --check PASS. Focused counts overlap other suites and are not added to a full backend total. Full integration regression follows after the remaining implementation batches.
+
+
+### C3 first implementation batch: GCC and bank/local lookups
+
+LEG-03/04/LIM-01: additive nullable GCC number/name and large-exposure fields, source-resolved GCC name, backward-compatible omission semantics, paged local limit lookup, and configurable SELECT-only bank adapter are implemented. Historical exposure remains null, not inferred false. New creates default false; DTO updates may explicitly change it. Exact13+checksum tax behavior is unchanged. Legal duplicates include inactive rows, matching the existing unfiltered SQL unique constraints; physical active-only identity reuse policy is unchanged. Search is case-insensitive independently of source SQL collation; pages are bounded and stably ordered. The shared workbook opener now validates ZIP expansion/active external content before ClosedXML.
+
+Gate: backend analyzer build PASS (0 warnings/errors);321/321 backend unit PASS;26/26 affected HTTP/real-SQL/GCC/verification tests PASS, no skips. Source SQL tests use synthetic tables in a disposable GUID database, including case-sensitive source collation, literal wildcard/injection inputs, exact ambiguous GCC, invalid identifiers, and missing mappings. A populated disposable migration proves existing creator/GCC/exposure remain unknown and original values survive. This verifies the adapter contract, not connectivity/reconciliation against actual bank data.
+
+Deployment requires additive `AddRegistryGccAndExposure` before this API; it only adds nullable columns. No historical GCC/exposure inference or shared database migration was performed. Bank owners must supply confirmed tax/name source columns, read-only connection/access and sample reconciliation. GCC-required UI enforcement remains gated on real bank readiness and frontend rollout, as the published additive contract specifies. Full workbook parity and remaining C3 validation/audit work continue next.
+
+
+### C3 registry workbook and audit continuation
+
+XLSX-01/02, PHY-01/02, NOT-02, AUD-01 registry portion: existing legal/physical export now matches importable v2 business columns plus requested created/modified metadata. Legacy10/15-column templates remain supported. Legal exports/imports preserve both registration and bank matbroj separately, source GCC, exposure and invariant dates. Physical exports include actual relation description and linked-person JMBG/passport/FBA; import resolves accepted parents before children regardless of file order, rejects cycles and invalid/missing parents and preserves server-owned family defaults. Status/audit/provenance fields in files are ignored; valid rows are persisted once with audit and structured row/field/code errors. Formulas, active/external packages, malformed workbooks and ZIP expansion are rejected safely. Main/family registry CRUD audits now share SaveChanges and rollback with the mutation. Audit snapshots use trusted username and subject, not request-supplied identity. The explicitly retired physical HR create/expiry messages are no longer sent; templates/API remain only for source compatibility.
+
+POPRAVKE.txt explicitly documents customer `porez_broj` / `matbroj` / `naziv`; those are now adapter defaults rather than incorrectly treating the names as absent. Real bank schema/access/sample reconciliation is still external. Once the bank source is enabled/configured, new/unlinked legal records require source GCC server-side; old linked updates may omit and preserve it. Before source rollout GCC remains additive/optional. No fake bank source is enabled locally.
+
+Gate: analyzer backend build0 warnings/errors;321/321 backend unit PASS and full backend integration308/308 PASS (629 backend tests, no skips). This includes actual SQL trigger failures proving creation/update/deactivation/import audit rollback, concurrent duplicate creation, populated migration preservation, role/admin/subject safety, source adapter tests and new workbook roundtrips/cycle cases. These totals supersede earlier incremental full-backend totals; focused subsets must not be added again. git diff --check PASS. This does not claim full .NET/browser or real Keycloak/bank acceptance.
+
+Continue: remaining C3 reference-choice integrity/paged read/resource/concurrency checks, C4 capital/as-of/limits, period/report/audit completion and operational gaps. Full runtime localization of every legacy business-message path is not established merely by having a catalog; retain that final acceptance work in the backlog.
+
+
+### C3 reference integrity, bounded reads and normalized physical identities
+
+PHY/LIM/PERF continuation adds case-insensitive, stably ordered SQL-first paging for physical persons and limits without replacing legacy array endpoints. Legal/physical export queries stop at5001 rows and safely reject >5000 rather than materializing an unbounded export or silently omitting records. Physical writes normalize passport/FBA inputs and validate optional FBA ASCII/length, including resident/family/direct-service paths. Configured relation catalogs are loaded once per operation/import; active codes or legacy labels are required. Empty/inactive defined catalogs deny unknown choices. Entirely absent historical catalogs keep rollout compatibility, not invented replacements; actual business codebook provisioning remains a production prerequisite.
+
+Additive `EnforceReferenceAndPhysicalIdentityKeys` adds normalized definition-name uniqueness and active-only normalized physical passport/FBA indexes. Preflight throws before DDL for duplicates; it never trims, merges or deletes existing values. Four disposable SQL cases explicitly use a case-sensitive database to prove duplicate preflight preserves rows, normalized active uniqueness prevents case variants, inactive identity reuse remains legal, and conflicting definition/FBA legacy rows are retained on rejection. No existing migration was rewritten and no shared database was changed.
+
+Gate: backend analyzer build0 warnings/errors;321/321 unit PASS and full integration318/318 PASS (639 backend tests, no skips); migration model aligned and git diff --check PASS. New browser/Frontend work is not included or claimed. C4 capital revisions/as-of/limits is next; remaining reporting/period/inbox/audit/localization/operations coverage must still be completed before the final matrix can be marked complete.
+
+
+### C4 capital revisions and as-of limits
+
+CAP-01/LIM-02 capital portion: `PUT /api/capital` appends to new CapitalRevisions, with database-issued ordering, effective date, trusted actor and atomic audit. Same-date corrections retain every prior revision; concurrent writes both survive and the highest revision defines the current observation for that date. EF and a SQL trigger prohibit updates/deletes of history. As-of resolves the latest known effective date not after the requested date, preferring revisions over a same-date legacy observation. Existing Capitals rows remain unchanged and are used only from their actual known dates; no older values are inferred/backfilled. Unknown values remain null/204. CapitalEdit/period-lock behavior is preserved. Monetary values must fit decimal(18,2) without silent rounding.
+
+Additive history/as-of endpoints and optional limits asOf query are published in the shared contract. Current limits/form defaults use today's history-aware capital. Persisted report snapshots are not rewritten; authoritative finance integration remains separate work, not substituted with invented capital/exposure data.
+
+Gate: backend analyzer build PASS (0 warnings/errors);321/321 unit and full integration327/327 PASS (648 backend tests, no skips). Nine new focused HTTP/SQL cases cover date boundaries/unknown history, same-date corrections, limits as-of, validation/period423, actual concurrent SQL writes, atomic audit rollback, EF/direct-SQL immutability and populated legacy migration without invented history. `AddImmutableCapitalHistory` only creates the new table/indexes/guard trigger; no shared migration was applied. All SQL databases are disposable fixture GUID names. git diff --check PASS. Continue remaining limits/import/reporting/period/operations/localization work before final completion.
+
+
+### C4/REP reporting validation, atomic snapshots and testable Finrep adapter
+
+REP-03/AUD reporting portion: calendar validation now also runs at service entry; list bounds/stable tie-breaks prevent overflow/unstable paging. Generate/persist still requires existing Capital/Admin policy and stores the snapshot plus trusted actor audit in one SaveChanges. Download still reads saved JSON. New nullable DataSource preserves unknown historical provenance; DTOs distinguish local.clientlimits and legacy.unspecified from finance.monthlyhistory. The local existing workflow is preserved, explicitly non-authoritative, not sold as bank acceptance.
+
+REP-02 safely implementable portion: configurable SELECT-only Monthlyhistory adapter maps only the two PDF-named components, validates identifier paths, uses approved exact period-table configuration rather than guessing suffixes, parameterizes/batches customer keys, preserves decimals and cancellation, rejects missing/null/duplicate/unapproved-precision data, and never substitutes zero/local values on configured-source failure. Confirmed BAM source currency and the approved numeric Matbroj key mapping are required; no currency conversions or source credentials are invented. Successful configured monthly reports use known month-end capital and retain immutable snapshot content. Source/input totals must fit persisted precision without rounding; processing is bounded to20,000 scoped clients.
+
+External REP-02 acceptance remains BLOCKED: referenced finance spreadsheets (including30-09-2026 registry mapping), real period table/key-column schema, read-only bank access, currency/unit confirmation, sample records/reconciled totals and daily-source mapping. Synthetic SQL fixtures validate the adapter mechanics only. The isAuthoritative DTO flag describes configured source origin, not proof of those production gates. No real bank query was attempted.
+
+Gate: analyzer backend build PASS0 warnings/errors;325/325 unit and full integration341/341 PASS (666 backend tests, no skips). Thirty focused reporting authorization/source/rollback/migration cases PASS as an overlapping subset. Tests cover ordinary read/download vs Capital/Admin generation, unchanged snapshots after source edits, real SQL batch>500, exact decimals, NULL/missing/ambiguous source, malicious identifiers, unknown currency/mapping, cancellation, unapproved precision, report audit-trigger rollback and populated provenance migration preserving the exact historical JSON/source-unknown state. The unit controller fixture now includes a trusted subject while retaining its existing assertions. Migration `AddReportSnapshotProvenance` adds only nullable metadata; no historical source is inferred and no shared database changed. Continue limits import/audit, period/inbox atomicity and remaining matrix work; no final full-solution/production completion claim or push.
+
+
+### LIM-02/XLSX/AUD limits completion
+
+Additive authorized period-locked limits import accepts current18-column exports and prior14-column exports. Read-only party descriptions/capital/audit metadata do not establish identity or change capital. Multiple supplied party keys must resolve to the same active legal entity. Active codebook choice, exact monetary precision/range, comment/date/header/formula/ZIP/upload/5000-row validation and structured row diagnostics apply. All valid rows are staged; errors/duplicates are counted without silently ignored service failures. Exact repeated business rows are deduplicated for import while existing ordinary-create multiplicity remains unchanged; no unapproved one-limit-per-type policy is introduced.
+
+Limits CRUD audits now use trusted username/subject and commit with the mutation. SQL creation/import saves generated IDs and the audit under one transaction; its stable audit ID detects a previously successful commit on retry. A real SQL transaction-commit interceptor deliberately loses acknowledgement after COMMIT for both create and import; the retry returns the persisted IDs and produces no duplicate row/audit. New nullable ImportFingerprint plus a filtered unique key prevents concurrent exact re-import duplication. Updates refresh an existing import fingerprint; no old records are backfilled. The populated upgrade preserves both previously identical business rows with null fingerprints. Existing delete behavior is preserved; no real user data is deleted by this task.
+
+Gate: analyzer backend build0 warnings/errors;325/325 unit and full integration353/353 PASS (678 backend tests, no skips).12/12 focused limits HTTP/SQL cases PASS as an overlapping subset: roundtrip/metadata distrust, partial success/replay, legacy shape, invalid amounts/identifiers/comment, permissions/period423, audit rollback for create/update/delete/import, racing imports, lost COMMIT acknowledgement, and populated additive migration. `AddLimitImportIdempotency` requires schema-before-API rollout; no shared DDL or data change occurred. Migration model aligned; git diff --check PASS. Continue period request/lock/audit/outbox atomicity, notification rendering, operations and remaining localization/role-catalog/coverage gaps before final completion.
+
+
+### PER-02/NOT/AUD atomic period workflows and notification rendering
+
+PeriodWorkflow replaces controller-side multi-save/audit/direct-email sequences with one SaveChanges for state, approvals, audit, inbox and delivery outbox. Existing Capital processing permissions, owner-only visibility,10–490 response/prefix500 storage, original NEEDS_INFO→PENDING-child transition and multiple independent initial requests are preserved. PeriodLocks rowversion plus existing request rowversion/parent uniqueness protect races. Already-open historical periods with no pending work produce no false repeat audit/broadcast. Historical inactive/department records require reconciliation, not silent reactivation/reassignment. New audit records use trusted subject/username; historical fields are not rewritten.
+
+Configured AdminEmail remains validated before a request/response is persisted. Known authorized reviewer contacts receive scoped inbox notices; distribution mailboxes have empty recipient subject and are explicitly delivery-only, with every inbox access requiring a nonblank validated subject. Broadcast queries all known active confirmed recipients directly, removing the200-user clamp. The asynchronous worker renders complete parameterized BS/EN/DE period/role details as bounded HTML-encoded plain text, rejects missing/malformed templates/parameters and unsafe subject lines, and retries transport without repeating the business workflow. No fake identity or raw HTML is introduced. Parameter metadata supports complete Unicode20-role/1000-character notes without truncation.
+
+Automatic locking now calls the same atomic/idempotent system operation, honors cancellation and logs only safe failure types instead of terminating the host or logging transport exceptions. Existing scheduling timing is preserved; production timezone/holiday calendar, ownership/overlap, alert/retry/drain policy still requires real RBBH operations inputs. This batch does not invent those values or claim production scheduler acceptance.
+
+Gate: backend analyzer build PASS0 warnings/errors;325/325 unit and full integration365/365 PASS (690 backend tests, no skips). Existing61 period/role affected cases and12 new atomic/rendering cases PASS as overlapping subsets. Real SQL proves lock/unlock/request audit rollback, retained pending requests/outbox, competing reject/info, idempotent system checks, populated migration preserving500-character reason/proven subject/edited labels, and complete Unicode role email details without raw HTML/grants. HTTP proves Capital-role processing, owner/mailbox isolation (including malformed subject),>200 recipients, HTML encoding and failure/retry delivery without repeated requests. Updated response tests assert the committed exact outbox payload instead of synchronous transport; all original text/storage/state/audit checks remain. The shared real-pipeline fixture now registers actual period dependencies and supports an explicit malformed-subject test header (test-only).
+
+Additive migration `AddPeriodConcurrencyAndNotificationResources` must precede the API; existing resources are not overwritten, language-pack version advances to invalidate caches, and historical request/period values survive. No shared DDL or production data change occurred. Migration model aligned and git diff --check PASS. Continue remaining identity/authorization/catalog/localization/operations/performance gaps and final release gates; no push or whole-solution acceptance claim.
+
+### Opaque subject isolation (ID-01, SAFE-02, AUTH-02, S3)
+
+A fresh real-SQL HTTP regression demonstrated that the database's default case-insensitive comparison allowed `CREATOR` to inherit `creator`'s Admin grants and a case-variant subject to list another owner's requests. This is a violation of the approved exact identity/owner contract, not a role-policy change.
+
+`EnforceOpaqueSubjectComparisons` keeps every stored value unchanged and uses indexed `Latin1_General_100_BIN2` comparisons for AppUsers.KeycloakId, RoleRequests.RequesterSubject, Notifications.RecipientSubject and UnlockRequests.RequestedBySubject. Existing uniqueness/indexes remain; duplicate preflight fails rather than reassigning identities. Resolver additionally checks ordinal equality and rejects malformed/padded subjects without trimming. The existing virtual Guest baseline for an authenticated identity without a subject is preserved; mutations still require a valid subject.
+
+Five new disposable LocalDB tests prove permission isolation, request/inbox read and mark-read isolation, period ownership even when both distinct identities have Admin/Capital grants, malformed-subject rejection, and populated migration retention without identity backfill. Original two regressions failed before the fix and passed afterwards. Full integration: **370/370 PASS, no skips**. No shared database or identity was modified.
+
+Deployment: apply the reviewed migration before deploying the matching backend. It changes comparison semantics, not identifier values, email matching, DB permission authority or Keycloak configuration. Application rollback should retain the safer comparison; reversing the collation after admitting distinct case-sensitive subjects requires a duplicate review and must not merge identities.
+
+Batch gates: backend unit **325/325**, full integration **370/370** (total **695**, no skips); final focused opaque-subject tests **5/5**; analyzer Release build **0 warnings / 0 errors**; EF pending-model check and `git diff --check` PASS.
+
+### Operational dependency and monitoring closure (AUTH-01, MON-01, OPS-01)
+
+- `/metrics` is now an endpoint authorized by the existing `AdministrationRead` permission, rather than middleware serving metrics before authentication. The actual HTTP test proves 401 anonymous, 403 virtual Guest and removed grants, and 200 for a DB-authorized administrator. Health live/ready remain intentionally anonymous, aggregate-only responses; metrics does not publish identities or notification bodies.
+- SQL readiness requires connectivity **and no pending application migrations**. It performs no DDL. A database created without deployment migration history is unhealthy. Disposable LocalDB tests prove the current migrated database is healthy and an unverified database remains unchanged/unhealthy. Cancellation propagates; failure metadata contains only exception type, never connection strings/messages.
+- Outbox worker observes pending/exhausted counts and oldest pending age after batches, exposes `rbbh_notification_pending`, `rbbh_notification_exhausted`, `rbbh_notification_oldest_pending_seconds` and `rbbh_notification_backlog_observed_timestamp_seconds`. A SQL test distinguishes pending, leased, exhausted and delivered records without reading JSON bodies. Exhausted attempts emit an aggregate warning. Scheduler exposes `rbbh_period_scheduler_success_timestamp_seconds` and `rbbh_period_scheduler_failures_total`; no new timezone, holiday, overlap or retry policy is invented.
+- Email configuration rejects demo delivery outside Development/Testing, insecure application/HTTP mail URLs and non-TLS production SMTP. Required active administration recipient and sender are validated; the retired HR mailbox no longer blocks startup. Real transport configuration is supplied externally. Six configuration cases cover local/production and both real transports; no credential defaults are introduced.
+
+Batch evidence: **75/75 affected operations integration tests**, **331/331 full backend unit tests**, analyzer Release build **0 warnings/errors**, `git diff --check` PASS. These focused counts overlap the full integration suite and are not added to a full-suite total.
+
+Operations prerequisites: configure an authenticated metrics scraper with the existing administrative read permission; configure per-instance scrape freshness and real alert thresholds centrally. For shared outbox counts across replicas, aggregate observations as a shared backlog rather than summing duplicate DB observations. Readiness does not imply mail/Keycloak/bank source health; real delivery, realm, scheduler ownership, OCP/3scale, backup/restore and failover acceptance remain external. Roll out approved migrations before routing traffic. No shared database, deployment or production secret was accessed.
+
+### Stable user-administration audit actors (AUD-01)
+
+New user administration audits store validated subject in `UserId` and the actor username snapshot in `Username`; created/modified display metadata also uses username (subject fallback when no name claim exists). Verified-email first-link and role approvals use the same display convention. Email remains a contact/legacy self-protection input, never the new audit identity. Existing audit history is unchanged. Existing service signatures/legacy direct-call overloads remain compatible; authenticated API writes capture the server principal, not request-supplied actor fields. No self/final-Admin rule was altered.
+
+A new real SQL HTTP scenario covers create, profile update, role replacement, deactivate, reactivate and permanent delete with a changed actor email and forged body actor fields. It asserts every exact action, stable subject/name, created/modified metadata, assignment metadata and final persisted state. Existing historical email-based audit expectations were replaced with explicit subject **and** username assertions; all other authorization, rollback and business-state checks remain. Evidence: **85/85 focused users/subject-link integration tests**, **331/331 full backend unit tests**, analyzer build **0 warnings/errors**, diff check PASS. SQL data and audit still share the existing transaction-owned user mutation boundary.
+
+### Database-backed administrative role catalog (AUTH-04)
+
+Added role-catalog administration over the **existing normalized Roles/Permissions/RolePermissions** tables. Names remain immutable technical identifiers after creation; optional display name/description are editable; inactive definitions remain stored. New choices and grants use active DB definitions, not a fixed assignable-name list or Keycloak roles. Existing bootstrap names and virtual Guest permissions remain technical invariants.
+
+`GET /api/role-catalog` is bounded/stable/paged/searchable; `GET /api/role-catalog/{id}` and `/permissions` require existing administrative read. POST and PUT require the existing administration-management policy **and an active confirmed named Admin recheck inside UsersMutationBoundary**. Unknown/inactive permissions and duplicates are rejected. Admin/Guest definitions are protected. An actor cannot edit a role assigned to their own account, preventing indirect self-role management. All changes/grants/audit commit together, expectedVersion rejects stale writes; the shared user lock serializes competing changes. The API does not delete role history or create arbitrary permission codes.
+
+`AddAdministrativeRoleCatalog` adds display metadata/version and a computed normalized-name unique index after duplicate preflight. It retains original names, grants, IDs and metadata; existing definitions start at version1 without inventing display translations. A populated disposable SQL upgrade proves preservation and a leading-space duplicate fails51010 without deleting either row. Existing old-schema test setup continues using raw SQL.
+
+Evidence: **6/6 focused HTTP/SQL tests** (custom role request/approval, grant revocation on deactivation, permission/duplicate/version validation, technical/self-role guards, concurrent updates, audit rollback, populated upgrade/preflight), **331/331 unit**, **380/380 full integration** = **711 backend PASS, no skips**. Analyzer build 0 warnings/errors, model check and diff check PASS. Admin/Capital/Guest policies and provider trust boundary retained. Frontend catalog UI remains Claude ownership.
+
+### Measured paged-user query behavior (PERF-01)
+
+A disposable SQL HTTP test seeds **2,500 synthetic confirmed users and 5,000 multi-role assignments** (no real personal data), then reads page2 with sizes1 and100 through actual authentication, DB claims and UsersController/service. Both requests execute **7 SQL reader commands**, including authorization; SQL OFFSET/FETCH is observed, output bounds and duplicate-free multi-role permission union are asserted. A bounded command-count guard detects per-user lookup/grant queries as page size increases without pinning the exact implementation count.
+
+Local observations: pageSize1 **891.7ms** on the first measured request, pageSize100 **110.3ms** after warm-up. These are explicitly cold/warm local HTTP samples, **not a comparative speedup, production load proof or SLO**. Test **1/1 PASS**. Real bank/Keycloak network performance, representative production cardinalities, concurrent users, OCP proxy/3scale latency and Lighthouse frontend measurements remain environment/frontend acceptance inputs. No speculative cache or business-query rewrite was needed for this measured path.
+
+### Resource-backed business errors (LOC-01, incremental closure)
+
+All production BusinessRuleException call sites now use stable code/resource keys rather than embedded human messages. The existing runtime Languages/LanguagePacks catalog remains authoritative. A small embedded BS safe-fallback manifest supplies exception construction before scoped runtime lookup or when the catalog is unavailable; it is not a second frontend localization engine. Generic exception/fallback-writer text uses the same manifest. Unknown server codes receive a safe generic label rather than exposing a raw key. Existing three-argument exception constructor is kept for source compatibility; a source guard rejects new embedded messages at backend call sites and verifies referenced keys exist.
+
+`AddBusinessErrorResources` inserts **195 missing BS/EN/DE labels for 65 business keys** into the existing language pack, preserving any existing translations and bumping its version. The four generic error keys already seeded by the earlier localization migration are also embedded as safe fallbacks, for **69 fallback keys** total. Default catalog names are reference application defaults, not a DP_ requirement; installations with custom codebook names provision the same logical resources through their normal administration flow. No identity/business data backfill or destructive DDL.
+
+Period length errors carry safe minimum/maximum parameters; both embedded fallback and runtime translated label format them before HTTP output. A malformed administrator-supplied format cannot mask the original business-safe error. Existing status/code/resourceKey and error shapes remain. The only clarified shared label is generic concurrent-change text, since that code is used across multiple modules.
+
+New evidence: source/resource guard and formatter/fallback tests; real SQL HTTP DE→runtime edit→EN selection; safe malformed-template fallback; populated upgrade retains a preexisting translation and covers all BS/EN/DE keys. Full backend regression: **333 unit + 384 integration = 717 PASS**, no skips. Backend analyzer build **0 warnings/errors**; model/diff checks PASS. Remaining LOC-01 work is explicitly **not yet closed**: legacy field-validation, controller success/error and workbook presentation literals still need resource-key conversion. No frontend file was modified.
+
+### Runtime controller and field messages (LOC-01, second increment)
+
+Added **69 controller/model/field keys with 207 missing BS/EN/DE labels**, preserving existing translations. Explicit DTO annotation messages now use resource properties; framework Required/StringLength/MinLength/MaxLength/Range/Email/Format validators use the same runtime resources. Controller success, ProblemDetails and period error messages use semantic keys while preserving HTTP statuses, field names and existing response shapes. The model-validation envelope now follows the configured default BS language when Accept-Language is absent, rather than independently assuming English.
+
+`BackendMessages` is the same embedded safe-fallback helper generalized for these messages (renamed from the narrower error-fallback name). A scoped MVC resource filter loads the **existing** runtime codebook before binding/validation and disposes the async-context scope after the request. No frontend localization engine, culture singleton or client-side token change. Concurrent language requests are isolated. Malformed runtime format strings or extra argument placeholders are rejected for the override before DataAnnotations formats them, with a key-only diagnostic and safe fallback. Legacy case variants of resource keys remain consumable; new keys remain lowercase dot notation.
+
+`AddControllerAndValidationResources` is additive resource data only; it does not overwrite labels. Shared contract remains route/method/DTO compatible. `ForRequest` removes redundant language probes. The performance fixture now includes the production controller/localization options: on the same2,500-user/5,000-assignment SQL dataset, cold pageSize1 executes **10** reader commands (**498.7ms**), warm pageSize100 **9** (**118.0ms**), including identity/permission and localization reads. This remains bounded, includes cold/warm differences, and is not a production SLO.
+
+Evidence: full unit **334/334**, full integration **387/387** = **721 backend PASS**, no skips; **38/38** affected localization/request/outbox/performance cases after the language-query change; final focused controller/template/legacy-key SQL tests **3/3**. HTTP tests prove explicit and framework annotations, live label edits, malformed-template fallback, uppercase legacy keys, self-delete denial, period 9-character rejection and concurrent BS/EN/DE isolation. Source guards prohibit embedded controller/explicit-DTO human messages and missing literal message keys. Analyzer build and model/diff checks PASS. Legacy service validation/import presentation strings remain the next LOC-01 increment; this is not a declaration of full localization or frontend completion.
+
+### Service, validator and import message resources (LOC-01)
+
+Converted123 plain legacy call sites plus parameterized not-found/duplicate/row messages to the same scoped runtime resources. Added **133 semantic keys / 399 missing BS/EN/DE labels** through `AddServiceValidationAndWorkbookResources`; existing labels remain untouched. Includes user/capital validation, legal/physical identity and family constraints, limits, code-list references, workbook envelope feedback, row/header diagnostics, tree presentation labels and report workbook titles. Original BS messages and validation/identity/amount/date rules are retained. Detailed row numbers, fields/codes and parameters remain; no text truncation or workbook schema change.
+
+Period-lock middleware runs before MVC, so it resolves its status423 message through the scoped runtime catalog independently, retaining the existing `errors[{field:null,message}]` contract and a safe fallback if localization fails. It does not change which mutations are locked or their permissions. Exception diagnostics, protocol identifiers and fixed import/export schema names remain distinct from user messages.
+
+Evidence: **335/335 unit + 389/389 integration = 724 backend PASS**, no skips. New real SQL HTTP cases prove translated capital service validation, formatted code-list workbook diagnostics and German middleware423 without any persisted capital/audit change. Extended source guards cover embedded validation/result messages and missing message keys. Existing workbook roundtrip, detailed-error/resource-bound tests and identity/period/audit suites all pass. Analyzer build0 warnings/errors, EF model check and `git diff --check` PASS. Runtime pack now has **271 safe fallback keys** across these increments; generated seed migrations retain each approved existing translation.
+
+Canonical workbook headers/aliases and bank-format date/boolean identifiers are compatibility contracts; translating those serialized values would break existing imports. Runtime messages may translate around those identifiers, while the actual file schema remains unchanged. Retired mail-template methods remain compatibility-only; active role/period delivery uses runtime templates through the transactional outbox. Remaining finalization work: final current requirement matrix, final artifact/startup gates and explicit external/frontend deployment dependencies; no full-solution/frontend/real-environment claim is made by these backend results.
+
+### Required legal residency presence (LEG-02)
+
+The final matrix review found that `[Required] bool IsResident` did not reject a missing JSON property: omission silently becamefalse (nonresident). Create and Update DTOs now require explicit JSON presence via JsonRequired, preserving the boolean wire type and accepting both true and false. The existing RBI transport uses WhenWritingNull, so explicitfalse continues to serialize. Import/service construction already supplies the boolean; no residency/tax business rule or stored record was changed.
+
+The real SQL HTTP regression proves missing create/update input returns400 with safe localized residency feedback and no mutation/audit, while explicitfalse creates the valid nonresident record. It also exposed duplicate normalized root model-state keys (`$` and `dto`) causing a500; validation errors are now grouped by the existing friendly field before serialization, retaining every distinct safe message. Formatter type names are not exposed. Evidence: **335 unit + 390 integration = 725 backend PASS**, no skips; analyzer build and diff check PASS. No schema migration, frontend edit or production data change.
+
+### Registry metadata in newly generated report snapshots (LEG-04 / REP-02 boundary)
+
+New report snapshots capture the registry's nullable GCC number/name and explicit large-exposure flag alongside the existing exposure amounts. Historical snapshots are not rewritten; absent metadata remains unknown. The flag does not introduce a threshold/classification formula, change limit-breach logic, alter source provenance or make local ClientLimits authoritative. Workbook column mapping stays unchanged pending the approved bank spreadsheets.
+
+A real SQL HTTP regression generates a snapshot with GCC/large-exposure metadata, asserts unchanged exposure/total/breach values, edits the source registry and downloads through the existing generated-report export route. The persisted JSON remains byte-for-byte unchanged. Affected reporting HTTP/SQL tests **11/11 PASS**; analyzer build and diff check PASS. Financial grouping/threshold/export-column reconciliation is still the external REP-02 input, not an invented implementation.
+
+### Period-lock log privacy closure (OBS-01)
+
+The remaining global period-lock warning now records method and matched route template, or `(unmatched)`, rather than the raw user-controlled path. Responses, period policy and permissions are unchanged. Two direct middleware cases include an email-shaped path sentinel with and without endpoint metadata; both prove423, no action execution, template/fallback visibility and absence of the sentinel/exception from logs. The complete affected period-lock privacy/route unit set is **14/14 PASS**. Analyzer build and diff check PASS.
+
+### Generic codebook workbook formula guard (XLSX-02 / CODE-02)
+
+Final workbook review found that the one-column codebook path validated ZIP/size/schema but could read formula cell values before rejecting them, unlike the registry imports. It now rejects actual header/data formulas before any GetString/evaluation or persistence, using the existing localized error contract. Literal string values are not classified as formulas. Added per-row/request cancellation checks; labels, generated-code rules, partial-success behavior and the one-column format remain unchanged.
+
+The real SQL HTTP regression submits both formula-header and formula-data workbooks with dryRun=false, asserts400 localized feedback and no definition/value/audit persistence. Affected workbook/localization integration set **11/11 PASS**; analyzer build0 warnings/errors and diff check PASS. This is an input-validation closure, not a new workbook format.
+
+
+## Current backend closure matrix — 2026-11-03
+
+This section supersedes baseline statuses above for the current backend scope; original audit/checkpoints remain historical evidence. **VERIFIED** means implemented and locally tested. **BLOCKED** identifies the stated real environment/data/other-owner dependency. **NOT_IMPLEMENTED: none for the independently implementable, approved backend scope.** An end-to-end BLOCKED row does not imply its tested backend part is missing. No production/full-application completion is claimed.
+
+| Requirement | Current status | Evidence / remaining boundary |
+| --- | --- | --- |
+| AUTH-01 | VERIFIED | Real-pipeline permission/denial tests; DB grants and virtual Guest, guarded catalog/requests, multi-role union, S1 signed-token audience validation. See the corresponding completed batches above. |
+| AUTH-02 | VERIFIED | Real-pipeline permission/denial tests; DB grants and virtual Guest, guarded catalog/requests, multi-role union, S1 signed-token audience validation. See the corresponding completed batches above. |
+| AUTH-03 | VERIFIED | Real-pipeline permission/denial tests; DB grants and virtual Guest, guarded catalog/requests, multi-role union, S1 signed-token audience validation. See the corresponding completed batches above. |
+| AUTH-04 | VERIFIED | Real-pipeline permission/denial tests; DB grants and virtual Guest, guarded catalog/requests, multi-role union, S1 signed-token audience validation. See the corresponding completed batches above. |
+| AUTH-05 | VERIFIED | Real-pipeline permission/denial tests; DB grants and virtual Guest, guarded catalog/requests, multi-role union, S1 signed-token audience validation. See the corresponding completed batches above. |
+| AUTH-06 | VERIFIED | Real-pipeline permission/denial tests; DB grants and virtual Guest, guarded catalog/requests, multi-role union, S1 signed-token audience validation. See the corresponding completed batches above. |
+| AUTH-07 | BLOCKED | Backend8h absolute cookie/no sliding, expiry and POST-CSRF logout verified. Real realm/refresh/browser acceptance and coordinated retirement of deprecated GET logout require frontend/realm owners. |
+| AUTH-08 | VERIFIED | Real-pipeline permission/denial tests; DB grants and virtual Guest, guarded catalog/requests, multi-role union, S1 signed-token audience validation. See the corresponding completed batches above. |
+| ID-01 | VERIFIED | Opaque subject-first/BIN2 owner binding, normalized identity uniqueness/preflight, no provider role grants or silent identity reassignment; profile/subject-link HTTP and SQL evidence above. |
+| ID-02 | BLOCKED | Opt-in verified unique email first-link is tested/audited and remains off by default. Real realm email_verified/export reconciliation and approved production subject-link/backfill are not performed. |
+| ID-03 | VERIFIED | Opaque subject-first/BIN2 owner binding, normalized identity uniqueness/preflight, no provider role grants or silent identity reassignment; profile/subject-link HTTP and SQL evidence above. |
+| ID-04 | BLOCKED | Read-only exact identity adapter/service-account selection/disposal/cancellation/failure fixtures verified. Actual realm service-account privileges and responses remain external. |
+| ID-05 | VERIFIED | Opaque subject-first/BIN2 owner binding, normalized identity uniqueness/preflight, no provider role grants or silent identity reassignment; profile/subject-link HTTP and SQL evidence above. |
+| SAFE-01 | VERIFIED | Approved S2/S3, immutable creator/server-owned status, historical409, self-management denial, final-Admin SQL application lock and races; atomic audit/rollback evidence. |
+| SAFE-02 | VERIFIED | Approved S2/S3, immutable creator/server-owned status, historical409, self-management denial, final-Admin SQL application lock and races; atomic audit/rollback evidence. |
+| DB-01 | VERIFIED | Normalized relations retained, additive metadata/FK/index/version/resource migrations with preflight and populated disposable SQL upgrades; no shared data changes or default startup DDL. |
+| DB-02 | BLOCKED | Applied history preserved. Real legacy backup/restore, duplicates/orphans, old destructive-history reconciliation and approved deployment baseline require actual production-shaped data and owners. |
+| DB-03 | VERIFIED | Normalized relations retained, additive metadata/FK/index/version/resource migrations with preflight and populated disposable SQL upgrades; no shared data changes or default startup DDL. |
+| LEG-01 | VERIFIED | Field/conditional identifier bounds and imports verified; instructed exact13/checksum behavior preserved. A max13 rule change remains TAX-01, not an invented implementation. |
+| LEG-02 | VERIFIED | Required dates/bank/basis/description and valid order preserved. Explicit JSON isResident required for create/update; missing values cannot silently become nonresident. Safe model grouping/type redaction verified. |
+| LEG-03 | BLOCKED | Additive GCC fields and safe read-only source adapter/local SQL fixtures verified. Real kod/glava types/keys/access/samples and required production source enablement remain external. |
+| LEG-04 | VERIFIED | Newfalse/historicalnull large-exposure flag, CRUD/workbook and new report-snapshot GCC/flag metadata verified. No backfill or invented threshold/grouping/export mapping; bank mapping remains REP-02. |
+| LEG-05 | VERIFIED | Shared HTTP/service/import field validation and required dates/bank/basis/description, explicit JSON residency, case-insensitive reads and preserved duplicate policy; GCC/flag evidence above. |
+| XLSX-01 | VERIFIED | Versioned legal19/physical25/limits18 workbooks and legacy compatibility; metadata/relationships roundtrip, field/row diagnostics, ZIP/file/row/expansion/formula guards, atomic batch rollback. |
+| XLSX-02 | VERIFIED | Versioned legal19/physical25/limits18 workbooks and legacy compatibility; metadata/relationships roundtrip, field/row diagnostics, ZIP/file/row/expansion/formula guards, atomic batch rollback. |
+| PHY-01 | VERIFIED | Preserved identification/family/date/cycle rules with S2; export/import description, linked identities, staff and audit metadata; current HTTP/workbook/SQL tests pass. |
+| PHY-02 | VERIFIED | Preserved identification/family/date/cycle rules with S2; export/import description, linked identities, staff and audit metadata; current HTTP/workbook/SQL tests pass. |
+| LIM-01 | VERIFIED | Bounded stable pages, active type/party references, validated transactional import/fingerprints/generated-ID audit and commit-ack recovery; as-of capital and retained legacy read contracts. |
+| LIM-02 | VERIFIED | Bounded stable pages, active type/party references, validated transactional import/fingerprints/generated-ID audit and commit-ack recovery; as-of capital and retained legacy read contracts. |
+| CAP-01 | VERIFIED | Immutable effective-date capital revisions, same-date ordering, as-of/null handling, SQL/EF mutation rejection, atomic audit/concurrent writes; no invented historical values. |
+| REP-01 | VERIFIED | Read/export authenticated Guest baseline; Capital/Admin generate-persist retained; bounded period/paging/amount validation, provenance and persisted snapshot retention after source edits. |
+| REP-02 | BLOCKED | Documented monthly source adapter/guards and snapshots verified locally. Actual spreadsheets, period-table/key mapping, samples/totals/currency/source access and daily-source reconciliation remain external; no finance formula invented. |
+| REP-03 | VERIFIED | Read/export authenticated Guest baseline; Capital/Admin generate-persist retained; bounded period/paging/amount validation, provenance and persisted snapshot retention after source edits. |
+| NOT-01 | VERIFIED | Recipient-only durable inbox/read state and leased retry outbox; retired HR flow, complete encoded role/period templates, canonical links, >200 recipients and no repeated grants on mail failure. |
+| NOT-02 | VERIFIED | Recipient-only durable inbox/read state and leased retry outbox; retired HR flow, complete encoded role/period templates, canonical links, >200 recipients and no repeated grants on mail failure. |
+| NOT-03 | VERIFIED | Recipient-only durable inbox/read state and leased retry outbox; retired HR flow, complete encoded role/period templates, canonical links, >200 recipients and no repeated grants on mail failure. |
+| PER-01 | VERIFIED | Exhaustive mutation route/HTTP lock matrix, Capital processing retained, owner-scoped requests/responses, 10–490+prefix and note/calendar bounds, atomic state/audit/notices and concurrency guards. |
+| PER-02 | VERIFIED | Exhaustive mutation route/HTTP lock matrix, Capital processing retained, owner-scoped requests/responses, 10–490+prefix and note/calendar bounds, atomic state/audit/notices and concurrency guards. |
+| PER-03 | VERIFIED | Exhaustive mutation route/HTTP lock matrix, Capital processing retained, owner-scoped requests/responses, 10–490+prefix and note/calendar bounds, atomic state/audit/notices and concurrency guards. |
+| CODE-01 | VERIFIED | Normalized definition/value integrity and references/system guards; metadata/version, normal CRUD, documented one-column label bulk import/export, detailed errors and atomic batch; runtime pack invalidation. |
+| CODE-02 | VERIFIED | Normal definition/value CRUD and metadata, documented one-column label bulk import/export, row errors, formula guards and atomic audit verified. This is a label-add workflow, not a full database backup format. |
+| CODE-03 | VERIFIED | Normalized definition/value integrity and references/system guards; metadata/version, normal CRUD, documented one-column label bulk import/export, detailed errors and atomic batch; runtime pack invalidation. |
+| LOC-01 | VERIFIED | Application-specific existing codebooks; BS/EN/DE semantic/legacy keys, labels/helpers/placeholders, runtime updates/fallback/cache/version; scoped DTO/controller/service/import/423 messages, format safety and source guards. |
+| AUD-01 | VERIFIED | Stable subject/username snapshots and state+audit atomicity across approved mutations/imports/verification/requests/periods/reports; replay/rollback tests, historical records unchanged. |
+| ERR-01 | VERIFIED | Safe localized global/fallback errors, no raw SQL/type/token leakage, grouped root model errors and valid control/Unicode JSON; existing statuses/field structures retained. |
+| OBS-01 | VERIFIED | Bounded correlation and structured method/route-template/status/type/trace logs, auth/mail/period redaction and sentinel privacy tests. |
+| OBS-02 | BLOCKED | SQL readiness and aggregate outbox/scheduler telemetry verified. Real authenticated scrape integration, SLOs, alert thresholds/routing, retention and failover drills require deployment owners. |
+| OPS-01 | VERIFIED | Actual DATA_CORE.dll entrypoint, backend Release analyzer build/publish and isolated published Development startup; no production DDL or fabricated environment settings. |
+| OPS-02 | BLOCKED | Real OCP/3scale/proxy/hosts/CA, shared session cache/protected persisted DP keys, resource/drain/scheduler calendar/ownership/overlap, SQL/mail/cert/failover and production vulnerability-feed confirmation remain prerequisites. |
+| PERF-01 | BLOCKED | Local paging/batching/cancellation/resource bounds and2,500-user/5,000-assignment production-option SQL measurement verified (10/9 commands). Production cardinality/load, bank network latency, allocation/SLO acceptance and frontend Lighthouse need real environment/owner data. |
+| TEST-01 | BLOCKED | Backend final337unit+392integration=729PASS, zero skipped; analyzer/publish/startup pass. Full solution/native browser gate remains blocked by the unchanged3 frontend-owned BrowserHost reference errors. |
+| DOC-01 | BLOCKED | Backend README/configuration/onboarding, shared contract and current matrix updated; evidence preserved. Repository-wide historical-doc consolidation and release-notes UI require cross-owner/frontend coordination. |
+| FE-01 | BLOCKED | Frontend-owned duplicate DATA_CORE/BrowserHost reference fix must come through coordinated integration. No frontend fix, branch merge, browser change or visual completion claim was made here. |
+
+**TAX-01 — BLOCKED (business clarification):** PDF maximum13 versus established exact13/checksum remains unresolved. The explicit instruction to preserve existing validated behavior is satisfied; no tax-rule change was invented.
+
+### Final backend gate and scope
+
+Implementation head tested: `d2689de9bddb0acc7229df06cb3d603ca21da457`; subsequent closure changes are documentation-only.
+
+- Unit **337/337**, integration **392/392**, combined **729/729 PASS**. TRX counters: failed0, skipped/notExecuted0. Local evidence is ignored under `artifacts/backend-finalization/closure-results/`; durable test sources are committed.
+- Dedicated `UsersLastAdminSqlServerTests`: **6/6 PASS**, including3 concurrent races, unconfirmed placeholder exclusion, lock release and production SQL-lock path. All SQL evidence uses owned disposable LocalDB GUID databases, never shared data.
+- Backend Release build with analyzers: **0 warnings/errors**. Release publish: PASS (`closure-publish/DATA_CORE.dll`).
+- Published artifact startup: explicit Development/InMemory at loopback5371, live200/ready200, existing local-development Guest read200/write403. It is not real SSO or a seeded Admin preview. The owned process was stopped with Ctrl+C; other hosts were unchanged.
+- Automatic execution policy rejected an additional combined SQL-startup-fixture/process-cleanup command before execution (no detailed reason; no operation/database created). The safer separate InMemory startup completed. SQL schema/readiness/migrations/concurrency were verified by integration tests, not misrepresented as a published SQL/OCP startup.
+- Startup emitted the existing EF required Limit→filtered LegalEntity navigation notice. Active limit reads use explicit parent joins; filter/navigation semantics were not altered merely to silence that notice. Compiler/analyzer0-warning results do not assert zero runtime diagnostics.
+- Full solution analyzer build: **FAIL**, same3 frontend-owned BrowserHostProgram.cs25/26/192 reference errors (frontend/RBI namespaces, duplicate DATA_CORE identity). No BrowserHost workaround, frontend edit, branch merge or browser/visual parity claim.
+- PKCS remains **9.0.21**; NU1900/NU1902/NU1903 are not suppressed. Production vulnerability-feed confirmation is external; no fresh vulnerability-free assertion is inferred from no-restore builds.
+- New migrations are additive metadata/constraints/resource seeds with populated SQL upgrade/preflight evidence. Applied history, historical reports/audits and identity links remain intact; no shared migration/backfill was run.
+- No frontend/browser file, existing user launchSettings file, Legacy/React content or other checkout was changed. No push/merge was performed. Backend onboarding/configuration links are current; cross-owner consolidation remains DOC-01.
+
+### Integration/deployment handoff
+
+Share `docs/BACKEND-FRONTEND-CONTRACT-V1.md` and this matrix with the frontend owner. Integrate the frontend-owned BrowserHost fix and coordinated consumers through the agreed process, then run the complete .NET/native browser/role/accessibility/viewport gate. Retire legacy GET logout only with consumer coordination. Apply reviewed migrations through deployment, after DB-02 backup/history/preflight reconciliation. Reconcile bank spreadsheets/sources and real realm identities before enabling production sources or first-link settings. No missing production value or historical identity is inferred locally.
+
+## Final integration and contract review — 2026-11-03
+
+Input HEAD `82760bb513f6fa2efe2f9b970bb612b79d509e77` rechecked against controller/service/DTO/policy source, POPRAVKE and the existing20-page PDF extraction. This batch changes documentation only. Definitive consumer contracts are now in [BACKEND-FRONTEND-CONTRACT-FINAL.md](BACKEND-FRONTEND-CONTRACT-FINAL.md); branch ancestry, all backend commits, migration order, frontend actions and exact commands are in [INTEGRATION-HANDOFF-CODEX.md](INTEGRATION-HANDOFF-CODEX.md). Earlier audit/checkpoint statements above are historical.
+
+- Fresh unit **337 passed /0 failed /0 skipped**; integration **392 passed /0 failed /0 skipped**. Of integration, **83 SQL-classified tests PASS**, including **6 last-Admin SQL tests**, three concurrent races and populated disposable upgrades. These are subsets, not extra totals.
+- Backend Release analyzer build **0 warnings/0 errors**; fresh Release publish PASS. Published Development/InMemory smoke at5372: live/ready/profile/legal-list/inbox200, Guest write403, unconfigured bank503, empty unseeded language pack404. The owned smoke process was stopped; other hosts untouched. No real SSO/bank/finance success or shared SQL startup was inferred.
+- Fresh solution build **0 warnings/3 errors**: BrowserHostProgram.cs25/26/192. Both projects are named DATA_CORE in this checkout. Claude's existing frontend-owned `59b8d382ce5cd192e32e9a3a51c472adf8ea960a` removes the frontend override. No duplicate backend/harness fix was made. Browser gate remains unexecuted here.
+- Read-only Git inspection: frontend branch4d49c8a shares48cf8da; separate integration/frontend-backend atb3e5e9e already merges frontend4d49c8a/backend82760bb. Codex did not create/change that branch or merge anything. README and two modify/delete onboarding guides need semantic resolution, not a blind choice of one side.
+- Final catalog documents **108 operations/66 named schemas** from the published OpenAPI, corrected with actual policies, service checks, anonymous payloads and redirect/binary behavior. All local source links resolve. No route/DTO alias was invented to match frontend proposals.
+
+The previous closure's VERIFIED rows describe tested backend behavior, not every end-to-end presentation requirement. Precise integration review additionally records:
+
+| Item | Current classification | Action / owner |
+| --- | --- | --- |
+| DOC-02: server-side GitHub release-notes API | MISSING | No controller/DTO/source exists. Separate product/frontend/backend contract needed; this handoff explicitly forbids speculative new features. |
+| LOC-02: remaining legacy display values | PARTIAL | Audit/email-preview choose EN versus BS; module/person-type labels and some legacy scalar validation text remain fixed. Core runtime error/resources are implemented. No claim of universal DE/display-text completion. |
+| FE-02: requested consumer shapes | PARTIAL | Actual role-request IDs/replay/version, inbox unreadCount/route, GCC route, capital PUT/history, import details and localization pack differ from frontend proposals; exact actions in the final handoff. No frontend code changed. |
+| LEG-06: identifier-update comment | PARTIAL (documentation/policy clarification) | Controller summary says immutable identifiers; service currently validates/assigns replacement residency/tax/FBA. Final contract states actual behavior; any new immutability policy must be coordinated, not silently introduced. |
+
+Production prerequisites and TAX-01 remain as documented. This handoff establishes local backend integration readiness with explicit gaps; it does not certify a complete production application. No push, rebase, cherry-pick or merge was performed. Existing migrations, business rules, frontend/browser sources and user launchSettings remain unchanged.

@@ -29,7 +29,7 @@ public class ReportController : ControllerBase
     }
 
     private string CurrentUser() =>
-        RBBH.ConnectedParties.Helpers.AuthenticatedActor.Email(User);
+        RBBH.ConnectedParties.Helpers.AuthenticatedActor.Username(User);
 
     // ── Dnevni izvještaji ─────────────────────────────────────────────────────
 
@@ -42,17 +42,6 @@ public class ReportController : ControllerBase
     {
         var currentUser = CurrentUser();
         var report = await _reportService.GenerateDailyReportAsync(currentUser);
-
-        await _auditService.LogAsync(new AuditEntry
-        {
-            TableName = "Report",
-            RecordId = report.Id.ToString(),
-            Action = "GENERATE",
-            NewValues = System.Text.Json.JsonSerializer.Serialize(new { type = "daily" }),
-            UserId = currentUser,
-            Username = currentUser,
-            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-        });
 
         return CreatedAtAction(nameof(GetDailyReports), report);
     }
@@ -86,24 +75,13 @@ public class ReportController : ControllerBase
     public async Task<IActionResult> GenerateMonthlyReport(int year, int month)
     {
         if (month < 1 || month > 12)
-            return BadRequest(new { errors = new[] { new { field = "month", message = "Mjesec mora biti između 1 i 12." } } });
+            return BadRequest(new { errors = new[] { new { field = "month", message = BackendMessages.Message("errors.report.month.range") } } });
 
         if (year < 2000 || year > DateTime.UtcNow.Year)
-            return BadRequest(new { errors = new[] { new { field = "year", message = "Godina nije ispravna." } } });
+            return BadRequest(new { errors = new[] { new { field = "year", message = BackendMessages.Message("errors.report.year.invalid") } } });
 
         var currentUser = CurrentUser();
         var report = await _reportService.GenerateMonthlyReportAsync(year, month, currentUser);
-
-        await _auditService.LogAsync(new AuditEntry
-        {
-            TableName = "Report",
-            RecordId = report.Id.ToString(),
-            Action = "GENERATE",
-            NewValues = System.Text.Json.JsonSerializer.Serialize(new { type = "monthly", year, month }),
-            UserId = currentUser,
-            Username = currentUser,
-            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-        });
 
         return CreatedAtAction(nameof(GetMonthlyReports), report);
     }
@@ -134,7 +112,7 @@ public class ReportController : ControllerBase
     public async Task<IActionResult> ExportClient(string identifier)
     {
         var bytes = await _reportService.ExportClientByIdAsync(identifier);
-        var fileName = $"klijent_{identifier}_{DateTime.Now:yyyyMMdd}.xlsx";
+        var fileName = $"klijent_{identifier}_{DateTime.UtcNow:yyyyMMdd}.xlsx";
 
         var currentUser = CurrentUser();
         await _auditService.LogAsync(new AuditEntry
@@ -143,7 +121,7 @@ public class ReportController : ControllerBase
             RecordId = identifier,
             Action = "EXPORT",
             NewValues = System.Text.Json.JsonSerializer.Serialize(new { type = "client", identifier }),
-            UserId = currentUser,
+            UserId = RBBH.ConnectedParties.Helpers.AuthenticatedActor.RequireSubject(User),
             Username = currentUser,
             IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
         });
@@ -172,7 +150,7 @@ public class ReportController : ControllerBase
             RecordId = "-",
             Action = "EXPORT",
             NewValues = System.Text.Json.JsonSerializer.Serialize(new { type = "all-clients" }),
-            UserId = currentUser,
+            UserId = RBBH.ConnectedParties.Helpers.AuthenticatedActor.RequireSubject(User),
             Username = currentUser,
             IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
         });
@@ -195,7 +173,7 @@ public class ReportController : ControllerBase
             RecordId = reportId.ToString(),
             Action = "EXPORT",
             NewValues = System.Text.Json.JsonSerializer.Serialize(new { type = "generated" }),
-            UserId = currentUser,
+            UserId = RBBH.ConnectedParties.Helpers.AuthenticatedActor.RequireSubject(User),
             Username = currentUser,
             IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
         });

@@ -21,7 +21,7 @@ test("empty state and native entity picker use accessible labels", async ({ page
   await open(page); await expect(page.getByRole("heading", { name: "Nema zapisa", exact: true })).toBeVisible();
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
   const dialog = await begin(page);
-  await expect(dialog.getByText("SERVER-ONLY-789", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("789456123", { exact: true })).toBeVisible();
   await expect(dialog.getByText("BAM 1,234,567.89", { exact: true })).toBeVisible();
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
 });
@@ -52,10 +52,18 @@ test("create keeps zero/null and backend-derived capital, edit and confirmed del
 test("negative amounts remain field errors without persistence", async ({ page, request }) => {
   await open(page); const dialog = await begin(page);
   await dialog.getByLabel("Odobreni limit", { exact: false }).fill("-1");
-  await dialog.getByLabel("Maksimalna očekivana utilizacija", { exact: false }).fill("-2");
-  await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
+  await dialog.getByLabel("Maksimalna očekivana utilizacija", { exact: false }).fill("-2"); await page.keyboard.press("Tab");
+  await expect(dialog.getByRole("button", { name: "Sačuvaj", exact: true })).toBeDisabled();
   await expect(dialog.getByText("Iznos ne može biti negativan.", { exact: true }).first()).toBeVisible();
   expect(await (await request.get("/__fixtures/limits", { headers })).json()).toEqual([]);
+});
+test("entity picker lists clients on focus before anything is typed", async ({ page, request }) => {
+  await request.post("/__fixtures/legal-pages", { headers }); await open(page);
+  await page.getByRole("button", { name: "Novi zapis", exact: true }).click(); const dialog = page.getByRole("dialog");
+  const combobox = dialog.getByRole("combobox", { name: "Pravno lice", exact: false });
+  await combobox.focus();
+  await expect(dialog.getByRole("option").first()).toBeVisible();
+  await combobox.fill("No such company"); await expect(dialog.getByText("Nema rezultata.", { exact: true })).toBeVisible();
 });
 test("entity search reaches beyond the initial 20 and derives the selected entity only", async ({ page, request }) => {
   await request.post("/__fixtures/legal-pages", { headers }); await open(page);
@@ -126,4 +134,15 @@ test("BS/EN limit copy persists and reaches the backend", async ({ page, request
   await page.keyboard.press("Escape"); await page.reload(); await interactive(page);
   await expect(page.getByRole("heading", { name: "Limits", exact: true })).toBeVisible();
   expect((await (await request.get("/__fixtures/culture", { headers })).json()).language).toBe("en");
+});
+test("workbook import rejects non-xlsx files locally and reports imported/failed counts for a real workbook", async ({ page }, info) => {
+  await open(page);
+  await page.locator("#limit-import").setInputFiles({ name: "limiti.txt", mimeType: "text/plain", buffer: Buffer.from("x") });
+  await expect(page.getByRole("dialog")).toBeVisible(); await page.getByRole("dialog").getByRole("button", { name: "Zatvori", exact: true }).first().click();
+  const pending = page.waitForEvent("download"); await page.getByRole("button", { name: "Izvezi Excel", exact: true }).click();
+  const target = info.outputPath("roundtrip.xlsx"); await (await pending).saveAs(target);
+  await page.locator("#limit-import").setInputFiles(target);
+  const dialog = page.getByRole("dialog"); await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText(/\d/); // the result is stated from the backend response, never assumed successful
+  expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
 });

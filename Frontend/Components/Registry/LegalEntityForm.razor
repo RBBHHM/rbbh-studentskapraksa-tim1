@@ -13,6 +13,10 @@
             <RbiField TValue="string" Label="@T["legal.tax"]" Required="@(Model.IsResident == true)" Disabled="@(Model.IsResident == false)" For="@(() => Model.TaxNumber)"><RbiInput @bind-Value="Model.TaxNumber" maxlength="13" inputmode="numeric" /></RbiField>
             <RbiField TValue="string" Label="@T["legal.registration"]" For="@(() => Model.MaticniBroj)"><RbiInput @bind-Value="Model.MaticniBroj" maxlength="50" inputmode="numeric" /></RbiField>
             <RbiField TValue="string" Label="@T["person.fba"]" Required="@(Model.IsResident == false)" Disabled="@(Model.IsResident == true)" For="@(() => Model.FbaId)"><RbiInput @bind-Value="Model.FbaId" maxlength="10" inputmode="numeric" /></RbiField>
+            <RbiField TValue="string" Id="legal-gcc" Label="@T["legal.gcc"]" For="@(() => Model.GccNumber)"><GccPicker Id="legal-gcc" Value="@Model.GccNumber" GccName="@Model.GccName" Selected="GccSelected" /></RbiField>
+            <RbiRadioGroup TValue="bool?" Label="@T["legal.large-exposure"]" @bind-Value="Model.IsLargeExposure">
+                <RbiRadio TValue="bool?" Value="@((bool?)true)">@T["common.yes"]</RbiRadio><RbiRadio TValue="bool?" Value="@((bool?)false)">@T["common.no"]</RbiRadio>
+            </RbiRadioGroup>
             <RbiField TValue="string" Label="@T["person.basis"]" Required For="@(() => Model.BasisOfConnection)">
                 <RbiSelect TValue="string" @bind-Value="Model.BasisOfConnection" @bind-Value:after="BasisChanged"><option value="">@T["common.select"]</option>
                     @foreach (var option in Bases) { <option value="@option.Kod">@option.Naziv</option> }
@@ -25,10 +29,10 @@
             <RbiField TValue="DateTime?" Id="legal-from" Label="@T["person.from"]" Required For="@(() => Model.DateFrom)"><InputDate TValue="DateTime?" id="legal-from" class="rbi-control" @bind-Value="Model.DateFrom" ParsingErrorMessage="@T["validation.date"]" /></RbiField>
             <RbiField TValue="DateTime?" Id="legal-to" Label="@T["person.to"]" For="@(() => Model.DateTo)"><InputDate TValue="DateTime?" id="legal-to" class="rbi-control" @bind-Value="Model.DateTo" ParsingErrorMessage="@T["validation.date"]" /></RbiField>
         </div>
-    <div role="alert" tabindex="-1" @ref="_summary"><ValidationSummary /></div>
+    <FormSummary @ref="_summary" Context="_context" />
         <div class="registry-toolbar">
             <RbiButton OnClick="Cancel" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton>
-            <RbiButton Type="RbiButtonType.Submit" Disabled="MutationBlocked">@T["common.save"]</RbiButton>
+            <RbiButton Type="RbiButtonType.Submit" Disabled="@(MutationBlocked || _live.Incomplete)">@T["common.save"]</RbiButton>
         </div>
     </fieldset>
 </EditForm>
@@ -42,13 +46,19 @@
     private EditContext _context = null!;
     private RbiServerValidation _validation = null!;
     private readonly RbiFormSubmissionState _submission = new();
-    private ElementReference _summary;
+    private FormSummary _summary = null!;
     private bool _focusErrors;
-    protected override void OnInitialized() { _context = new(Model); _validation = new(_context); }
+    private LiveValidation _live = null!;
+    protected override void OnInitialized()
+    {
+        _context = new(Model); _validation = new(_context);
+        _live = new(_context, _validation, () => Model.Validate(), key => T[key], () => _ = InvokeAsync(StateHasChanged), new() { [nameof(Model.IsResident)] = [nameof(Model.TaxNumber), nameof(Model.FbaId)], [nameof(Model.BasisOfConnection)] = [nameof(Model.ConnectionDescription)] });
+    }
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (_focusErrors) { _focusErrors = false; await _summary.FocusAsync(); }
     }
+    private void GccSelected(GccOption? item) { Model.GccNumber = item?.Number; Model.GccName = item?.Name; _context.NotifyFieldChanged(new(Model, nameof(Model.GccNumber))); }
     private void BasisChanged() => Model.ConnectionDescription = Bases.FirstOrDefault(item => item.Kod == Model.BasisOfConnection)?.Opis;
     private async Task SubmitAsync() => await _submission.SubmitAsync(async () =>
     {
@@ -61,5 +71,5 @@
         catch (RegistryApiException exception) { _validation.DisplayFormError(T[exception.MessageKey]); _focusErrors = true; }
         catch (OperationCanceledException) { /* The owning route cancels its request on disposal. */ }
     });
-    public void Dispose() => _validation.Dispose();
+    public void Dispose() { _live.Dispose(); _validation.Dispose(); }
 }

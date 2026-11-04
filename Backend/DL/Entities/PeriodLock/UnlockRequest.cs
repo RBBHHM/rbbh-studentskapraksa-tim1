@@ -20,6 +20,12 @@ public class UnlockRequest
     [StringLength(200)]
     public string RequestedByEmail { get; set; } = string.Empty;
 
+    [StringLength(100)]
+    public string? RequestedBySubject { get; internal set; }
+    public Guid? ParentRequestId { get; set; }
+    [Timestamp]
+    public byte[]? Version { get; set; }
+
     public int Year { get; set; }
     public int Month { get; set; }
 

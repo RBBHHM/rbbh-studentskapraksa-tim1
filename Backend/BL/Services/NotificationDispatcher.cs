@@ -1,0 +1,108 @@
+using System.Net;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using RBBH.ConnectedParties.BL.ServiceInterfaces;
+using RBBH.ConnectedParties.DL.Persistence;
+
+namespace RBBH.ConnectedParties.BL.Services;
+
+/// <summary>Only sends committed notices; never replays business grants or decisions.</summary>
+public sealed class NotificationDispatcher(ConnectedPartiesDbContext db, IEmailService mail,
+    IOptions<EmailSettings> settings, ILogger<NotificationDispatcher> logger, RuntimeLocalizationCatalog localization)
+{
+    private static readonly SemaphoreSlim LocalClaimGate = new(1, 1);
+
+    public async Task<int> DeliverBatchAsync(CancellationToken ct)
+    {
+        var now = DateTime.UtcNow;
+        var ids = await db.NotificationDeliveries.AsNoTracking().Where(row => row.DeliveredAt == null && row.Attempts < 5 &&
+                row.NextAttemptAt <= now && (row.LeaseUntil == null || row.LeaseUntil < now))
+            .OrderBy(row => row.NextAttemptAt).ThenBy(row => row.Id).Select(row => row.Id).Take(50).ToListAsync(ct);
+        var delivered = 0;
+        foreach (var id in ids)
+        {
+            var lease = Guid.NewGuid();
+            if (!await Claim(id, lease, ct)) continue;
+            var row = await db.NotificationDeliveries.AsNoTracking().Include(row => row.Notification).SingleAsync(row => row.Id == id, ct);
+            string? failure = null;
+            try
+            {
+                var baseUrl = settings.Value.AppBaseUrl;
+                if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var uri) ||
+                    !(uri.Scheme == "https" || uri.Scheme == "http" && uri.IsLoopback) ||
+                    uri.UserInfo.Length > 0 || uri.Query.Length > 0 || uri.Fragment.Length > 0 ||
+                    !row.Notification.Route.StartsWith("/app/", StringComparison.Ordinal))
+                    throw new InvalidOperationException("Notification application URL is not configured safely.");
+                var titleKey = row.Notification.TitleKey.Replace('_', '.');
+                var bodyKey = row.Notification.BodyKey.Replace('_', '.');
+                var title = await localization.Text(titleKey, null, ct);
+                var text = await localization.Text(bodyKey, null, ct);
+                // Missing setup/templates is retryable; sending raw keys would falsely mark delivery as successful.
+                if (title == titleKey || text == bodyKey) throw new InvalidOperationException("Notification resources unavailable.");
+                title = Render(title, row.Notification.ParametersJson); text = Render(text, row.Notification.ParametersJson);
+                if (title.Length > 500 || title.Any(character => character is '\r' or '\n')) throw new InvalidOperationException("Invalid notification title.");
+                var link = baseUrl.TrimEnd('/') + row.Notification.Route;
+                var encodedText = WebUtility.HtmlEncode(text).Replace("\r\n", "\n").Replace("\n", "<br>");
+                var html = $"<p>{encodedText}</p><a href=\"{WebUtility.HtmlEncode(link)}\">{WebUtility.HtmlEncode(title)}</a>";
+                await mail.SendApplicationNotificationAsync(row.Notification.RecipientEmail, title, html, ct);
+                delivered++;
+            }
+            catch (Exception error) when (error is not OperationCanceledException)
+            {
+                failure = "delivery.failed";
+                logger.LogWarning("Notification delivery failed. FailureType {FailureType}", error.GetType().Name);
+            }
+            var completed = DateTime.UtcNow;
+            if (db.Database.IsRelational())
+                await db.NotificationDeliveries.Where(item => item.Id == id && item.LeaseId == lease).ExecuteUpdateAsync(update => update
+                    .SetProperty(item => item.DeliveredAt, failure == null ? completed : (DateTime?)null)
+                    .SetProperty(item => item.FailureCode, failure).SetProperty(item => item.LeaseId, (Guid?)null)
+                    .SetProperty(item => item.LeaseUntil, (DateTime?)null)
+                    .SetProperty(item => item.NextAttemptAt, completed.AddMinutes(Math.Min(60, Math.Pow(2, row.Attempts)))), ct);
+            else
+            {
+                var tracked = await db.NotificationDeliveries.SingleAsync(item => item.Id == id && item.LeaseId == lease, ct);
+                tracked.DeliveredAt = failure is null ? completed : null; tracked.FailureCode = failure;
+                tracked.LeaseId = null; tracked.LeaseUntil = null; tracked.NextAttemptAt = completed.AddMinutes(Math.Min(60, Math.Pow(2, row.Attempts)));
+                await db.SaveChangesAsync(ct);
+            }
+        }
+        return delivered;
+    }
+
+    private static string Render(string template, string json)
+    {
+        if (json.Length > 32000) throw new InvalidOperationException("Notification parameters too large.");
+        using var document = JsonDocument.Parse(json, new JsonDocumentOptions { MaxDepth = 8 });
+        if (document.RootElement.ValueKind != JsonValueKind.Object) throw new InvalidOperationException("Invalid notification parameters.");
+        var result = Regex.Replace(template, @"\{([A-Za-z][A-Za-z0-9]*)\}", match =>
+        {
+            if (!document.RootElement.TryGetProperty(match.Groups[1].Value, out var value)) throw new InvalidOperationException("Notification parameter missing.");
+            return value.ValueKind switch { JsonValueKind.String => value.GetString() ?? "", JsonValueKind.Null => "",
+                JsonValueKind.Number or JsonValueKind.True or JsonValueKind.False => value.GetRawText(), _ => throw new InvalidOperationException("Invalid notification parameter value.") };
+        });
+        if (result.Length > 32000) throw new InvalidOperationException("Rendered notification too large.");
+        return result;
+    }
+
+    private async Task<bool> Claim(Guid id, Guid lease, CancellationToken ct)
+    {
+        var now = DateTime.UtcNow;
+        var query = db.NotificationDeliveries.Where(row => row.Id == id && row.DeliveredAt == null && row.Attempts < 5 &&
+            row.NextAttemptAt <= now && (row.LeaseUntil == null || row.LeaseUntil < now));
+        if (db.Database.IsRelational())
+            return await query.ExecuteUpdateAsync(update => update.SetProperty(row => row.LeaseId, lease)
+                .SetProperty(row => row.LeaseUntil, now.AddMinutes(2)).SetProperty(row => row.Attempts, row => row.Attempts + 1), ct) == 1;
+        await LocalClaimGate.WaitAsync(ct);
+        try
+        {
+            var row = await query.SingleOrDefaultAsync(ct);
+            if (row is null) return false;
+            row.LeaseId = lease; row.LeaseUntil = now.AddMinutes(2); row.Attempts++;
+            await db.SaveChangesAsync(ct); return true;
+        }
+        finally { LocalClaimGate.Release(); }
+    }
+}

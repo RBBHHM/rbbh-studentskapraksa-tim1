@@ -39,7 +39,7 @@ else if (_profile is not null)
 }
 @code {
     private static readonly string[] States = ["draft", "verified", "rejected", "inactive"];
-    private static AppIconName SectionIcon(string id) => id switch { "physical" => AppIconName.UsersRound, "legal" => AppIconName.Building2, "limits" => AppIconName.Scale, "reports" => AppIconName.FileSpreadsheet, _ => AppIconName.UserCog };
+    private static AppIconName SectionIcon(string id) => id switch { "physical" => AppIconName.UsersRound, "legal" => AppIconName.Building2, "limits" => AppIconName.Scale, "reports" => AppIconName.FileSpreadsheet, "general" => AppIconName.BookOpenCheck, _ => AppIconName.UserCog };
     private readonly CancellationTokenSource _lifetime = new();
     private readonly CancellationToken _token;
     public Guide() => _token = _lifetime.Token;

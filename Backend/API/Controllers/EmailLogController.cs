@@ -10,7 +10,8 @@ namespace RBBH.ConnectedParties.API.Controllers;
 [Authorize(Policy = ApplicationPolicies.CapitalRead)]
 public class EmailLogController(
     EmailLogStore store,
-    IConfiguration configuration) : ControllerBase
+    IConfiguration configuration,
+    IHostEnvironment? environment = null) : ControllerBase
 {
     [HttpGet]
     public IActionResult Get([FromQuery] string? audience = null)
@@ -19,11 +20,15 @@ public class EmailLogController(
         var provider = configuration["Email:Provider"] ?? "demo";
 
         IReadOnlyList<RBBH.ConnectedParties.BL.Services.EmailLogEntry> emails = [];
-        if (!provider.Equals("smtp", StringComparison.OrdinalIgnoreCase))
+        // Raw mail preview is an isolated Development facility, never a production inbox.
+        if (environment?.IsDevelopment() == true && provider.Equals("demo", StringComparison.OrdinalIgnoreCase))
         {
             emails = string.IsNullOrWhiteSpace(audience)
                 ? store.GetAll()
                 : store.GetForAudience(audience);
+            var email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+            emails = emails.Where(entry => !string.IsNullOrWhiteSpace(email) &&
+                string.Equals(entry.To, email, StringComparison.OrdinalIgnoreCase)).ToList();
         }
 
         return Ok(new

@@ -39,10 +39,10 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
     public async Task<Result<List<CodeListDropdownDTO>>> GetDropdownByKategorija(string kategorija)
     {
         if (string.IsNullOrWhiteSpace(kategorija))
-            return Result<List<CodeListDropdownDTO>>.ValidationError("Kategorija ne smije biti prazna.");
+            return Result<List<CodeListDropdownDTO>>.ValidationError(BackendMessages.Message("validation.codelist.category.required"));
 
         var items = await _dbContext.CodeLists
-            .Where(x => x.Kategorija == kategorija && x.Aktivan)
+            .Where(x => x.Kategorija == kategorija && x.Aktivan && (x.Definition == null || x.Definition.IsActive))
             .OrderBy(x => x.RedoslijedPrikaza ?? int.MaxValue)
             .ThenBy(x => x.Naziv)
             .ProjectToType<CodeListDropdownDTO>()
@@ -55,7 +55,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
     public async Task<Result<List<CodeListResponseDTO>>> GetAllByKategorija(string kategorija)
     {
         if (string.IsNullOrWhiteSpace(kategorija))
-            return Result<List<CodeListResponseDTO>>.ValidationError("Kategorija ne smije biti prazna.");
+            return Result<List<CodeListResponseDTO>>.ValidationError(BackendMessages.Message("validation.codelist.category.required"));
 
         var items = await _dbContext.CodeLists
             // Administrators must be able to see the complete history, including
@@ -74,14 +74,14 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
     public async Task<Result<CodeListResponseDTO>> GetByID(int id)
     {
         if (id < 1)
-            return Result<CodeListResponseDTO>.ValidationError("ID nije validan.");
+            return Result<CodeListResponseDTO>.ValidationError(BackendMessages.Message("validation.identifier.invalid"));
 
         var item = await _dbContext.CodeLists
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(x => x.ID == id);
 
         if (item is null)
-            return Result<CodeListResponseDTO>.NotFoundError($"Šifarnik s ID={id} nije pronađen.");
+            return Result<CodeListResponseDTO>.NotFoundError(BackendMessages.Message("validation.codelist.value.missing", id));
 
         return Result<CodeListResponseDTO>.Success(item.Adapt<CodeListResponseDTO>());
     }
@@ -95,17 +95,21 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
         if (validacija is not null) return validacija;
 
         // Provjera duplikata — isti Kod u istoj Kategoriji
-        var postoji = await _dbContext.CodeLists.AnyAsync(x =>
-            x.Kategorija == dto.Kategorija && x.Kod == dto.Kod);
+        var category = dto.Kategorija.Trim();
+        var normalizedCategory = category.ToUpperInvariant();
+        var code = dto.Kod.Trim().ToUpperInvariant();
+        // Inactive values retain their stable key and must be reactivated, not duplicated.
+        var postoji = await _dbContext.CodeLists.IgnoreQueryFilters().AnyAsync(x =>
+            x.Kategorija.Trim().ToUpper() == normalizedCategory && x.Kod.Trim().ToUpper() == code);
 
         if (postoji)
             return Result<CodeListResponseDTO>.ValidationError(
-                $"Vrijednost s kodom '{dto.Kod}' već postoji u kategoriji '{dto.Kategorija}'.");
+                BackendMessages.Message("validation.codelist.value.duplicate", dto.Kod, dto.Kategorija));
 
         var entitet = new CodeList
         {
-            Kategorija        = dto.Kategorija.Trim(),
-            Kod               = dto.Kod.Trim().ToUpper(),
+            Kategorija        = category,
+            Kod               = code,
             Naziv             = dto.Naziv.Trim(),
             Opis              = dto.Opis?.Trim(),
             RedoslijedPrikaza = dto.RedoslijedPrikaza,
@@ -114,7 +118,18 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
             KreiraoKorisnik   = korisnik,
         };
 
+        var definition = await _dbContext.CodeListDefinitions.SingleOrDefaultAsync(item => item.Name == category);
+        if (definition is not null && !definition.IsActive)
+            return Result<CodeListResponseDTO>.ValidationError(BackendMessages.Message("validation.codelist.inactive"));
+        if (definition is null)
+        {
+            definition = new CodeListDefinition { Name = category, CreatedBy = korisnik };
+            _dbContext.CodeListDefinitions.Add(definition);
+        }
+        entitet.DefinitionId = definition.Id;
+        definition.ModifiedBy = korisnik;
         _dbContext.CodeLists.Add(entitet);
+        AddAudit(entitet.Kategorija, entitet.Kod, entitet.IzmijenjenDatum is null ? "CODELIST_ADD" : "CODELIST_UPDATE", korisnik);
         await _dbContext.SaveChangesAsync();
 
         return Result<CodeListResponseDTO>.Success(entitet.Adapt<CodeListResponseDTO>());
@@ -126,10 +141,13 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
     public async Task<Result<CodeListResponseDTO>> Update(int id, UpdateCodeListDTO dto, string korisnik)
     {
         if (id < 1)
-            return Result<CodeListResponseDTO>.ValidationError("ID nije validan.");
+            return Result<CodeListResponseDTO>.ValidationError(BackendMessages.Message("validation.identifier.invalid"));
 
         if (string.IsNullOrWhiteSpace(dto.Naziv))
-            return Result<CodeListResponseDTO>.ValidationError("Naziv ne smije biti prazan.");
+            return Result<CodeListResponseDTO>.ValidationError(BackendMessages.Message("validation.codelist.name.required"));
+
+        if (dto.Naziv.Length > 200 || dto.Opis?.Length > 500)
+            return Result<CodeListResponseDTO>.ValidationError(BackendMessages.Message("validation.codelist.value.length"));
 
         // Moramo pratiti entitet da bismo ga mogli ažurirati
         var entitet = await _dbContext.CodeLists
@@ -138,7 +156,11 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
             .FirstOrDefaultAsync(x => x.ID == id);
 
         if (entitet is null)
-            return Result<CodeListResponseDTO>.NotFoundError($"Šifarnik s ID={id} nije pronađen.");
+            return Result<CodeListResponseDTO>.NotFoundError(BackendMessages.Message("validation.codelist.value.missing", id));
+
+        // Updating Aktivan must enforce the same reference guard as Delete.
+        if (entitet.Aktivan && !dto.Aktivan && (entitet.IsSystemRequired || await JeVrijednostUUpotrebi(entitet.Kategorija, entitet.Kod)))
+            return Result<CodeListResponseDTO>.ValidationError(BackendMessages.Message("validation.codelist.value.in.use"));
 
         // Ažuriramo dopuštena polja (Kategorija i Kod se ne mijenjaju)
         entitet.Naziv             = dto.Naziv.Trim();
@@ -148,6 +170,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
         entitet.IzmijenjenDatum   = DateTime.UtcNow;
         entitet.IzmijenioKorisnik = korisnik;
 
+        AddAudit(entitet.Kategorija, entitet.Kod, entitet.IzmijenjenDatum is null ? "CODELIST_ADD" : "CODELIST_UPDATE", korisnik);
         await _dbContext.SaveChangesAsync();
 
         return Result<CodeListResponseDTO>.Success(entitet.Adapt<CodeListResponseDTO>());
@@ -164,7 +187,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
     public async Task<Result<bool>> Delete(int id, string korisnik)
     {
         if (id < 1)
-            return Result<bool>.ValidationError("ID nije validan.");
+            return Result<bool>.ValidationError(BackendMessages.Message("validation.identifier.invalid"));
 
         var entitet = await _dbContext.CodeLists
             .IgnoreQueryFilters()
@@ -172,20 +195,20 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
             .FirstOrDefaultAsync(x => x.ID == id);
 
         if (entitet is null)
-            return Result<bool>.NotFoundError($"Šifarnik s ID={id} nije pronađen.");
+            return Result<bool>.NotFoundError(BackendMessages.Message("validation.codelist.value.missing", id));
 
         // PL-37 — provjera upotrebe
-        var uUpotrebi = await JeVrijednostUUpotrebi(entitet.Kategorija, entitet.Kod);
+        var uUpotrebi = entitet.IsSystemRequired || await JeVrijednostUUpotrebi(entitet.Kategorija, entitet.Kod);
         if (uUpotrebi)
             return Result<bool>.ValidationError(
-                $"Vrijednost '{entitet.Naziv}' ({entitet.Kod}) je trenutno u upotrebi i ne može biti obrisana. " +
-                "Prvo je potrebno ukloniti sve reference na ovu vrijednost.");
+                BackendMessages.Message("validation.codelist.value.delete.in.use", entitet.Naziv, entitet.Kod));
 
         // Soft-delete: ne brišemo fizički, samo deaktiviramo
         entitet.Aktivan           = false;
         entitet.IzmijenjenDatum   = DateTime.UtcNow;
         entitet.IzmijenioKorisnik = korisnik;
 
+        AddAudit(entitet.Kategorija, entitet.Kod, "CODELIST_DELETE", korisnik);
         await _dbContext.SaveChangesAsync();
 
         return Result<bool>.Success(true);
@@ -196,7 +219,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
     {
         var normalizedCategory = kategorija?.Trim();
         if (string.IsNullOrWhiteSpace(normalizedCategory))
-            return Result<bool>.ValidationError("Naziv šifrarnika ne smije biti prazan.");
+            return Result<bool>.ValidationError(BackendMessages.Message("validation.codelist.definition.required"));
 
         var definition = await _dbContext.CodeListDefinitions
             .AsTracking()
@@ -208,12 +231,11 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
             .ToListAsync();
 
         if (definition is null && values.Count == 0)
-            return Result<bool>.NotFoundError($"Šifrarnik '{normalizedCategory}' nije pronađen.");
+            return Result<bool>.NotFoundError(BackendMessages.Message("validation.codelist.definition.missing", normalizedCategory));
 
-        if (await JeKategorijaUUpotrebi(normalizedCategory, values.Select(item => item.Kod)))
+        if (definition?.IsSystemRequired == true || values.Any(item => item.IsSystemRequired) || await JeKategorijaUUpotrebi(normalizedCategory, values.Select(item => item.Kod)))
             return Result<bool>.ValidationError(
-                $"Šifrarnik '{normalizedCategory}' se ne može obrisati jer se najmanje jedna njegova vrijednost koristi u aplikaciji. " +
-                "Prvo uklonite poslovne zapise koji koriste te vrijednosti.");
+                BackendMessages.Message("validation.codelist.definition.delete.in.use", normalizedCategory));
 
         var changedAt = DateTime.UtcNow;
         foreach (var value in values)
@@ -224,8 +246,9 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
         }
 
         if (definition is not null)
-            definition.IsActive = false;
+            { definition.IsActive = false; definition.ModifiedBy = korisnik; }
 
+        AddAudit(normalizedCategory, null, "CODELIST_DELETE", korisnik);
         await _dbContext.SaveChangesAsync();
         return Result<bool>.Success(true);
     }
@@ -238,6 +261,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
     /// </summary>
     private async Task<bool> JeVrijednostUUpotrebi(string kategorija, string kod)
     {
+        if (await _dbContext.CodeLists.IgnoreQueryFilters().AnyAsync(row => row.LanguageCode == kod && row.ResourceKey != null)) return true;
         return kategorija switch
         {
             "OsnovPovezanosti" =>
@@ -275,16 +299,26 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
         };
     }
 
+    private void AddAudit(string category, string? code, string action, string actor) => _dbContext.AuditLogs.Add(new()
+    {
+        TableName = "CodeList", RecordId = category, Action = action, UserId = actor, Username = actor,
+        Timestamp = DateTime.UtcNow, NewValues = System.Text.Json.JsonSerializer.Serialize(new { category, code })
+    });
+
     private static Result<CodeListResponseDTO>? ValidateCreateDTO(CreateCodeListDTO dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Kategorija))
-            return Result<CodeListResponseDTO>.ValidationError("Kategorija ne smije biti prazna.");
+            return Result<CodeListResponseDTO>.ValidationError(BackendMessages.Message("validation.codelist.category.required"));
 
         if (string.IsNullOrWhiteSpace(dto.Kod))
-            return Result<CodeListResponseDTO>.ValidationError("Kod ne smije biti prazan.");
+            return Result<CodeListResponseDTO>.ValidationError(BackendMessages.Message("validation.codelist.code.required"));
 
         if (string.IsNullOrWhiteSpace(dto.Naziv))
-            return Result<CodeListResponseDTO>.ValidationError("Naziv ne smije biti prazan.");
+            return Result<CodeListResponseDTO>.ValidationError(BackendMessages.Message("validation.codelist.name.required"));
+
+        if (dto.Kategorija.Length > 100 || dto.Kod.Length > 50 || dto.Naziv.Length > 200 || dto.Opis?.Length > 500)
+            return Result<CodeListResponseDTO>.ValidationError(
+                BackendMessages.Message("validation.codelist.value.bounds"));
 
         return null; // Validno
     }

@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using ClosedXML.Excel;
@@ -13,6 +13,7 @@ using Moq;
 using RBBH.ConnectedParties.API.Controllers;
 using RBBH.ConnectedParties.BL.ServiceInterfaces;
 using RBBH.ConnectedParties.BL.Services;
+using RBBH.ConnectedParties.DL.Entities.Notifications;
 using RBBH.ConnectedParties.DL.Entities.Role;
 using RBBH.ConnectedParties.DL.Entities.Sifarnici;
 using RBBH.ConnectedParties.DL.Entities.Users;
@@ -84,6 +85,20 @@ internal static class BrowserHostProgram
         builder.Services.AddScoped<IReportService, ReportService>();
         builder.Services.AddScoped<IAppUserService, AppUserService>();
         builder.Services.AddScoped<IRoleService, RoleService>();
+        // Backend services added by the finalization; the real controllers resolve them.
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddScoped<PeriodWorkflow>();
+        builder.Services.AddScoped<RoleRequestService>();
+        builder.Services.AddScoped<RoleCatalogService>();
+        builder.Services.AddScoped<NotificationDispatcher>();
+        builder.Services.AddSingleton<RuntimeLocalizationCache>();
+        builder.Services.AddOptions<RuntimeLocalizationOptions>().Bind(builder.Configuration.GetSection("Localization"));
+        builder.Services.AddScoped<RuntimeLocalizationCatalog>();
+        builder.Services.AddScoped<RBBH.ConnectedParties.Localization.BackendLocalizationFilter>();
+        builder.Services.AddOptions<BankReferenceOptions>().Bind(builder.Configuration.GetSection("BankReference"));
+        builder.Services.AddSingleton<IBankReferenceSource>(new FixtureBankSource(database)); // test-only stand-in; the real source needs bank access
+        builder.Services.AddOptions<FinanceMonthlyOptions>().Bind(builder.Configuration.GetSection("FinanceMonthly"));
+        builder.Services.AddScoped<IFinanceMonthlySource, SqlFinanceMonthlySource>();
         builder.Configuration["KeycloakSettings:Enabled"] = "false";
         builder.Services.AddHttpClient<KeycloakAdminService>().ConfigurePrimaryHttpMessageHandler(() => new NoIdentityNetwork());
         builder.Services.AddScoped(_ => database.MailStore);
@@ -91,6 +106,19 @@ internal static class BrowserHostProgram
         builder.Services.Configure<EmailSettings>(_ => { });
         var app = builder.Build();
         app.UseExceptionHandler();
+        // Fault injection only: the backend now commits business state, audit and notices atomically, so the
+        // 'persisted but unconfirmed' case is simulated by losing the success response after the commit.
+        app.Use(async (context, next) =>
+        {
+            var path = context.Request.Path.Value ?? "";
+            var lose = HttpMethods.IsPost(context.Request.Method) && ((database.FailGenerationAudit && path.StartsWith("/api/reports/", StringComparison.OrdinalIgnoreCase)) ||
+                (database.FailPeriodAudit && path.StartsWith("/api/period-lock/", StringComparison.OrdinalIgnoreCase) && (path.EndsWith("/respond", StringComparison.OrdinalIgnoreCase) || path.EndsWith("/request-unlock", StringComparison.OrdinalIgnoreCase))));
+            if (!lose) { await next(); return; }
+            var original = context.Response.Body; using var buffer = new MemoryStream(); context.Response.Body = buffer;
+            try { await next(); } finally { context.Response.Body = original; }
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError; context.Response.ContentType = "application/problem+json";
+            await context.Response.WriteAsync("{\"status\":500}");
+        });
         app.Use(async (context, next) =>
         {
             if (database.DuplicateBarrier is { } barrier && context.Request.Path == "/api/related-persons/check-duplicate" && context.Request.Query.ContainsKey("fbaId"))
@@ -256,10 +284,31 @@ internal static class BrowserHostProgram
                 services.AddRbiApiClient<ICodeListsApi, CodeListsApi>("BrowserCodeLists", options => options.BaseUrl = new("http://backend.fixture/"))
                     .AddHttpMessageHandler<ApplicationCultureHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
+                services.AddRbiApiClient<ILocalizationApi, LocalizationApi>("BrowserLocalization", options => options.BaseUrl = new("http://backend.fixture/"))
+                    .AddHttpMessageHandler<ApplicationCultureHandler>()
+                    .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
+                services.AddRbiApiClient<IRoleRequestsApi, RoleRequestsApi>("BrowserRoleRequests", options => options.BaseUrl = new("http://backend.fixture/"))
+                    .AddHttpMessageHandler<ApplicationCultureHandler>()
+                    .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
             });
         }
     }
 
+    /// <summary>Test-only bank reference source. Disabled it behaves like an unconfigured production source (503); enabled it serves two synthetic groups.</summary>
+    private sealed class FixtureBankSource(FixtureDatabase database) : IBankReferenceSource
+    {
+        private static readonly BankGroup[] Known = [new("1001", "Fixture Group A"), new("1002", "Fixture Group B")];
+        public bool IsConfigured => database.BankSourceEnabled;
+        private void Require() { if (!database.BankSourceEnabled) throw new RBBH.ConnectedParties.Exceptions.BusinessRuleException(503, "bank_reference.unavailable"); }
+        public Task<ReferencePage<BankCustomer>> Customers(string? search, int page, int pageSize, CancellationToken ct) { Require(); return Task.FromResult(new ReferencePage<BankCustomer>([], 0, page, pageSize)); }
+        public Task<ReferencePage<BankGroup>> Groups(string? search, int page, int pageSize, CancellationToken ct)
+        {
+            Require();
+            var items = Known.Where(item => string.IsNullOrWhiteSpace(search) || item.Number.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase) || item.Name.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase)).ToArray();
+            return Task.FromResult(new ReferencePage<BankGroup>(items, items.Length, page, pageSize));
+        }
+        public Task<BankGroup?> Group(string number, CancellationToken ct) { Require(); return Task.FromResult<BankGroup?>(Known.FirstOrDefault(item => item.Number == number)); }
+    }
     private sealed record FixtureUser(string Email, string Role);
     private sealed class FixtureDatabase
     {
@@ -272,6 +321,7 @@ internal static class BrowserHostProgram
         public bool PeriodUnavailable { get; set; }
         public bool GeneratedDownloadUnavailable { get; set; }
         public bool FailGenerationAudit { get; set; }
+        public bool BankSourceEnabled { get; set; }
         public bool FailPeriodAudit { get; set; }
         public TaskCompletionSource? DuplicateBarrier { get; set; }
         public int ReportGenerationAttempts { get; set; }
@@ -386,6 +436,16 @@ internal static class BrowserHostProgram
                         using var response = await client.PostAsJsonAsync($"/api/period-lock/unlock-requests/{input!.Id}/respond", new { message = input.Message });
                         await context.Response.WriteAsJsonAsync(new { status = (int)response.StatusCode }); return;
                     }
+                    if (context.Request.Path == "/__fixtures/role-requests-state" && HttpMethods.IsGet(context.Request.Method))
+                    {
+                        await using var scope = backend.Services.CreateAsyncScope();
+                        var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                        var requests = await db.RoleRequests.AsNoTracking().OrderBy(item => item.CreatedAt).Select(item => new { item.Username, item.Status, item.Purpose, roles = item.RequestedRoles.Select(r => r.Role.Name).ToArray() }).ToArrayAsync();
+                        var requester = await db.AppUsers.AsNoTracking().Where(item => item.KeycloakId == "requester-subject").Select(item => item.Id).SingleOrDefaultAsync();
+                        var granted = await db.UserRoles.AsNoTracking().Where(item => item.IsActive && item.UserId == requester).Select(item => item.Role.Name).ToArrayAsync();
+                        var notices = await db.Notifications.AsNoTracking().Where(item => item.RecipientSubject == "requester-subject").Select(item => item.TitleKey).ToArrayAsync();
+                        await context.Response.WriteAsJsonAsync(new { requests, granted, notices }); return;
+                    }
                     if (context.Request.Path == "/__fixtures/users-status" && HttpMethods.IsGet(context.Request.Method))
                     {
                         using var client = backend.GetTestClient();
@@ -436,7 +496,7 @@ internal static class BrowserHostProgram
                     {
                         await using var scope = backend.Services.CreateAsyncScope();
                         var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
-                        await context.Response.WriteAsJsonAsync(await db.Capitals.AsNoTracking().Select(item => new { item.Id, item.RegulatoryCapital, item.CoreCapital, item.SupplementaryCapital, item.CapitalDate }).ToArrayAsync());
+                        await context.Response.WriteAsJsonAsync((await db.CapitalRevisions.AsNoTracking().OrderBy(item => item.Revision).ToArrayAsync()).Select(item => new { item.Id, item.Revision, item.RegulatoryCapital, item.CoreCapital, item.SupplementaryCapital, CapitalDate = item.EffectiveDate }).ToArray());
                         return;
                     }
                     if (context.Request.Path == "/__fixtures/reports" && HttpMethods.IsGet(context.Request.Method))
@@ -456,7 +516,7 @@ internal static class BrowserHostProgram
                         case "/__fixtures/reset":
                             // Fresh unique InMemory store; never delete an existing database.
                             database.Name = "browser-" + Guid.NewGuid(); database.Unavailable = database.CodebooksUnavailable = false;
-                            database.ProfileUnavailable = database.GeneratedDownloadUnavailable = database.FailGenerationAudit = false;
+                            database.ProfileUnavailable = database.GeneratedDownloadUnavailable = database.FailGenerationAudit = database.BankSourceEnabled = false;
                             database.FailPeriodAudit = database.PeriodUnavailable = false;
                             database.DuplicateBarrier?.TrySetResult(); database.DuplicateBarrier = null;
                             database.ReportGenerationAttempts = 0;
@@ -513,6 +573,21 @@ internal static class BrowserHostProgram
                                 var count = context.Request.Path == "/__fixtures/period-pages" ? 101 : 1;
                                 for (var index = 0; index < count; index++)
                                     db.UnlockRequests.Add(new UnlockRequest { RequestedBy = $"requester{index:D3}", RequestedByEmail = "fixture@example.test", Year = now.Year, Month = now.Month, Reason = "Fixture request for clarification", Status = count == 1 ? "NEEDS_INFO" : "PENDING", CreatedBy = "fixture", CreatedAt = now.AddSeconds(-index) });
+                                if (count == 1) db.Entry(db.UnlockRequests.Local.Single()).Property("RequestedBySubject").CurrentValue = "fixture-user";
+                                await db.SaveChangesAsync();
+                            }
+                            break;
+                        case "/__fixtures/role-requests-seed":
+                            await using (var scope = backend.Services.CreateAsyncScope())
+                            {
+                                var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                                var admin = new AppUser { Username = "second-admin", Email = "second-admin@fixture.test", FirstName = "Second", LastName = "Admin", KeycloakSubjectConfirmed = true, KeycloakId = "second-admin-subject" };
+                                db.AppUsers.Add(admin);
+                                db.UserRoles.Add(new UserRole { UserId = admin.Id, RoleId = (await db.Roles.SingleAsync(item => item.Name == "admin")).Id });
+                                var fl = await db.Roles.SingleAsync(item => item.Name == "FL");
+                                var request = new RBBH.ConnectedParties.DL.Entities.Authorization.RoleRequest { ClientRequestId = Guid.NewGuid(), RequesterSubject = "requester-subject", Username = "requester", FirstName = "Re", LastName = "Quester", Email = "requester@fixture.test", Purpose = "new", Note = "Need FL for onboarding" };
+                                request.RequestedRoles = [new RBBH.ConnectedParties.DL.Entities.Authorization.RequestedRole { Role = fl, RoleId = fl.Id, RequestId = request.Id }];
+                                db.RoleRequests.Add(request);
                                 await db.SaveChangesAsync();
                             }
                             break;
@@ -532,17 +607,31 @@ internal static class BrowserHostProgram
                         case "/__fixtures/generated-downloads-unavailable": database.GeneratedDownloadUnavailable = true; break;
                         case "/__fixtures/generated-downloads-available": database.GeneratedDownloadUnavailable = false; break;
                         case "/__fixtures/generation-audit-fails": database.FailGenerationAudit = true; break;
-                        case "/__fixtures/email-existing":
-                            database.MailStore.Add(new EmailLogEntry
+                        case "/__fixtures/bank-source-on": database.BankSourceEnabled = true; break;
+                        case "/__fixtures/bank-source-off": database.BankSourceEnabled = false; break;
+                        case "/__fixtures/notifications-seed":
+                            await using (var scope = backend.Services.CreateAsyncScope())
                             {
-                                To = "fixture@example.test",
-                                Subject = "Fixture notification",
-                                Audience = "broadcast",
-                                HtmlBody = "<img src=x onerror=\"window.__notificationExecuted=true\">body-search-needle"
-                            });
+                                var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                                var languages = new CodeListDefinition { Name = "Languages", CreatedBy = "fixture" };
+                                var packs = new CodeListDefinition { Name = "LanguagePacks", CreatedBy = "fixture" };
+                                db.CodeListDefinitions.AddRange(languages, packs);
+                                db.CodeLists.AddRange(
+                                    new CodeList { Kategorija = "Languages", DefinitionId = languages.Id, Kod = "BS", Naziv = "Bosanski", KreiraoKorisnik = "fixture" },
+                                    new CodeList { Kategorija = "Languages", DefinitionId = languages.Id, Kod = "EN", Naziv = "English", KreiraoKorisnik = "fixture" });
+                                foreach (var (language, key, label) in new[] {
+                                    ("BS", "notifications.fixture.title", "Rola dodijeljena"), ("BS", "notifications.fixture.body", "Odobrena rola {role}."),
+                                    ("EN", "notifications.fixture.title", "Role granted"), ("EN", "notifications.fixture.body", "Role {role} was approved.") })
+                                    db.CodeLists.Add(new CodeList { Kategorija = "LanguagePacks", DefinitionId = packs.Id, Kod = language + ":" + key, Naziv = key, LanguageCode = language, ResourceKey = key, ResourceLabel = label, KreiraoKorisnik = "fixture" });
+                                var now = DateTime.UtcNow;
+                                db.Notifications.AddRange(
+                                    new ApplicationNotification { RecipientSubject = "fixture-user", RecipientEmail = "fixture@example.test", EventKey = "fixture.a", TitleKey = "notifications.fixture.title", BodyKey = "notifications.fixture.body", ParametersJson = "{\"role\":\"FL\"}", Route = "/app/profile", CreatedAt = now.AddMinutes(-1) },
+                                    new ApplicationNotification { RecipientSubject = "fixture-user", RecipientEmail = "fixture@example.test", EventKey = "fixture.b", TitleKey = "notifications.fixture.title", BodyKey = "notifications.fixture.body", ParametersJson = "{\"role\":\"PL\"}", Route = "//evil.example", CreatedAt = now.AddMinutes(-2) },
+                                    new ApplicationNotification { RecipientSubject = "fixture-user", RecipientEmail = "fixture@example.test", EventKey = "fixture.c", TitleKey = "notifications.fixture.title", BodyKey = "notifications.fixture.body", ParametersJson = "{\"role\":\"kapital\"}", CreatedAt = now.AddMinutes(-3), ReadAt = now.AddMinutes(-2) },
+                                    new ApplicationNotification { RecipientSubject = "another-user", RecipientEmail = "other@example.test", EventKey = "fixture.d", TitleKey = "notifications.fixture.title", BodyKey = "notifications.fixture.body", ParametersJson = "{\"role\":\"OTHERS-ONLY\"}", CreatedAt = now });
+                                await db.SaveChangesAsync();
+                            }
                             break;
-                        case "/__fixtures/email-smtp": backend.Configuration["Email:Provider"] = "smtp"; break;
-                        case "/__fixtures/email-demo": backend.Configuration["Email:Provider"] = "demo"; break;
                         case "/__fixtures/forge-provider-admin": database.ForgeAdmin = true; break;
                         case "/__fixtures/audit-existing":
                             await using (var scope = backend.Services.CreateAsyncScope())
@@ -652,7 +741,7 @@ internal static class BrowserHostProgram
                                     IsResident = false,
                                     FbaId = (100000 + index).ToString(System.Globalization.CultureInfo.InvariantCulture),
                                     MaticniBroj = "12345",
-                                    Matbroj = "SERVER-ONLY-789",
+                                    Matbroj = "789456123",
                                     BasisOfConnection = "ZOB-2-V-5",
                                     ConnectionDescription = "Fixture relationship description",
                                     ConnectedWithBank = true,
@@ -662,6 +751,15 @@ internal static class BrowserHostProgram
                                     IsActive = true,
                                     CreatedAt = new DateTime(2026, 1, 1).AddMinutes(index)
                                 });
+                                foreach (var seeded in db.ChangeTracker.Entries<RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntity>().ToArray()) seeded.Property("CreatorSubject").CurrentValue = "fixture-author-subject"; // a proven creator other than the fixture user, so four-eyes verification can succeed
+                                await db.SaveChangesAsync();
+                            }
+                            break;
+                        case "/__fixtures/persons-entered-by-other":
+                            await using (var scope = backend.Services.CreateAsyncScope())
+                            {
+                                var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                                foreach (var person in db.RelatedPersons.IgnoreQueryFilters()) { person.CreatedBy = "fixture-author"; var creator = db.Entry(person).Property("CreatorSubject"); creator.CurrentValue = "fixture-author-subject"; creator.OriginalValue = "fixture-author-subject"; creator.IsModified = true; }
                                 await db.SaveChangesAsync();
                             }
                             break;
@@ -688,7 +786,7 @@ internal static class BrowserHostProgram
     {
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
-            var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, "fixture-user"), new(ClaimTypes.Email, user.Email), new(ClaimTypes.Name, user.Email) };
+            var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, "fixture-user"), new(ClaimTypes.Email, user.Email), new(ClaimTypes.Name, user.Email), new("email_verified", "true"), new("preferred_username", user.Email) };
             if (database.ForgeAdmin) claims.AddRange([new(ClaimTypes.Role, "admin"), new("permission", "ADMINISTRATION_MANAGE"), new("rct_done", "1")]);
             return Task.FromResult(AuthenticateResult.Success(new(new ClaimsPrincipal(new ClaimsIdentity(claims, "BrowserFixture")), "BrowserFixture")));
         }

@@ -9,7 +9,7 @@ using RBBH.ConnectedParties.Helpers.Constants;
 namespace RBBH.ConnectedParties.API.Controllers;
 
 /// <summary>
-/// API za upravljanje globalnim (jedinim) zapisom kapitala — modul Kapital.
+/// API za kapital banke s historijom po datumu važenja.
 /// </summary>
 [RBBH.ConnectedParties.Helpers.RequireActorEmail]
 [ApiController]
@@ -20,7 +20,7 @@ public class CapitalController(ICapitalService capitalService, IAuditService aud
     private readonly ICapitalService _capitalService = capitalService;
     private readonly IAuditService _auditService = auditService;
 
-    /// <summary>Vraća globalni zapis kapitala, ili null ako još nije postavljen.</summary>
+    /// <summary>Vraća poznati kapital koji važi danas, ili nema sadržaja ako nije poznat.</summary>
     [HttpGet]
     [Authorize(Policy = ApplicationPolicies.CapitalRead)]
     [ProducesResponseType(typeof(CapitalDTO), StatusCodes.Status200OK)]
@@ -29,6 +29,17 @@ public class CapitalController(ICapitalService capitalService, IAuditService aud
         var result = await _capitalService.Get();
         return HandleResult(result);
     }
+
+    [HttpGet("as-of"), Authorize(Policy = ApplicationPolicies.CapitalRead)]
+    public async Task<ActionResult<CapitalDTO?>> AsOf([FromQuery] DateTime date, CancellationToken ct)
+    {
+        if (!Request.Query.ContainsKey("date")) return BadRequest(new ProblemDetails { Status = 400, Title = BackendMessages.Message("errors.capital.date.required") });
+        return HandleResult(await _capitalService.AsOf(date, ct));
+    }
+
+    [HttpGet("history"), Authorize(Policy = ApplicationPolicies.CapitalRead)]
+    public Task<BL.Services.ReferencePage<CapitalHistoryDTO>> History(CancellationToken ct, int page = 1, int pageSize = 20) =>
+        _capitalService.History(page, pageSize, ct);
 
     /// <summary>Izvoz kapitala u Excel — samo 4 kolone kapitala.</summary>
     [HttpGet("export")]
@@ -47,7 +58,7 @@ public class CapitalController(ICapitalService capitalService, IAuditService aud
         return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"kapital-{DateTime.UtcNow:yyyyMMdd-HHmm}.xlsx");
     }
 
-    /// <summary>Kreira ili ažurira globalni zapis kapitala (Regulatorni/Osnovni/Dopunski + datum).</summary>
+    /// <summary>Dodaje nepromjenjivu reviziju kapitala (Regulatorni/Osnovni/Dopunski + datum).</summary>
     [HttpPut]
     [Authorize(Policy = ApplicationPolicies.CapitalEdit)]
     [ProducesResponseType(typeof(CapitalDTO), StatusCodes.Status200OK)]
@@ -56,27 +67,6 @@ public class CapitalController(ICapitalService capitalService, IAuditService aud
     {
         var korisnik = GetKorisnik();
         var result = await _capitalService.Upsert(dto, korisnik);
-
-        if (result.IsSuccessful)
-        {
-            await _auditService.LogAsync(new AuditEntry
-            {
-                TableName = "Capital",
-                RecordId = result.Value.Id.ToString(),
-                Action = "UPSERT",
-                NewValues = System.Text.Json.JsonSerializer.Serialize(new
-                {
-                    regulatoryCapital = result.Value.RegulatoryCapital,
-                    coreCapital = result.Value.CoreCapital,
-                    supplementaryCapital = result.Value.SupplementaryCapital,
-                    capitalDate = result.Value.CapitalDate
-                }),
-                UserId = korisnik,
-                Username = korisnik,
-                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
-            });
-        }
-
         return HandleResult(result);
     }
 
@@ -84,6 +74,6 @@ public class CapitalController(ICapitalService capitalService, IAuditService aud
 
     private string GetKorisnik()
     {
-        return RBBH.ConnectedParties.Helpers.AuthenticatedActor.Email(User);
+        return RBBH.ConnectedParties.Helpers.AuthenticatedActor.Username(User);
     }
 }

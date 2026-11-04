@@ -84,7 +84,10 @@ public sealed class SmtpEmailService(
             await SendAsync(to, subject, html);
     }
 
-    private async Task SendAsync(string to, string subject, string htmlBody)
+    public Task SendApplicationNotificationAsync(string to, string subject, string htmlBody, CancellationToken cancellationToken = default) =>
+        SendAsync(to, subject, htmlBody, cancellationToken);
+
+    private async Task SendAsync(string to, string subject, string htmlBody, CancellationToken cancellationToken = default)
     {
         var smtp = options.Value.Smtp;
 
@@ -105,7 +108,7 @@ public sealed class SmtpEmailService(
             IsBodyHtml = true
         };
 
-        await client.SendMailAsync(msg);
-        logger.LogInformation("Email poslan na {To}: {Subject}", to, subject);
+        await client.SendMailAsync(msg, cancellationToken);
+        logger.LogInformation("Email delivered through the configured SMTP transport.");
     }
 }

@@ -1,3 +1,4 @@
+using RBBH.ConnectedParties.IoC.Extensions.ExceptionHandling;
 using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
@@ -51,6 +52,8 @@ public abstract class UsersHttpFixture : IAsyncLifetime
         builder.WebHost.UseTestServer();
         builder.Logging.ClearProviders();
         builder.Configuration["KeycloakSettings:Enabled"] = "false";
+        builder.Services.AddExceptionHandlingExtension(builder.Environment);
+        builder.Services.AddHttpContextAccessor();
         builder.Services.AddControllers().AddApplicationPart(typeof(UsersController).Assembly);
         builder.Services.AddDbContext<ConnectedPartiesDbContext>(ConfigureDatabase);
         builder.Services.AddAuthentication("UsersFixture")
@@ -61,6 +64,7 @@ public abstract class UsersHttpFixture : IAsyncLifetime
         builder.Services.AddScoped<IAuditService, AuditService>();
         builder.Services.AddHttpClient<KeycloakAdminService>().ConfigurePrimaryHttpMessageHandler(() => new NoOutboundRequests());
         _app = builder.Build();
+        _app.UseExceptionHandler();
         _app.UseAuthentication();
         _app.Use(async (context, next) =>
         {

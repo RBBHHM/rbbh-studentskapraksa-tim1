@@ -55,7 +55,7 @@ else
                             <td class="registry-actions-cell"><div class="registry-row-actions">
                                 @if (_canEdit)
                                 {
-                                    @if (person.Status != 3) { <RbiButton Disabled="@(_busy || _openingEditor || _refreshing || _periodLocked)" OnClick="() => Confirm(person, false)" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["common.verify"]" title="@T["common.verify"]"><RbiIcon Name="RbiIconName.CheckCircle2" /></RbiButton> }
+                                    @if (person.Status != 3) { <span title="@T[Own(person.CreatedBy) ? "common.verify-own" : "common.verify"]"><RbiButton Disabled="@(_busy || _openingEditor || _refreshing || _periodLocked || Own(person.CreatedBy))" OnClick="() => Confirm(person, false)" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["common.verify"]"><RbiIcon Name="RbiIconName.CheckCircle2" /></RbiButton></span> }
                                     <RbiButton Disabled="@(_busy || _refreshing || _periodLocked)" Loading="_openingEditor" LoadingLabel="@T["state.loading"]" OnClick="() => Edit(person)" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["common.edit"]" title="@T["common.edit"]"><RbiIcon Name="RbiIconName.Pencil" /></RbiButton>
                                 }
                                 @if (_canDelete) { <RbiButton Disabled="@(_busy || _openingEditor || _refreshing || _periodLocked)" OnClick="() => Confirm(person, true)" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["common.deactivate"]" title="@T["common.deactivate"]" Class="registry-danger-icon"><RbiIcon Name="RbiIconName.Trash2" /></RbiButton> }
@@ -145,6 +145,9 @@ else
     private bool _loaded, _refreshing, _openingEditor;
     private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
     private IEnumerable<RelatedPerson> Filtered => _people.Where(person => person.Matches(_search));
+    private string? _self;
+    // Four-eyes: the person who entered a record cannot verify it (the backend remains authoritative).
+    private bool Own(string? createdBy) => !string.IsNullOrWhiteSpace(_self) && string.Equals(createdBy, _self, StringComparison.OrdinalIgnoreCase);
     protected override Task OnInitializedAsync() => LoadAsync();
     private async Task LoadAsync()
     {
@@ -154,7 +157,7 @@ else
         {
             _authenticated = (await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true;
             if (!_authenticated) return;
-            var profile = await Profile.GetAsync(_token);
+            var profile = await Profile.GetAsync(_token); _self = profile.Username;
             _canRead = profile.Permissions.Contains("FL_VIEW"); _canCreate = profile.Permissions.Contains("FL_CREATE");
             _canEdit = profile.Permissions.Contains("FL_EDIT"); _canDelete = profile.Permissions.Contains("FL_DELETE");
             if (!_canRead) return;

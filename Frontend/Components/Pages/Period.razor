@@ -59,7 +59,7 @@ else if (_current is { } current)
     }
     @if (TotalPages > 1)
     {
-        <p role="status">@T.Format("legal.page-summary", _page, TotalPages, _requests.Total)</p>
+        <p class="page-total" role="status">@T.Format("legal.page-summary", _page, TotalPages, _requests.Total)</p>
     <RbiPagination CurrentPage="_page" CurrentPageChanged="ChangePageAsync" TotalPages="TotalPages" AccessibleLabel="@T["period.pages"]" PreviousLabel="@T["common.back"]" PreviousAccessibleLabel="@T["legal.previous"]" NextLabel="@T["common.actions.continue"]" NextAccessibleLabel="@T["legal.next"]" PageAccessibleLabel="@(page => T.Format("legal.page", page))" />
     }
 }
@@ -98,8 +98,8 @@ else if (_current is { } current)
             _canRead = ApplicationAccess.IsAdministrator(profile) && profile.Permissions.Contains("KAPITAL_VIEW");
             _canWrite = _canRead && profile.Permissions.Any(code => code is "KAPITAL_CREATE" or "KAPITAL_EDIT" or "KAPITAL_DELETE");
             if (!_canRead) return;
-            _current = await Api.CurrentAsync(_token); _requests = await Api.RequestsAsync(_status, _page, _token);
-            if (_page > TotalPages) { _page = TotalPages; _requests = await Api.RequestsAsync(_status, _page, _token); }
+            _current = await Api.CurrentAsync(_token); _requests = await Api.RequestsAsync(_status, _page, _canWrite, _token);
+            if (_page > TotalPages) { _page = TotalPages; _requests = await Api.RequestsAsync(_status, _page, _canWrite, _token); }
             _loaded = true;
         }
         catch (RegistryApiException exception) { _error = exception.MessageKey; }

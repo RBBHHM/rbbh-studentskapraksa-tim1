@@ -1,5 +1,4 @@
 using RBBH.ConnectedParties.Helpers.Constants;
-using RBBH.ConnectedParties.Exceptions.Custom;
 using Microsoft.AspNetCore.Diagnostics;
 
 namespace RBBH.ConnectedParties.IoC.Extensions.ExceptionHandling
@@ -27,25 +26,14 @@ namespace RBBH.ConnectedParties.IoC.Extensions.ExceptionHandling
         {
             var exception = context.HttpContext.Features.Get<IExceptionHandlerFeature>()?.Error;
 
-            SetTitle(context, exception);
-
-                if (exception != null)
-                {
-                    // If this is a validation exception, expose structured errors
-                    if (exception is ValidationException vex)
-                    {
-                        context.ProblemDetails.Extensions.TryAdd("errors", vex.Errors);
-                    }
-
-                    context.ProblemDetails.Extensions.TryAdd("message", exception.Message);
-                    context.ProblemDetails.Extensions.TryAdd("innerException", exception.InnerException?.Message);
-
-                    if (env.IsDevelopment())
-                    {
-                        context.ProblemDetails.Extensions.TryAdd("stackTrace", exception.StackTrace);
-                    }
-
-                }
+            // The fallback writer must be as safe as GlobalExceptionHandler.
+            // Never copy exception messages, inner exceptions or stack traces to HTTP.
+            if (exception is not null)
+            {
+                context.ProblemDetails.Title = RBBH.ConnectedParties.Localization.BackendMessages.Text("request.unavailable.title");
+                context.ProblemDetails.Detail = RBBH.ConnectedParties.Localization.BackendMessages.Text("request.unavailable.detail");
+            }
+            context.ProblemDetails.Extensions.TryAdd("traceId", context.HttpContext.TraceIdentifier);
 
             var correlationId = context.HttpContext.Request.Headers[AppConstants.CORRELATION_ID].ToString();
             context.ProblemDetails.Extensions.TryAdd(AppConstants.CORRELATION_ID, correlationId);
@@ -53,15 +41,5 @@ namespace RBBH.ConnectedParties.IoC.Extensions.ExceptionHandling
             context.ProblemDetails.Extensions.TryAdd("timestamp", DateTime.UtcNow);
         }
 
-        private static void SetTitle(ProblemDetailsContext context, Exception? exception)
-        {
-            if (exception != null) 
-            {
-                context.ProblemDetails.Title = exception.GetType().Name;
-                return;
-            }
-
-            // If null, use default value on "context.ProblemDetails.Title"
-        }
     }
 }

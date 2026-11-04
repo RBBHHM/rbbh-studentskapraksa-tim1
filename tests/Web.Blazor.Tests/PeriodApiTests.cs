@@ -65,6 +65,19 @@ public sealed class PeriodApiTests
         var api = provider.GetRequiredService<IPeriodApi>(); Assert.True((await api.CurrentAsync()).IsLocked);
         Assert.Equal(101, (await api.RequestsAsync("NEEDS_INFO", 2)).Total);
     }
+    [Fact]
+    public async Task ProcessorQueueUsesTheReviewRouteWhileOtherReadersKeepTheirOwnList()
+    {
+        var paths = new List<string>();
+        await using var provider = Client(request =>
+        {
+            paths.Add(request.RequestUri!.PathAndQuery);
+            return Task.FromResult(Json(HttpStatusCode.OK, new { requests = Array.Empty<object>(), total = 0, page = 1, pageSize = 100 }));
+        });
+        var api = provider.GetRequiredService<IPeriodApi>();
+        await api.RequestsAsync("PENDING", 1, review: true); await api.RequestsAsync("", 1);
+        Assert.Equal(["/api/period-lock/unlock-requests/review?status=PENDING&page=1&pageSize=100", "/api/period-lock/unlock-requests?status=&page=1&pageSize=100"], paths);
+    }
     [Theory]
     [InlineData("lock")]
     [InlineData("unlock")]

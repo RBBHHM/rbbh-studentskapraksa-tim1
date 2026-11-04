@@ -77,6 +77,105 @@ namespace RBBH.ConnectedParties.Migrations
                     b.ToTable("AuditLogs");
                 });
 
+            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Authorization.RequestedRole", b =>
+                {
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("RequestId", "RoleId");
+
+                    b.HasIndex("RoleId");
+
+                    b.ToTable("RequestedRole");
+                });
+
+            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Authorization.RoleRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ClientRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("DecisionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("DecisionNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ProcessedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("RequesterSubject")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_BIN2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequesterSubject")
+                        .IsUnique()
+                        .HasFilter("[Status] = N'pending'");
+
+                    b.HasIndex("RequesterSubject", "ClientRequestId")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "CreatedAt");
+
+                    b.ToTable("RoleRequests");
+                });
+
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -103,6 +202,10 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("CreatorSubject")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<DateTime?>("DateFrom")
                         .HasColumnType("datetime2");
 
@@ -113,7 +216,18 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<string>("GccName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("GccNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool?>("IsLargeExposure")
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsResident")
@@ -155,6 +269,11 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.HasKey("Id");
 
                     b.HasIndex("FbaId")
@@ -188,6 +307,10 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("ImportFingerprint")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<string>("Komentar")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
@@ -218,11 +341,111 @@ namespace RBBH.ConnectedParties.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ImportFingerprint")
+                        .IsUnique()
+                        .HasFilter("[ImportFingerprint] IS NOT NULL");
+
                     b.HasIndex("LegalEntityId");
 
                     b.HasIndex("TipLimita");
 
                     b.ToTable("Limiti", (string)null);
+                });
+
+            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Notifications.ApplicationNotification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("BodyKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("EventKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ParametersJson")
+                        .IsRequired()
+                        .HasMaxLength(32000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RecipientEmail")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("RecipientSubject")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_BIN2");
+
+                    b.Property<string>("Route")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("TitleKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecipientSubject", "CreatedAt");
+
+                    b.HasIndex("RecipientSubject", "EventKey")
+                        .IsUnique();
+
+                    b.ToTable("Notifications");
+                });
+
+            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Notifications.NotificationDelivery", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("DeliveredAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid?>("LeaseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("LeaseUntil")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("NextAttemptAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("NotificationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NotificationId")
+                        .IsUnique();
+
+                    b.HasIndex("DeliveredAt", "NextAttemptAt");
+
+                    b.ToTable("NotificationDeliveries");
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.PeriodLock.PeriodLock", b =>
@@ -273,6 +496,11 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<int>("Year")
                         .HasColumnType("int");
 
@@ -315,6 +543,9 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<int>("Month")
                         .HasColumnType("int");
 
+                    b.Property<Guid?>("ParentRequestId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("ProcessedAt")
                         .HasColumnType("datetime2");
 
@@ -337,15 +568,31 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("RequestedBySubject")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_BIN2");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<int>("Year")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ParentRequestId")
+                        .IsUnique()
+                        .HasFilter("[ParentRequestId] IS NOT NULL");
+
+                    b.HasIndex("RequestedBySubject");
 
                     b.HasIndex("Status");
 
@@ -439,6 +686,10 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("CreatorSubject")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<DateTime?>("DateFrom")
                         .HasColumnType("datetime2");
 
@@ -482,6 +733,18 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("NormalizedFbaId")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasComputedColumnSql("UPPER(LTRIM(RTRIM([FBAId])))", true);
+
+                    b.Property<string>("NormalizedPassport")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasComputedColumnSql("UPPER(LTRIM(RTRIM([PassportNumber])))", true);
+
                     b.Property<string>("PassportNumber")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -524,6 +787,11 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.HasKey("Id");
 
                     b.HasIndex("FBAId")
@@ -533,6 +801,14 @@ namespace RBBH.ConnectedParties.Migrations
                     b.HasIndex("JMBG")
                         .IsUnique()
                         .HasFilter("[IsActive] = 1 AND [JMBG] IS NOT NULL");
+
+                    b.HasIndex("NormalizedFbaId")
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1 AND [FBAId] IS NOT NULL");
+
+                    b.HasIndex("NormalizedPassport")
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1 AND [PassportNumber] IS NOT NULL");
 
                     b.HasIndex("PassportNumber")
                         .IsUnique()
@@ -587,6 +863,57 @@ namespace RBBH.ConnectedParties.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Capitals");
+                });
+
+            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Report.CapitalRevision", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ActorSubject")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("CoreCapital")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("EffectiveDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime>("RecordedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RecordedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("RegulatoryCapital")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<long>("Revision")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Revision"));
+
+                    b.Property<decimal>("SupplementaryCapital")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Revision")
+                        .IsUnique();
+
+                    b.HasIndex("EffectiveDate", "Revision");
+
+                    b.ToTable("CapitalRevisions", (string)null);
+
+                    b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Report.ClientLimit", b =>
@@ -677,6 +1004,10 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<string>("DataSnapshot")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("DataSource")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -751,6 +1082,14 @@ namespace RBBH.ConnectedParties.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -765,9 +1104,22 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("NormalizedName")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasComputedColumnSql("UPPER(LTRIM(RTRIM([Name])))", true);
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("NormalizedName")
                         .IsUnique();
 
                     b.ToTable("Roles");
@@ -831,6 +1183,12 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<bool>("Aktivan")
                         .HasColumnType("bit");
 
+                    b.Property<Guid?>("DefinitionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsSystemRequired")
+                        .HasColumnType("bit");
+
                     b.Property<string>("IzmijenioKorisnik")
                         .HasMaxLength(100)
                         .IsUnicode(false)
@@ -860,10 +1218,26 @@ namespace RBBH.ConnectedParties.Migrations
                         .IsUnicode(false)
                         .HasColumnType("varchar(100)");
 
+                    b.Property<string>("LanguageCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
                     b.Property<string>("Naziv")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("NormalizedCategory")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasComputedColumnSql("UPPER(LTRIM(RTRIM([Kategorija])))", true);
+
+                    b.Property<string>("NormalizedCode")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasComputedColumnSql("UPPER(LTRIM(RTRIM([Kod])))", true);
 
                     b.Property<string>("Opis")
                         .HasMaxLength(500)
@@ -872,9 +1246,35 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<int?>("RedoslijedPrikaza")
                         .HasColumnType("int");
 
+                    b.Property<string>("ResourceHelper")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("ResourceKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .UseCollation("Latin1_General_100_CI_AS");
+
+                    b.Property<string>("ResourceLabel")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("ResourcePlaceholder")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.HasKey("ID");
 
+                    b.HasIndex("DefinitionId");
+
                     b.HasIndex("Kategorija");
+
+                    b.HasIndex("NormalizedCategory", "NormalizedCode")
+                        .IsUnique();
+
+                    b.HasIndex("Kategorija", "LanguageCode", "ResourceKey")
+                        .IsUnique()
+                        .HasFilter("[LanguageCode] IS NOT NULL AND [ResourceKey] IS NOT NULL");
 
                     b.ToTable("CodeLists");
                 });
@@ -900,15 +1300,38 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsSystemRequired")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
                         .IsUnicode(false)
                         .HasColumnType("varchar(100)");
 
+                    b.Property<string>("NormalizedName")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasComputedColumnSql("UPPER(LTRIM(RTRIM([Name])))", true);
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("NormalizedName")
                         .IsUnique();
 
                     b.ToTable("CodeListDefinitions");
@@ -944,7 +1367,8 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<string>("KeycloakId")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_BIN2");
 
                     b.Property<bool>("KeycloakSubjectConfirmed")
                         .HasColumnType("bit");
@@ -964,6 +1388,18 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("NormalizedEmail")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasComputedColumnSql("UPPER(LTRIM(RTRIM([Email])))", true);
+
+                    b.Property<string>("NormalizedUsername")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasComputedColumnSql("UPPER(LTRIM(RTRIM([Username])))", true);
+
                     b.Property<string>("Username")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -977,10 +1413,35 @@ namespace RBBH.ConnectedParties.Migrations
                     b.HasIndex("KeycloakId")
                         .IsUnique();
 
+                    b.HasIndex("NormalizedEmail")
+                        .IsUnique();
+
+                    b.HasIndex("NormalizedUsername")
+                        .IsUnique();
+
                     b.HasIndex("Username")
                         .IsUnique();
 
                     b.ToTable("AppUsers");
+                });
+
+            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Authorization.RequestedRole", b =>
+                {
+                    b.HasOne("RBBH.ConnectedParties.DL.Entities.Authorization.RoleRequest", "Request")
+                        .WithMany("RequestedRoles")
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("RBBH.ConnectedParties.DL.Entities.Role.Role", "Role")
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Request");
+
+                    b.Navigation("Role");
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Limiti.Limit", b =>
@@ -992,6 +1453,17 @@ namespace RBBH.ConnectedParties.Migrations
                         .IsRequired();
 
                     b.Navigation("LegalEntity");
+                });
+
+            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Notifications.NotificationDelivery", b =>
+                {
+                    b.HasOne("RBBH.ConnectedParties.DL.Entities.Notifications.ApplicationNotification", "Notification")
+                        .WithOne("Delivery")
+                        .HasForeignKey("RBBH.ConnectedParties.DL.Entities.Notifications.NotificationDelivery", "NotificationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Notification");
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.RelatedPersons.FamilyMember", b =>
@@ -1060,7 +1532,33 @@ namespace RBBH.ConnectedParties.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("RBBH.ConnectedParties.DL.Entities.Users.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Sifarnici.CodeList", b =>
+                {
+                    b.HasOne("RBBH.ConnectedParties.DL.Entities.Sifarnici.CodeListDefinition", "Definition")
+                        .WithMany()
+                        .HasForeignKey("DefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Definition");
+                });
+
+            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Authorization.RoleRequest", b =>
+                {
+                    b.Navigation("RequestedRoles");
+                });
+
+            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Notifications.ApplicationNotification", b =>
+                {
+                    b.Navigation("Delivery");
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.RelatedPersons.FamilyMember", b =>

@@ -17,10 +17,16 @@ DotEnv.Load();
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
 builder.Services.AddApplicationForwardedHeaders(builder.Configuration, builder.Environment);
+builder.Services.AddAntiforgery(options =>
+{
+    options.HeaderName = "X-CSRF-TOKEN";
+    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
+});
 
 // Dependency Injection
 builder.Services.AddServicesExtensions(builder.Configuration, builder.Environment, builder.Host);
 builder.Services.AddHostedService<RBBH.ConnectedParties.Services.AutoLockHostedService>();
+builder.Services.AddHostedService<RBBH.ConnectedParties.Services.NotificationDeliveryWorker>();
 
 // Build app
 var app = builder.Build();
@@ -62,66 +68,29 @@ app.MapCustomHealthChecks();
 app.UseCors();
 //#endif
 
+// Include authentication/authorization short-circuits without logging identity data.
+app.UseMiddleware<RequestOutcomeLoggingMiddleware>();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.Use(async (context, next) =>
-{
-    await next();
-
-    if (context.Request.Path.StartsWithSegments("/api"))
-    {
-        Console.WriteLine(
-            $"[API] {context.Request.Method} {context.Request.Path} " +
-            $"=> {context.Response.StatusCode}; " +
-            $"Authenticated={context.User.Identity?.IsAuthenticated}; " +
-            $"User={context.User.FindFirst("preferred_username")?.Value ?? "(none)"}; " +
-            $"Subject={AuthenticatedActor.Subject(context.User) ?? "(none)"}; " +
-            $"ApplicationUserId={context.User.FindFirst(AuthenticatedActor.ApplicationUserIdClaim)?.Value ?? "(none)"}; " +
-            $"Roles=[{string.Join(", ", context.User.FindAll(System.Security.Claims.ClaimTypes.Role).Select(x => x.Value))}]; " +
-            $"Permissions=[{string.Join(", ", context.User.FindAll("permission").Select(x => x.Value))}]");
-    }
-});
-
 app.UseMiddleware<RBBH.ConnectedParties.Middlewares.PeriodLockMiddleware>();
 
-app.MapGet("/authentication/login", (string? returnUrl) =>
-    Results.Challenge(
-        new Microsoft.AspNetCore.Authentication.AuthenticationProperties
-        {
-            RedirectUri = SafeLocalReturnUrl(returnUrl)
-        },
-        ["KeycloakOidc"]));
-app.MapGet("/authentication/logout", () =>
-    Results.SignOut(
-        new Microsoft.AspNetCore.Authentication.AuthenticationProperties { RedirectUri = "/" },
-        [Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme, "KeycloakOidc"]));
-app.MapGet("/api/auth/profile", (HttpContext context) => Results.Ok(new
-{
-    userId = RBBH.ConnectedParties.Helpers.AuthenticatedActor.Subject(context.User),
-    fullName = context.User.FindFirst("name")?.Value ?? context.User.Identity?.Name,
-    username = context.User.FindFirst("preferred_username")?.Value,
-    email = context.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value,
-    applicationUserId = context.User.FindFirst(RBBH.ConnectedParties.Helpers.AuthenticatedActor.ApplicationUserIdClaim)?.Value,
-    roles = context.User.FindAll(System.Security.Claims.ClaimTypes.Role).Select(claim => claim.Value).Distinct(),
-    permissions = context.User.FindAll("permission").Select(claim => claim.Value).Distinct()
-})).RequireAuthorization();
+app.MapApplicationAuthentication();
 
 app.MapControllers();
 
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() && app.Configuration.GetValue<bool>("Database:ApplyMigrations"))
 {
     using var scope = app.Services.CreateScope();
 
     var db = scope.ServiceProvider
         .GetRequiredService<ConnectedPartiesDbContext>();
 
-    await db.Database.MigrateAsync();
+    if (db.Database.IsRelational())
+        await db.Database.MigrateAsync();
+    else
+        app.Logger.LogWarning("Development migration request ignored for the non-relational database provider.");
 }
 
 app.Run();
-
-static string SafeLocalReturnUrl(string? returnUrl) =>
-    !string.IsNullOrWhiteSpace(returnUrl) && returnUrl.StartsWith('/') && !returnUrl.StartsWith("//")
-        ? returnUrl
-        : "/app";

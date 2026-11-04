@@ -4,7 +4,7 @@ using RBI.ApiCore;
 namespace RBBH.RelatedPartiesRegister.Web.Api;
 
 public sealed record ApplicationUser(Guid Id, string Username, string FirstName, string LastName, string Email,
-    IReadOnlyList<string> Roles, IReadOnlyList<string> EffectivePermissions, bool IsActive);
+    IReadOnlyList<string> Roles, IReadOnlyList<string> EffectivePermissions, bool IsActive, bool IdentityConfirmed = false);
 public sealed record UsersPage(IReadOnlyList<ApplicationUser> Users, int Total, int Page, int PageSize);
 public sealed record ApplicationRole(Guid Id, string Name, int UserCount);
 public sealed record RolesCatalog(IReadOnlyList<ApplicationRole> Roles);
@@ -16,6 +16,8 @@ public interface IUsersApi
     Task<RolesCatalog> RolesAsync(CancellationToken token = default);
     Task<ApplicationUser> CreateAsync(CreateApplicationUser request, CancellationToken token = default);
     Task UpdateRolesAsync(Guid id, IReadOnlyList<Guid> roles, CancellationToken token = default);
+    /// <summary>Profile fields only (username, names, e-mail); the backend never accepts subject, active state or roles here.</summary>
+    Task UpdateProfileAsync(Guid id, string username, string firstName, string lastName, string email, CancellationToken token = default);
     Task SetActiveAsync(Guid id, bool active, CancellationToken token = default);
     Task DeleteAsync(Guid id, CancellationToken token = default);
 }
@@ -45,6 +47,8 @@ public sealed class UsersApi(IRbiApiTransport transport) : IUsersApi
     }
     public Task UpdateRolesAsync(Guid id, IReadOnlyList<Guid> roles, CancellationToken token = default) =>
         SendAsync(HttpMethod.Put, $"api/users/{id}/role", new { roleIds = roles }, token);
+    public Task UpdateProfileAsync(Guid id, string username, string firstName, string lastName, string email, CancellationToken token = default) =>
+        SendAsync(HttpMethod.Put, $"api/users/{id}", new { username, firstName, lastName, email }, token);
     public Task SetActiveAsync(Guid id, bool active, CancellationToken token = default) => active
         ? SendAsync(HttpMethod.Post, $"api/users/{id}/reactivate", new { }, token)
         : SendAsync(HttpMethod.Delete, $"api/users/{id}", null, token);
@@ -62,6 +66,7 @@ internal sealed class UnconfiguredUsersApi : IUsersApi
     public Task<RolesCatalog> RolesAsync(CancellationToken token = default) => Task.FromException<RolesCatalog>(new RegistryApiException());
     public Task<ApplicationUser> CreateAsync(CreateApplicationUser request, CancellationToken token = default) => Task.FromException<ApplicationUser>(new RegistryApiException());
     public Task UpdateRolesAsync(Guid id, IReadOnlyList<Guid> roles, CancellationToken token = default) => Task.FromException(new RegistryApiException());
+    public Task UpdateProfileAsync(Guid id, string username, string firstName, string lastName, string email, CancellationToken token = default) => Task.FromException(new RegistryApiException());
     public Task SetActiveAsync(Guid id, bool active, CancellationToken token = default) => Task.FromException(new RegistryApiException());
     public Task DeleteAsync(Guid id, CancellationToken token = default) => Task.FromException(new RegistryApiException());
 }

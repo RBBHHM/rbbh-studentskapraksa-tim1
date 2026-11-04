@@ -10,6 +10,14 @@ public sealed class MockEmailService(
 {
     private string AppBaseUrl => options.Value.AppBaseUrl;
 
+    public Task SendApplicationNotificationAsync(string to, string subject, string htmlBody, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        store.Add(new EmailLogEntry { To = to, Subject = subject, HtmlBody = htmlBody, Audience = "application" });
+        Log(to, subject);
+        return Task.CompletedTask;
+    }
+
     public Task SendUnlockRequestAsync(
         string adminEmail, string requestedBy, int year, int month, string reason)
     {
@@ -103,5 +111,5 @@ public sealed class MockEmailService(
     }
 
     private void Log(string to, string subject) =>
-        logger.LogInformation("[EMAIL DEMO] Prima: {To} | Naslov: {Subject}", to, subject);
+        logger.LogInformation("Email recorded in the isolated demo store.");
 }

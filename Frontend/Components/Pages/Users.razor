@@ -30,10 +30,10 @@ else
     else
     {
         <RbiTable AccessibleLabel="@T["users.title"]" Class="registry-table registry-users-table">
-            <thead><tr><th scope="col">@T["users.user"]</th><th scope="col">@T["users.email"]</th><th scope="col">@T["users.col-accesses"]</th><th scope="col">@T["users.permissions"]</th><th scope="col" class="registry-center">@T["users.status"]</th>@if (_canWrite) { <th scope="col" class="registry-center registry-actions-cell">@T["users.actions"]</th> }</tr></thead>
+            <thead><tr><th scope="col">@T["users.user"]</th><th scope="col">@T["users.email"]</th><th scope="col">@T["users.col-accesses"]</th><th scope="col" class="registry-center">@T["users.status"]</th>@if (_canWrite) { <th scope="col" class="registry-center registry-actions-cell">@T["users.actions"]</th> }</tr></thead>
             <tbody>@foreach (var user in _result.Users)
             {
-                <tr @key="user.Id"><td><strong>@user.FirstName @user.LastName</strong><br /><span class="registry-sub">@user.Username</span></td><td>@user.Email</td><td>@(user.IsActive && user.Roles.Count == 0 ? RoleLabel("gost") : string.Join(", ", user.Roles.Select(RoleLabel)))</td><td class="registry-permissions">@string.Join(", ", user.EffectivePermissions)</td><td class="registry-center"><Indicator Kind="@(user.IsActive ? "active" : "inactive")" Label="@T[user.IsActive ? "users.active" : "users.inactive"]" /></td>
+                <tr @key="user.Id"><td><strong>@user.FirstName @user.LastName</strong><br /><span class="registry-sub">@user.Username</span></td><td>@user.Email</td><td>@(user.IsActive && user.Roles.Count == 0 ? RoleLabel("gost") : string.Join(", ", user.Roles.Select(RoleLabel)))@if (!user.IdentityConfirmed) { <br /><span class="registry-sub" data-identity="unconfirmed">@T["users.identity-unconfirmed"]</span> }</td><td class="registry-center"><Indicator Kind="@(user.IsActive ? "active" : "inactive")" Label="@T[user.IsActive ? "users.active" : "users.inactive"]" /></td>
                 @if (_canWrite)
                 {
                     <td class="registry-actions-cell"><div class="registry-row-actions">
@@ -47,7 +47,7 @@ else
     }
     @if (TotalPages > 1)
     {
-        <p role="status">@T.Format("legal.page-summary", _page, TotalPages, _result.Total)</p>
+        <p class="page-total" role="status">@T.Format("legal.page-summary", _page, TotalPages, _result.Total)</p>
     <RbiPagination CurrentPage="_page" CurrentPageChanged="ChangePageAsync" TotalPages="TotalPages" AccessibleLabel="@T["users.pages"]" PreviousLabel="@T["common.back"]" PreviousAccessibleLabel="@T["legal.previous"]" NextLabel="@T["common.actions.continue"]" NextAccessibleLabel="@T["legal.next"]" PageAccessibleLabel="@(page => T.Format("legal.page", page))" />
     }
 }
@@ -75,8 +75,7 @@ else
     private bool _disposed, _authenticated, _canRead, _canWrite, _busy, _loading = true, _refreshing, _loaded, _delete;
     private string? _notice;
     private int TotalPages => Math.Max(1, (int)Math.Ceiling(_result.Total / 20d));
-    private string RoleLabel(string role) => role.ToLowerInvariant() is "fl" or "pl" or "kapital" or "limiti" or "admin" or "gost"
-        ? T["users.role." + role.ToLowerInvariant()] : role;
+    private string RoleLabel(string role) => T.Role(role);
     private bool IsSelf(ApplicationUser user) => _profile?.ApplicationUserId is { } id ? user.Id == id
         : !string.IsNullOrWhiteSpace(_profile?.Email) && string.Equals(_profile.Email.Trim(), user.Email.Trim(), StringComparison.OrdinalIgnoreCase);
     protected override Task OnInitializedAsync() => LoadAsync();
@@ -108,7 +107,12 @@ else
         if (_busy) return; _busy = true;
         try
         {
-            if (draft.Id is { } id) await Api.UpdateRolesAsync(id, draft.SelectedRoles, _token);
+            if (draft.Id is { } id)
+            {
+                var current = _result.Users.Single(user => user.Id == id);
+                if (draft.ProfileChanged) await Api.UpdateProfileAsync(id, draft.Username.Trim(), draft.FirstName.Trim(), draft.LastName.Trim(), draft.Email.Trim(), _token);
+                if (draft.RolesChanged(current)) await Api.UpdateRolesAsync(id, draft.SelectedRoles, _token);
+            }
             else await Api.CreateAsync(draft.ToRequest(), _token);
             _notice = draft.Id is null ? "toast.user-created" : "toast.user-role"; await LoadAsync(); _draft = null;
         }

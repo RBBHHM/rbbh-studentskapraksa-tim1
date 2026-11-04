@@ -15,7 +15,7 @@ public class RoleService(ConnectedPartiesDbContext dbContext) : IRoleService
     public async Task<Result<GetRolesResponseDTO>> GetAllRoles()
     {
         var roles = await _dbContext.Roles
-            .Where(r => r.IsActive && ApplicationAccessRoles.Assignable.Contains(r.Name))
+            .Where(r => r.IsActive && r.Name != ApplicationAccessRoles.Guest)
             .Select(r => new RoleDTO
             {
                 Id = r.Id,

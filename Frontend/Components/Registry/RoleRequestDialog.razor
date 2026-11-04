@@ -1,0 +1,84 @@
+@using RBI.DesignSystem.Components.Forms
+@implements IDisposable
+@inject IRoleRequestsApi Api
+@inject IProfileApi Profile
+
+@if (Open)
+{
+    <RbiDialog Open Class="registry-period-dialog" Title="@T[Purpose == "change" ? "roles.change-title" : "roles.request-title"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="OpenChangedAsync">
+        <DialogBody>
+            @if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
+            else if (_loadFailed) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T["roles.options-unavailable"]" /><RbiButton OnClick="LoadAsync">@T["state.retry"]</RbiButton> }
+            else
+            {
+                <form class="registry-period-form" @onsubmit="SubmitAsync" @onsubmit:preventDefault novalidate>
+                    <p class="registry-period-dialog__help">@T[Purpose == "change" ? "roles.change-help" : "roles.request-help"]</p>
+                    <fieldset class="registry-user-fieldset">
+                        <legend class="app-required-legend">@T["roles.choose"]</legend>
+                        <p>@T["users.multiple"]</p>
+                        @foreach (var choice in _choices)
+                        {
+                            <RbiCheckbox @key="choice.Id" @bind-Value="choice.Selected">@choice.Label</RbiCheckbox>
+                        }
+                    </fieldset>
+                    <label class="app-label" for="role-request-note">@T["roles.note"]</label>
+                    <textarea id="role-request-note" class="rbi-textarea" rows="4" maxlength="1000" @bind="_note" @bind:event="oninput" placeholder="@T["roles.note-placeholder"]"></textarea>
+                    @if (_error is not null) { <p class="app-error" role="alert">@T[_error]</p> }
+                    @if (_pending) { <p role="status" class="app-hint">@T["roles.pending-exists"]</p> }
+                    <div class="registry-toolbar">
+                        <RbiButton OnClick="() => OpenChangedAsync(false)" Variant="RbiButtonVariant.Secondary" Disabled="_busy">@T["common.cancel"]</RbiButton>
+                        <RbiButton Type="RbiButtonType.Submit" Disabled="@(_busy || !CanSubmit)">@T["roles.send"]</RbiButton>
+                    </div>
+                </form>
+            }
+        </DialogBody>
+    </RbiDialog>
+}
+@code {
+    /// <summary>"new" adds the chosen roles to the current ones; "change" replaces the explicit roles.</summary>
+    [Parameter] public string Purpose { get; set; } = "new";
+    [Parameter] public bool Open { get; set; }
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+    [Parameter] public EventCallback Submitted { get; set; }
+    private sealed class Choice { public Guid Id { get; init; } public string Name { get; init; } = ""; public string Label { get; init; } = ""; public bool Selected { get; set; } }
+    private readonly CancellationTokenSource _lifetime = new();
+    private List<Choice> _choices = [];
+    private string _note = "";
+    private string? _error;
+    private bool _loading, _loadFailed, _busy, _pending, _wasOpen;
+    private Guid _clientRequestId = Guid.NewGuid();
+    private bool CanSubmit => Purpose == "change" || _choices.Any(choice => choice.Selected);
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Open && !_wasOpen) { _wasOpen = true; _clientRequestId = Guid.NewGuid(); _note = ""; _error = null; await LoadAsync(); }
+        else if (!Open) _wasOpen = false;
+    }
+    private async Task LoadAsync()
+    {
+        _loading = true; _loadFailed = false;
+        try
+        {
+            var options = await Api.OptionsAsync(_lifetime.Token);
+            var current = (await Profile.GetAsync(_lifetime.Token)).Roles.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            _choices = options.Items.Select(role => new Choice { Id = role.Id, Name = role.Name, Label = role.DisplayName is { Length: > 0 } ? role.DisplayName : T.Role(role.Name), Selected = Purpose == "change" && current.Contains(role.Name) }).ToList();
+        }
+        catch (RegistryApiException) { _loadFailed = true; }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally { _loading = false; }
+    }
+    private async Task OpenChangedAsync(bool open) { if (!open && _busy) return; await OpenChanged.InvokeAsync(open); }
+    private async Task SubmitAsync()
+    {
+        if (_busy || !CanSubmit) return; _busy = true; _error = null; _pending = false;
+        try
+        {
+            await Api.SubmitAsync(_clientRequestId, Purpose, _choices.Where(choice => choice.Selected).Select(choice => choice.Id).ToArray(), string.IsNullOrWhiteSpace(_note) ? null : _note.Trim(), _lifetime.Token);
+            await Submitted.InvokeAsync(); await OpenChanged.InvokeAsync(false);
+        }
+        catch (RegistryApiException exception) when ((int?)exception.StatusCode == 409) { _pending = true; _clientRequestId = Guid.NewGuid(); }
+        catch (RegistryApiException exception) { _error = exception.MessageKey; }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally { _busy = false; }
+    }
+    public void Dispose() { _lifetime.Cancel(); _lifetime.Dispose(); }
+}

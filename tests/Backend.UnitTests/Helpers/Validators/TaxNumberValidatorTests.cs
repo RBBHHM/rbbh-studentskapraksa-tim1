@@ -47,6 +47,7 @@ namespace UnitTests.Helpers.Validators
         [InlineData("123")]
         [InlineData("12345678901234")]
         [InlineData("11111111111x1")]
+        [InlineData("١١١١١١١١١١١١١")]
         public void ValidateTaxNumber_WithInvalidFormat_ThrowsValidationException(string taxNumber)
         {
             // Act

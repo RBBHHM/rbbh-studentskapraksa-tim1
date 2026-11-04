@@ -31,7 +31,7 @@ for (const length of [9, 10, 490, 491, 500]) test(`native clarification boundary
   const confirm = dialog.getByRole("button", { name: "Potvrdi", exact: true }); if (length < 10) await expect(confirm).toBeDisabled(); else await confirm.click();
   const accepted = length >= 10 && length <= 490;
   if (accepted) await expect(dialog).toHaveCount(0);
-  else if (length >= 10) await expect(dialog.locator("div[role=alert]").first()).toContainText("Dopuna mora sadržavati od 10 do 490 znakova.");
+  else if (length >= 10) await expect(dialog.getByText(/Dopuna mora sadržavati od 10 do 490 znakova\./).first()).toBeVisible();
   const state = await (await request.get("/__fixtures/period-state", { headers })).json();
   expect(state.requests).toHaveLength(accepted ? 2 : 1);
   if (accepted) {
@@ -72,7 +72,7 @@ test("reject, status filter and cancel do not fabricate or duplicate mutations",
 });
 test("request paging reaches beyond the source first hundred", async ({ page, request }) => {
   await request.post("/__fixtures/period-pages", { headers }); await visit(page); await page.getByRole("button", { name: "Sljedeća stranica", exact: true }).click();
-  await expect(page.getByText("Stranica 2 od 2; ukupno zapisa: 101.", { exact: true })).toBeVisible(); await expect(page.getByRole("row").filter({ hasText: "requester100" })).toBeVisible();
+  await expect(page.getByText("Ukupno zapisa: 101", { exact: true })).toBeVisible(); await expect(page.getByRole("row").filter({ hasText: "requester100" })).toBeVisible();
 });
 test("outage never looks like an open period and retry recovers", async ({ page, request }) => {
   await request.post("/__fixtures/unavailable", { headers }); await visit(page); await expect(page.getByText("Servis trenutno nije dostupan. Pokušajte ponovo.", { exact: true }).first()).toBeVisible();
@@ -84,7 +84,7 @@ test("post-persist failure warns about uncertainty and refresh does not duplicat
   await page.getByRole("button", { name: "Dostavi traženu dopunu", exact: true }).click(); const dialog = page.getByRole("dialog");
   await dialog.getByRole("textbox").fill("Potpuna trazena dopuna"); await dialog.getByRole("button", { name: "Potvrdi", exact: true }).click();
   await expect(dialog.getByText(/Promjena je možda već snimljena/)).toBeVisible();
-  let state = await (await request.get("/__fixtures/period-state", { headers })).json(); expect(state.requests).toHaveLength(2); expect(state.audit).toEqual([]);
+  let state = await (await request.get("/__fixtures/period-state", { headers })).json(); expect(state.requests).toHaveLength(2); expect(state.audit.map((entry: { action: string }) => entry.action)).toEqual(["UNLOCK_REQUEST"]); // state, audit and notice commit atomically; only the response is lost
   expect((await (await request.get("/__fixtures/counts", { headers })).json()).mutations).toBe(1);
   await request.post("/__fixtures/period-audit-restored", { headers }); await dialog.getByRole("button", { name: "Odustani", exact: true }).click();
   await page.reload(); await interactive(page); await expect(page.getByRole("row").filter({ hasText: "[ODGOVOR] Potpuna trazena dopuna" })).toBeVisible();

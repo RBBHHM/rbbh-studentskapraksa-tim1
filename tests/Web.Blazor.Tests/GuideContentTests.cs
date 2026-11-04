@@ -20,7 +20,7 @@ public sealed class GuideContentTests
     public void ReportingReadRemainsAvailableWithoutMutationPermissionsAndAdminNeedsRealApplicationAccess()
     {
         Assert.Empty(GuideContent.Visible(new("u", null, null, null, [], [])));
-        Assert.Equal("reports", Assert.Single(GuideContent.Visible(new("u", null, null, null, ["gost"], []))).Id);
+        Assert.Equal(["reports", "general"], GuideContent.Visible(new("u", null, null, null, ["gost"], [])).Select(item => item.Id));
         Assert.DoesNotContain(GuideContent.Visible(new("u", null, null, null, ["admin"], [])), item => item.Administrator);
         Assert.Contains(GuideContent.Visible(new("u", null, null, null, ["admin"], ["ADMINISTRATION_MANAGE"])), item => item.Administrator);
     }
@@ -35,7 +35,7 @@ public sealed class GuideContentTests
         using var document = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory.FullName, "Frontend", "Localization", culture + ".json")));
         var resource = document.RootElement.GetProperty("translations");
         var all = GuideContent.Visible(new("u", null, null, null, ["admin"], ["FL_VIEW", "PL_VIEW", "LIMITI_VIEW", "KAPITAL_VIEW", "ADMINISTRATION_MANAGE"]));
-        Assert.Equal(5, all.Count);
+        Assert.Equal(6, all.Count);
         foreach (var section in all)
         {
             Assert.False(string.IsNullOrWhiteSpace(resource.GetProperty($"guide.{section.Id}.title").GetString()));

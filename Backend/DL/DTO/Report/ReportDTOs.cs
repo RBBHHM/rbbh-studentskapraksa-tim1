@@ -5,6 +5,8 @@ namespace RBBH.ConnectedParties.DL.DTO.Report;
 /// <summary>DTO za prikaz jednog izvještaja u listi.</summary>
 public class ReportDTO
 {
+    public string DataSource { get; set; } = "legacy.unspecified";
+    public bool IsAuthoritative => DataSource == "finance.monthlyhistory";
     public Guid Id { get; set; }
     public string ReportType { get; set; } = string.Empty;
     public DateTime ReportDate { get; set; }
@@ -65,4 +67,16 @@ public class UpdateCapitalDTO
     public decimal? CoreCapital { get; set; }
     public decimal? SupplementaryCapital { get; set; }
     public DateTime? CapitalDate { get; set; }
+}
+public sealed class CapitalHistoryDTO
+{
+    public Guid Id { get; set; }
+    public long Revision { get; set; }
+    public DateTime EffectiveDate { get; set; }
+    public decimal RegulatoryCapital { get; set; }
+    public decimal CoreCapital { get; set; }
+    public decimal SupplementaryCapital { get; set; }
+    public DateTime RecordedAt { get; set; }
+    public string RecordedBy { get; set; } = string.Empty;
+    public string Source { get; set; } = string.Empty;
 }

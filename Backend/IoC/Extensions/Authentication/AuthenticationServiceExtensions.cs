@@ -6,7 +6,6 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using RBBH.ConnectedParties.Helpers.Constants;
 using System.Security.Claims;
-using System.Diagnostics;
 
 namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
 {
@@ -29,6 +28,7 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
             var publicIssuer = configuration["KeycloakSettings:PublicIssuer"];
             var clientId = configuration["KeycloakSettings:ClientId"];
             var clientSecret = configuration["KeycloakSettings:ClientSecret"];
+            var audience = configuration["KeycloakSettings:Audience"]?.Trim();
 
             var enabled = configuration.GetValue<bool?>("KeycloakSettings:Enabled")
                 ?? !string.IsNullOrWhiteSpace(issuer);
@@ -53,6 +53,10 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
                 return services;
             }
 
+            if (!environment.IsDevelopment() && string.IsNullOrWhiteSpace(audience))
+                throw new InvalidOperationException(
+                    "KeycloakSettings:Audience must be configured outside Development.");
+
             // HTTP metadata is a local Development exception, not a string-prefix
             // exception for production or hosts such as localhost.attacker.test.
             var localDevelopmentMetadata = environment.IsDevelopment()
@@ -74,11 +78,37 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
                 })
                 .AddCookie(options =>
                 {
+                    options.ExpireTimeSpan = TimeSpan.FromHours(8);
+                    options.SlidingExpiration = false;
                     options.Cookie.HttpOnly = true;
                     options.Cookie.SameSite = SameSiteMode.Lax;
                     options.Cookie.SecurePolicy = environment.IsDevelopment()
                         ? CookieSecurePolicy.SameAsRequest
                         : CookieSecurePolicy.Always;
+                    options.Events.OnSigningIn = context =>
+                    {
+                        var now = (context.Options.TimeProvider ?? TimeProvider.System).GetUtcNow();
+                        var ceiling = now.AddHours(8);
+                        context.Properties.IssuedUtc = now;
+                        context.Properties.AllowRefresh = false;
+                        if (context.Properties.ExpiresUtc is null || context.Properties.ExpiresUtc > ceiling)
+                            context.Properties.ExpiresUtc = ceiling;
+                        return Task.CompletedTask;
+                    };
+                    options.Events.OnValidatePrincipal = async context =>
+                    {
+                        var now = (context.Options.TimeProvider ?? TimeProvider.System).GetUtcNow();
+                        var accessToken = context.Properties.GetTokenValue("access_token");
+                        var tokenValid = string.IsNullOrEmpty(accessToken) ||
+                            DateTimeOffset.TryParse(context.Properties.GetTokenValue("expires_at"), System.Globalization.CultureInfo.InvariantCulture,
+                                System.Globalization.DateTimeStyles.RoundtripKind, out var expires) && now < expires;
+                        if (!tokenValid || context.Properties.IssuedUtc is not { } issued || now >= issued.AddHours(8) || issued > now.AddMinutes(1))
+                        {
+                            context.RejectPrincipal();
+                            await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                        }
+                        context.ShouldRenew = false;
+                    };
                     options.Events.OnRedirectToLogin = context =>
                     {
                         context.Response.StatusCode = StatusCodes.Status401Unauthorized;
@@ -94,13 +124,15 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
                     options.Authority = issuer;
                     options.RequireHttpsMetadata = !localDevelopmentMetadata;
 
-                    // Local Development only: do not validate the token audience.
+                    // Only unconfigured Development keeps the local audience exception.
+                    // API access-token audience is separate from the OIDC client ID.
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
                         ValidateIssuer = true,
                         ValidIssuers = validIssuers,
 
-                        ValidateAudience = false,
+                        ValidateAudience = !string.IsNullOrWhiteSpace(audience),
+                        ValidAudience = audience,
 
                         ValidateIssuerSigningKey = true,
                         RequireSignedTokens = true,
@@ -113,81 +145,23 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
                     options.RefreshInterval = TimeSpan.FromSeconds(10);
 
                     options.Events = new JwtBearerEvents
-{
-    OnMessageReceived = context =>
-    {
-        var hasBearer = context.Request.Headers.Authorization
-            .ToString()
-            .StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase);
+                    {
+                        OnAuthenticationFailed = context =>
+                        {
+                            // Exception messages can contain token/claim data. Log only
+                            // the failure category and a server-controlled trace identifier.
+                            var logger = context.HttpContext.RequestServices
+                                .GetRequiredService<ILoggerFactory>().CreateLogger("AuthenticationFailure");
+                            logger.LogWarning("Bearer authentication failed. FailureType {FailureType}. TraceId {TraceId}",
+                                context.Exception.GetType().Name, context.HttpContext.TraceIdentifier);
 
-        Console.WriteLine(
-            $"[JWT] Request: {context.Request.Method} {context.Request.Path}; " +
-            $"HasBearer={hasBearer}");
-
-        Console.WriteLine(
-            $"[JWT] Request: {context.Request.Method} {context.Request.Path}; " +
-            $"HasBearer={hasBearer}");
-
-        return Task.CompletedTask;
-    },
-
-    OnTokenValidated = context =>
-    {
-        var subject = context.Principal?.FindFirst("sub")?.Value;
-        var username = context.Principal?.FindFirst("preferred_username")?.Value;
-        var tokenAudiences = context.Principal?
-            .FindAll("aud")
-            .Select(claim => claim.Value);
-
-        Console.WriteLine(
-            $"[JWT] VALID. Path={context.Request.Path}; " +
-            $"sub={subject}; username={username}; " +
-            $"aud=[{string.Join(", ", tokenAudiences ?? [])}]");
-
-        Console.WriteLine(
-            $"[JWT] VALID. Path={context.Request.Path}; " +
-            $"sub={subject}; username={username}; " +
-            $"aud=[{string.Join(", ", tokenAudiences ?? [])}]");
-
-        return Task.CompletedTask;
-    },
-
-    OnAuthenticationFailed = context =>
-    {
-        Console.WriteLine(
-            $"[JWT] FAILED. Path={context.Request.Path}; " +
-            $"Exception={context.Exception.GetType().Name}; " +
-            $"Message={context.Exception.Message}");
-
-        Console.WriteLine(
-            $"[JWT] FAILED. Path={context.Request.Path}; " +
-            $"Exception={context.Exception.GetType().Name}; " +
-            $"Message={context.Exception.Message}");
-
-        if (context.Exception is SecurityTokenExpiredException)
-            context.Response.Headers.Append("Token-Expired", "true");
-
-        if (context.Exception is SecurityTokenInvalidSigningKeyException)
-            context.Response.Headers.Append("SigningKey-Invalid", "true");
-
-        return Task.CompletedTask;
-    },
-
-    OnChallenge = context =>
-    {
-        Console.WriteLine(
-            $"[JWT] CHALLENGE. Path={context.Request.Path}; " +
-            $"Error={context.Error ?? "(null)"}; " +
-            $"Description={context.ErrorDescription ?? "(null)"}");
-
-        Console.WriteLine(
-            $"[JWT] CHALLENGE. Path={context.Request.Path}; " +
-            $"Error={context.Error ?? "(null)"}; " +
-            $"Description={context.ErrorDescription ?? "(null)"}");
-
-        return Task.CompletedTask;
-    }
-};
+                            if (context.Exception is SecurityTokenExpiredException)
+                                context.Response.Headers.Append("Token-Expired", "true");
+                            if (context.Exception is SecurityTokenInvalidSigningKeyException)
+                                context.Response.Headers.Append("SigningKey-Invalid", "true");
+                            return Task.CompletedTask;
+                        }
+                    };
 
                 })
                 .AddOpenIdConnect("KeycloakOidc", options =>
@@ -225,6 +199,9 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
         {
             services.AddAuthorization(options =>
             {
+                options.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+                    .RequireAuthenticatedUser().RequireRole(ApplicationAccessRoles.Guest).Build();
+                options.AddPolicy(ApplicationPolicies.ApplicationAccess, options.DefaultPolicy);
                 AddPermissionPolicy(options, ApplicationPolicies.PhysicalPersonsRead, ApplicationPermissions.PhysicalPersonsView);
                 AddWritePolicy(options, ApplicationPolicies.PhysicalPersonsWrite, ApplicationPermissions.PhysicalPersonsCreate, ApplicationPermissions.PhysicalPersonsEdit, ApplicationPermissions.PhysicalPersonsDelete);
                 AddPermissionPolicy(options, ApplicationPolicies.PhysicalPersonsCreate, ApplicationPermissions.PhysicalPersonsCreate);
@@ -241,8 +218,8 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
                 AddPermissionPolicy(options, ApplicationPolicies.CapitalEdit, ApplicationPermissions.CapitalEdit);
                 AddPermissionPolicy(options, ApplicationPolicies.CapitalDelete, ApplicationPermissions.CapitalDelete);
                 // Reporting exception approved for this application: reading/downloading
-                // is open to every known application user (Guest baseline is granted only
-                // to an active AppUser, never to an unknown identity); generating persists
+                // is open to effective Guest, including unprovisioned authenticated identities;
+                // inactive identities receive no Guest baseline. Generating persists
                 // a snapshot and requires the database-owned Kapital/Admin create permission.
                 options.AddPolicy(ApplicationPolicies.ReportsRead, policy => policy
                     .RequireAuthenticatedUser()

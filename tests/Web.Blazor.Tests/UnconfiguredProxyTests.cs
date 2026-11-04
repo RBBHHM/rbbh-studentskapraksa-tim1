@@ -23,7 +23,9 @@ public sealed class UnconfiguredProxyTests
         await Assert.ThrowsAsync<RegistryApiException>(() => provider.GetRequiredService<ILimitsApi>().ListAsync());
         await Assert.ThrowsAsync<RegistryApiException>(() => provider.GetRequiredService<ICapitalApi>().GetAsync());
         await Assert.ThrowsAsync<RegistryApiException>(() => provider.GetRequiredService<IReportsApi>().ListAsync(ReportKind.Daily));
-        await Assert.ThrowsAsync<RegistryApiException>(() => provider.GetRequiredService<INotificationsApi>().GetAsync());
+        await Assert.ThrowsAsync<RegistryApiException>(() => provider.GetRequiredService<INotificationsApi>().InboxAsync());
+        await Assert.ThrowsAsync<RegistryApiException>(() => provider.GetRequiredService<ILocalizationApi>().LanguagesAsync());
+        await Assert.ThrowsAsync<RegistryApiException>(() => provider.GetRequiredService<IRoleRequestsApi>().OptionsAsync());
         await Assert.ThrowsAsync<RegistryApiException>(() => provider.GetRequiredService<IAuditApi>().GetAsync());
         await Assert.ThrowsAsync<RegistryApiException>(() => provider.GetRequiredService<IUsersApi>().ListAsync());
         await Assert.ThrowsAsync<RegistryApiException>(() => provider.GetRequiredService<IPeriodApi>().CurrentAsync());

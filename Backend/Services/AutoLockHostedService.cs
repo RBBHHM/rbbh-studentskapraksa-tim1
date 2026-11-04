@@ -1,6 +1,4 @@
-using System.Text.Json;
-using RBBH.ConnectedParties.BL.ServiceInterfaces;
-using RBBH.ConnectedParties.DL.Entities.PeriodLock;
+using RBBH.ConnectedParties.BL.Services;
 
 namespace RBBH.ConnectedParties.Services;
 
@@ -30,123 +28,29 @@ public class AutoLockHostedService : BackgroundService
                 delay
             );
 
-            await Task.Delay(delay, stoppingToken);
+            try { await Task.Delay(delay, stoppingToken); }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
 
             if (stoppingToken.IsCancellationRequested)
                 break;
 
-            await CheckAndLockCurrentPeriodAsync();
+            try { await CheckAndLockCurrentPeriodAsync(stoppingToken); BackgroundOperationsMetrics.RecordSchedulerSuccess(); }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
+            catch (Exception error)
+            {
+                BackgroundOperationsMetrics.RecordSchedulerFailure();
+                _logger.LogError("AutoLock check failed. FailureType {FailureType}", error.GetType().Name);
+            }
         }
     }
 
-    private async Task CheckAndLockCurrentPeriodAsync()
+    private async Task CheckAndLockCurrentPeriodAsync(CancellationToken ct)
     {
         var today = DateTime.UtcNow.Date;
-        var year = today.Year;
-        var month = today.Month;
-
-        if (!IsLastWorkingDayOfMonth(today))
-        {
-            _logger.LogInformation(
-                "AutoLock: Today is not the last working day of the month. Date={Date}",
-                today.ToString("yyyy-MM-dd")
-            );
-
-            return;
-        }
-
-        using var scope = _scopeFactory.CreateScope();
-        var periodLockRepository = scope.ServiceProvider.GetRequiredService<IPeriodLockRepository>();
-
-        var currentPeriod = await periodLockRepository.GetCurrentAsync();
-
-        if (currentPeriod != null && currentPeriod.IsLocked)
-        {
-            _logger.LogInformation(
-                "AutoLock: Period {Month}/{Year} is already locked.",
-                month,
-                year
-            );
-
-            return;
-        }
-
-        if (currentPeriod == null)
-        {
-            var newPeriodLock = new PeriodLock
-            {
-                Year = year,
-                Month = month,
-                IsLocked = true,
-                LockedBy = "system",
-                LockedAt = DateTime.UtcNow,
-                CreatedBy = "system",
-                CreatedAt = DateTime.UtcNow,
-                IsActive = true
-            };
-
-            await periodLockRepository.CreateAsync(newPeriodLock);
-        }
-        else
-        {
-            currentPeriod.IsLocked = true;
-            currentPeriod.LockedBy = "system";
-            currentPeriod.LockedAt = DateTime.UtcNow;
-            currentPeriod.UnlockedBy = null;
-            currentPeriod.UnlockedAt = null;
-            currentPeriod.ModifiedBy = "system";
-            currentPeriod.ModifiedAt = DateTime.UtcNow;
-
-            await periodLockRepository.UpdateAsync(currentPeriod);
-        }
-
-        _logger.LogInformation(
-            "AutoLock: Period {Month}/{Year} automatski zaključan.",
-            month,
-            year
-        );
-
-        var auditService = scope.ServiceProvider.GetRequiredService<IAuditService>();
-        await auditService.LogAsync(new AuditEntry
-        {
-            TableName = "PeriodLock",
-            RecordId = $"{year}-{month:D2}",
-            Action = "PERIOD_LOCK",
-            NewValues = JsonSerializer.Serialize(new { year, month, lockedBy = "system" }),
-            UserId = "system",
-            Username = "system"
-        });
-
-        await NotifyAllUsersAsync(scope.ServiceProvider, year, month);
-    }
-
-    private async Task NotifyAllUsersAsync(IServiceProvider services, int year, int month)
-    {
-        try
-        {
-            var emailService = services.GetRequiredService<IEmailService>();
-            var appUserService = services.GetRequiredService<IAppUserService>();
-
-            var usersResult = await appUserService.GetUsersAsync(1, 500, null, null);
-            if (!usersResult.IsSuccessful)
-                return;
-
-            var emails = usersResult.Value.Users
-                .Where(u => u.IsActive && !string.IsNullOrWhiteSpace(u.Email))
-                .Select(u => u.Email)
-                .ToList();
-
-            if (emails.Count == 0)
-                return;
-
-            await emailService.SendPeriodLockedBroadcastAsync(emails, "system", year, month);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex,
-                "AutoLock: slanje broadcast obavijesti za period {Year}-{Month} nije uspjelo.",
-                year, month);
-        }
+        if (!IsLastWorkingDayOfMonth(today)) return;
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        await scope.ServiceProvider.GetRequiredService<PeriodWorkflow>().SetSystemLock(today.Year, today.Month, ct);
+        _logger.LogInformation("AutoLock check completed for {Year}-{Month}", today.Year, today.Month);
     }
 
     private static TimeSpan GetDelayUntilNextEightOClock()

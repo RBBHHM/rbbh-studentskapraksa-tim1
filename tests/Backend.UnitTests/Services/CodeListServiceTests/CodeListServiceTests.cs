@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using FluentAssertions;
 using RBBH.ConnectedParties.BL.Services;
 using RBBH.ConnectedParties.DL.DTO.Sifarnici;
@@ -16,6 +17,40 @@ namespace UnitTests.Services.CodeListServiceTests
     /// </summary>
     public class CodeListServiceTests
     {
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task NormalizedKeyCannotBeDuplicatedEvenWhenExistingValueIsInactive(bool active)
+        {
+            using var db = InMemoryContextFactory.Create();
+            db.CodeLists.Add(NewEntity("VL", "Original", active));
+            await db.SaveChangesAsync();
+            var result = await new CodeListService(db).Create(new CreateCodeListDTO
+            {
+                Kategorija = " vrstalimita ", Kod = " vl ", Naziv = "Duplicate"
+            }, "fixture");
+            Assert.True(result.IsValidationError);
+            Assert.Single(db.CodeLists.IgnoreQueryFilters());
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task UpdatingActiveFlagCannotBypassTheDeleteReferenceGuard(bool referenced)
+        {
+            using var db = InMemoryContextFactory.Create();
+            var value = NewEntity("VL", "Original");
+            db.CodeLists.Add(value);
+            if (referenced) db.Limiti.Add(new Limit { TipLimita = "VL", LegalEntityId = Guid.NewGuid(), CreatedBy = "fixture" });
+            await db.SaveChangesAsync();
+            var result = await new CodeListService(db).Update(value.ID,
+                new UpdateCodeListDTO { Naziv = "Changed", Aktivan = false }, "fixture");
+            Assert.Equal(referenced, result.IsValidationError);
+            Assert.Equal(referenced, value.Aktivan);
+            Assert.Equal(referenced ? "Original" : "Changed", value.Naziv);
+            if (referenced) Assert.Null(value.IzmijenjenDatum);
+        }
+
         private const string Kategorija = "VrstaLimita";
 
         private static CodeList NewEntity(string kod, string naziv, bool aktivan = true, int? redoslijed = null) => new()

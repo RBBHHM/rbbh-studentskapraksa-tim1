@@ -13,6 +13,8 @@ public interface IRelatedPersonService
 
     /// <summary>Vraća listu svih povezanih fizičkih lica (skraćeni prikaz).</summary>
     Task<Result<List<RelatedPersonSummaryDTO>>> GetAll();
+    Task<BL.Services.ReferencePage<RelatedPersonSummaryDTO>> Page(string? search, int page, int pageSize, CancellationToken ct);
+    Task<Result<List<RelatedPersonResponseDTO>>> ExportData(CancellationToken ct);
 
     /// <summary>Vraća listu svih povezanih fizičkih lica s punim podacima (za export).</summary>
     Task<Result<List<RelatedPersonResponseDTO>>> GetAllDetailed();

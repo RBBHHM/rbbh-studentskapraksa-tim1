@@ -114,10 +114,10 @@ namespace RBBH.ConnectedParties.API.Controllers.BaseController
         {
             return ex switch
             {
-                ResultException.ValidationException => "Validation Exception",
-                ResultException.NotFoundException => "Not Found Exception",
-                ResultException.InternalException => "Internal Server Exception",
-                _ => "Internal Server Exception",
+                ResultException.ValidationException => BackendMessages.Message("errors.result.validation.title"),
+                ResultException.NotFoundException => BackendMessages.Message("errors.result.not.found.title"),
+                ResultException.InternalException => BackendMessages.Message("errors.result.internal.title"),
+                _ => BackendMessages.Message("errors.result.internal.title"),
             };
         }
     }

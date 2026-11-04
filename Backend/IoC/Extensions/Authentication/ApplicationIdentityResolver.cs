@@ -13,18 +13,20 @@ public sealed class ApplicationIdentityResolver(ConnectedPartiesDbContext db, IC
     public async Task<ApplicationIdentity> ResolveAsync(ClaimsPrincipal principal)
     {
         if (principal.Identity?.IsAuthenticated != true) return new(null, true);
-        var subject = RBBH.ConnectedParties.Helpers.AuthenticatedActor.Subject(principal)?.Trim();
+        var subject = RBBH.ConnectedParties.Helpers.AuthenticatedActor.Subject(principal);
+        if (subject is not null && (string.IsNullOrWhiteSpace(subject) || subject.Length > 100 || subject != subject.Trim())) return new(null, true);
         if (!string.IsNullOrEmpty(subject))
         {
             var confirmed = await db.AppUsers.IgnoreQueryFilters().SingleOrDefaultAsync(user =>
                 user.KeycloakSubjectConfirmed && user.KeycloakId == subject);
-            if (confirmed is not null) return new(confirmed, !confirmed.IsActive);
+            if (confirmed is not null) return string.Equals(confirmed.KeycloakId, subject, StringComparison.Ordinal)
+                ? new(confirmed, !confirmed.IsActive) : new(null, true);
             // A historical disabled identifier is a deny marker, never proof of a role grant.
             if (await db.AppUsers.IgnoreQueryFilters().AnyAsync(user => !user.IsActive && user.KeycloakId == subject))
                 return new(null, true);
         }
 
-        var email = principal.FindFirst(ClaimTypes.Email)?.Value?.Trim().ToLowerInvariant();
+        var email = (principal.FindFirst(ClaimTypes.Email)?.Value ?? principal.FindFirst("email")?.Value)?.Trim().ToLowerInvariant();
         if (string.IsNullOrEmpty(email)) return new(null, false); // Virtual Guest reads only; mutations require actor email.
         var matches = await db.AppUsers.IgnoreQueryFilters()
             .Where(user => user.Email.Trim().ToLower() == email).Take(2).ToListAsync();
@@ -58,7 +60,7 @@ public sealed class ApplicationIdentityResolver(ConnectedPartiesDbContext db, IC
             row.KeycloakSubjectConfirmed = true;
             row.KeycloakSubjectLinkedAt = DateTime.UtcNow;
             row.ModifiedAt = DateTime.UtcNow;
-            row.ModifiedBy = principal.FindFirst(ClaimTypes.Email)!.Value;
+            row.ModifiedBy = Helpers.AuthenticatedActor.Username(principal);
             await db.SaveChangesAsync();
             await new AuditService(db).LogAsync(new()
             {

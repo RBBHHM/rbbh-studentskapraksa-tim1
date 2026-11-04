@@ -40,16 +40,16 @@ else
     else
     {
         <RbiTable AccessibleLabel="@T["legal.title"]" Class="registry-table registry-persons-table">
-                        <thead><tr><th scope="col">@T["legal.name"]</th><th scope="col" class="registry-center">@T["person.residency"]</th><th scope="col">@T["legal.tax"]</th><th scope="col">@T["legal.registration"]</th><th scope="col">@T["person.fba"]</th><th scope="col">@T["person.basis"]</th><th scope="col" class="registry-center">@T["common.status"]</th>@if (_canEdit || _canDelete) { <th scope="col" class="registry-center registry-actions-cell">@T["common.actions"]</th> }</tr></thead>
+                        <thead><tr><th scope="col">@T["legal.name"]</th><th scope="col" class="registry-center">@T["person.residency"]</th><th scope="col">@T["legal.tax"]</th><th scope="col">@T["legal.registration"]</th><th scope="col">@T["person.fba"]</th><th scope="col">@T["legal.gcc"]</th><th scope="col" class="registry-center">@T["legal.large-exposure"]</th><th scope="col">@T["person.basis"]</th><th scope="col" class="registry-center">@T["common.status"]</th>@if (_canEdit || _canDelete) { <th scope="col" class="registry-center registry-actions-cell">@T["common.actions"]</th> }</tr></thead>
             <tbody>@foreach (var entity in Filtered)
             {
-                <tr @key="entity.Id"><td>@entity.Name</td><td class="registry-center"><Indicator Kind="@(entity.IsResident ? "yes" : "no")" Label="@T[entity.IsResident ? "person.resident" : "person.nonresident"]" /></td><td>@Dash(entity.TaxNumber)</td><td>@Dash(entity.MaticniBroj)</td><td>@Dash(entity.FbaId)</td><td>@Dash(entity.BasisOfConnection)</td><td class="registry-center"><Indicator Kind="@entity.Status.ToLowerInvariant()" Label="@T[$"status.{entity.Status.ToLowerInvariant()}"]" /></td>
+                <tr @key="entity.Id"><td>@entity.Name</td><td class="registry-center"><Indicator Kind="@(entity.IsResident ? "yes" : "no")" Label="@T[entity.IsResident ? "person.resident" : "person.nonresident"]" /></td><td>@Dash(entity.TaxNumber)</td><td>@Dash(entity.MaticniBroj)</td><td>@Dash(entity.FbaId)</td><td>@Dash(entity.GccNumber is { Length: > 0 } ? $"{entity.GccNumber} — {entity.GccName}" : null)</td><td class="registry-center">@(entity.IsLargeExposure is { } large ? (large ? T["common.yes"] : T["common.no"]) : "—")</td><td>@Dash(entity.BasisOfConnection)</td><td class="registry-center"><Indicator Kind="@entity.Status.ToLowerInvariant()" Label="@T[$"status.{entity.Status.ToLowerInvariant()}"]" /></td>
                     @if (_canEdit || _canDelete)
                     {
                         <td class="registry-actions-cell"><div class="registry-row-actions">
                             @if (_canEdit)
                             {
-                                @if (!string.Equals(entity.Status, "Verified", StringComparison.OrdinalIgnoreCase)) { <RbiButton Disabled="@(_busy || _openingEditor || _refreshing || _periodLocked)" OnClick="() => Confirm(entity, false)" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["common.verify"]" title="@T["common.verify"]"><RbiIcon Name="RbiIconName.CheckCircle2" /></RbiButton> }
+                                @if (!string.Equals(entity.Status, "Verified", StringComparison.OrdinalIgnoreCase)) { <span title="@T[Own(entity.CreatedBy) ? "common.verify-own" : "common.verify"]"><RbiButton Disabled="@(_busy || _openingEditor || _refreshing || _periodLocked || Own(entity.CreatedBy))" OnClick="() => Confirm(entity, false)" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["common.verify"]"><RbiIcon Name="RbiIconName.CheckCircle2" /></RbiButton></span> }
                                 <RbiButton Disabled="@(_busy || _refreshing || _periodLocked)" Loading="_openingEditor" LoadingLabel="@T["state.loading"]" OnClick="() => Edit(entity)" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["common.edit"]" title="@T["common.edit"]"><RbiIcon Name="RbiIconName.Pencil" /></RbiButton>
                             }
                             @if (_canDelete) { <RbiButton Disabled="@(_busy || _openingEditor || _refreshing || _periodLocked)" OnClick="() => Confirm(entity, true)" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["common.deactivate"]" title="@T["common.deactivate"]" Class="registry-danger-icon"><RbiIcon Name="RbiIconName.Trash2" /></RbiButton> }
@@ -61,7 +61,7 @@ else
     }
     @if (TotalPages > 1)
     {
-        <p role="status">@T.Format("legal.page-summary", _page, TotalPages, _total)</p>
+        <p class="page-total" role="status">@T.Format("legal.page-summary", _page, TotalPages, _total)</p>
     <RbiPagination CurrentPage="_page" CurrentPageChanged="ChangePageAsync" TotalPages="TotalPages" AccessibleLabel="@T["legal.pages"]"
                    PreviousLabel="@T["common.back"]" PreviousAccessibleLabel="@T["legal.previous"]" NextLabel="@T["common.actions.continue"]" NextAccessibleLabel="@T["legal.next"]" PageAccessibleLabel="@(page => T.Format("legal.page", page))" />
     }
@@ -117,6 +117,9 @@ else
     private bool _loaded, _refreshing, _openingEditor;
     private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
     private IEnumerable<LegalEntity> Filtered => _entities.Where(entity => entity.Matches(_search));
+    private string? _self;
+    // Four-eyes: the person who entered a record cannot verify it (the backend remains authoritative).
+    private bool Own(string? createdBy) => !string.IsNullOrWhiteSpace(_self) && string.Equals(createdBy, _self, StringComparison.OrdinalIgnoreCase);
     protected override Task OnInitializedAsync() => LoadAsync();
     private async Task LoadAsync()
     {
@@ -126,7 +129,7 @@ else
         {
             _authenticated = (await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true;
             if (!_authenticated) return;
-            var profile = await Profile.GetAsync(_token);
+            var profile = await Profile.GetAsync(_token); _self = profile.Username;
             _canRead = profile.Permissions.Contains("PL_VIEW"); _canCreate = profile.Permissions.Contains("PL_CREATE");
             _canEdit = profile.Permissions.Contains("PL_EDIT"); _canDelete = profile.Permissions.Contains("PL_DELETE");
             if (!_canRead) return;

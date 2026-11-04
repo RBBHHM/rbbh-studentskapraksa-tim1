@@ -14,6 +14,7 @@ public class PeriodLock
     public int Year { get; set; }
     public int Month { get; set; }
     public bool IsLocked { get; set; }
+    [Timestamp] public byte[]? Version { get; set; }
 
     /// <summary>
     /// Historical migration boundary only. Runtime reads/writes the null global row;

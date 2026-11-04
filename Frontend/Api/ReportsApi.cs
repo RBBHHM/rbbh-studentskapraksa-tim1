@@ -5,7 +5,7 @@ namespace RBBH.RelatedPartiesRegister.Web.Api;
 
 public enum ReportKind { Daily, Monthly }
 public sealed record ReportEntry(Guid Id, string ReportType, DateTime ReportDate, int TotalClients,
-    int ClientsWithBreachedLimit, decimal TotalExposure, string CreatedBy, DateTime CreatedAt);
+    int ClientsWithBreachedLimit, decimal TotalExposure, string CreatedBy, DateTime CreatedAt, string? DataSource = null, bool IsAuthoritative = false);
 public sealed record ReportArchive(IReadOnlyList<ReportEntry> Items, int Total, int Page, int PageSize);
 public interface IReportsApi
 {

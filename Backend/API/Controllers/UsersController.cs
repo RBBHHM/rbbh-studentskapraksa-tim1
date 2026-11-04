@@ -54,6 +54,13 @@ public class UsersController(IAppUserService appUserService)
         return HTTPExceptiontFromResult(result);
     }
 
+    [HttpPut("{userId}")]
+    [Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
+    public async Task<ActionResult<object>> UpdateProfile(string userId, UpdateUserProfileDTO dto) =>
+        MutationResponse(await _appUserService.UpdateProfileAsync(userId, dto,
+            RBBH.ConnectedParties.Helpers.AuthenticatedActor.Capture(User), RemoteIp, HttpContext.RequestAborted),
+            BackendMessages.Message("messages.users.profile.updated"));
+
     /// <summary>Atomically replaces the user's functional application accesses.</summary>
     [HttpPost("{userId}/roles")]
     [HttpPut("{userId}/role")]
@@ -64,7 +71,7 @@ public class UsersController(IAppUserService appUserService)
         [FromRoute] string userId, [FromBody] AssignRoleRequestDTO request) =>
         MutationResponse(await _appUserService.ReplaceRolesAsync(userId, request.EffectiveRoleIds,
             RBBH.ConnectedParties.Helpers.AuthenticatedActor.Capture(User), RemoteIp, HttpContext.RequestAborted),
-            "Role korisnika su uspješno ažurirane.");
+            BackendMessages.Message("messages.users.roles.updated"));
 
     /// <summary>Soft-deactivates the application privilege mapping.</summary>
     [HttpDelete("{userId}")]
@@ -75,7 +82,7 @@ public class UsersController(IAppUserService appUserService)
     public async Task<ActionResult<object>> DeactivateUser([FromRoute] string userId) =>
         MutationResponse(await _appUserService.DeactivateAsync(userId,
             RBBH.ConnectedParties.Helpers.AuthenticatedActor.Capture(User), RemoteIp, HttpContext.RequestAborted),
-            "Korisnik uspješno deaktiviran.");
+            BackendMessages.Message("messages.users.deactivated"));
 
     /// <summary>Reactivates a previously deactivated user.</summary>
     [HttpPost("{userId}/reactivate")]
@@ -84,7 +91,7 @@ public class UsersController(IAppUserService appUserService)
     public async Task<ActionResult<object>> ReactivateUser([FromRoute] string userId) =>
         MutationResponse(await _appUserService.ReactivateAsync(userId,
             RBBH.ConnectedParties.Helpers.AuthenticatedActor.Capture(User), RemoteIp, HttpContext.RequestAborted),
-            "Korisnik uspješno reaktiviran.");
+            BackendMessages.Message("messages.users.reactivated"));
 
     /// <summary>Permanently removes a user after explicit confirmation in the UI.</summary>
     [HttpDelete("{userId}/permanent")]
@@ -92,42 +99,42 @@ public class UsersController(IAppUserService appUserService)
     public async Task<ActionResult<object>> DeleteUser([FromRoute] string userId) =>
         MutationResponse(await _appUserService.DeleteAsync(userId,
             RBBH.ConnectedParties.Helpers.AuthenticatedActor.Capture(User), RemoteIp, HttpContext.RequestAborted),
-            "Korisnik je obrisan.");
+            BackendMessages.Message("messages.users.deleted"));
 
     private string? RemoteIp => HttpContext.Connection.RemoteIpAddress?.ToString();
 
     private ActionResult<object> MutationResponse(UserMutationResult result, string message) => result.Status switch
     {
         UserMutationStatus.Success => result.Roles is { } roles ? Ok(new { message, roles }) : Ok(new { message }),
-        UserMutationStatus.NotFound => NotFound(new ProblemDetails { Title = "Korisnik nije pronađen" }),
+        UserMutationStatus.NotFound => NotFound(new ProblemDetails { Title = BackendMessages.Message("errors.users.not.found.title") }),
         UserMutationStatus.InvalidRoles => BadRequest(new ProblemDetails
         {
-            Title = "Neispravna rola",
-            Detail = "Jedna ili više odabranih aplikacijskih rola nije ispravna."
+            Title = BackendMessages.Message("errors.users.invalid.role.title"),
+            Detail = BackendMessages.Message("errors.users.invalid.role.detail")
         }),
         UserMutationStatus.FinalAdmin => Conflict(new ProblemDetails
         {
-            Title = "Promjena nije dozvoljena",
-            Detail = "U sistemu mora ostati najmanje jedan aktivni Admin korisnik."
+            Title = BackendMessages.Message("errors.users.change.denied.title"),
+            Detail = BackendMessages.Message("errors.users.final.admin")
         }),
         UserMutationStatus.SelfRoles => BadRequest(new ProblemDetails
         {
-            Title = "Promjena nije dozvoljena",
-            Detail = "Ne možete mijenjati vlastite aplikacijske role."
+            Title = BackendMessages.Message("errors.users.change.denied.title"),
+            Detail = BackendMessages.Message("errors.users.self.roles.denied")
         }),
         UserMutationStatus.SelfDeactivate => BadRequest(new
         {
-            errors = new[] { new { field = (string?)null, message = "Ne možete deaktivirati vlastiti nalog." } }
+            errors = new[] { new { field = (string?)null, message = BackendMessages.Message("errors.users.self.deactivate.denied") } }
         }),
         UserMutationStatus.SelfDelete => BadRequest(new ProblemDetails
         {
-            Title = "Brisanje nije dozvoljeno",
-            Detail = "Ne možete obrisati vlastiti nalog."
+            Title = BackendMessages.Message("errors.users.delete.denied.title"),
+            Detail = BackendMessages.Message("errors.users.self.delete.denied")
         }),
         UserMutationStatus.Busy => Conflict(new ProblemDetails
         {
-            Title = "Promjena trenutno nije moguća",
-            Detail = "Upravljanje korisnicima je zauzeto. Osvježite podatke i pokušajte ponovo."
+            Title = BackendMessages.Message("errors.users.busy.title"),
+            Detail = BackendMessages.Message("errors.users.busy.detail")
         }),
         _ => throw new InvalidOperationException("Unknown user mutation outcome.")
     };

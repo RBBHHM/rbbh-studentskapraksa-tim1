@@ -9,6 +9,10 @@ public sealed class CodeListDefinition
     [Required, StringLength(100), Unicode(false)] public string Name { get; set; } = string.Empty;
     [StringLength(500)] public string? Description { get; set; }
     public bool IsActive { get; set; } = true;
+    public bool IsSystemRequired { get; set; }
+    [ConcurrencyCheck] public int Version { get; set; }
+    public DateTime? ModifiedAt { get; set; }
+    [StringLength(100)] public string? ModifiedBy { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     [StringLength(100)] public string CreatedBy { get; set; } = string.Empty;
 }

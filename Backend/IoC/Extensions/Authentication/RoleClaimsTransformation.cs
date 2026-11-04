@@ -43,7 +43,7 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
             if (user is not null) identity.AddClaim(new Claim(RBBH.ConnectedParties.Helpers.AuthenticatedActor.ApplicationUserIdClaim, user.Id.ToString()));
             var roles = user is null ? new List<string>() : await db.UserRoles.Where(userRole => userRole.IsActive && userRole.UserId == user.Id)
                 .Join(db.Roles.Where(role => role.IsActive), userRole => userRole.RoleId, role => role.Id, (userRole, role) => role.Name)
-                .Where(role => ApplicationAccessRoles.Assignable.Contains(role))
+                .Where(role => role != ApplicationAccessRoles.Guest)
                 .Distinct()
                 .ToListAsync();
             foreach (var role in roles)

@@ -78,3 +78,11 @@ test("BS/EN reporting copy and API culture persist", async ({ page, request }) =
   await page.reload(); await interactive(page); await expect(page.getByRole("heading", { name: "Regulatory reporting", exact: true })).toBeVisible();
   expect((await (await request.get("/__fixtures/culture", { headers })).json()).language).toBe("en");
 });
+test("report archive states the data origin as origin only, not as bank reconciliation", async ({ page, request }, info) => {
+  await request.post("/__fixtures/lock", { headers }); await open(page);
+  const pending = page.waitForEvent("download"); await page.getByRole("button", { name: "Generiši dnevni", exact: true }).click(); await pending;
+  await expect(page.getByRole("columnheader", { name: "Izvor podataka", exact: true })).toBeVisible();
+  const row = page.getByRole("row", { name: /Dnevni/ });
+  await expect(row).toContainText(/Lokalni snimak|Finansijski izvor|Nepoznato porijeklo/);
+  await expect(row).not.toContainText(/usaglašen(?!ost)/i);
+});

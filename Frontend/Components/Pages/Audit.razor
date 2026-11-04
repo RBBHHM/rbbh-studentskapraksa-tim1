@@ -1,5 +1,6 @@
 @page "/app/admin/audit"
 @using RBI.DesignSystem.Components.Forms
+@using RBBH.RelatedPartiesRegister.Web.Components.Registry
 @implements IDisposable
 @inject AuthenticationStateProvider AuthenticationState
 @inject IProfileApi Profile
@@ -26,17 +27,43 @@ else
             <thead><tr><th scope="col">@T["audit.time"]</th><th scope="col">@T["audit.action"]</th><th scope="col">@T["audit.area"]</th><th scope="col">@T["audit.change"]</th><th scope="col">@T["audit.user"]</th><th scope="col">@T["audit.ip"]</th></tr></thead>
             <tbody>@foreach (var entry in Filtered)
             {
-                <tr @key="entry.Id"><td>@AppFormat.Timestamp(entry.Timestamp)</td><td>@entry.ActionDisplay</td><td>@entry.AreaDisplay</td><td>@entry.ChangeSummary</td><td>@entry.Username</td><td>@entry.IpAddress</td></tr>
+                <tr @key="entry.Id"><td>@AppFormat.Timestamp(entry.Timestamp)</td><td><span class="audit-badge audit-badge--@AuditChange.Tone(entry.Action)">@entry.ActionDisplay</span></td><td>@entry.AreaDisplay</td><td><span class="audit-summary">@entry.ChangeSummary</span> <RbiButton Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Small" OnClick="() => _detail = entry" AccessibleLabel="@($"{T["audit.details"]}: {entry.ActionDisplay} {entry.AreaDisplay} {AppFormat.Timestamp(entry.Timestamp)}")">@T["audit.details"]</RbiButton></td><td>@entry.Username</td><td>@entry.IpAddress</td></tr>
             }</tbody>
         </RbiTable>
     }
     @if (TotalPages > 1)
     {
-        <p role="status">@T.Format("audit.page-summary", _page, TotalPages, _result.Total)</p>
+        <p class="page-total" role="status">@T.Format("audit.page-summary", _page, TotalPages, _result.Total)</p>
     <RbiPagination CurrentPage="_page" CurrentPageChanged="ChangePageAsync" TotalPages="TotalPages" AccessibleLabel="@T["audit.pages"]" PreviousLabel="@T["common.back"]" PreviousAccessibleLabel="@T["legal.previous"]" NextLabel="@T["common.actions.continue"]" NextAccessibleLabel="@T["legal.next"]" PageAccessibleLabel="@(page => T.Format("legal.page", page))" />
     }
 }
+@if (_detail is { } detail)
+{
+    <RbiDialog Open Class="app-form-dialog app-form-dialog--md" Title="@T["audit.details"]" CloseLabel="@T["common.close"]" OpenChanged="CloseDetail">
+        <DialogBody>
+            <p><span class="audit-badge audit-badge--@AuditChange.Tone(detail.Action)">@detail.ActionDisplay</span> @detail.AreaDisplay · @detail.Username · @AppFormat.Timestamp(detail.Timestamp)</p>
+            @if (!string.IsNullOrWhiteSpace(detail.ChangeSummary)) { <p>@detail.ChangeSummary</p> }
+            @{ var changes = AuditChange.Compare(detail.OldValues, detail.NewValues); }
+            @if (changes.Count > 0)
+            {
+                <RbiTable AccessibleLabel="@T["audit.change"]" Class="registry-table">
+                    <thead><tr><th scope="col">@T["audit.field"]</th><th scope="col">@T["audit.old"]</th><th scope="col">@T["audit.new"]</th></tr></thead>
+                    <tbody>@foreach (var change in changes)
+                    {
+                        <tr class="audit-row audit-row--@change.Kind.ToString().ToLowerInvariant()"><th scope="row">@change.Field</th><td>@change.Old</td><td>@change.New</td></tr>
+                    }</tbody>
+                </RbiTable>
+            }
+            else if (!string.IsNullOrWhiteSpace(detail.OldValues) || !string.IsNullOrWhiteSpace(detail.NewValues))
+            {
+                <pre class="audit-raw">@detail.OldValues@detail.NewValues</pre>
+            }
+        </DialogBody>
+    </RbiDialog>
+}
 @code {
+    private AuditRecord? _detail;
+    private void CloseDetail(bool open) { if (!open) _detail = null; }
     private readonly CancellationTokenSource _lifetime = new();
     private readonly CancellationToken _token;
     public Audit() => _token = _lifetime.Token;

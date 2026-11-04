@@ -221,5 +221,17 @@ namespace UnitTests.Services.ReportServiceTests
             result.Page.Should().Be(1);
             result.PageSize.Should().Be(2);
         }
+        [Theory]
+        [InlineData(0, 1, "year")]
+        [InlineData(9999, 1, "year")]
+        [InlineData(2026, 0, "month")]
+        [InlineData(2026, 13, "month")]
+        public async Task DirectServiceInvalidCalendarReturnsBusinessValidationWithoutWriting(int year, int month, string field)
+        {
+            var service = NewService(out var db);
+            var error = await Assert.ThrowsAsync<RBBH.ConnectedParties.Exceptions.ValidationException>(() => service.GenerateMonthlyReportAsync(year, month, "fixture"));
+            Assert.Equal(field, error.Field); Assert.Empty(db.Reports); Assert.Empty(db.AuditLogs);
+        }
+
     }
 }

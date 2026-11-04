@@ -101,6 +101,21 @@ public sealed class LegalEntityHttpValidationTests : IAsyncLifetime
         Assert.DoesNotContain("private-fixture-marker", body); Assert.DoesNotContain("stackTrace", body);
     }
 
+    [Fact]
+    public async Task MalformedXlsxIsAFieldValidationErrorWithNoPersistence()
+    {
+        using var form = new MultipartFormDataContent();
+        form.Add(new ByteArrayContent("not-an-xlsx-private-marker"u8.ToArray()), "file", "fixture.xlsx");
+        var response = await _client.PostAsync("/api/legal-entities/import", form);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        using var json = JsonDocument.Parse(body);
+        Assert.True(json.RootElement.GetProperty("errors").TryGetProperty("file", out _));
+        Assert.DoesNotContain("private-marker", body);
+        await using var scope = _app.Services.CreateAsyncScope();
+        Assert.Empty(await scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>().LegalEntities.ToListAsync());
+    }
+
     public async Task DisposeAsync() { _client.Dispose(); await _app.DisposeAsync(); }
     private sealed class IdentityFixture(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)
         : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)

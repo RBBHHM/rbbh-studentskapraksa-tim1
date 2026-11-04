@@ -10,7 +10,8 @@ public sealed record UnlockRequestsPage(IReadOnlyList<UnlockRequestRecord> Reque
 public interface IPeriodApi
 {
     Task<PeriodState> CurrentAsync(CancellationToken token = default);
-    Task<UnlockRequestsPage> RequestsAsync(string status = "", int page = 1, CancellationToken token = default);
+    /// <summary>Own requests; with <paramref name="review"/> the processing queue (unlock-requests/review, capital write permission).</summary>
+    Task<UnlockRequestsPage> RequestsAsync(string status = "", int page = 1, bool review = false, CancellationToken token = default);
     Task SetLockedAsync(bool locked, int? year = null, int? month = null, CancellationToken token = default);
     Task RequestUnlockAsync(int year, int month, string reason, CancellationToken token = default);
     Task ProcessAsync(Guid id, bool reject, string note, CancellationToken token = default);
@@ -25,10 +26,10 @@ public sealed class PeriodApi(IRbiApiTransport transport) : IPeriodApi
         if (!result.IsSuccess) throw new RegistryApiException(result.Error?.StatusCode);
         return result.Value;
     }
-    public async Task<UnlockRequestsPage> RequestsAsync(string status = "", int page = 1, CancellationToken token = default)
+    public async Task<UnlockRequestsPage> RequestsAsync(string status = "", int page = 1, bool review = false, CancellationToken token = default)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(page, 1);
-        var result = await transport.GetAsync<UnlockRequestsPage>($"api/period-lock/unlock-requests?status={Uri.EscapeDataString(status)}&page={page}&pageSize=100", token);
+        var result = await transport.GetAsync<UnlockRequestsPage>($"api/period-lock/unlock-requests{(review ? "/review" : "")}?status={Uri.EscapeDataString(status)}&page={page}&pageSize=100", token);
         token.ThrowIfCancellationRequested();
         if (!result.IsSuccess || result.Value.Requests is null) throw new RegistryApiException(result.Error?.StatusCode);
         return result.Value;
@@ -51,7 +52,7 @@ public sealed class PeriodApi(IRbiApiTransport transport) : IPeriodApi
 internal sealed class UnconfiguredPeriodApi : IPeriodApi
 {
     public Task<PeriodState> CurrentAsync(CancellationToken token = default) => Task.FromException<PeriodState>(new RegistryApiException());
-    public Task<UnlockRequestsPage> RequestsAsync(string status = "", int page = 1, CancellationToken token = default) => Task.FromException<UnlockRequestsPage>(new RegistryApiException());
+    public Task<UnlockRequestsPage> RequestsAsync(string status = "", int page = 1, bool review = false, CancellationToken token = default) => Task.FromException<UnlockRequestsPage>(new RegistryApiException());
     public Task SetLockedAsync(bool locked, int? year = null, int? month = null, CancellationToken token = default) => Task.FromException(new RegistryApiException());
     public Task RequestUnlockAsync(int year, int month, string reason, CancellationToken token = default) => Task.FromException(new RegistryApiException());
     public Task ProcessAsync(Guid id, bool reject, string note, CancellationToken token = default) => Task.FromException(new RegistryApiException());

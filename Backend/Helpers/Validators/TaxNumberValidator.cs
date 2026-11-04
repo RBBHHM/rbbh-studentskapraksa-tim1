@@ -5,13 +5,13 @@ namespace RBBH.ConnectedParties.Helpers.Validators
 {
     public static class TaxNumberValidator
     {
-        private const string TaxNumberPattern = @"^\d{13}$";
+        private const string TaxNumberPattern = @"^[0-9]{13}$";
 
         public static bool ValidateTaxNumber(string taxNumber)
         {
             if (string.IsNullOrWhiteSpace(taxNumber))
             {
-                throw new ValidationException("PoreaskiBroj", "Porezni broj ne može biti prazan.");
+                throw new ValidationException("PoreaskiBroj", BackendMessages.Message("validation.tax.required"));
             }
 
             taxNumber = taxNumber.Trim();
@@ -19,12 +19,12 @@ namespace RBBH.ConnectedParties.Helpers.Validators
             if (!Regex.IsMatch(taxNumber, TaxNumberPattern))
             {
                 throw new ValidationException("PoreaskiBroj", 
-                    "Porezni broj mora biti 13-cifreni broj (npr. 1234567890123).");
+                    BackendMessages.Message("validation.tax.format"));
             }
 
             if (!IsValidControlDigit(taxNumber))
             {
-                throw new ValidationException("Kontrolna cifra poreskog broja nije validna.");
+                throw new ValidationException(BackendMessages.Message("validation.tax.checksum"));
             }
 
             return true;

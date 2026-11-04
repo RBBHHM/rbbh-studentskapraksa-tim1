@@ -12,7 +12,7 @@
         <p class="app-visually-hidden" id="@(_id + "-help")">@T[Model.Kind == PeriodNoteKind.Response ? "period.response-range" : "period.note-range"]</p>
         @if (Model.Kind != PeriodNoteKind.RequestUnlock) { <p class="app-visually-hidden">@T.Format("period.count", Model.Text.Length, Model.Maximum)</p> }
         @if (ShowCancel) { <p class="registry-period-dialog__count" aria-hidden="true">@T.Format("period.min-count", Model.Text.Trim().Length)</p> }
-    <div role="alert" tabindex="-1" @ref="_summary"><ValidationSummary /></div>
+    <FormSummary @ref="_summary" Context="_context" />
         <div class="registry-toolbar">
             @if (ShowCancel) { <RbiButton OnClick="Cancel" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton> }
             <RbiButton Type="RbiButtonType.Submit" Disabled="@(ShowCancel && Model.Text.Trim().Length < 10)">@T[SubmitKey]</RbiButton>
@@ -30,7 +30,7 @@
     private EditContext _context = null!;
     private RbiServerValidation _validation = null!;
     private readonly RbiFormSubmissionState _submission = new();
-    private ElementReference _summary;
+    private FormSummary _summary = null!;
     private bool _focusErrors;
     protected override void OnInitialized() { _context = new(Model); _validation = new(_context); }
     private void InputChanged(ChangeEventArgs args) { Model.Text = args.Value?.ToString() ?? ""; _context.NotifyFieldChanged(new(Model, nameof(Model.Text))); }

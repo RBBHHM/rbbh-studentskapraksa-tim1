@@ -31,19 +31,32 @@ public class LegalEntityService : ILegalEntityService
         new("Datum od / Date from", "Datum od", "Date from"),
         new("Datum do / Date to", "Datum do", "Date to")
     ];
+    private static readonly ExcelImportSchema.Column[] V2Columns =
+    [
+        .. ImportColumns,
+        new("Matični broj registracije", "Matični broj registracije", "Registration number"),
+        new("GCC broj", "GCC broj", "GCC number"), new("GCC naziv", "GCC naziv", "GCC name"),
+        new("Velika izloženost", "Velika izloženost", "Large exposure"),
+        new("Status", "Status"), new("Kreirao", "Kreirao", "Created by"), new("Kreirano", "Kreirano", "Created at"),
+        new("Izmijenio", "Izmijenio", "Modified by"), new("Izmijenjeno", "Izmijenjeno", "Modified at")
+    ];
     private readonly ConnectedPartiesDbContext _context;
     private readonly ILogger<LegalEntityService> _logger;
+    private readonly IHttpContextAccessor? _actor;
+    private readonly IBankReferenceSource? _bank;
 
-    public LegalEntityService(ConnectedPartiesDbContext context, ILogger<LegalEntityService> logger)
+    public LegalEntityService(ConnectedPartiesDbContext context, ILogger<LegalEntityService> logger, IHttpContextAccessor? actor = null, IBankReferenceSource? bank = null)
     {
         _context = context;
         _logger = logger;
+        _actor = actor;
+        _bank = bank;
     }
 
     /// <inheritdoc />
     public async Task<LegalEntityListDTO> GetAllAsync(int page, int pageSize, string? search)
     {
-        page = Math.Max(page, 1);
+        page = Math.Clamp(page, 1, 1_000_000);
         pageSize = Math.Clamp(pageSize, 1, 200);
         var query = _context.LegalEntities.AsNoTracking().Where(e => e.IsActive);
 
@@ -51,10 +64,10 @@ public class LegalEntityService : ILegalEntityService
         {
             var term = search.Trim();
             query = _context.Database.IsRelational()
-                ? query.Where(e => EF.Functions.Like(e.Name, $"%{term}%")
+                ? query.Where(e => EF.Functions.Like(EF.Functions.Collate(e.Name, "Latin1_General_100_CI_AS"), $"%{term}%")
                     || (e.TaxNumber != null && e.TaxNumber.Contains(term))
                     || (e.MaticniBroj != null && e.MaticniBroj.Contains(term))
-                    || (e.FbaId != null && EF.Functions.Like(e.FbaId, $"%{term}%")))
+                    || (e.FbaId != null && EF.Functions.Like(EF.Functions.Collate(e.FbaId, "Latin1_General_100_CI_AS"), $"%{term}%")))
                 : query.Where(e => e.Name.ToLower().Contains(term.ToLower())
                     || (e.TaxNumber != null && e.TaxNumber.Contains(term))
                     || (e.MaticniBroj != null && e.MaticniBroj.Contains(term))
@@ -64,7 +77,7 @@ public class LegalEntityService : ILegalEntityService
         var total = await query.CountAsync();
 
         var items = await query
-            .OrderByDescending(e => e.CreatedAt)
+            .OrderByDescending(e => e.CreatedAt).ThenBy(e => e.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(e => MapToDto(e))
@@ -79,13 +92,13 @@ public class LegalEntityService : ILegalEntityService
         };
     }
 
-    public async Task<List<LegalEntityDTO>> GetAllForExportAsync() =>
-        await _context.LegalEntities
-            .AsNoTracking()
-            .Where(entity => entity.IsActive)
-            .OrderBy(entity => entity.Name)
-            .Select(entity => MapToDto(entity))
-            .ToListAsync();
+    public async Task<List<LegalEntityDTO>> GetAllForExportAsync()
+    {
+        var items = await _context.LegalEntities.AsNoTracking().OrderBy(row => row.Name).ThenBy(row => row.Id).Take(5001)
+            .Select(row => MapToDto(row)).ToListAsync(_actor?.HttpContext?.RequestAborted ?? default);
+        if (items.Count > 5000) throw new ValidationException("file", BackendMessages.Message("errors.workbook.export.limit"));
+        return items;
+    }
 
     /// <inheritdoc />
     public async Task<LegalEntityDTO?> GetByIdAsync(Guid id)
@@ -101,10 +114,13 @@ public class LegalEntityService : ILegalEntityService
     public async Task<LegalEntityDTO> CreateAsync(CreateLegalEntityDTO dto, string createdBy)
     {
         ValidateCreateDto(dto);
+        (await Helpers.CodebookChoices.Load(_context, _actor?.HttpContext?.RequestAborted ?? default, "OsnovPovezanosti"))
+            .Check("OsnovPovezanosti", dto.BasisOfConnection, "basisOfConnection");
+        var gcc = await ResolveGcc(dto.GccNumber);
         await ValidateUniqueIdentifierAsync(dto.IsResident, dto.TaxNumber, dto.FbaId);
 
         if (dto.ConnectedWithBank is null)
-            throw new ValidationException("connectedWithBank", "Polje 'Povezano lice sa Bankom' je obavezno.");
+            throw new ValidationException("connectedWithBank", BackendMessages.Message("validation.registry.bank.relation.required"));
 
         var entity = new LegalEntity
         {
@@ -113,6 +129,9 @@ public class LegalEntityService : ILegalEntityService
             MaticniBroj = dto.MaticniBroj?.Trim(),
             FbaId = !dto.IsResident ? dto.FbaId?.Trim() : null,
             Name = dto.Name.Trim(),
+            GccNumber = gcc?.Number,
+            GccName = gcc?.Name,
+            IsLargeExposure = dto.IsLargeExposure ?? false,
             Matbroj = string.IsNullOrWhiteSpace(dto.Matbroj) ? null : dto.Matbroj.Trim(),
             BasisOfConnection = dto.BasisOfConnection.Trim(),
             ConnectionDescription = dto.ConnectionDescription?.Trim(),
@@ -120,17 +139,17 @@ public class LegalEntityService : ILegalEntityService
             DateFrom = dto.DateFrom,
             DateTo = dto.DateTo,
             Status = "Draft",
+            CreatorSubject = Helpers.RegistryVerification.CreatorSubject(_actor),
             CreatedBy = createdBy,
             CreatedAt = DateTime.UtcNow,
             IsActive = true
         };
 
         _context.LegalEntities.Add(entity);
-        await _context.SaveChangesAsync();
+        _context.AuditLogs.Add(Helpers.BusinessAudit.Create("LegalEntity", entity.Id.ToString(), "INSERT", createdBy, _actor, newValues: MapToDto(entity)));
+        await _context.SaveChangesAsync(_actor?.HttpContext?.RequestAborted ?? default);
 
-        _logger.LogInformation(
-            "Pravno lice kreirano. Id={Id}; Name={Name}; CreatedBy={CreatedBy}",
-            entity.Id, entity.Name, createdBy);
+        _logger.LogInformation("Legal entity created.");
 
         return MapToDto(entity);
     }
@@ -143,14 +162,25 @@ public class LegalEntityService : ILegalEntityService
             .FirstOrDefaultAsync(e => e.Id == id);
 
         if (entity is null)
-            throw new ValidationException("id", $"Pravno lice s ID-om {id} nije pronađeno.");
+            throw new ValidationException("id", BackendMessages.Message("validation.registry.legal.id.missing", id));
 
         ValidateUpdateDto(dto);
+        (await Helpers.CodebookChoices.Load(_context, _actor?.HttpContext?.RequestAborted ?? default, "OsnovPovezanosti"))
+            .Check("OsnovPovezanosti", dto.BasisOfConnection, "basisOfConnection");
+        // Omitted additive fields preserve previous source-backed values during rollout.
+        var gcc = dto.GccNumber is null && entity.GccNumber is not null ? null : await ResolveGcc(dto.GccNumber);
         await ValidateUniqueIdentifierAsync(dto.IsResident, dto.TaxNumber, dto.FbaId, id);
 
         if (dto.ConnectedWithBank is null)
-            throw new ValidationException("connectedWithBank", "Polje 'Povezano lice sa Bankom' je obavezno.");
+            throw new ValidationException("connectedWithBank", BackendMessages.Message("validation.registry.bank.relation.required"));
 
+        // Status is owned by verification, even if an old client sends it back.
+        if (!string.IsNullOrWhiteSpace(dto.Status) && !string.Equals(dto.Status.Trim(), entity.Status, StringComparison.Ordinal))
+            throw new BusinessRuleException(400, "verification.status_owned");
+
+        var before = MapToDto(entity);
+        if (dto.GccNumber is not null) { entity.GccNumber = gcc?.Number; entity.GccName = gcc?.Name; }
+        if (dto.IsLargeExposure.HasValue) entity.IsLargeExposure = dto.IsLargeExposure.Value;
         entity.IsResident = dto.IsResident;
         entity.TaxNumber = dto.IsResident ? dto.TaxNumber?.Trim() : null;
         entity.FbaId = dto.IsResident ? null : dto.FbaId?.Trim();
@@ -162,15 +192,13 @@ public class LegalEntityService : ILegalEntityService
         entity.ConnectedWithBank = dto.ConnectedWithBank;
         entity.DateFrom = dto.DateFrom;
         entity.DateTo = dto.DateTo;
-        if (!string.IsNullOrWhiteSpace(dto.Status)) entity.Status = dto.Status.Trim();
         entity.ModifiedBy = modifiedBy;
         entity.ModifiedAt = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        _context.AuditLogs.Add(Helpers.BusinessAudit.Create("LegalEntity", entity.Id.ToString(), "UPDATE", modifiedBy, _actor, oldValues: before, newValues: MapToDto(entity)));
+        await _context.SaveChangesAsync(_actor?.HttpContext?.RequestAborted ?? default);
 
-        _logger.LogInformation(
-            "Pravno lice ažurirano. Id={Id}; ModifiedBy={ModifiedBy}",
-            entity.Id, modifiedBy);
+        _logger.LogInformation("Legal entity updated.");
 
         return MapToDto(entity);
     }
@@ -183,17 +211,17 @@ public class LegalEntityService : ILegalEntityService
             .FirstOrDefaultAsync(e => e.Id == id);
 
         if (entity is null)
-            throw new ValidationException("id", $"Pravno lice s ID-om {id} nije pronađeno.");
+            throw new ValidationException("id", BackendMessages.Message("validation.registry.legal.id.missing", id));
 
         entity.IsActive = false;
         entity.ModifiedBy = deletedBy;
         entity.ModifiedAt = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        _context.AuditLogs.Add(Helpers.BusinessAudit.Create("LegalEntity", entity.Id.ToString(), "DELETE", deletedBy, _actor,
+            oldValues: new { isActive = true }, newValues: new { isActive = false }));
+        await _context.SaveChangesAsync(_actor?.HttpContext?.RequestAborted ?? default);
 
-        _logger.LogInformation(
-            "Pravno lice deaktivirano (soft delete). Id={Id}; DeletedBy={DeletedBy}",
-            id, deletedBy);
+        _logger.LogInformation("Legal entity deactivated.");
     }
 
     /// <inheritdoc />
@@ -204,53 +232,43 @@ public class LegalEntityService : ILegalEntityService
             .FirstOrDefaultAsync(e => e.Id == id && e.IsActive);
 
         if (entity is null)
-            throw new ValidationException("id", $"Pravno lice s ID-om {id} nije pronađeno.");
+            throw new ValidationException("id", BackendMessages.Message("validation.registry.legal.id.missing", id));
 
         if (string.Equals(entity.Status, "Verified", StringComparison.OrdinalIgnoreCase))
-            throw new ValidationException("status", "Pravno lice je već verificirano.");
+            throw new ValidationException("status", BackendMessages.Message("validation.registry.legal.verified"));
 
+        Helpers.RegistryVerification.Authorize(entity.CreatorSubject, _actor);
         entity.Status = "Verified";
         entity.VerifiedBy = verifiedBy;
         entity.VerifiedAt = DateTime.UtcNow;
         entity.ModifiedBy = verifiedBy;
         entity.ModifiedAt = DateTime.UtcNow;
 
+        _context.AuditLogs.Add(Helpers.RegistryVerification.Audit("LegalEntity", entity.Id, verifiedBy, _actor));
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation(
-            "Pravno lice verificirano. Id={Id}; VerifiedBy={VerifiedBy}",
-            entity.Id, verifiedBy);
+        _logger.LogInformation("Legal entity verified.");
 
         return MapToDto(entity);
     }
         /// <inheritdoc />
-    public async Task<List<LegalEntityLookupDTO>> SearchForLimitsAsync(string? search)
-    {
-        var query = _context.LegalEntities
-            .AsNoTracking()
-            .Where(e => e.IsActive);
+    public async Task<List<LegalEntityLookupDTO>> SearchForLimitsAsync(string? search) =>
+        (await SearchForLimitsPageAsync(search, 1, 20, _actor?.HttpContext?.RequestAborted ?? default)).Items.ToList();
 
+    public async Task<ReferencePage<LegalEntityLookupDTO>> SearchForLimitsPageAsync(string? search, int page, int pageSize, CancellationToken ct)
+    {
+        if (search?.Length > 200) throw new BusinessRuleException(400, "registry.invalid_search");
+        page = Math.Clamp(page, 1, 1_000_000); pageSize = Math.Clamp(pageSize, 1, 100);
+        var query = _context.LegalEntities.AsNoTracking();
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var term = search.Trim();
-            query = _context.Database.IsRelational()
-                ? query.Where(e => EF.Functions.Like(e.Name, $"%{term}%")
-                    || (e.MaticniBroj != null && e.MaticniBroj.Contains(term)))
-                : query.Where(e => e.Name.ToLower().Contains(term.ToLower())
-                    || (e.MaticniBroj != null && e.MaticniBroj.Contains(term)));
+            var term = search.Trim().ToUpperInvariant();
+            query = query.Where(row => row.Name.ToUpper().Contains(term) || row.MaticniBroj != null && row.MaticniBroj.Contains(term) || row.TaxNumber != null && row.TaxNumber.Contains(term));
         }
-
-        return await query
-            .OrderBy(e => e.Name)
-            .Take(20)
-            .Select(e => new LegalEntityLookupDTO
-            {
-                Id = e.Id,
-                Name = e.Name,
-                MaticniBroj = e.MaticniBroj,
-                TaxNumber = e.TaxNumber
-            })
-            .ToListAsync();
+        var total = await query.CountAsync(ct);
+        var items = await query.OrderBy(row => row.Name).ThenBy(row => row.Id).Skip((page - 1) * pageSize).Take(pageSize)
+            .Select(row => new LegalEntityLookupDTO { Id = row.Id, Name = row.Name, TaxNumber = row.TaxNumber, MaticniBroj = row.MaticniBroj }).ToListAsync(ct);
+        return new(items, total, page, pageSize);
     }
 
     /// <inheritdoc />
@@ -274,7 +292,7 @@ public class LegalEntityService : ILegalEntityService
             return null;
 
         // Kapital je jedan globalni zapis (nije po pravnom licu) — čita se odvojeno.
-        var capital = await _context.Capitals.AsNoTracking().FirstOrDefaultAsync();
+        var capital = await CapitalHistory.AsOf(_context, DateTime.UtcNow.Date, _actor?.HttpContext?.RequestAborted ?? default);
         result.RegulatoryCapital = capital?.RegulatoryCapital;
         result.CoreCapital = capital?.CoreCapital;
 
@@ -283,134 +301,177 @@ public class LegalEntityService : ILegalEntityService
 
     // ── Privatni pomoćni metodi ───────────────────────────────────────────────
 
+    private async Task<BankGroup?> ResolveGcc(string? number)
+    {
+        if (string.IsNullOrWhiteSpace(number))
+        {
+            if (_bank?.IsConfigured == true) throw new BusinessRuleException(400, "registry.gcc_required");
+            return null;
+        }
+        if (number.Length > 50 || number.Any(character => character is < '0' or > '9'))
+            throw new BusinessRuleException(400, "registry.invalid_gcc");
+        if (_bank is null) throw new BusinessRuleException(503, "bank_reference.unavailable");
+        var group = await _bank.Group(number, _actor?.HttpContext?.RequestAborted ?? default)
+            ?? throw new BusinessRuleException(400, "registry.unknown_gcc");
+        if (group.Number != number || string.IsNullOrWhiteSpace(group.Name) || group.Name.Length > 200)
+            throw new BusinessRuleException(503, "bank_reference.invalid_record");
+        return group;
+    }
+
     private static void ValidateCreateDto(CreateLegalEntityDTO dto)
     {
+        ValidateStoredFields(dto.Name, dto.MaticniBroj, dto.Matbroj, dto.BasisOfConnection, dto.ConnectionDescription);
         if (dto.IsResident)
         {
             if (string.IsNullOrWhiteSpace(dto.TaxNumber))
-                throw new ValidationException("taxNumber", "Porezni broj je obavezan za rezidentno pravno lice.");
+                throw new ValidationException("taxNumber", BackendMessages.Message("validation.registry.tax.resident.required"));
 
             TaxNumberValidator.ValidateTaxNumber(dto.TaxNumber);
         }
         else
         {
             if (string.IsNullOrWhiteSpace(dto.FbaId))
-                throw new ValidationException("fbaId", "FBA ID je obavezan za nerezidentno pravno lice.");
+                throw new ValidationException("fbaId", BackendMessages.Message("validation.registry.fba.nonresident.required"));
 
-            if (!System.Text.RegularExpressions.Regex.IsMatch(dto.FbaId.Trim(), @"^\d{1,10}$"))
-                throw new ValidationException("fbaId", "FBA ID mora sadržavati maksimalno 10 cifara.");
+            if (dto.FbaId.Trim().Length > 10 || !dto.FbaId.Trim().All(char.IsAsciiDigit))
+                throw new ValidationException("fbaId", BackendMessages.Message("validation.registry.fba.digit.limit"));
         }
 
         if (string.IsNullOrWhiteSpace(dto.Name))
-            throw new ValidationException("name", "Naziv je obavezan.");
+            throw new ValidationException("name", BackendMessages.Message("validation.registry.name.required"));
 
         if (string.IsNullOrWhiteSpace(dto.BasisOfConnection))
-            throw new ValidationException("basisOfConnection", "Osnov povezanosti je obavezan.");
+            throw new ValidationException("basisOfConnection", BackendMessages.Message("validation.registry.connection.required"));
 
         ValidateRequiredBusinessFields(dto.ConnectionDescription, dto.DateFrom);
 
         if (dto.DateFrom.HasValue && dto.DateTo.HasValue && dto.DateTo < dto.DateFrom)
-            throw new ValidationException("dateTo", "Datum do mora biti nakon datuma od.");
+            throw new ValidationException("dateTo", BackendMessages.Message("validation.registry.date.order"));
     }
 
     private static void ValidateUpdateDto(UpdateLegalEntityDTO dto)
     {
+        ValidateStoredFields(dto.Name, dto.MaticniBroj, dto.Matbroj, dto.BasisOfConnection, dto.ConnectionDescription);
         if (dto.IsResident)
         {
             if (string.IsNullOrWhiteSpace(dto.TaxNumber))
-                throw new ValidationException("taxNumber", "Porezni broj je obavezan za rezidentno pravno lice.");
+                throw new ValidationException("taxNumber", BackendMessages.Message("validation.registry.tax.resident.required"));
             TaxNumberValidator.ValidateTaxNumber(dto.TaxNumber);
         }
         else
         {
             if (string.IsNullOrWhiteSpace(dto.FbaId))
-                throw new ValidationException("fbaId", "FBA ID je obavezan za nerezidentno pravno lice.");
-            if (!System.Text.RegularExpressions.Regex.IsMatch(dto.FbaId.Trim(), @"^\d{1,10}$"))
-                throw new ValidationException("fbaId", "FBA ID mora sadržavati maksimalno 10 cifara.");
+                throw new ValidationException("fbaId", BackendMessages.Message("validation.registry.fba.nonresident.required"));
+            if (dto.FbaId.Trim().Length > 10 || !dto.FbaId.Trim().All(char.IsAsciiDigit))
+                throw new ValidationException("fbaId", BackendMessages.Message("validation.registry.fba.digit.limit"));
         }
         if (string.IsNullOrWhiteSpace(dto.Name))
-            throw new ValidationException("name", "Naziv je obavezan.");
+            throw new ValidationException("name", BackendMessages.Message("validation.registry.name.required"));
         if (string.IsNullOrWhiteSpace(dto.BasisOfConnection))
-            throw new ValidationException("basisOfConnection", "Osnov povezanosti je obavezan.");
+            throw new ValidationException("basisOfConnection", BackendMessages.Message("validation.registry.connection.required"));
         ValidateRequiredBusinessFields(dto.ConnectionDescription, dto.DateFrom);
         if (dto.DateFrom.HasValue && dto.DateTo.HasValue && dto.DateTo < dto.DateFrom)
-            throw new ValidationException("dateTo", "Datum do mora biti nakon datuma od.");
+            throw new ValidationException("dateTo", BackendMessages.Message("validation.registry.date.order"));
+    }
+
+    private static void ValidateStoredFields(string name, string? maticniBroj, string? matbroj,
+        string basis, string? description)
+    {
+        if (name?.Length > 100)
+            throw new ValidationException("name", BackendMessages.Message("validation.registry.name.length"));
+        if (basis?.Length > 100)
+            throw new ValidationException("basisOfConnection", BackendMessages.Message("validation.registry.connection.length"));
+        if (description?.Length > 500)
+            throw new ValidationException("connectionDescription", BackendMessages.Message("validation.registry.description.length"));
+        ValidateOptionalNumber(maticniBroj, "maticniBroj");
+        ValidateOptionalNumber(matbroj, "matbroj");
+    }
+
+    private static void ValidateOptionalNumber(string? value, string field)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return;
+        var normalized = value.Trim();
+        if (normalized.Length > 50 || !normalized.All(char.IsAsciiDigit))
+            throw new ValidationException(field, BackendMessages.Message("validation.registry.registration.length"));
     }
 
     private static void ValidateRequiredBusinessFields(string? connectionDescription, DateTime? dateFrom)
     {
         if (string.IsNullOrWhiteSpace(connectionDescription))
-            throw new ValidationException("connectionDescription", "Opis osnova povezanosti je obavezan.");
+            throw new ValidationException("connectionDescription", BackendMessages.Message("validation.registry.description.required"));
         if (!dateFrom.HasValue)
-            throw new ValidationException("dateFrom", "Datum početka povezanosti je obavezan.");
+            throw new ValidationException("dateFrom", BackendMessages.Message("validation.registry.start.required"));
     }
 
     private async Task ValidateUniqueIdentifierAsync(bool isResident, string? taxNumber, string? fbaId, Guid? excludedId = null)
     {
         if (isResident && !string.IsNullOrWhiteSpace(taxNumber))
         {
-            var exists = await _context.LegalEntities
+            var exists = await _context.LegalEntities.IgnoreQueryFilters()
                 .AsNoTracking()
                 .AnyAsync(e => e.TaxNumber == taxNumber.Trim() && (!excludedId.HasValue || e.Id != excludedId));
 
             if (exists)
-                throw new ValidationException("taxNumber", $"Pravno lice s poreznim brojem {taxNumber} već postoji.");
+                throw new ValidationException("taxNumber", BackendMessages.Message("validation.registry.legal.tax.exists", taxNumber));
         }
         else if (!isResident && !string.IsNullOrWhiteSpace(fbaId))
         {
-            var exists = await _context.LegalEntities
+            var exists = await _context.LegalEntities.IgnoreQueryFilters()
                 .AsNoTracking()
                 .AnyAsync(e => e.FbaId == fbaId.Trim() && (!excludedId.HasValue || e.Id != excludedId));
 
             if (exists)
-                throw new ValidationException("fbaId", $"Pravno lice s FBA ID-om {fbaId} već postoji.");
+                throw new ValidationException("fbaId", BackendMessages.Message("validation.registry.legal.fba.exists", fbaId));
         }
     }
 
     /// <inheritdoc />
     public async Task<ImportResultDTO> ImportFromExcelAsync(Stream stream, string createdBy)
     {
-        using var wb = new ClosedXML.Excel.XLWorkbook(stream);
+        using var wb = ExcelImportSchema.OpenWorkbook(stream);
         var ws = wb.Worksheets.First();
         var lastRow = ws.LastRowUsed()?.RowNumber() ?? 1;
 
         var result = new ImportResultDTO();
-        var schemaErrors = ExcelImportSchema.Validate(ws, ImportColumns);
+        var isV2 = ws.LastColumnUsed()?.ColumnNumber() == V2Columns.Length;
+        var schemaErrors = ExcelImportSchema.Validate(ws, isV2 ? V2Columns : ImportColumns);
         if (schemaErrors.Count > 0)
         {
             result.Failed = Math.Max(lastRow - 1, 1);
             result.Errors.AddRange(schemaErrors);
             return result;
         }
-        var usedTaxNumbers = (await _context.LegalEntities.AsNoTracking()
+        var choices = await Helpers.CodebookChoices.Load(_context, _actor?.HttpContext?.RequestAborted ?? default, "OsnovPovezanosti");
+        var usedTaxNumbers = (await _context.LegalEntities.IgnoreQueryFilters().AsNoTracking()
             .Where(entity => entity.TaxNumber != null)
             .Select(entity => entity.TaxNumber!)
             .ToListAsync()).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var usedFbaIds = (await _context.LegalEntities.AsNoTracking()
+        var usedFbaIds = (await _context.LegalEntities.IgnoreQueryFilters().AsNoTracking()
             .Where(entity => entity.FbaId != null)
             .Select(entity => entity.FbaId!)
             .ToListAsync()).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         for (int row = 2; row <= lastRow; row++)
         {
+            _actor?.HttpContext?.RequestAborted.ThrowIfCancellationRequested();
             try
             {
-                var name           = ws.Cell(row, 1).GetString().Trim();
-                var tipStr         = ws.Cell(row, 2).GetString().Trim();
-                var taxNumber      = ws.Cell(row, 3).GetString().Trim();
-                var fbaId          = ws.Cell(row, 4).GetString().Trim();
-                var matbroj        = ws.Cell(row, 5).GetString().Trim();
-                var basisOfConn    = ws.Cell(row, 6).GetString().Trim();
-                var connDesc       = ws.Cell(row, 7).GetString().Trim();
-                var connBankStr    = ws.Cell(row, 8).GetString().Trim();
-                var dateFromStr    = ws.Cell(row, 9).GetString().Trim();
-                var dateToStr      = ws.Cell(row, 10).GetString().Trim();
+                var name           = ExcelImportSchema.CellText(ws.Cell(row, 1));
+                var tipStr         = ExcelImportSchema.CellText(ws.Cell(row, 2));
+                var taxNumber      = ExcelImportSchema.CellText(ws.Cell(row, 3));
+                var fbaId          = ExcelImportSchema.CellText(ws.Cell(row, 4));
+                var matbroj        = ExcelImportSchema.CellText(ws.Cell(row, 5));
+                var basisOfConn    = ExcelImportSchema.CellText(ws.Cell(row, 6));
+                var connDesc       = ExcelImportSchema.CellText(ws.Cell(row, 7));
+                var connBankStr    = ExcelImportSchema.CellText(ws.Cell(row, 8));
+                var dateFromStr    = ExcelImportSchema.CellText(ws.Cell(row, 9));
+                var dateToStr      = ExcelImportSchema.CellText(ws.Cell(row, 10));
 
-                if (string.IsNullOrWhiteSpace(name))
-                    continue; // prazan red — preskoči bez greške
+                if (ws.Row(row).Cells(1, isV2 ? 14 : ImportColumns.Length).All(cell => string.IsNullOrWhiteSpace(cell.GetString())))
+                    continue; // Ignore only entirely empty rows, never an incomplete record.
 
                 if (string.IsNullOrWhiteSpace(basisOfConn))
-                    throw new InvalidOperationException("Osnov povezanosti je obavezan.");
+                    throw new ValidationException(BackendMessages.Message("validation.registry.connection.required"));
 
                 var isResident = tipStr.Equals("Rezident", StringComparison.OrdinalIgnoreCase) ||
                     tipStr.Equals("Resident", StringComparison.OrdinalIgnoreCase);
@@ -418,7 +479,7 @@ public class LegalEntityService : ILegalEntityService
                     tipStr.Equals("Non-resident", StringComparison.OrdinalIgnoreCase) ||
                     tipStr.Equals("Nonresident", StringComparison.OrdinalIgnoreCase);
                 if (!isResident && !isNonResident)
-                    throw new InvalidOperationException("Tip mora biti 'Rezident/Resident' ili 'Nerezident/Non-resident'.");
+                    throw new ValidationException(BackendMessages.Message("validation.registry.legal.residency.import"));
 
                 bool? connectedWithBank = connBankStr.Equals("DA", StringComparison.OrdinalIgnoreCase) ? true
                     : connBankStr.Equals("YES", StringComparison.OrdinalIgnoreCase) ? true
@@ -427,7 +488,7 @@ public class LegalEntityService : ILegalEntityService
                     : null;
 
                 if (connectedWithBank is null)
-                    throw new InvalidOperationException("Kolona 'Povezano lice s Bankom' mora sadržavati DA/NE ili YES/NO.");
+                    throw new ValidationException(BackendMessages.Message("validation.registry.bank.relation.import"));
 
                 DateTime? dateFrom = ParseOptionalDate(dateFromStr, "Datum od");
                 DateTime? dateTo   = ParseOptionalDate(dateToStr, "Datum do");
@@ -443,17 +504,22 @@ public class LegalEntityService : ILegalEntityService
                     ConnectionDescription = string.IsNullOrWhiteSpace(connDesc) ? null : connDesc,
                     ConnectedWithBank  = connectedWithBank,
                     DateFrom           = dateFrom,
-                    DateTo             = dateTo
+                    DateTo             = dateTo,
+                    MaticniBroj = isV2 ? ExcelImportSchema.CellText(ws.Cell(row, 11)) : null,
+                    GccNumber = isV2 ? ExcelImportSchema.CellText(ws.Cell(row, 12)) : null,
+                    IsLargeExposure = isV2 ? ParseExposure(ExcelImportSchema.CellText(ws.Cell(row, 14))) : null
                 };
                 ValidateCreateDto(dto);
+                choices.Check("OsnovPovezanosti", dto.BasisOfConnection, "basisOfConnection");
+                var gcc = await ResolveGcc(dto.GccNumber);
                 if (dto.ConnectedWithBank is null)
-                    throw new InvalidOperationException("Kolona 'Povezano lice s Bankom' mora sadržavati DA/NE ili YES/NO.");
+                    throw new ValidationException(BackendMessages.Message("validation.registry.bank.relation.import"));
                 var identifier = isResident ? taxNumber : fbaId;
                 var identifiers = isResident ? usedTaxNumbers : usedFbaIds;
                 if (!identifiers.Add(identifier))
-                    throw new InvalidOperationException(isResident
-                        ? "Pravno lice s ovim poreznim brojem već postoji."
-                        : "Pravno lice s ovim FBA ID-em već postoji.");
+                    throw new ValidationException(isResident
+                        ? BackendMessages.Message("validation.registry.legal.tax.duplicate")
+                        : BackendMessages.Message("validation.registry.legal.fba.duplicate"));
 
                 var entity = new LegalEntity
                 {
@@ -462,6 +528,8 @@ public class LegalEntityService : ILegalEntityService
                     FbaId = dto.IsResident ? null : dto.FbaId,
                     Name = dto.Name,
                     Matbroj = dto.Matbroj,
+                    MaticniBroj = dto.MaticniBroj,
+                    GccNumber = gcc?.Number, GccName = gcc?.Name, IsLargeExposure = dto.IsLargeExposure ?? false,
                     BasisOfConnection = dto.BasisOfConnection,
                     ConnectionDescription = dto.ConnectionDescription,
                     ConnectedWithBank = dto.ConnectedWithBank,
@@ -470,24 +538,46 @@ public class LegalEntityService : ILegalEntityService
                     Status             = "Draft",
                     IsActive           = true,
                     CreatedAt          = DateTime.UtcNow,
+                    CreatorSubject = Helpers.RegistryVerification.CreatorSubject(_actor),
                     CreatedBy          = createdBy
                 };
 
                 _context.LegalEntities.Add(entity);
                 result.Imported++;
             }
-            catch (Exception ex)
+            catch (ValidationException exception)
             {
                 result.Failed++;
-                result.Errors.Add($"Red {row}: {ex.Message}");
+                result.Errors.Add(BackendMessages.Message("workbook.row.error", row, exception.ErrorMessage));
+                result.Details.Add(new(row, exception.Field ?? "row", "validation.invalid", exception.ErrorMessage));
+            }
+            catch (BusinessRuleException exception) when (exception.Status < 500)
+            {
+                result.Failed++; result.Errors.Add(BackendMessages.Message("workbook.row.error", row, exception.Message));
+                result.Details.Add(new(row, "gccNumber", exception.Code, exception.Message));
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException and not OutOfMemoryException and not BusinessRuleException)
+            {
+                result.Failed++;
+                result.Errors.Add(BackendMessages.Message("workbook.row.unreadable", row));
+                result.Details.Add(new(row, "row", "import.invalid_row", "Provjerite format i vrijednosti polja."));
+                _logger.LogWarning("Legal import row could not be read. Row {Row}. FailureType {FailureType}", row, exception.GetType().Name);
             }
         }
 
         if (result.Imported > 0)
-            await _context.SaveChangesAsync();
+        {
+            _context.AuditLogs.Add(Helpers.BusinessAudit.Create("LegalEntity", "-", "IMPORT", createdBy, _actor, newValues: new { result.Imported, result.Failed }));
+            await _context.SaveChangesAsync(_actor?.HttpContext?.RequestAborted ?? default);
+        }
 
         return result;
     }
+
+    private static bool? ParseExposure(string value) => string.IsNullOrWhiteSpace(value) ? null
+        : value.Equals("DA", StringComparison.OrdinalIgnoreCase) || value.Equals("YES", StringComparison.OrdinalIgnoreCase) ? true
+        : value.Equals("NE", StringComparison.OrdinalIgnoreCase) || value.Equals("NO", StringComparison.OrdinalIgnoreCase) ? false
+        : throw new ValidationException("isLargeExposure", BackendMessages.Message("validation.registry.exposure.import"));
 
     private static DateTime? ParseOptionalDate(string value, string field)
     {
@@ -495,7 +585,7 @@ public class LegalEntityService : ILegalEntityService
         if (DateTime.TryParse(value, CultureInfo.GetCultureInfo("bs-BA"), DateTimeStyles.None, out var date) ||
             DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out date))
             return date;
-        throw new InvalidOperationException($"Kolona '{field}' ne sadrži ispravan datum.");
+        throw new ValidationException(BackendMessages.Message("workbook.column.date.invalid", field));
     }
 
     private static LegalEntityDTO MapToDto(LegalEntity e) => new()
@@ -506,6 +596,7 @@ public class LegalEntityService : ILegalEntityService
         MaticniBroj = e.MaticniBroj,
         FbaId = e.FbaId,
         Name = e.Name,
+        GccNumber = e.GccNumber, GccName = e.GccName, IsLargeExposure = e.IsLargeExposure,
         Matbroj = e.Matbroj,
         BasisOfConnection = e.BasisOfConnection,
         ConnectionDescription = e.ConnectionDescription,

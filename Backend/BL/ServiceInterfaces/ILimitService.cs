@@ -9,7 +9,11 @@ namespace RBBH.ConnectedParties.BL.ServiceInterfaces;
 public interface ILimitService
 {
     /// <summary>Vraća limite, opcionalno filtrirano po pravnom licu ili matičnom broju.</summary>
+    Task<BL.Services.ReferencePage<LimitResponseDTO>> Page(Guid? legalEntityId, string? search, int page, int pageSize, CancellationToken ct, DateTime? asOf = null);
     Task<Result<List<LimitResponseDTO>>> GetAll(Guid? legalEntityId = null, string? matbroj = null);
+
+    Task<Result<List<LimitResponseDTO>>> ExportData(Guid? legalEntityId, string? matbroj, DateTime? asOf, CancellationToken ct);
+    Task<Result<List<LimitResponseDTO>>> GetAsOf(Guid? legalEntityId, string? matbroj, DateTime asOf, CancellationToken ct);
 
     /// <summary>Vraća jedan limit po ID-u.</summary>
     Task<Result<LimitResponseDTO>> GetByID(int id);
@@ -28,4 +32,6 @@ public interface ILimitService
     /// <summary>Briše limit.</summary>
     /// <param name="id">ID limita koji se briše.</param>
     Task<Result<bool>> Delete(int id);
+    Task<Result<bool>> Delete(int id, string korisnik);
+    Task<DL.DTO.ImportResultDTO> Import(Stream stream, string korisnik, CancellationToken ct);
 }

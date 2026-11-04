@@ -13,7 +13,20 @@ on:
 permissions:
   contents: read
 jobs:
+  secret_scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Verify publication guard
+        run: python3 -m unittest discover -s scripts/security -p 'test_*.py'
+      - name: Scan the complete source branch history
+        env:
+          SECURITY_SCAN_REF: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: python3 scripts/security/scan_git_secrets.py --ref "$SECURITY_SCAN_REF"
   dotnet:
+    needs: secret_scan
     runs-on: ubuntu-latest
     timeout-minutes: 30
     services:
@@ -50,6 +63,7 @@ jobs:
         if: always()
         with: { name: dotnet-results, path: artifacts/ci-tests }
   browser:
+    needs: secret_scan
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:

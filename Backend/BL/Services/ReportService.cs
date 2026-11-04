@@ -14,11 +14,14 @@ public class ReportService : IReportService
 {
     private readonly ConnectedPartiesDbContext _context;
     private readonly ILogger<ReportService> _logger;
+    private readonly IHttpContextAccessor? _actor;
+    private readonly IFinanceMonthlySource? _finance;
+    private CancellationToken Cancellation => _actor?.HttpContext?.RequestAborted ?? default;
 
-    public ReportService(ConnectedPartiesDbContext context, ILogger<ReportService> logger)
+    public ReportService(ConnectedPartiesDbContext context, ILogger<ReportService> logger, IHttpContextAccessor? actor = null, IFinanceMonthlySource? finance = null)
     {
         _context = context;
-        _logger = logger;
+        _logger = logger; _actor = actor; _finance = finance;
     }
 
     public async Task<ReportDTO> GenerateDailyReportAsync(string createdBy)
@@ -32,23 +35,28 @@ public class ReportService : IReportService
             ReportDate = today,
             TotalClients = snapshot.Count,
             ClientsWithBreachedLimit = snapshot.Count(s => s.IsLimitBreached),
-            TotalExposure = snapshot.Sum(s => s.CurrentExposure),
+            TotalExposure = SnapshotTotal(snapshot),
             DataSnapshot = JsonSerializer.Serialize(snapshot),
+            DataSource = "local.clientlimits",
             CreatedBy = createdBy,
             CreatedAt = DateTime.UtcNow,
             IsActive = true
         };
 
         _context.Reports.Add(report);
-        await _context.SaveChangesAsync();
+        _context.AuditLogs.Add(Helpers.BusinessAudit.Create("Report", report.Id.ToString(), "GENERATE", createdBy, _actor,
+            newValues: new { report.ReportType, report.ReportDate, report.DataSource, report.TotalClients, report.TotalExposure }));
+        await _context.SaveChangesAsync(Cancellation);
 
         return MapReportToDto(report);
     }
 
     public async Task<ReportDTO> GenerateMonthlyReportAsync(int year, int month, string createdBy)
     {
+        if (year < 2000 || year > DateTime.UtcNow.Year) throw new ValidationException("year", BackendMessages.Message("errors.report.year.invalid"));
+        if (month is < 1 or > 12) throw new ValidationException("month", BackendMessages.Message("errors.report.month.range"));
         var reportDate = new DateTime(year, month, 1);
-        var snapshot = await BuildExposureSnapshotAsync();
+        var snapshot = await BuildExposureSnapshotAsync(year, month);
 
         var report = new Report
         {
@@ -56,53 +64,58 @@ public class ReportService : IReportService
             ReportDate = reportDate,
             TotalClients = snapshot.Count,
             ClientsWithBreachedLimit = snapshot.Count(s => s.IsLimitBreached),
-            TotalExposure = snapshot.Sum(s => s.CurrentExposure),
+            TotalExposure = SnapshotTotal(snapshot),
             DataSnapshot = JsonSerializer.Serialize(snapshot),
+            DataSource = _finance?.Enabled == true ? "finance.monthlyhistory" : "local.clientlimits",
             CreatedBy = createdBy,
             CreatedAt = DateTime.UtcNow,
             IsActive = true
         };
 
         _context.Reports.Add(report);
-        await _context.SaveChangesAsync();
+        _context.AuditLogs.Add(Helpers.BusinessAudit.Create("Report", report.Id.ToString(), "GENERATE", createdBy, _actor,
+            newValues: new { report.ReportType, report.ReportDate, report.DataSource, report.TotalClients, report.TotalExposure }));
+        await _context.SaveChangesAsync(Cancellation);
 
         return MapReportToDto(report);
     }
 
     public async Task<ReportListDTO> GetDailyReportsAsync(int page, int pageSize)
     {
+        page = Math.Clamp(page, 1, 1_000_000); pageSize = Math.Clamp(pageSize, 1, 200);
         var query = _context.Reports.AsNoTracking()
             .Where(r => r.ReportType == "DAILY")
-            .OrderByDescending(r => r.ReportDate);
+            .OrderByDescending(r => r.ReportDate).ThenByDescending(r => r.CreatedAt).ThenBy(r => r.Id);
 
-        var total = await query.CountAsync();
+        var total = await query.CountAsync(Cancellation);
         var items = await query
             .Skip((page - 1) * pageSize).Take(pageSize)
             .Select(r => MapReportToDto(r))
-            .ToListAsync();
+            .ToListAsync(Cancellation);
 
         return new ReportListDTO { Items = items, Total = total, Page = page, PageSize = pageSize };
     }
 
     public async Task<ReportListDTO> GetMonthlyReportsAsync(int page, int pageSize)
     {
+        page = Math.Clamp(page, 1, 1_000_000); pageSize = Math.Clamp(pageSize, 1, 200);
         var query = _context.Reports.AsNoTracking()
             .Where(r => r.ReportType == "MONTHLY")
-            .OrderByDescending(r => r.ReportDate);
+            .OrderByDescending(r => r.ReportDate).ThenByDescending(r => r.CreatedAt).ThenBy(r => r.Id);
 
-        var total = await query.CountAsync();
+        var total = await query.CountAsync(Cancellation);
         var items = await query
             .Skip((page - 1) * pageSize).Take(pageSize)
             .Select(r => MapReportToDto(r))
-            .ToListAsync();
+            .ToListAsync(Cancellation);
 
         return new ReportListDTO { Items = items, Total = total, Page = page, PageSize = pageSize };
     }
 
     public async Task<byte[]> ExportClientByIdAsync(string identifier)
     {
-        if (string.IsNullOrWhiteSpace(identifier))
-            throw new ValidationException("identifier", "Identifikator je obavezan.");
+        if (string.IsNullOrWhiteSpace(identifier) || identifier.Length > 50)
+            throw new ValidationException("identifier", BackendMessages.Message("validation.report.identifier.required"));
 
         var id = identifier.Trim().ToLower();
 
@@ -117,13 +130,13 @@ public class ReportService : IReportService
 
         if (legalEntity is null)
             throw new ValidationException("identifier",
-                $"Pravno lice s identifikatorom '{identifier.Trim()}' nije pronađeno.");
+                BackendMessages.Message("validation.report.legal.missing", identifier.Trim()));
 
         var rows = await GetLimitExportRowsAsync(legalEntity.Id);
 
         if (rows.Count == 0)
             throw new ValidationException("identifier",
-                $"Klijent '{legalEntity.Name}' nema definisanih limita.");
+                BackendMessages.Message("validation.report.limits.missing", legalEntity.Name));
 
         return BuildLimitsExcel(rows);
     }
@@ -137,31 +150,62 @@ public class ReportService : IReportService
     public async Task<byte[]> ExportGeneratedReportAsync(Guid reportId)
     {
         var report = await _context.Reports.AsNoTracking().FirstOrDefaultAsync(item => item.Id == reportId && item.IsActive)
-            ?? throw new ValidationException("reportId", "Izvještaj nije pronađen.");
+            ?? throw new ValidationException("reportId", BackendMessages.Message("validation.report.missing"));
         var snapshot = string.IsNullOrWhiteSpace(report.DataSnapshot)
             ? []
             : JsonSerializer.Deserialize<List<ExposureSnapshotRow>>(report.DataSnapshot) ?? [];
-        return GenerateExposureExcel(snapshot, $"{(report.ReportType == "DAILY" ? "Dnevni" : "Mjesečni")} izvještaj — {report.ReportDate:dd.MM.yyyy}");
+        return GenerateExposureExcel(snapshot, BackendMessages.Message("workbook.report.title", BackendMessages.Message(report.ReportType == "DAILY" ? "labels.report.daily" : "labels.report.monthly"), report.ReportDate));
     }
 
     // ─── Privatne metode ────────────────────────────────────────────────────
 
-    private async Task<List<ExposureSnapshotRow>> BuildExposureSnapshotAsync() =>
-        await (from capital in _context.ClientLimits.AsNoTracking()
-               join entity in _context.LegalEntities.AsNoTracking() on capital.LegalEntityId equals entity.Id
-               orderby entity.Name
-               select new ExposureSnapshotRow
-               {
-                   Naziv = entity.Name,
-                   ExposureLimit = capital.ExposureLimit,
-                   CurrentExposure = capital.CurrentExposure,
-                   Currency = capital.Currency,
-                   IsLimitBreached = capital.IsLimitBreached,
-                   RegulatoryCapital = capital.RegulatoryCapital,
-                   CoreCapital = capital.CoreCapital,
-                   CreatedBy = capital.CreatedBy
-               })
-              .ToListAsync();
+    private async Task<List<ExposureSnapshotRow>> BuildExposureSnapshotAsync(int? year = null, int? month = null)
+    {
+        var rows = await (from capital in _context.ClientLimits.AsNoTracking()
+            join entity in _context.LegalEntities.AsNoTracking() on capital.LegalEntityId equals entity.Id
+            orderby entity.Name, entity.Id
+            select new ExposureSnapshotRow { Naziv = entity.Name, Matbroj = entity.Matbroj,
+                GccNumber = entity.GccNumber, GccName = entity.GccName, IsLargeExposure = entity.IsLargeExposure,
+                ExposureLimit = capital.ExposureLimit,
+                CurrentExposure = capital.CurrentExposure, Currency = capital.Currency, IsLimitBreached = capital.IsLimitBreached,
+                RegulatoryCapital = capital.RegulatoryCapital, CoreCapital = capital.CoreCapital, CreatedBy = capital.CreatedBy }).Take(20_001).ToListAsync(Cancellation);
+        if (rows.Count > 20_000) throw new BusinessRuleException(503, "report.resource_limit");
+        if (year.HasValue && month.HasValue && _finance?.Enabled == true)
+        {
+            if (rows.Any(row => string.IsNullOrWhiteSpace(row.Matbroj) || row.Currency != "BAM") || rows.GroupBy(row => row.Matbroj).Any(group => group.Count() > 1))
+                throw new BusinessRuleException(409, "finance.registry_reconciliation");
+            var exposures = await _finance.Read(year.Value, month.Value, rows.Select(row => row.Matbroj!).ToArray(), Cancellation);
+            var map = exposures.ToDictionary(row => row.CustomerKey, StringComparer.Ordinal);
+            if (rows.Any(row => !map.ContainsKey(row.Matbroj!))) throw new BusinessRuleException(503, "finance.incomplete_period");
+            var date = new DateTime(year.Value, month.Value, DateTime.DaysInMonth(year.Value, month.Value));
+            var capital = await CapitalHistory.AsOf(_context, date, Cancellation);
+            if (rows.Count > 0 && capital is null) throw new BusinessRuleException(409, "finance.capital_missing");
+            foreach (var row in rows)
+            {
+                row.CurrentExposure = map[row.Matbroj!].TotalExposure; row.IsLimitBreached = row.CurrentExposure > row.ExposureLimit;
+                row.RegulatoryCapital = capital!.RegulatoryCapital; row.CoreCapital = capital.CoreCapital;
+            }
+        }
+        return rows;
+    }
+
+    private static decimal SnapshotTotal(IReadOnlyList<ExposureSnapshotRow> rows)
+    {
+        const decimal maximum = 9_999_999_999_999_999.99m;
+        try
+        {
+            if (rows.Any(row => new[] { row.CurrentExposure, row.ExposureLimit, row.RegulatoryCapital, row.CoreCapital }
+                    .Any(value => Math.Abs(value) > maximum || decimal.Round(value, 2) != value)))
+                throw new OverflowException();
+            var total = rows.Sum(row => row.CurrentExposure);
+            if (Math.Abs(total) > maximum) throw new OverflowException();
+            return total;
+        }
+        catch (OverflowException)
+        {
+            throw new BusinessRuleException(409, "report.amount_out_of_range");
+        }
+    }
 
     private async Task<List<LimitExportRow>> GetLimitExportRowsAsync(Guid? legalEntityId)
     {
@@ -193,7 +237,7 @@ public class ReportService : IReportService
                 RegulatorniKapital = x.capital != null ? x.capital.RegulatoryCapital : (decimal?)null,
                 OsnovniKapital = x.capital != null ? x.capital.CoreCapital : (decimal?)null,
             })
-            .ToListAsync();
+            .ToListAsync(Cancellation);
     }
 
     private static byte[] BuildLimitsExcel(List<LimitExportRow> rows) =>
@@ -217,7 +261,7 @@ public class ReportService : IReportService
         ws.Row(1).Height = 34;
         ws.Range(1, 1, 1, 7).Merge();
 
-        ws.Cell(2, 1).Value = $"Generisano: {DateTime.Now:dd.MM.yyyy HH:mm}";
+        ws.Cell(2, 1).Value = BackendMessages.Message("workbook.generated.at", DateTime.Now);
         ws.Cell(2, 1).Style.Font.Italic = true;
         ws.Cell(2, 1).Style.Font.FontName = "Amalia";
         ws.Cell(2, 1).Style.Font.FontColor = XLColor.FromArgb(0x55, 0x55, 0x55);
@@ -290,6 +334,7 @@ public class ReportService : IReportService
     private static ReportDTO MapReportToDto(Report r) => new()
     {
         Id = r.Id,
+        DataSource = r.DataSource ?? "legacy.unspecified",
         ReportType = r.ReportType,
         ReportDate = r.ReportDate,
         TotalClients = r.TotalClients,
@@ -302,6 +347,11 @@ public class ReportService : IReportService
     /// <summary>Snapshot reda izloženosti/kapitala klijenta — koristi se za DataSnapshot izvještaja (Kapital modul).</summary>
     private sealed class ExposureSnapshotRow
     {
+        // Registry metadata captured at generation, not a new finance classification rule.
+        public string? GccNumber { get; set; }
+        public string? GccName { get; set; }
+        public bool? IsLargeExposure { get; set; }
+        public string? Matbroj { get; set; }
         public string Naziv { get; set; } = string.Empty;
         public decimal ExposureLimit { get; set; }
         public decimal CurrentExposure { get; set; }

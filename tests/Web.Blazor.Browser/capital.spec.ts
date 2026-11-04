@@ -6,11 +6,11 @@ import { readFile } from "node:fs/promises";
 const headers = { "X-Fixture-Control": "true" };
 test.beforeEach(async ({ request }) => { expect((await request.post("/__fixtures/reset", { headers })).status()).toBe(204); });
 async function open(page: Page) { await page.goto("/app/capital"); await interactive(page); }
-async function fill(dialog: Locator, regulatory = "123.45", core = "0", supplementary = "67.89") {
+async function fill(dialog: Locator, regulatory = "123.45", core = "0", supplementary = "67.89", date = "2026-01-01") {
   await dialog.getByLabel("Regulatorni kapital", { exact: false }).fill(regulatory);
   await dialog.getByLabel("Osnovni kapital", { exact: false }).fill(core);
   await dialog.getByLabel("Dopunski kapital", { exact: false }).fill(supplementary);
-  await dialog.getByLabel("Datum kapitala", { exact: false }).fill("2026-01-01");
+  await dialog.getByLabel("Datum kapitala", { exact: false }).fill(date);
 }
 
 test("locked period disables capital editing without a mutation and export stays available", async ({ page, request }) => {
@@ -36,27 +36,45 @@ test("a period locked after opening the capital editor is still rejected by back
   expect(await (await request.get("/__fixtures/capital", { headers })).json()).toEqual([]);
   expect((await (await request.get("/__fixtures/counts", { headers })).json()).audit).toBe(0);
 });
-test("actual empty singleton, accessible editor and zero-valued upsert retain one stable record", async ({ page, request }) => {
+test("empty capital, accessible editor, zero values and immutable effective-date revisions with history and as-of lookup", async ({ page, request }) => {
   await open(page); await expect(page.getByText("Kapital nije postavljen.", { exact: true })).toBeVisible();
+  await expect(page.getByText("Još nema evidentiranih revizija kapitala.", { exact: true })).toBeVisible();
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
   await page.getByRole("button", { name: "Uredi kapital", exact: true }).click(); const dialog = page.getByRole("dialog");
   await expect(dialog.getByLabel("Osnovni kapital", { exact: false })).toHaveValue(""); await fill(dialog);
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).not.toBeVisible();
-  await expect(page.getByRole("cell", { name: "BAM 0.00", exact: true })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "BAM 0.00", exact: true }).first()).toBeVisible();
   let records = await (await request.get("/__fixtures/capital", { headers })).json(); expect(records).toHaveLength(1);
-  const id = records[0].id; expect(records[0].coreCapital).toBe(0); expect(records[0].regulatoryCapital).toBe(123.45);
+  expect(records[0].coreCapital).toBe(0); expect(records[0].regulatoryCapital).toBe(123.45);
+  // Same effective date: the backend appends a correction, it never rewrites the first revision.
   await page.getByRole("button", { name: "Uredi kapital", exact: true }).click();
   expect(Number(await dialog.getByLabel("Regulatorni kapital", { exact: false }).inputValue())).toBe(123.45);
   await fill(dialog, "10", "20", "30"); await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).not.toBeVisible();
-  records = await (await request.get("/__fixtures/capital", { headers })).json(); expect(records).toHaveLength(1); expect(records[0].id).toBe(id); expect(records[0].coreCapital).toBe(20);
-  await page.reload(); await interactive(page); await expect(page.getByRole("cell", { name: "BAM 20.00", exact: true })).toBeVisible();
+  records = await (await request.get("/__fixtures/capital", { headers })).json(); expect(records).toHaveLength(2);
+  expect(records[0].id).not.toBe(records[1].id); expect(records[0].coreCapital).toBe(0); expect(records[1].coreCapital).toBe(20);
+  // A later effective date makes the earlier values history with an end date.
+  await page.getByRole("button", { name: "Uredi kapital", exact: true }).click();
+  await fill(dialog, "100", "200", "300", "2026-02-01"); await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).not.toBeVisible();
+  await page.reload(); await interactive(page);
+  await expect(page.getByRole("cell", { name: "BAM 200.00", exact: true }).first()).toBeVisible(); // active table
+  const history = page.locator("table.registry-capital-history tbody tr");
+  await expect(history).toHaveCount(3);
+  await expect(history.nth(0)).toContainText("Aktivan"); await expect(history.nth(0)).toContainText("bez kraja");
+  await expect(history.nth(1)).toContainText("2026-01-31"); await expect(history.nth(1)).toContainText("Raniji");
+  await expect(history.nth(2)).toContainText("2026-01-31");
+  expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
+  // As-of: the latest revision of the latest effective date not after the requested day; nothing before the first record.
+  await page.getByLabel("Datum", { exact: true }).fill("2026-01-15"); await page.getByRole("button", { name: "Prikaži", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Na dan 2026-01-15" })).toContainText("BAM 20.00");
+  await page.getByLabel("Datum", { exact: true }).fill("2025-12-31"); await page.getByRole("button", { name: "Prikaži", exact: true }).click();
+  await expect(page.getByText("Za datum 2025-12-31 nema evidentiranog kapitala.", { exact: true })).toBeVisible();
 });
 test("required amounts/date and negative values cannot persist", async ({ page, request }) => {
   await open(page); await page.getByRole("button", { name: "Uredi kapital", exact: true }).click(); const dialog = page.getByRole("dialog");
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
   await expect(dialog.getByText("Polje je obavezno.", { exact: true }).first()).toBeVisible();
-  await fill(dialog, "-1"); await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
+  await fill(dialog, "-1"); await page.keyboard.press("Tab"); await expect(dialog.getByRole("button", { name: "Sačuvaj", exact: true })).toBeDisabled();
   await expect(dialog.getByText("Iznos ne može biti negativan.", { exact: true }).first()).toBeVisible();
   expect(await (await request.get("/__fixtures/capital", { headers })).json()).toEqual([]);
 });
@@ -65,7 +83,7 @@ test("empty and populated capital export use real backend XLSX", async ({ page, 
   let pending = page.waitForEvent("download"); await page.getByRole("button", { name: "Izvezi Excel", exact: true }).click();
   let download = await pending; expect(download.suggestedFilename()).toMatch(/^kapital-.*\.xlsx$/);
   await request.post("/__fixtures/limit-reference", { headers }); await page.reload(); await interactive(page);
-  await expect(page.getByRole("cell", { name: "BAM 1,234,567.89", exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Kapital", exact: true }).getByRole("cell", { name: "BAM 1,234,567.89", exact: true })).toBeVisible();
   pending = page.waitForEvent("download"); await page.getByRole("button", { name: "Izvezi Excel", exact: true }).click(); download = await pending;
   const target = info.outputPath("capital.xlsx"); await download.saveAs(target); expect((await readFile(target)).subarray(0, 2)).toEqual(Buffer.from([0x50, 0x4b]));
 });

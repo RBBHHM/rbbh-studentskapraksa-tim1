@@ -10,6 +10,17 @@ namespace UnitTests.Authentication;
 
 public sealed class SubjectLinkAndVirtualGuestTests
 {
+    [Fact]
+    public async Task UnmappedOidcEmailClaimStillHonorsInactiveIdentityDenyMarker()
+    {
+        await using var db = Store(Guid.NewGuid().ToString());
+        db.AppUsers.Add(Legacy(active: false)); await db.SaveChangesAsync();
+        var principal = new ClaimsPrincipal(new ClaimsIdentity([new("sub", "new-subject"),
+            new("email", "person@example.test"), new("email_verified", "true")], "OidcFixture"));
+        await new RoleClaimsTransformation(db).TransformAsync(principal);
+        Assert.False(principal.IsInRole(ApplicationAccessRoles.Guest));
+        Assert.Empty(principal.FindAll("permission"));
+    }
     private static ConnectedPartiesDbContext Store(string name) => new(new DbContextOptionsBuilder<ConnectedPartiesDbContext>().UseInMemoryDatabase(name).Options);
     private static ClaimsPrincipal Identity(string subject = "real-subject", string email = "person@example.test", bool verified = true) =>
         new(new ClaimsIdentity([new("sub", subject), new(ClaimTypes.Email, email), new("email_verified", verified.ToString())], "Fixture"));

@@ -20,7 +20,7 @@ namespace RBBH.ConnectedParties.Helpers.Validators
         {
             if (string.IsNullOrWhiteSpace(jmbg))
             {
-                throw new ValidationException("JMBG", "JMBG ne može biti prazan.");
+                throw new ValidationException("JMBG", BackendMessages.Message("validation.jmbg.required"));
             }
 
             jmbg = jmbg.Trim();
@@ -28,7 +28,7 @@ namespace RBBH.ConnectedParties.Helpers.Validators
             if (!Regex.IsMatch(jmbg, JMBGPattern))
             {
                 throw new ValidationException("JMBG", 
-                    "JMBG mora biti 13-cifreni broj (npr. 1234567890123).");
+                    BackendMessages.Message("validation.jmbg.format"));
             }
 
             var day = int.Parse(jmbg[..2]);
@@ -40,13 +40,13 @@ namespace RBBH.ConnectedParties.Helpers.Validators
                     System.Globalization.DateTimeStyles.None, out var birthDate)
                 || birthDate.Date > DateTime.Today)
             {
-                throw new ValidationException("JMBG", "JMBG sadrži neispravan datum rođenja.");
+                throw new ValidationException("JMBG", BackendMessages.Message("validation.jmbg.birth.date"));
             }
 
             if (!IsValidControlDigit(jmbg))
             {
                 throw new ValidationException("JMBG", 
-                    "JMBG nije ispravan - kontrolna cifra nije validna.");
+                    BackendMessages.Message("validation.jmbg.checksum"));
             }
 
             return true;

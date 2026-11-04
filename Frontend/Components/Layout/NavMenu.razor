@@ -1,3 +1,4 @@
+@implements IDisposable
 @inject NavigationManager Navigation
 @inject RBI.Authorization.IRbiPermissionService Permissions
 @inject IProfileApi Profile
@@ -14,7 +15,6 @@
                 @if (_limits) { <NavEntry Label="@T["limit.title"]" Href="/app/limits" Glyph="AppIconName.Scale" Active="@IsActive("app/limits")" /> }
                 @if (_capital) { <NavEntry Label="@T["capital.title"]" Href="/app/capital" Glyph="AppIconName.Landmark" Active="@IsActive("app/capital")" /> }
                 @if (_reports) { <NavEntry Label="@T["reports.title"]" Href="/app/reports" Glyph="AppIconName.FileChartColumn" Active="@IsActive("app/reports")" /> }
-                @if (_capital) { <NavEntry Label="@T["notifications.title"]" Href="/app/notifications" Icon="RbiIconName.Bell" Active="@IsActive("app/notifications")" /> }
             </nav>
         </div>
         @if (_admin)
@@ -23,6 +23,7 @@
                 <p class="app-nav__eyebrow">@T["nav.area.administration"]</p>
                 <nav class="app-nav__list" aria-label="@T["nav.area.administration"]">
                     <NavEntry Label="@T["users.title"]" Href="/app/admin/users" Icon="RbiIconName.Users" Active="@IsActive("app/admin/users")" />
+                    <NavEntry Label="@T["roles.admin-title"]" Href="/app/admin/role-requests" Glyph="AppIconName.UserCog" Active="@IsActive("app/admin/role-requests")" />
                     <NavEntry Label="@T["period.title"]" Href="/app/admin/period" Glyph="AppIconName.CalendarClock" Active="@IsActive("app/admin/period")" />
                     <NavEntry Label="@T["codes.title"]" Href="/app/admin/code-lists" Glyph="AppIconName.BookOpen" Active="@IsActive("app/admin/code-lists")" />
                     <NavEntry Label="@T["audit.title"]" Href="/app/admin/audit" Glyph="AppIconName.ScrollText" Active="@IsActive("app/admin/audit")" />
@@ -41,9 +42,12 @@
     private bool _physical, _legal, _limits, _capital, _admin, _reports;
     protected override async Task OnInitializedAsync()
     {
+        Navigation.LocationChanged += RouteChanged;
         if ((await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated != true) return;
         try { _admin = ApplicationAccess.IsAdministrator(await Profile.GetAsync()); _reports = await Permissions.HasPermissionAsync("reports.read"); _physical = await Permissions.HasPermissionAsync("fl.read"); _legal = await Permissions.HasPermissionAsync("pl.read"); _limits = await Permissions.HasPermissionAsync("limiti.read"); _capital = await Permissions.HasPermissionAsync("kapital.read"); }
         catch (RegistryApiException) { _physical = _legal = _limits = _capital = _admin = _reports = false; }
     }
+    private void RouteChanged(object? sender, LocationChangedEventArgs args) => _ = InvokeAsync(StateHasChanged);
+    public void Dispose() => Navigation.LocationChanged -= RouteChanged;
     private bool IsActive(string path) => Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].Trim('/') == path;
 }

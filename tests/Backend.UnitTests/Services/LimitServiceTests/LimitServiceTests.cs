@@ -284,7 +284,7 @@ namespace UnitTests.Services.LimitServiceTests
             var created = await _service.Create(createDto, "test.user");
             var idZaBrisanje = created.Value!.Id;
 
-            var result = await _service.Delete(idZaBrisanje);
+            var result = await _service.Delete(idZaBrisanje, "fixture");
 
             Assert.True(result.IsSuccessful);
             Assert.True(result.Value);

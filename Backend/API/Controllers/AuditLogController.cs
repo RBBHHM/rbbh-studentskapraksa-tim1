@@ -83,14 +83,14 @@ public class AuditLogController(ConnectedPartiesDbContext db) : ControllerBase
         if (dateFrom.HasValue)
             query = query.Where(l => l.Timestamp >= DateTime.SpecifyKind(dateFrom.Value.Date, DateTimeKind.Utc));
 
-        if (dateTo.HasValue)
+        if (dateTo.HasValue && dateTo.Value.Date < DateTime.MaxValue.Date)
             query = query.Where(l => l.Timestamp < DateTime.SpecifyKind(dateTo.Value.Date.AddDays(1), DateTimeKind.Utc));
 
         var total = await query.CountAsync();
 
         var logEntities = await query
             .OrderByDescending(l => l.Timestamp)
-            .Skip((page - 1) * pageSize)
+            .Skip((int)Math.Min((long)(page - 1) * pageSize, int.MaxValue))
             .Take(pageSize)
             .ToListAsync();
         var logs = logEntities.Select(l => new

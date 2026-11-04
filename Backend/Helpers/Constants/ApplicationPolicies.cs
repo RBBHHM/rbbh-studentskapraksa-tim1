@@ -2,6 +2,7 @@ namespace RBBH.ConnectedParties.Helpers.Constants;
 
 public static class ApplicationPolicies
 {
+    public const string ApplicationAccess = "application.access";
     public const string PhysicalPersonsRead = "physical-persons.read";
     public const string PhysicalPersonsWrite = "physical-persons.write";
     public const string PhysicalPersonsCreate = "physical-persons.create";

@@ -6,7 +6,6 @@
     <WarningsAsErrors>$(WarningsAsErrors);RZ10012</WarningsAsErrors>
     <DefaultItemExcludes>$(DefaultItemExcludes);Platform/**</DefaultItemExcludes>
     <UserSecretsId>rbbh-webapp-16f22a6a-7621-42b8-8523-7d710990540b</UserSecretsId>
-    <AssemblyName>DATA_CORE</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

@@ -9,6 +9,28 @@ namespace RBBH.ConnectedParties.BL.Services;
 
 public partial class AppUserService
 {
+    public Task<UserMutationResult> UpdateProfileAsync(string userId, DL.DTO.Users.UpdateUserProfileDTO dto,
+        ActorIdentity actor, string? ipAddress, CancellationToken cancellationToken) => WithMutationBoundary(async () =>
+    {
+        var validation = new List<System.ComponentModel.DataAnnotations.ValidationResult>();
+        if (!System.ComponentModel.DataAnnotations.Validator.TryValidateObject(dto, new(dto), validation, true))
+            throw new Exceptions.BusinessRuleException(400, "users.invalid_profile");
+        var row = await ResolveUser(userId, cancellationToken);
+        if (row is null) return new(UserMutationStatus.NotFound);
+        var username = dto.Username.Trim(); var email = dto.Email.Trim().ToLowerInvariant();
+        var normalizedName = username.ToUpperInvariant(); var normalizedEmail = email.ToUpperInvariant();
+        if (await _db.AppUsers.AnyAsync(user => user.Id != row.Id &&
+            (user.Username.Trim().ToUpper() == normalizedName || user.Email.Trim().ToUpper() == normalizedEmail), cancellationToken))
+            throw new Exceptions.BusinessRuleException(409, "users.duplicate_identity");
+        var before = JsonSerializer.Serialize(new { row.Username, row.FirstName, row.LastName, row.Email });
+        row.Username = username; row.FirstName = dto.FirstName.Trim(); row.LastName = dto.LastName.Trim(); row.Email = email;
+        row.ModifiedAt = DateTime.UtcNow; row.ModifiedBy = actor.DisplayName;
+        await _db.SaveChangesAsync(cancellationToken);
+        await _audit.LogAsync(AuditEntry.ForActor("AppUser", row.Id.ToString(), "UPDATE", actor, ipAddress, before,
+            JsonSerializer.Serialize(new { row.Username, row.FirstName, row.LastName, row.Email })));
+        return new(UserMutationStatus.Success);
+    }, cancellationToken);
+
     public Task<UserMutationResult> ReplaceRolesAsync(string userId, IReadOnlyCollection<Guid> roleIds,
         ActorIdentity actor, string? ipAddress, CancellationToken cancellationToken) =>
         WithMutationBoundary(async () =>
@@ -16,7 +38,7 @@ public partial class AppUserService
             var localRoles = await _db.Roles
                 .Where(role => roleIds.Contains(role.Id) && role.IsActive)
                 .ToListAsync(cancellationToken);
-            if (localRoles.Count != roleIds.Count || localRoles.Any(role => !ApplicationAccessRoles.Assignable.Contains(role.Name)))
+            if (localRoles.Count != roleIds.Count || localRoles.Any(role => role.Name == ApplicationAccessRoles.Guest))
                 return new(UserMutationStatus.InvalidRoles);
 
             AppUser? localUser = null;
@@ -37,12 +59,12 @@ public partial class AppUserService
                 _db.UserRoles.RemoveRange(assignments);
             }
             else
-                await ReplaceLocalRoles(localUser.Id, roleIds, actor.Email, cancellationToken);
+                await ReplaceLocalRoles(localUser.Id, roleIds, actor.DisplayName, cancellationToken);
             await _db.SaveChangesAsync(cancellationToken);
 
             var roles = localRoles.Select(role => role.Name).ToList();
             await _audit.LogAsync(AuditEntry.ForActor("AppUser", userId,
-                isRemoval ? "ROLE_REMOVE" : "ROLE_ASSIGN", actor.Email, ipAddress,
+                isRemoval ? "ROLE_REMOVE" : "ROLE_ASSIGN", actor, ipAddress,
                 newValues: JsonSerializer.Serialize(new { Roles = roles })));
             return new(UserMutationStatus.Success, roles);
         }, cancellationToken);
@@ -56,34 +78,29 @@ public partial class AppUserService
             if (await IsFinalActiveAdmin(localUser, cancellationToken)) return new(UserMutationStatus.FinalAdmin);
             localUser.IsActive = false;
             localUser.ModifiedAt = DateTime.UtcNow;
-            localUser.ModifiedBy = actor.Email;
+            localUser.ModifiedBy = actor.DisplayName;
             await _db.SaveChangesAsync(cancellationToken);
 
-            await _audit.LogAsync(AuditEntry.ForActor("AppUser", userId, "DEACTIVATE", actor.Email, ipAddress,
+            await _audit.LogAsync(AuditEntry.ForActor("AppUser", userId, "DEACTIVATE", actor, ipAddress,
                 oldValues: JsonSerializer.Serialize(new { IsActive = true }),
                 newValues: JsonSerializer.Serialize(new { IsActive = false })));
             return new(UserMutationStatus.Success);
         }, cancellationToken);
 
-    // Reactivation increases access and historically executes outside the
-    // destructive-mutation boundary. Preserve its local-GUID/subject lookup.
-    public async Task<UserMutationResult> ReactivateAsync(string userId, ActorIdentity actor,
-        string? ipAddress, CancellationToken cancellationToken)
+    public Task<UserMutationResult> ReactivateAsync(string userId, ActorIdentity actor,
+        string? ipAddress, CancellationToken cancellationToken) => WithMutationBoundary(async () =>
     {
         AppUser? localUser = Guid.TryParse(userId, out var localId)
             ? await _db.AppUsers.IgnoreQueryFilters().FirstOrDefaultAsync(user => user.Id == localId, cancellationToken)
             : await _db.AppUsers.IgnoreQueryFilters().FirstOrDefaultAsync(user => user.KeycloakId == userId, cancellationToken);
         if (localUser is null) return new(UserMutationStatus.NotFound);
-        localUser.IsActive = true;
-        localUser.ModifiedAt = DateTime.UtcNow;
-        localUser.ModifiedBy = actor.Email;
+        if (localUser.IsActive) return new(UserMutationStatus.Success);
+        localUser.IsActive = true; localUser.ModifiedAt = DateTime.UtcNow; localUser.ModifiedBy = actor.DisplayName;
         await _db.SaveChangesAsync(cancellationToken);
-
-        await _audit.LogAsync(AuditEntry.ForActor("AppUser", userId, "REACTIVATE", actor.Email, ipAddress,
-            oldValues: JsonSerializer.Serialize(new { IsActive = false }),
-            newValues: JsonSerializer.Serialize(new { IsActive = true })));
+        await _audit.LogAsync(AuditEntry.ForActor("AppUser", userId, "REACTIVATE", actor, ipAddress,
+            oldValues: JsonSerializer.Serialize(new { IsActive = false }), newValues: JsonSerializer.Serialize(new { IsActive = true })));
         return new(UserMutationStatus.Success);
-    }
+    }, cancellationToken);
 
     public Task<UserMutationResult> DeleteAsync(string userId, ActorIdentity actor,
         string? ipAddress, CancellationToken cancellationToken) => WithMutationBoundary(async () =>
@@ -97,7 +114,7 @@ public partial class AppUserService
             _db.UserRoles.RemoveRange(assignments);
             _db.AppUsers.Remove(localUser);
             await _db.SaveChangesAsync(cancellationToken);
-            await _audit.LogAsync(AuditEntry.ForActor("AppUser", userId, "DELETE", actor.Email, ipAddress));
+            await _audit.LogAsync(AuditEntry.ForActor("AppUser", userId, "DELETE", actor, ipAddress));
             return new(UserMutationStatus.Success);
         }, cancellationToken);
 

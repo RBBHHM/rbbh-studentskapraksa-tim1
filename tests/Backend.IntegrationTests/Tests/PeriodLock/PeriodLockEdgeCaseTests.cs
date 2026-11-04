@@ -39,11 +39,7 @@ namespace IntegrationTests.Tests.PeriodLock
                 new PeriodLockRepository(ctx),
                 new UnlockRequestRepository(ctx),
                 new PeriodLockService(),
-                auditService,
-                emailService.Object,
-                configuration.Object,
-                appUserService.Object,
-                logger.Object
+                new PeriodWorkflow(ctx, configuration.Object)
             ).WithHttpContext(AdminUser);
         }
 
@@ -60,11 +56,7 @@ namespace IntegrationTests.Tests.PeriodLock
                 new PeriodLockRepository(ctx),
                 new UnlockRequestRepository(ctx),
                 new PeriodLockService(),
-                auditService,
-                emailService.Object,
-                configuration.Object,
-                appUserService.Object,
-                logger.Object
+                new PeriodWorkflow(ctx, configuration.Object)
             ).WithHttpContext(RegularUser);
         }
 
@@ -212,7 +204,7 @@ namespace IntegrationTests.Tests.PeriodLock
             await NewUserController().RequestUnlock(dto);
 
             // Admin pregleda zahtjeve
-            var result = await NewAdminController().GetUnlockRequests("PENDING", 1, 20);
+            var result = await NewAdminController().GetReviewUnlockRequests("PENDING", 1, 20);
 
             var ok = result.Should().BeOfType<OkObjectResult>().Subject;
             var json = System.Text.Json.JsonSerializer.Serialize(ok.Value);

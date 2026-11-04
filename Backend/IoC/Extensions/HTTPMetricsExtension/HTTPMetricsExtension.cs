@@ -7,7 +7,7 @@ namespace RBBH.ConnectedParties.IoC.Extensions.HTTPMetricsExtension
     {
         public static void AddHTTPMetricsExtension(this WebApplication app)
         {
-            app.UseMetricServer();
+            app.MapMetrics().RequireAuthorization(RBBH.ConnectedParties.Helpers.Constants.ApplicationPolicies.AdministrationRead);
 
             app.UseHttpMetrics(options =>
             {

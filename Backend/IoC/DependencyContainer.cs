@@ -39,6 +39,17 @@ namespace RBBH.ConnectedParties.IoC
             #region Register application service classes with their interfaces
 
             services.AddScoped<IRoleService, RoleService>();
+            services.AddScoped<RoleRequestService>();
+            services.AddScoped<RoleCatalogService>();
+            services.AddScoped<NotificationDispatcher>();
+            services.AddSingleton<RuntimeLocalizationCache>();
+            services.AddOptions<RuntimeLocalizationOptions>().Bind(configuration.GetSection("Localization"))
+                .Validate(options => !string.IsNullOrWhiteSpace(options.DefaultLanguage) && options.DefaultLanguage.Length <= 10 &&
+                    !string.IsNullOrWhiteSpace(options.LanguagesCodebook) && options.LanguagesCodebook.Length <= 100 &&
+                    !string.IsNullOrWhiteSpace(options.LanguagePacksCodebook) && options.LanguagePacksCodebook.Length <= 100 &&
+                    options.LanguagesCodebook != options.LanguagePacksCodebook).ValidateOnStart();
+            services.AddScoped<RuntimeLocalizationCatalog>();
+            services.AddScoped<RBBH.ConnectedParties.Localization.BackendLocalizationFilter>();
             services.AddScoped<ICodeListService, CodeListService>();
             services.AddScoped<IRelatedPersonService, RelatedPersonService>();
             services.AddHttpClient<KeycloakAdminService>();
@@ -47,19 +58,19 @@ namespace RBBH.ConnectedParties.IoC
             services.AddScoped<IPeriodLockRepository, PeriodLockRepository>();
             services.AddScoped<IUnlockRequestRepository, UnlockRequestRepository>();
             services.AddScoped<IPeriodLockService, PeriodLockService>();
+            services.AddScoped<PeriodWorkflow>();
+            services.AddOptions<BankReferenceOptions>().Bind(configuration.GetSection("BankReference"));
+            services.AddScoped<IBankReferenceSource, SqlBankReferenceSource>();
             services.AddScoped<ILegalEntityService, LegalEntityService>();
+            services.AddOptions<FinanceMonthlyOptions>().Bind(configuration.GetSection("FinanceMonthly"));
+            services.AddScoped<IFinanceMonthlySource, SqlFinanceMonthlySource>();
             services.AddScoped<IReportService, ReportService>();
             services.AddScoped<ILimitService, LimitService>();
             services.AddScoped<ICapitalService, CapitalService>();
             // ── Email ─────────────────────────────────────────────────────────
             services.AddOptions<EmailSettings>().Bind(configuration.GetSection("Email"))
-                .Validate(settings => settings.Provider.Equals("demo", StringComparison.OrdinalIgnoreCase) ||
-                    (!string.IsNullOrWhiteSpace(settings.AdminEmail) && !string.IsNullOrWhiteSpace(settings.HrEmail) &&
-                     (settings.Provider.Equals("httpapi", StringComparison.OrdinalIgnoreCase)
-                         ? !string.IsNullOrWhiteSpace(settings.From) && Uri.TryCreate(settings.SendEmailWithHtmlBodyUrl, UriKind.Absolute, out var url) && url.Scheme == Uri.UriSchemeHttps
-                         : settings.Provider.Equals("smtp", StringComparison.OrdinalIgnoreCase) &&
-                           !string.IsNullOrWhiteSpace(settings.Smtp.Host) && !string.IsNullOrWhiteSpace(settings.Smtp.FromAddress))),
-                    "Email transport, sender and required recipients must be explicitly configured.")
+                .Validate(settings => settings.IsConfiguredFor(env),
+                    "Email transport, secure application URL, sender and administration recipient must be explicitly configured; demo delivery is local/test only.")
                 .ValidateOnStart();
             services.AddSingleton<EmailLogStore>();
 

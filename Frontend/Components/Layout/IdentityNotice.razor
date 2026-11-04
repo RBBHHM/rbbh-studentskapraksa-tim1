@@ -1,7 +1,28 @@
 @inject IdentityConfiguration Identity
+@inject NavigationManager Navigation
+
 <RbiAlert Title="@T[Identity.Enabled ? "profile.signedout" : "profile.unconfigured"]">
     @if (Identity.Enabled)
     {
-        <RbiButton Href="/authentication/login?returnUrl=%2Fapp">@T["auth.signin"]</RbiButton>
+        <RbiButton Href="@SignInUrl(false)">@T["auth.signin"]</RbiButton>
     }
 </RbiAlert>
+
+@code {
+    private const string AttemptMarker = "signin=1";
+
+    // A protected route starts the identity challenge itself. The marker stops a redirect loop
+    // when the identity provider returns without establishing a session; the notice then stays visible.
+    protected override void OnInitialized()
+    {
+        if (Identity.Enabled && !Navigation.Uri.Contains(AttemptMarker, StringComparison.Ordinal))
+            Navigation.NavigateTo(SignInUrl(true), forceLoad: true);
+    }
+
+    private string SignInUrl(bool marked)
+    {
+        var local = "/" + Navigation.ToBaseRelativePath(Navigation.Uri).Split('#')[0];
+        if (marked) local += (local.Contains('?') ? "&" : "?") + AttemptMarker;
+        return "/authentication/login?returnUrl=" + Uri.EscapeDataString(local);
+    }
+}

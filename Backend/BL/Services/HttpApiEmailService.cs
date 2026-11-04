@@ -86,7 +86,11 @@ public sealed class HttpApiEmailService(
             await SendAsync(to, subject, html, "broadcast");
     }
 
-    private async Task SendAsync(string to, string subject, string htmlBody, string audience, Guid? requestId = null)
+    public Task SendApplicationNotificationAsync(string to, string subject, string htmlBody, CancellationToken cancellationToken = default) =>
+        SendAsync(to, subject, htmlBody, "application", strict: true, cancellationToken: cancellationToken);
+
+    private async Task SendAsync(string to, string subject, string htmlBody, string audience, Guid? requestId = null,
+        bool strict = false, CancellationToken cancellationToken = default)
     {
         var emailApiUrl = options.Value.SendEmailWithHtmlBodyUrl;
         if (string.IsNullOrWhiteSpace(emailApiUrl) || string.IsNullOrWhiteSpace(FromAddress) || string.IsNullOrWhiteSpace(to))
@@ -107,12 +111,13 @@ public sealed class HttpApiEmailService(
         try
         {
             var httpClient = httpClientFactory.CreateClient();
-            using var response = await httpClient.PostAsJsonAsync(emailApiUrl, emailDto);
+            using var response = await httpClient.PostAsJsonAsync(emailApiUrl, emailDto, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
                 logger.LogWarning(
-                    "Slanje emaila na {To} nije uspjelo. Status: {StatusCode}", to, response.StatusCode);
+                    "Email delivery failed. Status {StatusCode}", (int)response.StatusCode);
+                if (strict) throw new HttpRequestException("Email provider did not accept delivery.", null, response.StatusCode);
                 return;
             }
 
@@ -124,11 +129,12 @@ public sealed class HttpApiEmailService(
                 Audience = audience,
                 RequestId = requestId
             });
-            logger.LogInformation("Email poslan preko zajedničkog servisa na {To}: {Subject}", to, subject);
+            logger.LogInformation("Email delivered through the configured HTTP transport.");
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "Greška prilikom slanja emaila na {To} preko zajedničkog servisa.", to);
+            logger.LogError("Email delivery failed. FailureType {FailureType}", ex.GetType().Name);
+            if (strict) throw;
         }
     }
 }

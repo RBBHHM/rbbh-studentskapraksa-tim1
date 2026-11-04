@@ -32,7 +32,7 @@ test("Admin sees real user/access metadata, accessible create form and disabled 
   await expect(own.getByRole("button", { name: "Deaktiviraj", exact: true })).toBeDisabled();
   await expect(own.getByRole("button", { name: "Obriši korisnika", exact: true })).toBeDisabled();
   await expect(own.getByRole("button", { name: "Promijeni ulogu", exact: true })).toBeDisabled();
-  await expect(own).toContainText("ADMINISTRATION_MANAGE");
+  await expect(own).toContainText("Administrator");
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
   await page.getByRole("button", { name: "Dodaj korisnika", exact: true }).click();
   await settled(page.getByRole("dialog"));
@@ -45,7 +45,7 @@ test("create preserves multiple application roles and persists the actual backen
   await access(dialog, "PL", true);
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).toHaveCount(0);
   const row = page.getByRole("row").filter({ hasText: "new.user@raiffeisengroup.ba" });
-  await expect(row).toContainText("FL_CREATE"); await expect(row).toContainText("PL_CREATE");
+  await expect(row).toContainText("FL, PL");
   await page.reload(); await interactive(page); await expect(row).toBeVisible();
   const state = await (await request.get("/__fixtures/users-state", { headers })).json();
   expect(state.users.find((user: { username: string }) => user.username === "new.user")).toMatchObject({ firstName: "Native", lastName: "User", isActive: true });
@@ -56,15 +56,25 @@ test("create preserves multiple application roles and persists the actual backen
   const afterDuplicate = await (await request.get("/__fixtures/users-state", { headers })).json();
   expect(afterDuplicate.users).toHaveLength(state.users.length); expect(afterDuplicate.audit).toHaveLength(1);
 });
-test("required names and corporate email block requests; Guest needs no checkbox", async ({ page, request }) => {
+test("Enter toggles a focused checkbox and Tab moves on without submitting", async ({ page, request }) => {
+  await visit(page); const dialog = await createFields(page);
+  const fl = dialog.getByRole("checkbox", { name: "FL", exact: true });
+  await fl.focus(); await fl.press("Enter");
+  await expect(fl).toBeChecked(); await expect(dialog).toBeVisible();
+  await fl.press("Enter"); await expect(fl).not.toBeChecked();
+  await fl.press("Tab"); await expect(fl).not.toBeFocused();
+  expect((await (await request.get("/__fixtures/counts", { headers })).json()).mutations).toBe(0);
+});
+test("required names and a well-formed email block requests; Guest needs no checkbox", async ({ page, request }) => {
   await visit(page); await page.getByRole("button", { name: "Dodaj korisnika", exact: true }).click();
   let dialog = page.getByRole("dialog"); await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
   await expect(dialog.getByRole("checkbox", { name: "Gost", exact: true })).toHaveCount(0);
-  await expect(dialog.getByRole("alert").first()).toBeVisible();
+  await expect(dialog.locator("[aria-invalid=true]").first()).toBeVisible();
   expect((await (await request.get("/__fixtures/counts", { headers })).json()).mutations).toBe(0);
-  await dialog.getByRole("button", { name: "Odustani", exact: true }).click(); dialog = await createFields(page, "invalid@example.test");
-  await access(dialog, "FL", true); await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
-  await expect(dialog.getByText("Unesite ispravnu email adresu s domenom @raiffeisengroup.ba.", { exact: true }).first()).toBeVisible();
+  await dialog.getByRole("button", { name: "Odustani", exact: true }).click(); dialog = await createFields(page, "not-an-email");
+  await access(dialog, "FL", true); await dialog.getByLabel("Email", { exact: false }).blur();
+  await expect(dialog.getByRole("button", { name: "Sačuvaj", exact: true })).toBeDisabled();
+  await expect(dialog.getByText("Unesite ispravnu email adresu.", { exact: true }).first()).toBeVisible();
   expect((await (await request.get("/__fixtures/counts", { headers })).json()).mutations).toBe(0);
 });
 test("role replacement and non-final empty roles preserve the existing mapping-removal workflow", async ({ page, request }) => {
@@ -73,12 +83,12 @@ test("role replacement and non-final empty roles preserve the existing mapping-r
   await other.getByRole("button", { name: "Promijeni ulogu", exact: true }).click();
   let dialog = page.getByRole("dialog"); await access(dialog, "FL", false);
   await access(dialog, "Kapital", true); await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
-  await expect(dialog).toHaveCount(0); await expect(other).toContainText("KAPITAL_CREATE");
+  await expect(dialog).toHaveCount(0); await expect(other).toContainText("Kapital");
   await other.getByRole("button", { name: "Promijeni ulogu", exact: true }).click(); dialog = page.getByRole("dialog");
   await access(dialog, "Kapital", false);
   await expect(dialog.getByText(/Zapis identiteta i status ostaju sačuvani/)).toBeVisible();
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).toHaveCount(0);
-  await expect(other).toBeVisible(); await expect(other).toContainText("FL_VIEW"); await expect(other).not.toContainText("KAPITAL_CREATE");
+  await expect(other).toBeVisible(); await expect(other).toContainText("Gost"); await expect(other).not.toContainText("Kapital");
   const state = await (await request.get("/__fixtures/users-state", { headers })).json();
   expect(state.users.find((user: { email: string }) => user.email === "other-FL@fixture.test").isActive).toBe(true);
 });
@@ -86,7 +96,7 @@ test("own role editor is unavailable even when another active Admin exists", asy
   await request.post("/__fixtures/users-reference", { headers }); await visit(page);
   const own = page.getByRole("row").filter({ hasText: "admin@fixture.test" }).filter({ hasNotText: "other-admin@fixture.test" });
   await expect(own.getByRole("button", { name: "Promijeni ulogu", exact: true })).toBeDisabled();
-  await expect(own).toContainText("ADMINISTRATION_MANAGE");
+  await expect(own).toContainText("Administrator");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("row").filter({ hasText: "other-admin@fixture.test" }).getByRole("button", { name: "Promijeni ulogu", exact: true })).toBeEnabled();
   expect((await (await request.get("/__fixtures/users-state", { headers })).json()).audit).toEqual([]);
@@ -107,7 +117,7 @@ test("deactivate/reactivate and permanent delete require confirmation and preser
 });
 test("server paging exposes users beyond the source first twenty", async ({ page, request }) => {
   await request.post("/__fixtures/users-pages", { headers }); await visit(page);
-  await page.getByRole("button", { name: "Sljedeća stranica", exact: true }).click(); await expect(page.getByText("Stranica 2 od 2; ukupno zapisa: 23.", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Sljedeća stranica", exact: true }).click(); await expect(page.getByText("Ukupno zapisa: 23", { exact: true })).toBeVisible(); await expect(page.locator("p.page-total")).toHaveCSS("border-radius", "999px"); await expect(page.getByText(/Stranica \d+ od/)).toHaveCount(0);
   await expect(page.getByRole("row").filter({ hasText: "page21@fixture.test" })).toBeVisible();
 });
 test("outage is redacted and retry recovers without fabricating empty users", async ({ page, request }) => {
@@ -134,4 +144,17 @@ test("375px user table/form and BS/EN owned copy remain usable", async ({ page }
   const nav = page.getByRole("dialog"); await chooseLanguage(nav, "en");
   await expect(page.getByRole("heading", { name: "User management", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Add user", exact: true }).click(); await expect(page.getByRole("dialog").getByText("Functional accesses", { exact: true })).toBeVisible();
+});
+test("profile fields of an existing user are editable and persisted through the profile endpoint", async ({ page, request }) => {
+  await request.post("/__fixtures/users-reference", { headers }); await visit(page);
+  const other = page.getByRole("row").filter({ hasText: "other-FL@fixture.test" });
+  await other.getByRole("button", { name: "Promijeni ulogu", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^Ime/).fill("Renamed");
+  await dialog.getByLabel("Email", { exact: false }).fill("other-FL@elsewhere.example"); // any valid domain is accepted
+  await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).toHaveCount(0);
+  const row = page.getByRole("row").filter({ hasText: "other-FL@elsewhere.example" });
+  await expect(row).toContainText("Renamed");
+  const state = await (await request.get("/__fixtures/users-state", { headers })).json();
+  expect(state.users.some((user: { email: string }) => user.email.toLowerCase() === "other-fl@elsewhere.example")).toBe(true);
 });

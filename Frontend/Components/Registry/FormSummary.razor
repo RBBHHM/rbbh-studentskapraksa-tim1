@@ -1,0 +1,35 @@
+@using Microsoft.JSInterop
+@implements IDisposable
+@inject IJSRuntime Js
+
+@if (Messages.Any())
+{
+    <div role="alert" tabindex="-1" @ref="_root" class="rbi-field__message">@foreach (var message in Messages) { <p>@message</p> }</div>
+}
+
+@code {
+    [Parameter, EditorRequired] public EditContext Context { get; set; } = null!;
+    private ElementReference _root;
+    private EditContext? _subscribed;
+    // Field messages are shown beside their fields; only form-level (server) messages appear here, once.
+    private IEnumerable<string> Messages => Context.GetValidationMessages(new FieldIdentifier(Context.Model, string.Empty));
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(_subscribed, Context)) return;
+        if (_subscribed is not null) _subscribed.OnValidationStateChanged -= Refresh;
+        _subscribed = Context;
+        Context.OnValidationStateChanged += Refresh;
+    }
+    private void Refresh(object? sender, ValidationStateChangedEventArgs args) => _ = InvokeAsync(StateHasChanged);
+    /// <summary>Moves focus to the form-level message, or else to the first invalid field.</summary>
+    public async Task FocusAsync()
+    {
+        try
+        {
+            if (Messages.Any()) await _root.FocusAsync();
+            else await Js.InvokeVoidAsync("appFocus.firstInvalid");
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or JSException or TaskCanceledException) { }
+    }
+    public void Dispose() { if (_subscribed is not null) _subscribed.OnValidationStateChanged -= Refresh; }
+}

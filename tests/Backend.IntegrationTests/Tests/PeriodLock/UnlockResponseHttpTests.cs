@@ -51,6 +51,7 @@ public sealed class UnlockResponseHttpTests : IAsyncLifetime
         builder.Services.AddScoped<IPeriodLockRepository, PeriodLockRepository>();
         builder.Services.AddScoped<IUnlockRequestRepository, UnlockRequestRepository>();
         builder.Services.AddScoped<IPeriodLockService, PeriodLockService>();
+        builder.Services.AddScoped<PeriodWorkflow>();
         builder.Services.AddScoped<IAuditService, AuditService>();
         // Unused user-list dependency must not start backend Program/Keycloak.
         var users = new Mock<IAppUserService>(MockBehavior.Strict);
@@ -72,6 +73,7 @@ public sealed class UnlockResponseHttpTests : IAsyncLifetime
         db.UnlockRequests.Add(new UnlockRequest
         {
             Id = _originalId,
+            RequestedBySubject = "period-fixture-subject",
             RequestedBy = "original-fixture",
             RequestedByEmail = "original@example.test",
             Year = 2026,
@@ -107,7 +109,7 @@ public sealed class UnlockResponseHttpTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var saved = Assert.Single(stored);
         Assert.Equal("[ODGOVOR] " + message, saved.Reason); // Exact full text, not truncation.
-        Assert.Equal("PENDING", saved.Status); Assert.Equal("period-fixture@example.test", saved.RequestedBy);
+        Assert.Equal("PENDING", saved.Status); Assert.Equal("period-fixture", saved.RequestedBy); Assert.Equal("period-fixture@example.test", saved.RequestedByEmail);
         Assert.Equal("NEEDS_INFO", (await db.UnlockRequests.SingleAsync(request => request.Id == _originalId)).Status);
         var maximum = db.Model.FindEntityType(typeof(UnlockRequest))!.FindProperty(nameof(UnlockRequest.Reason))!.GetMaxLength();
         Assert.Equal(500, maximum);
@@ -116,8 +118,14 @@ public sealed class UnlockResponseHttpTests : IAsyncLifetime
             "The controller adds '[ODGOVOR] ' before storing; no live SQL was executed.");
         var audit = Assert.Single(await db.AuditLogs.ToListAsync());
         Assert.Equal("UNLOCK_REQUEST", audit.Action); Assert.Equal(_originalId.ToString(), audit.RecordId);
-        Assert.Equal("period-fixture@example.test", audit.Username); Assert.Contains("user_response", audit.NewValues);
-        _mail.Verify(service => service.SendUserResponseAsync(It.IsAny<string>(), "period-fixture@example.test", 2026, 10, message), Times.Once);
+        Assert.Equal("period-fixture", audit.Username); Assert.Equal("period-fixture-subject", audit.UserId); Assert.Contains("user_response", audit.NewValues);
+        var delivery = Assert.Single(await db.NotificationDeliveries.Include(row => row.Notification).ToListAsync());
+        Assert.Null(delivery.DeliveredAt); Assert.Equal("admin@example.test", delivery.Notification.RecipientEmail);
+        Assert.Equal("", delivery.Notification.RecipientSubject); // Configured mailbox is not an invented inbox identity.
+        using var parameters = System.Text.Json.JsonDocument.Parse(delivery.Notification.ParametersJson);
+        Assert.Equal(message, parameters.RootElement.GetProperty("message").GetString());
+        Assert.Equal("period-fixture", parameters.RootElement.GetProperty("requester").GetString());
+        _mail.VerifyNoOtherCalls(); // Transport is invoked only by the committed outbox worker.
     }
 
     [Theory]
