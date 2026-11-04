@@ -104,7 +104,7 @@ else
     public CodeLists() => _token = _lifetime.Token;
     private bool _disposed, _authenticated, _canRead, _canWrite, _busy, _loading = true, _refreshing, _loaded;
     private IReadOnlyList<string> _categories = [];
-    private Dictionary<string, CodeListDefinition> _definitions = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, CodeListMeta> _definitions = new(StringComparer.OrdinalIgnoreCase);
     private string Meta(string category)
     {
         if (!_definitions.TryGetValue(category, out var definition)) return "";
