@@ -99,9 +99,12 @@ public sealed class ModulesControllerTests
         var modules = GetModules(CreateController());
 
         modules.Select(module => (module.Key, module.Route)).Should().BeEquivalentTo(
-            ("physical-persons", "/app/physical-persons"),
-            ("legal-persons", "/app/legal-persons"),
-            ("limits", "/app/limits"),
-            ("regulatory-reporting", "/app/reports"));
+            new[]
+            {
+                ("physical-persons", "/app/physical-persons"),
+                ("legal-persons", "/app/legal-persons"),
+                ("limits", "/app/limits"),
+                ("regulatory-reporting", "/app/reports")
+            });
     }
 }
