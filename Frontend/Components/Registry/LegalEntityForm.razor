@@ -6,11 +6,11 @@
     <fieldset disabled="@_submission.IsSubmitting">
         <legend class="app-visually-hidden">@T["legal.details"]</legend>
         <div class="registry-form-grid">
+            <RbiField TValue="string" Label="@T["legal.name"]" Required For="@(() => Model.Name)"><RbiInput @bind-Value="Model.Name" maxlength="100" /></RbiField>
             <div>
                 <label class="app-label" for="legal-bank-customer">@T["legal.bank-lookup"]</label>
                 <BankCustomerPicker Id="legal-bank-customer" Selected="BankCustomerSelected" />
             </div>
-            <RbiField TValue="string" Label="@T["legal.name"]" Required For="@(() => Model.Name)"><RbiInput @bind-Value="Model.Name" maxlength="100" /></RbiField>
             <RbiRadioGroup TValue="bool?" Label="@T["person.residency"]" Required @bind-Value="Model.IsResident" @bind-Value:after="Model.ResidencyChanged">
                 <RbiRadio TValue="bool?" Value="@((bool?)true)">@T["person.resident"]</RbiRadio><RbiRadio TValue="bool?" Value="@((bool?)false)">@T["person.nonresident"]</RbiRadio>
             </RbiRadioGroup>
