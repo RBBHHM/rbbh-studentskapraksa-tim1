@@ -601,6 +601,12 @@
     "release.prod": "PROD",
     "release.empty": "Za ovo okruženje još nema objavljenih GitHub izdanja.",
     "release.version": "Verzija: {0}",
-    "release.github": "Otvori na GitHubu"
+    "release.github": "Otvori na GitHubu",
+    "legal.bank-lookup": "Pretraži klijente banke",
+    "legal.bank-placeholder": "Naziv, porezni broj ili matični broj",
+    "legal.bank-results": "Rezultati pretrage klijenata",
+    "legal.bank-type": "Unesite najmanje 2 znaka za pretragu.",
+    "legal.bank-unavailable": "Izvor podataka o klijentima banke trenutno nije dostupan.",
+    "legal.bank-selected": "Odabrani klijent: {0}"
   }
 }

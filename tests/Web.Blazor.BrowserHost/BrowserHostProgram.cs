@@ -309,9 +309,18 @@ internal static class BrowserHostProgram
     private sealed class FixtureBankSource(FixtureDatabase database) : IBankReferenceSource
     {
         private static readonly BankGroup[] Known = [new("1001", "Fixture Group A"), new("1002", "Fixture Group B")];
+        private static readonly BankCustomer[] KnownCustomers = [new("1234567890125", "789456123", "Fixture Bank Customer")];
         public bool IsConfigured => database.BankSourceEnabled;
         private void Require() { if (!database.BankSourceEnabled) throw new RBBH.ConnectedParties.Exceptions.BusinessRuleException(503, "bank_reference.unavailable"); }
-        public Task<ReferencePage<BankCustomer>> Customers(string? search, int page, int pageSize, CancellationToken ct) { Require(); return Task.FromResult(new ReferencePage<BankCustomer>([], 0, page, pageSize)); }
+        public Task<ReferencePage<BankCustomer>> Customers(string? search, int page, int pageSize, CancellationToken ct)
+        {
+            Require();
+            var matches = KnownCustomers.Where(item => string.IsNullOrWhiteSpace(search) ||
+                item.TaxNumber.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase) ||
+                item.Name.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase) ||
+                item.Matbroj.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase)).ToArray();
+            return Task.FromResult(new ReferencePage<BankCustomer>(matches.Skip(Math.Max(0, page - 1) * pageSize).Take(pageSize).ToArray(), matches.Length, page, pageSize));
+        }
         public Task<ReferencePage<BankGroup>> Groups(string? search, int page, int pageSize, CancellationToken ct)
         {
             Require();

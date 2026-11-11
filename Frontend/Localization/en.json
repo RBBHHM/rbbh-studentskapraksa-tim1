@@ -601,6 +601,12 @@
     "release.prod": "PROD",
     "release.empty": "There are no published GitHub releases for this environment yet.",
     "release.version": "Version: {0}",
-    "release.github": "View on GitHub"
+    "release.github": "View on GitHub",
+    "legal.bank-lookup": "Search bank customers",
+    "legal.bank-placeholder": "Name, tax number or registry number",
+    "legal.bank-results": "Bank customer search results",
+    "legal.bank-type": "Enter at least 2 characters to search.",
+    "legal.bank-unavailable": "The bank customer reference source is currently unavailable.",
+    "legal.bank-selected": "Selected customer: {0}"
   }
 }

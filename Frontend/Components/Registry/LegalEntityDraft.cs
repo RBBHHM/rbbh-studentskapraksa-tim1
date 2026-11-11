@@ -41,6 +41,13 @@ public sealed class LegalEntityDraft
         IsLargeExposure = entity.IsLargeExposure,
         PreservedMatbroj = entity.Matbroj
     };
+    /// <summary>Copies only fields supplied by the bank reference; the separate application registration number stays untouched.</summary>
+    public void ApplyBankCustomer(BankCustomerOption customer)
+    {
+        Name = customer.Name;
+        if (IsResident != false && !string.IsNullOrWhiteSpace(customer.TaxNumber)) TaxNumber = customer.TaxNumber;
+        PreservedMatbroj = customer.Matbroj;
+    }
     public void ResidencyChanged()
     {
         if (IsResident == true) FbaId = null;

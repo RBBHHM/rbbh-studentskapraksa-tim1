@@ -27,6 +27,8 @@ public sealed record LegalEntityRequest(bool IsResident, string? TaxNumber, stri
     bool? ConnectedWithBank, DateTime? DateFrom, DateTime? DateTo, string? GccNumber = null, bool? IsLargeExposure = null);
 public sealed record GccOption(string? Number, string? Name);
 public sealed record GccPage(IReadOnlyList<GccOption> Items, int Total, int Page, int PageSize);
+public sealed record BankCustomerOption(string TaxNumber, string Matbroj, string Name);
+public sealed record BankCustomerPage(IReadOnlyList<BankCustomerOption> Items, int Total, int Page, int PageSize);
 
 public interface ILegalEntitiesApi
 {
@@ -39,6 +41,7 @@ public interface ILegalEntitiesApi
     Task<ImportResult> ImportAsync(Stream file, string name, CancellationToken token = default);
     /// <summary>Paged bank GCC list; 503 means the bank source is not configured or reachable (no placeholder rows are ever returned).</summary>
     Task<GccPage> GccAsync(string search = "", CancellationToken token = default);
+    Task<BankCustomerPage> CustomersAsync(string search = "", CancellationToken token = default);
 }
 
 public sealed class LegalEntitiesApi(IRbiApiFileTransport transport) : ILegalEntitiesApi
@@ -76,6 +79,11 @@ public sealed class LegalEntitiesApi(IRbiApiFileTransport transport) : ILegalEnt
         var page = Value(await transport.GetAsync<GccPage>($"api/bank-reference/gcc?search={Uri.EscapeDataString(search)}&page=1&pageSize=20", token), token);
         return page.Items is null ? throw new RegistryApiException() : page;
     }
+    public async Task<BankCustomerPage> CustomersAsync(string search = "", CancellationToken token = default)
+    {
+        var result = Value(await transport.GetAsync<BankCustomerPage>($"api/bank-reference/customers?search={Uri.EscapeDataString(search.Trim())}&page=1&pageSize=20", token), token);
+        return result.Items is null ? throw new RegistryApiException() : result;
+    }
     private static T Value<T>(RbiApiResult<T> result, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
@@ -94,4 +102,5 @@ internal sealed class UnconfiguredLegalEntitiesApi : ILegalEntitiesApi
     public Task<RbiApiFile> ExportAsync(CancellationToken token = default) => Unavailable<RbiApiFile>();
     public Task<ImportResult> ImportAsync(Stream file, string name, CancellationToken token = default) { file.Dispose(); return Unavailable<ImportResult>(); }
     public Task<GccPage> GccAsync(string search = "", CancellationToken token = default) => Unavailable<GccPage>();
+    public Task<BankCustomerPage> CustomersAsync(string search = "", CancellationToken token = default) => Unavailable<BankCustomerPage>();
 }
