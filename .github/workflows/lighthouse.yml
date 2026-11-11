@@ -1,0 +1,113 @@
+name: Lighthouse UX and performance baseline
+
+# Audits fixture data only. Production performance needs a deployed,
+# authenticated environment and is explicitly a separate acceptance gate.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      BROWSER_FIXTURE_ROLE: admin
+      ASPNETCORE_ENVIRONMENT: Development
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Restore and build the isolated test host
+        run: |
+          dotnet restore tests/Web.Blazor.BrowserHost/Web.Blazor.BrowserHost.csproj --configfile NuGet.config
+          dotnet build tests/Web.Blazor.BrowserHost/Web.Blazor.BrowserHost.csproj -c Release --no-restore
+      - name: Launch the test-only app
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet run --project tests/Web.Blazor.BrowserHost/Web.Blazor.BrowserHost.csproj \
+            -c Release --no-build --no-restore --no-launch-profile \
+            --urls http://127.0.0.1:5273 > "$RUNNER_TEMP/lighthouse-host.log" 2>&1 &
+          echo "LIGHTHOUSE_HOST_PID=$!" >> "$GITHUB_ENV"
+          for attempt in {1..90}; do
+            if curl --fail --silent http://127.0.0.1:5273/app > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/lighthouse-host.log"
+          exit 1
+      - name: Find installed Chrome
+        shell: bash
+        run: |
+          set -euo pipefail
+          path="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)"
+          test -x "$path"
+          echo "CHROME_PATH=$path" >> "$GITHUB_ENV"
+      - name: Audit mobile dashboard and guide
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/lighthouse
+          npx --yes lighthouse@13.6.0 http://127.0.0.1:5273/app \
+            --quiet --only-categories=performance,accessibility,best-practices \
+            --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" \
+            --output=json --output-path=artifacts/lighthouse/dashboard-mobile.json
+          npx --yes lighthouse@13.6.0 http://127.0.0.1:5273/app/guide \
+            --quiet --only-categories=performance,accessibility,best-practices \
+            --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" \
+            --output=json --output-path=artifacts/lighthouse/guide-mobile.json
+      - name: Audit desktop dashboard and guide
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes lighthouse@13.6.0 http://127.0.0.1:5273/app \
+            --quiet --preset=desktop --only-categories=performance,accessibility,best-practices \
+            --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" \
+            --output=json --output-path=artifacts/lighthouse/dashboard-desktop.json
+          npx --yes lighthouse@13.6.0 http://127.0.0.1:5273/app/guide \
+            --quiet --preset=desktop --only-categories=performance,accessibility,best-practices \
+            --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" \
+            --output=json --output-path=artifacts/lighthouse/guide-desktop.json
+      - name: Verify and summarize Lighthouse metrics
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          audits = sorted(Path("artifacts/lighthouse").glob("*.json"))
+          assert len(audits) == 4, "Expected mobile and desktop dashboard/guide reports"
+          with open(Path("artifacts/lighthouse") / "summary.md", "w") as out:
+              out.write("| Page | Performance | Accessibility | Best practices | LCP (ms) | CLS |\n")
+              out.write("|---|---:|---:|---:|---:|---:|\n")
+              for file in audits:
+                  report = json.loads(file.read_text())
+                  assert not report.get("runtimeError"), report.get("runtimeError")
+                  assert report["finalDisplayedUrl"].startswith("http://127.0.0.1:5273/app")
+                  score = lambda name: round(report["categories"][name]["score"] * 100)
+                  lcp = round(report["audits"]["largest-contentful-paint"]["numericValue"])
+                  cls = round(report["audits"]["cumulative-layout-shift"]["numericValue"], 3)
+                  line = f"| {file.stem} | {score('performance')} | {score('accessibility')} | {score('best-practices')} | {lcp} | {cls} |"
+                  print(line)
+                  out.write(line + "\n")
+          PY
+          cat artifacts/lighthouse/summary.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-fixture-reports
+          path: artifacts/lighthouse
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Stop fixture host
+        if: always()
+        shell: bash
+        run: |
+          if [ -n "${LIGHTHOUSE_HOST_PID:-}" ]; then kill "$LIGHTHOUSE_HOST_PID" 2>/dev/null || true; fi
