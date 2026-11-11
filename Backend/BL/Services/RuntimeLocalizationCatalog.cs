@@ -117,6 +117,8 @@ public sealed class RuntimeLocalizationCatalog(ConnectedPartiesDbContext db, IOp
             ?? throw new BusinessRuleException(503, "localization.setup_required");
         var now = DateTime.UtcNow;
         definition.ModifiedBy = actor;
+        definition.ModifiedAt = now;
+        definition.Version = checked(definition.Version + 1);
         if (row is null)
         {
             row = new CodeList { Kategorija = definition.Name, DefinitionId = definition.Id, Kod = Guid.NewGuid().ToString("N"),

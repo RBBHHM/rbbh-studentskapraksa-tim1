@@ -74,19 +74,18 @@ public sealed class FrontendSourceGuardTests
     }
 
     [Fact]
-    public void EveryLiteralResourceKeyExistsInBothCatalogs()
+    public void EveryLiteralResourceKeyExistsInAllThreeCatalogs()
     {
-        var keys = new HashSet<string>[2];
-        var index = 0;
-        foreach (var culture in new[] { "bs", "en" })
+        var keys = new List<HashSet<string>>();
+        foreach (var culture in new[] { "bs", "en", "de" })
         {
             using var document = JsonDocument.Parse(File.ReadAllText(Path.Combine(Frontend, "Localization", culture + ".json")));
-            keys[index++] = document.RootElement.GetProperty("translations").EnumerateObject().Select(item => item.Name).ToHashSet();
+            keys.Add(document.RootElement.GetProperty("translations").EnumerateObject().Select(item => item.Name).ToHashSet());
         }
         var used = new Regex(@"\bT\[""([^""]+)""\]|\bT\.Format\(""([^""]+)""");
         var missing = Sources("*.razor").Concat(Sources("*.cs"))
             .SelectMany(source => used.Matches(source.Text).Select(m => (source.Path, Key: m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Value)))
-            .Where(item => !keys[0].Contains(item.Key) || !keys[1].Contains(item.Key))
+            .Where(item => keys.Any(set => !set.Contains(item.Key)))
             .Select(item => $"{item.Path}: {item.Key}").Distinct().ToArray();
         Assert.True(missing.Length == 0, "Missing resource keys:\n" + string.Join('\n', missing));
     }
