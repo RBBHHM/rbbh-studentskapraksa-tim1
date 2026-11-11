@@ -274,6 +274,7 @@ internal sealed class RbiApiTransport(
         var title = DefaultTitle(kind);
         string? detail = null;
         string? bodyTraceId = null;
+        string? businessCode = null;
 
         var (body, truncated) = await ReadBoundedBodyAsync(response.Content, cancellationToken);
         if (!truncated && body.Length > 0)
@@ -281,7 +282,7 @@ internal sealed class RbiApiTransport(
             var mediaType = response.Content.Headers.ContentType?.MediaType;
             if (mediaType?.Contains("json", StringComparison.OrdinalIgnoreCase) == true)
             {
-                TryReadJsonError(body, ref title, ref detail, ref bodyTraceId);
+                TryReadJsonError(body, ref title, ref detail, ref bodyTraceId, ref businessCode);
             }
             else if (mediaType?.StartsWith("text/plain", StringComparison.OrdinalIgnoreCase) == true)
             {
@@ -294,7 +295,7 @@ internal sealed class RbiApiTransport(
             response.StatusCode,
             title,
             string.IsNullOrWhiteSpace(detail) ? null : detail,
-            bodyTraceId ?? ResolveTraceId(response));
+            bodyTraceId ?? ResolveTraceId(response)) { Code = businessCode };
     }
 
     private static async Task<(byte[] Body, bool Truncated)> ReadBoundedBodyAsync(
@@ -321,7 +322,8 @@ internal sealed class RbiApiTransport(
         byte[] body,
         ref string title,
         ref string? detail,
-        ref string? traceId)
+        ref string? traceId,
+        ref string? code)
     {
         try
         {
@@ -334,6 +336,14 @@ internal sealed class RbiApiTransport(
             detail = ReadString(document.RootElement, "detail")
                 ?? ReadString(document.RootElement, "message");
             traceId = ReadString(document.RootElement, "traceId");
+
+            // ProblemDetails code is untrusted JSON. Preserve only bounded,
+            // invariant identifiers, never message text or arbitrary markup.
+            var candidate = ReadString(document.RootElement, "code");
+            if (candidate is { Length: > 0 and <= 100 } &&
+                candidate[0] is >= 'a' and <= 'z' &&
+                candidate.All(ch => ch is >= 'a' and <= 'z' or >= '0' and <= '9' or '.' or '_'))
+                code = candidate;
 
             title = Limit(title, 256) ?? DefaultTitle(RbiApiErrorKind.Unknown);
             detail = Limit(detail, 2_000);

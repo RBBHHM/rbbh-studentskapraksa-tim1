@@ -607,6 +607,7 @@
     "legal.bank-results": "Rezultati pretrage klijenata",
     "legal.bank-type": "Unesite najmanje 2 znaka za pretragu.",
     "legal.bank-unavailable": "Izvor podataka o klijentima banke trenutno nije dostupan.",
-    "legal.bank-selected": "Odabrani klijent: {0}"
+    "legal.bank-selected": "Odabrani klijent: {0}",
+    "errors.verification-provenance-required": "Verifikacija nije moguća jer nije pouzdano poznato ko je kreirao ovaj zapis. Obratite se administratoru."
   }
 }

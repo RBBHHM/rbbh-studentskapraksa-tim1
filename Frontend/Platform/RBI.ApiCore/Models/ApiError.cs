@@ -13,7 +13,12 @@ public sealed record RbiApiError(
     HttpStatusCode? StatusCode,
     string Title,
     string? Detail = null,
-    string? TraceId = null);
+    string? TraceId = null)
+{
+    /// <summary>Validated server-defined business code (never an upstream message).
+    /// UI may map only explicitly approved codes to local resource keys.</summary>
+    public string? Code { get; init; }
+}
 
 /// <summary>Identifies the normalized category of an API failure.</summary>
 public enum RbiApiErrorKind

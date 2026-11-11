@@ -21,6 +21,8 @@ RBI.ApiCore.RbiApiClientOptions.Timeout.set -> void
 RBI.ApiCore.RbiApiError
 RBI.ApiCore.RbiApiError.<Clone>$() -> RBI.ApiCore.RbiApiError!
 RBI.ApiCore.RbiApiError.Deconstruct(out RBI.ApiCore.RbiApiErrorKind Kind, out System.Net.HttpStatusCode? StatusCode, out string! Title, out string? Detail, out string? TraceId) -> void
+RBI.ApiCore.RbiApiError.Code.get -> string?
+RBI.ApiCore.RbiApiError.Code.init -> void
 RBI.ApiCore.RbiApiError.Detail.get -> string?
 RBI.ApiCore.RbiApiError.Detail.init -> void
 RBI.ApiCore.RbiApiError.Equals(RBI.ApiCore.RbiApiError? other) -> bool

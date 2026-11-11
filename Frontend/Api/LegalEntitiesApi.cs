@@ -87,7 +87,7 @@ public sealed class LegalEntitiesApi(IRbiApiFileTransport transport) : ILegalEnt
     private static T Value<T>(RbiApiResult<T> result, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
-        if (!result.IsSuccess) throw new RegistryApiException(result.Error?.StatusCode);
+        if (!result.IsSuccess) throw new RegistryApiException(result.Error?.StatusCode, result.Error?.Code);
         return result.Value;
     }
 }
