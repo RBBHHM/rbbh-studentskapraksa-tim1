@@ -14,7 +14,7 @@ Sources: `[Related Parties Register] Dokumentacija.pdf` (preserved at the reposi
 
 **What "tested" means here.** All browser (Playwright) evidence runs against `tests/Web.Blazor.BrowserHost`: the real Blazor frontend calling the **real backend controllers, services and validators in-process**, but on an **EF InMemory database** with a fixture identity. It does **not** prove real SQL Server behaviour, real Keycloak, the bank reference database, Finrep, or a real mail provider. Real-SQL evidence exists only for the backend integration suite (disposable SQL Server 2022 in CI, optionally LocalDB on Windows). A true frontend → deployed API → SQL browser run was **not** executed and is listed as a gap.
 
-## Test results on final test PR #6 (11 November 2026; pending merge)
+## Test results merged to main via PR #6 (11 November 2026)
 
 CI evidence: https://github.com/RBBHHM/rbbh-studentskapraksa-tim1/actions/runs/43080936106
 
