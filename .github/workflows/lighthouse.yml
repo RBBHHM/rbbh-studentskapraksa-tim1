@@ -94,6 +94,14 @@ jobs:
                   score = lambda name: round(report["categories"][name]["score"] * 100)
                   lcp = round(report["audits"]["largest-contentful-paint"]["numericValue"])
                   cls = round(report["audits"]["cumulative-layout-shift"]["numericValue"], 3)
+                  # Guard proven fixture baselines while avoiding flaky score
+                  # assertions that overstate production performance.
+                  min_performance = 70 if file.stem.endswith("-mobile") else 90
+                  assert score("performance") >= min_performance, (
+                      f"{file.name}: performance fell below fixture floor {min_performance}")
+                  assert score("accessibility") >= 95, f"{file.name}: WCAG accessibility regression"
+                  assert score("best-practices") >= 95, f"{file.name}: best-practices regression"
+                  assert cls <= 0.1, f"{file.name}: cumulative layout shift regression"
                   line = f"| {file.stem} | {score('performance')} | {score('accessibility')} | {score('best-practices')} | {lcp} | {cls} |"
                   print(line)
                   out.write(line + "\n")
