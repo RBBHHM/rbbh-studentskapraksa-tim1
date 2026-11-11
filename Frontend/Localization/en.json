@@ -593,6 +593,14 @@
     "rolecatalog.empty": "No roles match the search.",
     "rolecatalog.total": "Total roles: {0}",
     "rolecatalog.pages": "Role pages",
-    "rolecatalog.saved": "Role saved successfully."
+    "rolecatalog.saved": "Role saved successfully.",
+    "release.title": "Release notes",
+    "release.subtitle": "Changes published on GitHub for UAT and production environments.",
+    "release.environment": "Environment",
+    "release.uat": "UAT",
+    "release.prod": "PROD",
+    "release.empty": "There are no published GitHub releases for this environment yet.",
+    "release.version": "Version: {0}",
+    "release.github": "View on GitHub"
   }
 }

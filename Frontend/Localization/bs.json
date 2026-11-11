@@ -593,6 +593,14 @@
     "rolecatalog.empty": "Nema rola za zadani kriterij.",
     "rolecatalog.total": "Ukupno rola: {0}",
     "rolecatalog.pages": "Stranice rola",
-    "rolecatalog.saved": "Rola je uspješno sačuvana."
+    "rolecatalog.saved": "Rola je uspješno sačuvana.",
+    "release.title": "Novosti u verziji",
+    "release.subtitle": "Promjene objavljene na GitHubu za UAT i produkcijsko okruženje.",
+    "release.environment": "Okruženje",
+    "release.uat": "UAT",
+    "release.prod": "PROD",
+    "release.empty": "Za ovo okruženje još nema objavljenih GitHub izdanja.",
+    "release.version": "Verzija: {0}",
+    "release.github": "Otvori na GitHubu"
   }
 }

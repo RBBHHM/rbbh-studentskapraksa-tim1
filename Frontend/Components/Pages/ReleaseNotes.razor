@@ -1,0 +1,86 @@
+@page "/app/release-notes"
+@implements IDisposable
+@inject AuthenticationStateProvider AuthenticationState
+@inject IReleaseNotesApi Api
+
+<PageTitle>@T["release.title"]</PageTitle>
+<HeroBar Title="@T["release.title"]" Description="@T["release.subtitle"]" Eyebrow="@T["nav.area.work"]">
+</HeroBar>
+@if (!_authenticated && !_loading) { <IdentityNotice /> }
+else if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
+else
+{
+    <div class="registry-controls notification-filter" role="group" aria-label="@T["release.environment"]">
+        <RbiButton Variant="@(_environment == "uat" ? RbiButtonVariant.Primary : RbiButtonVariant.Secondary)" aria-pressed="@(_environment == "uat" ? "true" : "false")" OnClick="() => ChangeEnvironmentAsync("uat")" Disabled="_refreshing">@T["release.uat"]</RbiButton>
+        <RbiButton Variant="@(_environment == "prod" ? RbiButtonVariant.Primary : RbiButtonVariant.Secondary)" aria-pressed="@(_environment == "prod" ? "true" : "false")" OnClick="() => ChangeEnvironmentAsync("prod")" Disabled="_refreshing">@T["release.prod"]</RbiButton>
+    </div>
+    @if (_error is not null)
+    {
+        <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_error]" />
+        <RbiButton OnClick="LoadAsync" Disabled="_refreshing">@T["state.retry"]</RbiButton>
+    }
+    else if (_notes.Items.Count == 0)
+    {
+        <div class="registry-surface"><RegistryEmpty Body="@T["release.empty"]" /></div>
+    }
+    else
+    {
+        <ul class="notification-list" aria-label="@T["release.title"]">
+            @foreach (var item in _notes.Items)
+            {
+                <li @key="item.Tag" class="notification">
+                    <div class="notification__text">
+                        <h2 class="notification__title">@item.Title</h2>
+                        <p class="app-hint">@T.Format("release.version", item.Tag)</p>
+                        @if (item.PublishedAt is { } published)
+                        {
+                            <time class="notification__time" datetime="@published.ToString("O")">@published.ToString("d")</time>
+                        }
+                        <p class="notification__body" style="white-space: pre-wrap;">@item.Body</p>
+                    </div>
+                    @if (!string.IsNullOrEmpty(item.Url))
+                    {
+                        <div class="notification__actions">
+                            <a href="@item.Url" target="_blank" rel="noopener noreferrer" class="rbi-button rbi-button--secondary rbi-button--medium">@T["release.github"]</a>
+                        </div>
+                    }
+                </li>
+            }
+        </ul>
+    }
+}
+@code {
+    private readonly CancellationTokenSource _lifetime = new();
+    private readonly CancellationToken _token;
+    public ReleaseNotes() => _token = _lifetime.Token;
+    private string _environment = "uat";
+    private ReleaseNoteEntries _notes = new([]);
+    private string? _error;
+    private bool _authenticated, _loading = true, _refreshing, _disposed;
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task ChangeEnvironmentAsync(string environment)
+    {
+        if (_refreshing || _environment == environment) return;
+        _environment = environment;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        if (_disposed || _refreshing) return;
+        _refreshing = true;
+        _error = null;
+        try
+        {
+            _authenticated = (await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true;
+            if (!_authenticated) return;
+            _notes = await Api.ListAsync(_environment, _token);
+        }
+        catch (RegistryApiException exception) { _error = exception.MessageKey; }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally { _loading = false; _refreshing = false; }
+    }
+
+    public void Dispose() { _disposed = true; _lifetime.Cancel(); _lifetime.Dispose(); }
+}

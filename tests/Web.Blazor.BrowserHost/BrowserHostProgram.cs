@@ -91,6 +91,9 @@ internal static class BrowserHostProgram
         builder.Services.AddScoped<RoleRequestService>();
         builder.Services.AddScoped<RoleCatalogService>();
         builder.Services.AddScoped<NotificationDispatcher>();
+        builder.Services.AddMemoryCache();
+        builder.Services.AddHttpClient<GitHubReleaseNotesService>()
+            .ConfigurePrimaryHttpMessageHandler(() => new FixtureGitHubReleasesHandler());
         builder.Services.AddSingleton<RuntimeLocalizationCache>();
         builder.Services.AddOptions<RuntimeLocalizationOptions>().Bind(builder.Configuration.GetSection("Localization"));
         builder.Services.AddScoped<RuntimeLocalizationCatalog>();
@@ -252,6 +255,7 @@ internal static class BrowserHostProgram
                 services.RemoveAll<IPeriodApi>();
                 services.RemoveAll<ICodeListsApi>();
                 services.RemoveAll<IRoleCatalogApi>();
+                services.RemoveAll<IReleaseNotesApi>();
                 services.AddRbiApiClient<IProfileApi, ProfileApi>("BrowserProfile", options => options.BaseUrl = new("http://backend.fixture/"))
                     .AddHttpMessageHandler<ApplicationCultureHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
@@ -294,6 +298,9 @@ internal static class BrowserHostProgram
                 services.AddRbiApiClient<IRoleCatalogApi, RoleCatalogApi>("BrowserRoleCatalog", options => options.BaseUrl = new("http://backend.fixture/"))
                     .AddHttpMessageHandler<ApplicationCultureHandler>()
                     .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
+                services.AddRbiApiClient<IReleaseNotesApi, ReleaseNotesApi>("BrowserReleaseNotes", options => options.BaseUrl = new("http://backend.fixture/"))
+                    .AddHttpMessageHandler<ApplicationCultureHandler>()
+                    .ConfigurePrimaryHttpMessageHandler(() => backend.GetTestServer().CreateHandler());
             });
         }
     }
@@ -312,6 +319,22 @@ internal static class BrowserHostProgram
             return Task.FromResult(new ReferencePage<BankGroup>(items, items.Length, page, pageSize));
         }
         public Task<BankGroup?> Group(string number, CancellationToken ct) { Require(); return Task.FromResult<BankGroup?>(Known.FirstOrDefault(item => item.Number == number)); }
+    }
+    private sealed class FixtureGitHubReleasesHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
+        {
+            if (request.RequestUri?.Host != "api.github.com")
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadGateway));
+            const string json = """
+                [{"tag_name":"uat-2.0.0","name":"UAT test","body":"UAT release details","published_at":"2026-11-11T10:00:00Z","prerelease":true,"draft":false,"html_url":"https://github.com/RBBHHM/rbbh-studentskapraksa-tim1/releases/tag/uat-2.0.0"},
+                 {"tag_name":"v1.9.0","name":"PROD test","body":"Production notes","published_at":"2026-11-01T10:00:00Z","prerelease":false,"draft":false,"html_url":"https://github.com/RBBHHM/rbbh-studentskapraksa-tim1/releases/tag/v1.9.0"}]
+                """;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+            });
+        }
     }
     private sealed record FixtureUser(string Email, string Role);
     private sealed class FixtureDatabase
