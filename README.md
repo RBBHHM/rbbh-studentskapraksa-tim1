@@ -149,10 +149,16 @@ docker build -f Backend/Dockerfile -t rbbh-api:local .
 docker build -f Frontend/Dockerfile -t rbbh-web:local .
 ```
 - Workflows: `build-and-push-image.yml`, `codeql.yml`, `deploy-to-ocp.yml`. Images are tagged `sha-<full commit>` and deployed pinned to `@sha256`. Rollback re-dispatches the deploy with the previous accepted tag and digest; the workflow does not down-migrate SQL.
-- GitHub environment variables: `ARTIFACTORY_REGISTRY`, `ARTIFACTORY_REPOSITORY`, `WEB_IMAGE_NAME`, `API_IMAGE_NAME`, `OCP_SERVER`, `OCP_PROJECT_NAME`, `OCP_PULL_SECRET`, `WEB_HEALTH_HOST`, `API_HEALTH_HOST`. Secrets: `ARTIFACTORY_USERNAME`, `ARTIFACTORY_TOKEN`, `TEST_SQL_SA_PASSWORD` (disposable CI SQL), `OCP_TOKEN`.
+- GitHub environment variables: `ARTIFACTORY_REGISTRY`, `ARTIFACTORY_REPOSITORY`, `WEB_IMAGE_NAME`, `API_IMAGE_NAME`, `OCP_SERVER`, `OCP_PROJECT_NAME`, `OCP_PULL_SECRET`, `WEB_HEALTH_HOST`, `API_HEALTH_HOST`. Secrets: `ARTIFACTORY_USERNAME`, `ARTIFACTORY_TOKEN`, `OCP_TOKEN`.
 - Health: `/health/live` (process only) and `/health/ready` (SQL connectivity, 503 on failure). Probe hosts must be in `AllowedHosts`. After a rollout also verify TLS and redirects, sign-in and permissions, deep links, notifications and the database state; an HTTP 200 alone is not enough.
 - Logs are structured with correlation IDs. `/metrics` must be reachable only through an approved network or auth policy. Alerting should cover error rate, database or Keycloak unavailability, failed migrations and report-generation failures.
 - Routine maintenance: security updates, controlled migrations, database backup, audit-log review, secret rotation, periodic role and permission review.
+
+The GitHub Actions test workflow uses a one-run SQL Server 2022 container with
+synthetic per-run credentials and automatically executes backend and six-role
+browser regressions on pushes to `main`. Publication remains gated by the
+full-history credential scanner. Latest passing test jobs:
+https://github.com/RBBHHM/rbbh-studentskapraksa-tim1/actions/runs/43021204873
 
 ## Release blockers
 | Severity | Item |

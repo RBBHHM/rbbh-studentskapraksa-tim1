@@ -1,6 +1,6 @@
 # Final requirements coverage
 
-Sources: `[Related Parties Register] Dokumentacija.pdf` (kept locally, **not** published), `docs/POPRAVKE.txt`, and the backend matrix in `docs/BACKEND-FINALIZATION.md`.
+Sources: `[Related Parties Register] Dokumentacija.pdf` (preserved at the repository root), `docs/POPRAVKE.txt`, and the backend matrix in `docs/BACKEND-FINALIZATION.md`.
 
 ## How to read the statuses
 
@@ -14,15 +14,19 @@ Sources: `[Related Parties Register] Dokumentacija.pdf` (kept locally, **not** p
 
 **What "tested" means here.** All browser (Playwright) evidence runs against `tests/Web.Blazor.BrowserHost`: the real Blazor frontend calling the **real backend controllers, services and validators in-process**, but on an **EF InMemory database** with a fixture identity. It does **not** prove real SQL Server behaviour, real Keycloak, the bank reference database, Finrep, or a real mail provider. Real-SQL evidence exists only for the backend integration suite (LocalDB). A true frontend → deployed API → SQL browser run was **not** executed and is listed as a gap.
 
-## Test results on this branch (exact counts)
+## Test results on current main (11 November 2026)
+
+CI evidence: https://github.com/RBBHHM/rbbh-studentskapraksa-tim1/actions/runs/43021204873
+
+The .NET solution build, all three .NET suites and every role-specific Playwright job passed on commit `a7aca7a9`. The security history scan failed on the pre-existing exposed credential; image publication was correctly skipped. These tests use disposable SQL and an InMemory BrowserHost, not real Keycloak, bank data, Finrep or OCP.
 
 | Suite | Result |
 |---|---|
 | Release build, whole solution, `-warnaserror` | 0 warnings, 0 errors |
 | Frontend unit (`tests/Web.Blazor.Tests`) | 234 passed, 0 failed, 0 skipped |
-| Backend unit (`tests/Backend.UnitTests`) | 337 passed, 0 failed, 0 skipped |
+| Backend unit (`tests/Backend.UnitTests`) | **348 passed, 0 failed, 0 skipped** (current main CI) |
 | Backend integration, no SQL variable | 309 passed, 0 failed, **86 skipped** (SQL-only tests) |
-| Backend integration, `RBBH_TEST_SQLSERVER` = LocalDB | **395 passed, 0 failed, 0 skipped** (real SQL) |
+| Backend integration, isolated SQL Server 2022 (CI) | **395 passed, 0 failed, 0 skipped** (real SQL) |
 | Playwright admin (BrowserHost) | 142 passed |
 | Playwright FL | 60 passed |
 | Playwright PL | 59 passed |
@@ -30,7 +34,7 @@ Sources: `[Related Parties Register] Dokumentacija.pdf` (kept locally, **not** p
 | Playwright limiti | 56 passed |
 | Playwright gost | 50 passed |
 | Publication guard unit tests (`scripts/security`) | 12 passed |
-| Secret scan of the full reachable history | 0 findings, 2507 objects |
+| Secret scan of the full reachable history | **FAIL: inherited Keycloak credential in public main history.** Current tracked configuration is blank; rotation and approved history remediation remain required. |
 | `git diff --check` on the integration range | clean |
 
 Every role's Playwright run also executes the shared specs: authorization matrix, shell/profile/guide, **Axe (WCAG 2 A/AA/2.1 AA) in light and dark themes**, keyboard focus order, notifications, role requests, and 375 px responsive checks. Suites were run one at a time with one worker.
@@ -135,7 +139,7 @@ Frontend paths are under `Frontend/`; backend paths under `Backend/`. "BH" means
 | Requirement | Evidence | Status | Remaining |
 |---|---|---|---|
 | Structured error codes in the UI | RBI transport carries only the status code | PARTIAL | RBI transport change or a typed-error extension is needed |
-| Secret-free publication history | scan 0 findings; old secret absent from all reachable trees and messages of this branch | VERIFIED (this branch) | `main` still contains the old Keycloak client secret in history; **credential rotation is an owner action** and `main` must not receive this branch until done |
+| Secret-free publication history | Current tracked settings are blank; full-history CI guard detects the previously committed credential. | BLOCKED | Owner must rotate/revoke the affected Keycloak credential and coordinate historical exposure remediation. Image publication stays blocked. |
 | Real Keycloak / SQL-through-frontend / bank / Finrep / mail | none run | NOT TESTED / BLOCKED | Needs an environment and credentials the owner controls |
 | Deployment (OCP/3scale, shared sessions, DP keys) | none | BLOCKED | Backend OPS-02 |
 
@@ -146,6 +150,6 @@ Frontend paths are under `Frontend/`; backend paths under `Backend/`. "BH" means
 3. No UI for the role catalog or bank customer lookup.
 4. Structured backend error codes are not propagated to the UI.
 5. DE has no frontend resource catalog.
-6. Release notes have no backend route.
+6. Release notes have no backend route; the repository currently has no published GitHub Releases to display.
 7. GCC mandatory mode, Finrep mapping, mail delivery and bank data need real external sources.
-8. Credential rotation on the already-public history is the owner's.
+8. Credential rotation and explicit owner-approved remediation of the already-public Git history are still required.
