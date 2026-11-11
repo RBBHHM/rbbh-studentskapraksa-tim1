@@ -12,24 +12,24 @@ Sources: `[Related Parties Register] Dokumentacija.pdf` (preserved at the reposi
 | BLOCKED | Needs an external system, an owner decision, or a backend contract that is not approved. |
 | NOT TESTED | Implemented, but no automated test exercises it. |
 
-**What "tested" means here.** All browser (Playwright) evidence runs against `tests/Web.Blazor.BrowserHost`: the real Blazor frontend calling the **real backend controllers, services and validators in-process**, but on an **EF InMemory database** with a fixture identity. It does **not** prove real SQL Server behaviour, real Keycloak, the bank reference database, Finrep, or a real mail provider. Real-SQL evidence exists only for the backend integration suite (LocalDB). A true frontend → deployed API → SQL browser run was **not** executed and is listed as a gap.
+**What "tested" means here.** All browser (Playwright) evidence runs against `tests/Web.Blazor.BrowserHost`: the real Blazor frontend calling the **real backend controllers, services and validators in-process**, but on an **EF InMemory database** with a fixture identity. It does **not** prove real SQL Server behaviour, real Keycloak, the bank reference database, Finrep, or a real mail provider. Real-SQL evidence exists only for the backend integration suite (disposable SQL Server 2022 in CI, optionally LocalDB on Windows). A true frontend → deployed API → SQL browser run was **not** executed and is listed as a gap.
 
 ## Test results on current main (11 November 2026)
 
 CI evidence: https://github.com/RBBHHM/rbbh-studentskapraksa-tim1/actions/runs/43021204873
 
-The .NET solution build, all three .NET suites and every role-specific Playwright job passed on commit `a7aca7a9`. The security history scan failed on the pre-existing exposed credential; image publication was correctly skipped. These tests use disposable SQL and an InMemory BrowserHost, not real Keycloak, bank data, Finrep or OCP.
+The .NET solution build, all three .NET suites and every role-specific Playwright job passed on commit `0ae03b5c` ([verified run](https://github.com/RBBHHM/rbbh-studentskapraksa-tim1/actions/runs/43027523788)). The security history scan failed on the pre-existing exposed credential; image publication was correctly skipped. These tests use disposable SQL and an InMemory BrowserHost, not real Keycloak, bank data, Finrep or OCP.
 
 | Suite | Result |
 |---|---|
 | Release build, whole solution, `-warnaserror` | 0 warnings, 0 errors |
-| Frontend unit (`tests/Web.Blazor.Tests`) | 234 passed, 0 failed, 0 skipped |
-| Backend unit (`tests/Backend.UnitTests`) | **348 passed, 0 failed, 0 skipped** (current main CI) |
-| Backend integration, no SQL variable | 309 passed, 0 failed, **86 skipped** (SQL-only tests) |
+| Frontend unit (`tests/Web.Blazor.Tests`) | **252 passed, 0 failed, 0 skipped** (current main CI) |
+| Backend unit (`tests/Backend.UnitTests`) | **355 passed, 0 failed, 0 skipped** (current main CI) |
+| Backend integration, without disposable SQL configuration | 309 passed, 0 failed, **86 skipped** (SQL-only tests; separate from current CI) |
 | Backend integration, isolated SQL Server 2022 (CI) | **395 passed, 0 failed, 0 skipped** (real SQL) |
 | Playwright admin (BrowserHost) | 142 passed |
 | Playwright FL | 60 passed |
-| Playwright PL | 59 passed |
+| Playwright PL | 60 passed |
 | Playwright kapital | 64 passed |
 | Playwright limiti | 56 passed |
 | Playwright gost | 50 passed |
@@ -59,7 +59,7 @@ Frontend paths are under `Frontend/`; backend paths under `Backend/`. "BH" means
 | "Zatraži rolu" / "Promijeni rolu" modal | `Components/Registry/RoleRequestDialog.razor`, `RoleRequestButton.razor`, `MyProfile.razor`; `Api/RoleRequestsApi.cs` | `api/role-requests` | `role-requests.spec.ts`, `RoleRequestsApiTests.cs` (BH) | VERIFIED | none |
 | Admin approve/reject role requests | `Pages/RoleRequests.razor`; deterministic `decisionId` for safe replay | decision with `decisionId` + `expectedVersion` | `role-requests.spec.ts` (BH) | VERIFIED | none |
 | Role-request mail | none (server side) | outbox + dispatcher | Backend tests | BLOCKED | Needs a real mail provider |
-| Role catalog UI | none | `api/roles` catalog mutations exist | none | MISSING | Contract exists; no UI was built or requested by an approved design |
+| Role catalog UI | `Pages/RoleCatalog.razor`, dynamic DB permissions and safe admin editor | `api/role-catalog` GET/POST/PUT with protected system roles and optimistic version | `RoleCatalogApiTests`, six-role Playwright | VERIFIED | Production role grants must be provisioned by the owner |
 | User profile edit (username, names, email) | `Pages/Users.razor`, `UserDraft.cs`, `UserForm.razor`, `UsersApi.UpdateProfileAsync` | `PUT api/users/{id}` | `users.spec.ts` "profile fields ... editable", `UsersApiTests.cs` (BH) | VERIFIED | none |
 | Email suggestion editable, any domain | `UserDraft.cs` | email `maxLength 200` | `UsersApiTests.cs`, users spec | VERIFIED | none |
 | Unconfirmed-identity badge | `Users.razor` | `identityConfirmed` | none (no spec asserts the badge) | NOT TESTED | Add a fixture user with `identityConfirmed=false` and assert the badge |
@@ -82,8 +82,8 @@ Frontend paths are under `Frontend/`; backend paths under `Backend/`. "BH" means
 | Physical persons CRUD, family links | `PhysicalPersons.razor` | `RelatedPersonService` | `physical-persons.spec.ts` (FL) | VERIFIED | none |
 | GCC search and automatic GCC name | `Registry/GccPicker.razor`, `LegalEntitiesApi.GccAsync` | `api/bank-reference/gcc` (503 when unconfigured) | `legal-entities.spec.ts` GCC test; both the unavailable and the available source (BH fixture source) | PARTIAL | Source is a **test fixture**. Real `bosnadb\HEAD` access and "mandatory GCC" are blocked until a source is configured |
 | Large-exposure DA/NE | `LegalEntityForm`, column in `LegalEntities.razor` | nullable `isLargeExposure` | GCC test saves and displays it | VERIFIED | Business meaning/default for existing rows is a backend decision |
-| Bank customer lookup | none | `api/bank-reference/customers` | none | MISSING | No approved UI design; same source blocker as GCC |
-| Four-eyes: creator cannot verify, hover hint | verify buttons disabled for creator | `self_denied` 403, `provenance_required` 409 | physical and legal specs (BH) | PARTIAL | The RBI transport does not expose the backend `code`, so the UI shows the generic forbidden text instead of the specific code |
+| Bank customer lookup | `BankCustomerPicker.razor`, `LegalEntityForm`, `LegalEntitiesApi.CustomersAsync` | `api/bank-reference/customers` SELECT-only | `BankCustomerApiTests`, browser fixture and unavailable-source tests | PARTIAL | Real bank source and mapping must be configured and verified externally |
+| Four-eyes: creator cannot verify, hover hint | creator disabled buttons and localized safe server codes | `verification.self_denied` 403, `verification.provenance_required` 409 | physical/legal browser specs and `StructuredBusinessErrorTests` | VERIFIED | Deployed Keycloak subject binding requires live environment validation |
 | Case-insensitive search | list search | SQL collation | list-search tests (BH, InMemory) | PARTIAL | Real-SQL collation behaviour is a backend/DB item (LEG-05) |
 | Excel export/import with result dialog | `ImportFeedback`, result dialogs | `{imported,failed,errors,details}` | import specs (BH), backend integration | PARTIAL | Extra export columns (created/modified, JMBG) depend on the C3 workbook format |
 | Next disabled, immediate field messages, no repeated bottom messages | `LiveValidation`, `FormSummary` | n/a | guard tests, form specs | VERIFIED | none |
@@ -131,14 +131,14 @@ Frontend paths are under `Frontend/`; backend paths under `Backend/`. "BH" means
 | No hardcoded options/text | guard tests | n/a | `MarkupContainsNoLiteralVisibleText` | VERIFIED | Two tracked static lists (Period, Guide) |
 | Responsive 375 px | `app.css` | n/a | 375 px spec in each page suite | VERIFIED | none |
 | Single README and onboarding | `README.md`, `docs/ONBOARDING.md` | n/a | review | VERIFIED | none |
-| Release notes page from GitHub | none | **no route exists** | none | BLOCKED | Needs a server-side GitHub source (token stays server-side) |
+| Release notes page from GitHub | `Pages/ReleaseNotes.razor`, UAT/PROD selector | `GET api/release-notes`, cached GitHub public-release adapter | Backend and frontend unit tests, six-role Playwright with fixture releases | VERIFIED | No published GitHub Release entries currently exist in this repository |
 | Performance / Lighthouse | n/a | n/a | none | NOT TESTED | Deferred by the requester |
 
 ### Platform and security
 
 | Requirement | Evidence | Status | Remaining |
 |---|---|---|---|
-| Structured error codes in the UI | RBI transport carries only the status code | PARTIAL | RBI transport change or a typed-error extension is needed |
+| Structured error codes in the UI | Transport exposes bounded and validated `code`; selected four-eyes errors have safe localized UI messages | PARTIAL | Other business codes still use generic HTTP status messages |
 | Secret-free publication history | Current tracked settings are blank; full-history CI guard detects the previously committed credential. | BLOCKED | Owner must rotate/revoke the affected Keycloak credential and coordinate historical exposure remediation. Image publication stays blocked. |
 | Real Keycloak / SQL-through-frontend / bank / Finrep / mail | none run | NOT TESTED / BLOCKED | Needs an environment and credentials the owner controls |
 | Deployment (OCP/3scale, shared sessions, DP keys) | none | BLOCKED | Backend OPS-02 |
@@ -147,9 +147,9 @@ Frontend paths are under `Frontend/`; backend paths under `Backend/`. "BH" means
 
 1. No frontend → deployed API → SQL browser run (BrowserHost is InMemory).
 2. 8-hour session is code-checked only.
-3. No UI for the role catalog or bank customer lookup.
-4. Structured backend error codes are not propagated to the UI.
+3. Role catalog and bank customer UI are implemented; production RBAC/catalog data and real bank source remain external.
+4. Four-eyes backend codes now reach localized UI via a validated typed transport; other domain errors remain status-based.
 5. DE has no frontend resource catalog.
-6. Release notes have no backend route; the repository currently has no published GitHub Releases to display.
+6. The release-notes page and GitHub-backed server route exist; there are no published GitHub Releases to display yet.
 7. GCC mandatory mode, Finrep mapping, mail delivery and bank data need real external sources.
 8. Credential rotation and explicit owner-approved remediation of the already-public Git history are still required.
