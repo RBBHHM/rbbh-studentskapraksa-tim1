@@ -627,6 +627,27 @@ internal static class BrowserHostProgram
                                 await db.SaveChangesAsync();
                             }
                             break;
+                        case "/__fixtures/users-unconfirmed":
+                            await using (var scope = backend.Services.CreateAsyncScope())
+                            {
+                                var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                                var user = new AppUser
+                                {
+                                    Email = "unconfirmed@fixture.test",
+                                    Username = "unconfirmed",
+                                    FirstName = "Unconfirmed",
+                                    LastName = "Fixture",
+                                    KeycloakSubjectConfirmed = false
+                                };
+                                db.AppUsers.Add(user);
+                                db.UserRoles.Add(new UserRole
+                                {
+                                    UserId = user.Id,
+                                    RoleId = (await db.Roles.SingleAsync(role => role.Name == ApplicationAccessRoles.PhysicalPersons)).Id
+                                });
+                                await db.SaveChangesAsync();
+                            }
+                            break;
                         case "/__fixtures/users-pages":
                             await using (var scope = backend.Services.CreateAsyncScope())
                             {
