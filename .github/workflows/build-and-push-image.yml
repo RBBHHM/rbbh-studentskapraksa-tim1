@@ -31,23 +31,26 @@ jobs:
     # Image publication remains gated by the secret_scan job.
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Never point tests at a shared database; this SQL service exists for one CI run.
     services:
       sql:
         image: mcr.microsoft.com/mssql/server:2022-latest
         env:
           ACCEPT_EULA: Y
-          MSSQL_SA_PASSWORD: ${{ secrets.TEST_SQL_SA_PASSWORD }}
+          MSSQL_SA_PASSWORD: ${{ format('Ci!{0}Qa8Test', github.run_id) }}
         ports: ["1433:1433"]
     env:
-      RBBH_TEST_SQLSERVER: "Server=localhost,1433;User ID=sa;Password=${{ secrets.TEST_SQL_SA_PASSWORD }};TrustServerCertificate=true"
+      RBBH_TEST_SQLSERVER: "Server=localhost,1433;User ID=sa;Password=${{ format('Ci!{0}Qa8Test', github.run_id) }};TrustServerCertificate=true"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with: { dotnet-version: "10.0.x" }
-      - name: Require disposable SQL test configuration
+      - name: Mask and verify the ephemeral CI-only SQL password
         env:
-          SQL_PASSWORD: ${{ secrets.TEST_SQL_SA_PASSWORD }}
-        run: test -n "$SQL_PASSWORD"
+          SQL_PASSWORD: ${{ format('Ci!{0}Qa8Test', github.run_id) }}
+        run: |
+          test -n "$SQL_PASSWORD"
+          echo "::add-mask::$SQL_PASSWORD"
       - run: dotnet restore RelatedPartiesRegister.slnx --configfile NuGet.config
       - run: dotnet build RelatedPartiesRegister.slnx -c Release --no-restore -p:RunAnalyzers=true
       - run: dotnet test RelatedPartiesRegister.slnx -c Release --no-build --no-restore --logger trx --results-directory artifacts/ci-tests
