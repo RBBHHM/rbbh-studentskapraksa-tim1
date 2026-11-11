@@ -442,14 +442,20 @@ public class LegalEntityService : ILegalEntityService
             return result;
         }
         var choices = await Helpers.CodebookChoices.Load(_context, _actor?.HttpContext?.RequestAborted ?? default, "OsnovPovezanosti");
-        var usedTaxNumbers = (await _context.LegalEntities.IgnoreQueryFilters().AsNoTracking()
-            .Where(entity => entity.TaxNumber != null)
-            .Select(entity => entity.TaxNumber!)
-            .ToListAsync()).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var usedFbaIds = (await _context.LegalEntities.IgnoreQueryFilters().AsNoTracking()
-            .Where(entity => entity.FbaId != null)
-            .Select(entity => entity.FbaId!)
-            .ToListAsync()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        // Stream just the identifiers in one SQL query instead of materializing
+        // two complete lists with two round-trips. Keep inactive rows included
+        // so historical identifiers cannot be silently reused.
+        var usedTaxNumbers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var usedFbaIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var cancellation = _actor?.HttpContext?.RequestAborted ?? default;
+        await foreach (var item in _context.LegalEntities.IgnoreQueryFilters().AsNoTracking()
+            .Where(entity => entity.TaxNumber != null || entity.FbaId != null)
+            .Select(entity => new { entity.TaxNumber, entity.FbaId })
+            .AsAsyncEnumerable().WithCancellation(cancellation))
+        {
+            if (!string.IsNullOrEmpty(item.TaxNumber)) usedTaxNumbers.Add(item.TaxNumber);
+            if (!string.IsNullOrEmpty(item.FbaId)) usedFbaIds.Add(item.FbaId);
+        }
 
         for (int row = 2; row <= lastRow; row++)
         {
