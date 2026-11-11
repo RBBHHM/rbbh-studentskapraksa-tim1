@@ -75,7 +75,19 @@ public sealed class GitHubReleaseNotesService(HttpClient client, IMemoryCache ca
                     Flag(row, "prerelease") || tag.StartsWith("uat-", StringComparison.OrdinalIgnoreCase)
                         ? "uat" : "prod"));
             }
-            return items;
+            // A promoted production version displays the identical UAT text,
+            // even if its GitHub release was created with different notes.
+            // Versions without an actual published production release are never invented.
+            var approvedUatNotes = items
+                .Where(item => item.Environment == "uat" &&
+                    item.Tag.StartsWith("uat-v", StringComparison.OrdinalIgnoreCase))
+                .GroupBy(item => item.Tag[4..], StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.First().Body,
+                    StringComparer.OrdinalIgnoreCase);
+
+            return items.Select(item => item.Environment == "prod" &&
+                    approvedUatNotes.TryGetValue(item.Tag, out var notes)
+                    ? item with { Body = notes } : item).ToArray();
         }
         catch (HttpRequestException) { throw Unavailable(); }
         catch (JsonException) { throw Unavailable(); }

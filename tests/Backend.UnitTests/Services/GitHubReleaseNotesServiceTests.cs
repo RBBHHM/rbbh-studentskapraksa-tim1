@@ -47,6 +47,29 @@ public sealed class GitHubReleaseNotesServiceTests
     }
 
     [Fact]
+    public async Task ProductionPromotionUsesTheSamePublishedUatNotesWithoutInventingVersions()
+    {
+        const string json = """
+            [
+              {"tag_name":"uat-v2.1.0","name":"UAT v2.1.0","body":"Approved notes for both environments","html_url":"https://github.com/RBBHHM/rbbh-studentskapraksa-tim1/releases/tag/uat-v2.1.0","prerelease":true},
+              {"tag_name":"v2.1.0","name":"PROD v2.1.0","body":"Different text must not diverge","html_url":"https://github.com/RBBHHM/rbbh-studentskapraksa-tim1/releases/tag/v2.1.0","prerelease":false},
+              {"tag_name":"uat-v2.2.0","name":"Unpromoted","body":"UAT only","prerelease":true}
+            ]
+            """;
+        var service = Create(_ => new(HttpStatusCode.OK)
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        });
+        var uat = await service.GetAsync("uat", default);
+        var prod = await service.GetAsync("prod", default);
+        Assert.Equal(2, uat.Items.Count);
+        var deployed = Assert.Single(prod.Items);
+        Assert.Equal("v2.1.0", deployed.Tag);
+        Assert.Equal("Approved notes for both environments", deployed.Body);
+        Assert.DoesNotContain(prod.Items, item => item.Tag == "v2.2.0");
+    }
+
+    [Fact]
     public async Task DisallowsUnapprovedReleaseLinksAndNeverRendersThirdPartyHtml()
     {
         var json = "[{\"tag_name\":\"v1.0.0\",\"name\":\"v1\",\"body\":\"<script>bad()</script>\",\"html_url\":\"https://untrusted.example/unsafe\",\"prerelease\":false}]";

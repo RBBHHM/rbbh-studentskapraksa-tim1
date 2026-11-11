@@ -17,7 +17,7 @@ public sealed class AppText
         var text = this[key];
         return text == key ? role : text;
     }
-    /// <summary>Text for a key owned by either catalog: the static resources first, then the backend language pack; a missing key is returned unchanged.</summary>
+    /// <summary>Text from the runtime language codebook first, then the static locale fallback. Unknown keys remain visible for diagnostics.</summary>
     public string Resolve(string key, System.Text.Json.JsonElement parameters = default)
     {
         if (!string.IsNullOrWhiteSpace(key) && System.Text.RegularExpressions.Regex.IsMatch(key, "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"))
@@ -25,7 +25,8 @@ public sealed class AppText
             var text = this[key];
             if (text != key) return RuntimeResources.Fill(text, parameters);
         }
-        return key;
+        return _runtime is not null && _runtime.TryGet(key, out var runtime)
+            ? RuntimeResources.Fill(runtime, parameters) : key;
     }
     public string Format(string key, params object?[] arguments)
     {
