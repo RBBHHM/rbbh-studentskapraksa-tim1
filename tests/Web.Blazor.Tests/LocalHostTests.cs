@@ -79,7 +79,7 @@ public sealed class LocalHostTests
         Assert.Contains("Autentifikacija nije", WebUtility.HtmlDecode(html));
         Assert.DoesNotContain("admin@localhost", html);
         Assert.DoesNotContain("/authentication/login", html);
-        Assert.DoesNotContain("Deutsch", html);
+        Assert.Contains("<option value=\"de\">Deutsch</option>", html);
         Assert.Contains("RBI.DesignSystem/rbi-design-system.css", html);
     }
 

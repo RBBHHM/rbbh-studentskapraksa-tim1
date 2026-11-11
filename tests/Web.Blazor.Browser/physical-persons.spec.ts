@@ -233,7 +233,7 @@ test("BS/EN cookie selection persists and reaches the actual backend", async ({ 
   await expect(page.getByRole("heading", { name: "Individuals", exact: true })).toBeVisible();
   const culture = await (await request.get("/__fixtures/culture", { headers: { "X-Fixture-Control": "true" } })).json();
   expect(culture.language).toBe("en");
-  await expect(page.getByRole("option", { name: "Deutsch", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("option", { name: "Deutsch", exact: true })).toHaveCount(1);
 });
 
 test("search covers identity and existing backend audit values, with no-result recovery", async ({ page }) => {
