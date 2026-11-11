@@ -16,10 +16,13 @@ public sealed class RegistryWorkbookSqlRoundtripTests : AuthenticatedApiFixture
 {
     protected override bool UseSql => true;
 
-    [SqlServerTheory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task ExportedRegistryWorkbookImportsIntoIndependentSqlDatabaseWithOneAudit(bool legal)
+    [SqlServerFact]
+    public Task LegalWorkbookRoundtrip() => Roundtrip(legal: true);
+
+    [SqlServerFact]
+    public Task PhysicalWorkbookRoundtrip() => Roundtrip(legal: false);
+
+    private async Task Roundtrip(bool legal)
     {
         var route = legal ? "/api/legal-entities" : "/api/related-persons";
         var payload = legal ? RegistryVerificationHttpTests.Legal() : RegistryVerificationHttpTests.Physical();
