@@ -9,6 +9,7 @@ on:
         default: UAT
         required: true
   push:
+    branches: [main]
     tags: ["v*"]
 permissions:
   contents: read
@@ -26,7 +27,8 @@ jobs:
           SECURITY_SCAN_REF: ${{ github.event.pull_request.head.sha || github.sha }}
         run: python3 scripts/security/scan_git_secrets.py --ref "$SECURITY_SCAN_REF"
   dotnet:
-    needs: secret_scan
+    # Build/test even when the historical secret scan finds an existing leak.
+    # Image publication remains gated by the secret_scan job.
     runs-on: ubuntu-latest
     timeout-minutes: 30
     services:
@@ -63,7 +65,7 @@ jobs:
         if: always()
         with: { name: dotnet-results, path: artifacts/ci-tests }
   browser:
-    needs: secret_scan
+    # Role-based browser regression runs independently of the security gate.
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -92,8 +94,9 @@ jobs:
           name: browser-${{ matrix.role }}
           path: artifacts/migration-browser
   image:
-    if: github.event_name != 'pull_request'
-    needs: [dotnet, browser]
+    # Never publish images on a routine branch push, even to main.
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+    needs: [secret_scan, dotnet, browser]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: ${{ inputs.environment || 'PROD' }}
