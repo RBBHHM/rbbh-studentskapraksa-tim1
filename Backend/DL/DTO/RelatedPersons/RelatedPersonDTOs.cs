@@ -140,6 +140,8 @@ public class RelatedPersonResponseDTO
     public string? RelationBasis { get; set; }
     public string? RelationDescription { get; set; }
     public string? SpecialRelationBasis { get; set; }
+    /// <summary>Export-only read-only label derived from the OsnovPosebnogOdnosa codebook.</summary>
+    public string? SpecialRelationBasisDescription { get; set; }
 
     public DateTime? DateFrom { get; set; }
     public DateTime? DateTo { get; set; }

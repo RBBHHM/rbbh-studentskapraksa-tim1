@@ -51,6 +51,11 @@ public class RelatedPersonService(
         new("Status", "Status"), new("Kreirao", "Kreirao", "Created by"), new("Kreirano", "Kreirano", "Created at"),
         new("Izmijenio", "Izmijenio", "Modified by"), new("Izmijenjeno", "Izmijenjeno", "Modified at")
     ];
+    private static readonly ExcelImportSchema.Column[] V3Columns =
+    [
+        .. V2Columns,
+        new("Opis osnova posebnog odnosa", "Special relationship basis description")
+    ];
     private readonly ConnectedPartiesDbContext _dbContext = dbContext;
     private readonly IEmailService _emailService = emailService;
     private readonly EmailSettings _emailSettings = emailSettings.Value;
@@ -90,8 +95,29 @@ public class RelatedPersonService(
     {
         var items = await _dbContext.RelatedPersons.AsNoTracking().OrderBy(row => row.LastName).ThenBy(row => row.FirstName).ThenBy(row => row.Id)
             .Take(5001).ProjectToType<RelatedPersonResponseDTO>().ToListAsync(ct);
-        return items.Count > 5000 ? Result<List<RelatedPersonResponseDTO>>.ValidationError(BackendMessages.Message("errors.workbook.export.limit"))
-            : Result<List<RelatedPersonResponseDTO>>.Success(items);
+        if (items.Count > 5000)
+            return Result<List<RelatedPersonResponseDTO>>.ValidationError(BackendMessages.Message("errors.workbook.export.limit"));
+
+        // Read the description from the authoritative codebook, not a
+        // hardcoded legal paragraph. Do not fabricate a label for missing codes.
+        var basisCodes = items.Select(item => item.SpecialRelationBasis)
+            .Where(code => !string.IsNullOrWhiteSpace(code)).Distinct().ToArray();
+        if (basisCodes.Length > 0)
+        {
+            var descriptions = await _dbContext.CodeLists.AsNoTracking()
+                .Where(row => row.Kategorija == "OsnovPosebnogOdnosa" &&
+                    basisCodes.Contains(row.Kod))
+                .Select(row => new { row.Kod, row.Naziv, row.Opis }).ToListAsync(ct);
+            var lookup = descriptions.GroupBy(row => row.Kod, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group
+                    .Select(row => !string.IsNullOrWhiteSpace(row.Opis) ? row.Opis : row.Naziv)
+                    .FirstOrDefault(), StringComparer.OrdinalIgnoreCase);
+            foreach (var item in items)
+                if (item.SpecialRelationBasis is { } code &&
+                    lookup.TryGetValue(code, out var description))
+                    item.SpecialRelationBasisDescription = description;
+        }
+        return Result<List<RelatedPersonResponseDTO>>.Success(items);
     }
 
     /// <inheritdoc/>
@@ -585,8 +611,13 @@ public class RelatedPersonService(
         var lastRow = ws.LastRowUsed()?.RowNumber() ?? 1;
 
         var result = new ImportResultDTO();
-        var isV2 = ws.LastColumnUsed()?.ColumnNumber() == V2Columns.Length;
-        var schemaErrors = ExcelImportSchema.Validate(ws, isV2 ? V2Columns : ImportColumns);
+        var columnCount = ws.LastColumnUsed()?.ColumnNumber();
+        var isV3 = columnCount == V3Columns.Length;
+        var isV2 = isV3 || columnCount == V2Columns.Length;
+        // Prior 15/25-column files remain supported. Export v3 appends only a
+        // derived informational description; imports use the authoritative code.
+        var schemaErrors = ExcelImportSchema.Validate(ws,
+            isV3 ? V3Columns : isV2 ? V2Columns : ImportColumns);
         if (schemaErrors.Count > 0)
         {
             result.Failed = Math.Max(lastRow - 1, 1);
