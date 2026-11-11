@@ -55,6 +55,8 @@
   "errors.registry.invalid.gcc": "GCC broj smije sadržavati najviše 50 cifara.",
   "errors.registry.invalid.search": "Pretraga smije imati najviše 200 znakova.",
   "errors.registry.unknown.gcc": "Odabrani GCC nije pronađen u bankovnom izvoru.",
+  "errors.release.notes.unavailable": "Podaci o GitHub izdanjima trenutno nisu dostupni. Pokušajte ponovo.",
+  "errors.release.notes.invalid.environment": "Odabrano okruženje za prikaz izdanja nije ispravno.",
   "errors.report.amount.out.of.range": "Iznosi izvještaja zahtijevaju usklađivanje prije snimanja.",
   "errors.report.invalid.period": "Odabrani period nije ispravan.",
   "errors.report.month.range": "Mjesec mora biti između 1 i 12.",
