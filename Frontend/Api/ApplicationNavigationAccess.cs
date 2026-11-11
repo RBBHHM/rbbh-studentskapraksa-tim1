@@ -20,22 +20,16 @@ public sealed record ApplicationNavigationAccess(
         IProfileApi profile, IRbiPermissionService permissions,
         CancellationToken cancellationToken = default)
     {
-        var profileTask = profile.GetAsync(cancellationToken);
-        var reportsTask = permissions.HasPermissionAsync("reports.read", cancellationToken).AsTask();
-        var physicalTask = permissions.HasPermissionAsync("fl.read", cancellationToken).AsTask();
-        var legalTask = permissions.HasPermissionAsync("pl.read", cancellationToken).AsTask();
-        var limitsTask = permissions.HasPermissionAsync("limiti.read", cancellationToken).AsTask();
-        var capitalTask = permissions.HasPermissionAsync("kapital.read", cancellationToken).AsTask();
-
-        // Independent authorization checks can run together instead of a
-        // serial chain during first render. Await every task before rendering.
-        await Task.WhenAll(profileTask, reportsTask, physicalTask, legalTask, limitsTask, capitalTask);
+        cancellationToken.ThrowIfCancellationRequested();
+        // Fail closed before requesting any grants. Never race checks that may
+        // use the same circuit-scoped authorization services / DbContext.
+        var effectiveProfile = await profile.GetAsync(cancellationToken);
         return new(
-            ApplicationAccess.IsAdministrator(await profileTask),
-            await reportsTask,
-            await physicalTask,
-            await legalTask,
-            await limitsTask,
-            await capitalTask);
+            ApplicationAccess.IsAdministrator(effectiveProfile),
+            await permissions.HasPermissionAsync("reports.read", cancellationToken),
+            await permissions.HasPermissionAsync("fl.read", cancellationToken),
+            await permissions.HasPermissionAsync("pl.read", cancellationToken),
+            await permissions.HasPermissionAsync("limiti.read", cancellationToken),
+            await permissions.HasPermissionAsync("kapital.read", cancellationToken));
     }
 }

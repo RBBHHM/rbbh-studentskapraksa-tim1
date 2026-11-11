@@ -64,5 +64,20 @@ public sealed class ApplicationNavigationAccessTests
             .Returns(ValueTask.FromResult(true));
         await Assert.ThrowsAsync<RegistryApiException>(() =>
             ApplicationNavigationAccess.ReadAsync(profile.Object, permissions.Object));
+        permissions.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task CancelledRequestDoesNotFetchProfileOrCheckPermissions()
+    {
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+        var profile = new Mock<IProfileApi>(MockBehavior.Strict);
+        var permissions = new Mock<IRbiPermissionService>(MockBehavior.Strict);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            ApplicationNavigationAccess.ReadAsync(profile.Object, permissions.Object, cancelled.Token));
+        profile.VerifyNoOtherCalls();
+        permissions.VerifyNoOtherCalls();
     }
 }

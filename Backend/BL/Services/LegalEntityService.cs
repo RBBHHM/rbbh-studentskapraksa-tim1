@@ -51,14 +51,15 @@ public partial class LegalEntityService : ILegalEntityService
                     || (e.FbaId != null && e.FbaId.ToLower().Contains(term.ToLower())));
         }
 
-        var total = await query.CountAsync();
+        var cancellation = _actor?.HttpContext?.RequestAborted ?? default;
+        var total = await query.CountAsync(cancellation);
 
         var items = await query
             .OrderByDescending(e => e.CreatedAt).ThenBy(e => e.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(DtoProjection)
-            .ToListAsync();
+            .ToListAsync(cancellation);
 
         return new LegalEntityListDTO
         {
