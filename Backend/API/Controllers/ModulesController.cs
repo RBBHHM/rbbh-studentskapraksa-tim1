@@ -1,94 +1,58 @@
-// File: src/RBBH.ConnectedParties/API/Controllers/ModulesController.cs
-// PL-19: Kreirati API endpoint koji vraća listu modula s isEnabled flagom prema roli korisnika
-//
-// GET /api/auth/modules
-// Response prema API kontraktu:
-// {
-//   "modules": [
-//     { "key": "connected-parties", "name": "Povezana lica", "route": "/connected-parties",
-//       "icon": "people", "isEnabled": true },
-//     ...
-//   ]
-// }
-
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 using RBBH.ConnectedParties.Helpers.Constants;
 
-namespace RBBH.ConnectedParties.API.Controllers
+namespace RBBH.ConnectedParties.API.Controllers;
+
+/// <summary>
+/// Lists modules from the effective application permissions, not role names.
+/// Roles and grants are managed in the database; provider-supplied roles never
+/// enable a module. The same permission codes protect the API endpoints.
+/// </summary>
+[ApiController]
+[Route("api/auth")]
+[Authorize(Policy = ApplicationPolicies.ApplicationAccess)]
+[Produces("application/json")]
+public sealed class ModulesController : ControllerBase
 {
-    /// <summary>
-    /// Endpoint za dohvat liste modula aplikacije s flagom dostupnosti prema roli korisnika.
-    /// </summary>
-    [ApiController]
-    [Route("api/auth")]
-    [Authorize]
-    [Produces("application/json")]
-    public class ModulesController : ControllerBase
+    private static readonly ModuleDefinition[] Modules =
+    [
+        new("physical-persons", "Fizička lica", "/app/physical-persons", "person",
+            ApplicationPermissions.PhysicalPersonsView),
+        new("legal-persons", "Pravna lica", "/app/legal-persons", "business",
+            ApplicationPermissions.LegalPersonsView),
+        new("limits", "Limiti", "/app/limits", "balance",
+            ApplicationPermissions.LimitsView),
+        new("regulatory-reporting", "Regulatorna izvještavanja", "/app/reports", "chart",
+            ApplicationPermissions.RegulatoryReportingView)
+    ];
+
+    [HttpGet("modules")]
+    [ProducesResponseType(typeof(ModulesResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public IActionResult GetModules()
     {
-        // Mapiranje rola na dostupne module.
-        // Ključ = naziv modula, Vrijednost = skup rola koje imaju pristup.
-        private static readonly Dictionary<string, HashSet<string>> _moduleRoles = new()
-        {
-            ["physical-persons"] = new(StringComparer.OrdinalIgnoreCase) { ApplicationAccessRoles.PhysicalPersons, ApplicationAccessRoles.Administrator, ApplicationAccessRoles.Guest },
-            ["legal-persons"] = new(StringComparer.OrdinalIgnoreCase) { ApplicationAccessRoles.LegalPersons, ApplicationAccessRoles.Administrator, ApplicationAccessRoles.Guest },
-            ["limits"] = new(StringComparer.OrdinalIgnoreCase) { ApplicationAccessRoles.Limits, ApplicationAccessRoles.Administrator, ApplicationAccessRoles.Guest },
-            ["regulatory-reporting"] = new(StringComparer.OrdinalIgnoreCase) { ApplicationAccessRoles.Capital, ApplicationAccessRoles.Administrator, ApplicationAccessRoles.Guest },
-        };
+        // Authorization uses exact, database-owned permission codes. A role
+        // name or a case-altered permission is not sufficient.
+        var permissions = User.FindAll("permission")
+            .Select(claim => claim.Value)
+            .ToHashSet(StringComparer.Ordinal);
 
-        // Statička lista svih modula s metapodacima
-        private static readonly List<ModuleDefinition> _allModules = new()
-        {
-            new("physical-persons", "Fizička lica", "/app/physical-persons", "person"),
-            new("legal-persons", "Pravna lica", "/app/legal-persons", "business"),
-            new("limits", "Limiti", "/app/limits", "balance"),
-            new("regulatory-reporting", "Regulatorna izvještavanja", "/app/reports", "chart"),
-        };
+        var modules = Modules.Select(module => new ModuleDto(
+            module.Key,
+            module.Name,
+            module.Route,
+            module.Icon,
+            permissions.Contains(module.RequiredPermission)
+        )).ToList();
 
-        /// <summary>
-        /// Vraća listu svih modula s flagom isEnabled prema roli prijavljenog korisnika.
-        /// isEnabled: false znači da modul ne treba biti prikazan u navigaciji.
-        /// </summary>
-        /// <returns>Lista modula s isEnabled flagom.</returns>
-        /// <response code="200">Lista modula uspješno vraćena.</response>
-        /// <response code="401">Korisnik nije prijavljen ili token je istekao.</response>
-        [HttpGet("modules")]
-        [ProducesResponseType(typeof(ModulesResponse), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public IActionResult GetModules()
-        {
-            var userRoles = User.Claims
-                .Where(c => c.Type == ClaimTypes.Role)
-                .Select(c => c.Value)
-                .ToHashSet();
-
-            var modules = _allModules.Select(m => new ModuleDto(
-                Key: m.Key,
-                Name: m.Name,
-                Route: m.Route,
-                Icon: m.Icon,
-                IsEnabled: _moduleRoles.TryGetValue(m.Key, out var allowedRoles)
-                           && allowedRoles.Overlaps(userRoles)
-            )).ToList();
-
-            return Ok(new ModulesResponse(modules));
-        }
+        return Ok(new ModulesResponse(modules));
     }
-
-    // ── DTOs ─────────────────────────────────────────────────────────────────
-
-    /// <summary>Response wrapper za listu modula.</summary>
-    public record ModulesResponse(List<ModuleDto> Modules);
-
-    /// <summary>Podaci o jednom modulu aplikacije.</summary>
-    public record ModuleDto(
-        string Key,
-        string Name,
-        string Route,
-        string Icon,
-        bool IsEnabled);
-
-    /// <summary>Interna definicija modula (statički metapodaci).</summary>
-    internal record ModuleDefinition(string Key, string Name, string Route, string Icon);
 }
+
+public sealed record ModulesResponse(List<ModuleDto> Modules);
+
+public sealed record ModuleDto(string Key, string Name, string Route, string Icon, bool IsEnabled);
+
+internal sealed record ModuleDefinition(string Key, string Name, string Route, string Icon, string RequiredPermission);

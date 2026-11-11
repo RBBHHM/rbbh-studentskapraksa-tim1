@@ -1,104 +1,107 @@
 using System.Security.Claims;
 using FluentAssertions;
-using RBBH.ConnectedParties.API.Controllers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using RBBH.ConnectedParties.API.Controllers;
+using RBBH.ConnectedParties.Helpers.Constants;
 
-namespace UnitTests.Controllers
+namespace UnitTests.Controllers;
+
+public sealed class ModulesControllerTests
 {
-    /// <summary>
-    /// Testovi za PL-19: prikaz/sakrivanje modula prema roli korisnika (isEnabled flag).
-    /// </summary>
-    public class ModulesControllerTests
+    private static ModulesController CreateController(params Claim[] claims)
     {
-        private static ModulesController CreateControllerForRoles(params string[] roles)
+        return new ModulesController
         {
-            var claims = roles.Select(r => new Claim(ClaimTypes.Role, r)).ToList();
-            var identity = new ClaimsIdentity(claims, "TestAuth");
-            var principal = new ClaimsPrincipal(identity);
-
-            return new ModulesController
+            ControllerContext = new ControllerContext
             {
-                ControllerContext = new ControllerContext
+                HttpContext = new DefaultHttpContext
                 {
-                    HttpContext = new DefaultHttpContext { User = principal }
+                    User = new ClaimsPrincipal(new ClaimsIdentity(claims, "TestAuth"))
                 }
-            };
-        }
+            }
+        };
+    }
 
-        private static List<ModuleDto> GetModules(ModulesController controller)
-        {
-            var actionResult = controller.GetModules();
-            var ok = actionResult.Should().BeOfType<OkObjectResult>().Subject;
-            return ok.Value.Should().BeOfType<ModulesResponse>().Subject.Modules;
-        }
+    private static List<ModuleDto> GetModules(ModulesController controller)
+    {
+        var response = controller.GetModules().Should().BeOfType<OkObjectResult>().Subject;
+        return response.Value.Should().BeOfType<ModulesResponse>().Subject.Modules;
+    }
 
-        [Fact]
-        public void GetModules_ForMultipleAccesses_EnablesExactlySelectedModules()
-        {
-            // Arrange
-            var controller = CreateControllerForRoles("FL", "limiti");
+    [Theory]
+    [InlineData(ApplicationPermissions.PhysicalPersonsView, "physical-persons")]
+    [InlineData(ApplicationPermissions.LegalPersonsView, "legal-persons")]
+    [InlineData(ApplicationPermissions.LimitsView, "limits")]
+    [InlineData(ApplicationPermissions.RegulatoryReportingView, "regulatory-reporting")]
+    public void OnlyExplicitEffectiveReadPermissionEnablesItsModule(string grant, string expectedKey)
+    {
+        var modules = GetModules(CreateController(new Claim("permission", grant)));
 
-            // Act
-            var modules = GetModules(controller);
+        modules.Should().HaveCount(4);
+        modules.Single(module => module.Key == expectedKey).IsEnabled.Should().BeTrue();
+        modules.Where(module => module.Key != expectedKey).Should()
+            .OnlyContain(module => !module.IsEnabled);
+    }
 
-            // Assert
-            modules.Single(m => m.Key == "physical-persons").IsEnabled.Should().BeTrue();
-            modules.Single(m => m.Key == "limits").IsEnabled.Should().BeTrue();
-            modules.Single(m => m.Key == "legal-persons").IsEnabled.Should().BeFalse();
-            modules.Single(m => m.Key == "regulatory-reporting").IsEnabled.Should().BeFalse();
-        }
+    [Theory]
+    [InlineData(ApplicationAccessRoles.Guest)]
+    [InlineData(ApplicationAccessRoles.PhysicalPersons)]
+    [InlineData(ApplicationAccessRoles.LegalPersons)]
+    [InlineData(ApplicationAccessRoles.Capital)]
+    [InlineData(ApplicationAccessRoles.Limits)]
+    [InlineData(ApplicationAccessRoles.Administrator)]
+    public void ResolvedRoleGrantsIncludeGuestReadAccess(string role)
+    {
+        // The production claims transformation adds Guest baseline permissions
+        // and reads extra grants from the database for assigned roles.
+        var claims = RolePermissionMatrix.Resolve([role])
+            .Select(grant => new Claim("permission", grant))
+            .ToArray();
 
-        [Fact]
-        public void GetModules_ForReportingAccess_EnablesOnlyReporting()
-        {
-            // Arrange
-            var controller = CreateControllerForRoles("kapital");
+        GetModules(CreateController(claims)).Should().OnlyContain(module => module.IsEnabled);
+    }
 
-            // Act
-            var modules = GetModules(controller);
+    [Fact]
+    public void RoleClaimsAloneNeverEnableModules()
+    {
+        var modules = GetModules(CreateController(
+            new Claim(ClaimTypes.Role, ApplicationAccessRoles.Administrator),
+            new Claim(ClaimTypes.Role, ApplicationAccessRoles.Guest)));
 
-            // Assert
-            modules.Single(m => m.Key == "regulatory-reporting").IsEnabled.Should().BeTrue();
-            modules.Where(m => m.Key != "regulatory-reporting").Should().OnlyContain(m => !m.IsEnabled);
-        }
+        modules.Should().OnlyContain(module => !module.IsEnabled);
+    }
 
-        [Fact]
-        public void GetModules_WithNoRoles_AllModulesDisabled()
-        {
-            // Arrange
-            var controller = CreateControllerForRoles();
+    [Fact]
+    public void CustomDatabaseRoleUsesItsActualGrants()
+    {
+        var modules = GetModules(CreateController(
+            new Claim(ClaimTypes.Role, "custom-role-from-database"),
+            new Claim("permission", ApplicationPermissions.RegulatoryReportingView)));
 
-            // Act
-            var modules = GetModules(controller);
+        modules.Single(module => module.Key == "regulatory-reporting").IsEnabled.Should().BeTrue();
+        modules.Where(module => module.Key != "regulatory-reporting").Should()
+            .OnlyContain(module => !module.IsEnabled);
+    }
 
-            // Assert
-            modules.Should().HaveCount(4);
-            modules.Should().OnlyContain(m => m.IsEnabled == false);
-        }
+    [Fact]
+    public void CaseChangedPermissionCannotEnableModule()
+    {
+        var modules = GetModules(CreateController(
+            new Claim("permission", ApplicationPermissions.PhysicalPersonsView.ToLowerInvariant())));
 
-        [Theory]
-        [InlineData("admin")]
-        [InlineData("gost")]
-        public void GetModules_ForGlobalReadRole_EnablesAllModules(string role)
-        {
-            var modules = GetModules(CreateControllerForRoles(role));
+        modules.Should().OnlyContain(module => !module.IsEnabled);
+    }
 
-            modules.Should().OnlyContain(module => module.IsEnabled);
-        }
+    [Fact]
+    public void ModulesAlwaysReturnStableRoutesAndMetadata()
+    {
+        var modules = GetModules(CreateController());
 
-        [Fact]
-        public void GetModules_AlwaysReturnsAllModuleDefinitions()
-        {
-            // Arrange
-            var controller = CreateControllerForRoles("FL");
-
-            // Act
-            var modules = GetModules(controller);
-
-            // Assert — bez obzira na rolu, sve definicije modula su prisutne
-            modules.Select(m => m.Key).Should().BeEquivalentTo(
-                "physical-persons", "legal-persons", "limits", "regulatory-reporting");
-        }
+        modules.Select(module => (module.Key, module.Route)).Should().BeEquivalentTo(
+            ("physical-persons", "/app/physical-persons"),
+            ("legal-persons", "/app/legal-persons"),
+            ("limits", "/app/limits"),
+            ("regulatory-reporting", "/app/reports"));
     }
 }
