@@ -11,8 +11,8 @@ else if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><R
 else
 {
     <div class="registry-controls notification-filter" role="group" aria-label="@T["release.environment"]">
-        <RbiButton Variant="@(_environment == "uat" ? RbiButtonVariant.Primary : RbiButtonVariant.Secondary)" aria-pressed="@(_environment == "uat" ? "true" : "false")" OnClick="() => ChangeEnvironmentAsync("uat")" Disabled="_refreshing">@T["release.uat"]</RbiButton>
-        <RbiButton Variant="@(_environment == "prod" ? RbiButtonVariant.Primary : RbiButtonVariant.Secondary)" aria-pressed="@(_environment == "prod" ? "true" : "false")" OnClick="() => ChangeEnvironmentAsync("prod")" Disabled="_refreshing">@T["release.prod"]</RbiButton>
+        <RbiButton Variant="@(_environment == "uat" ? RbiButtonVariant.Primary : RbiButtonVariant.Secondary)" aria-pressed="@(_environment == "uat" ? "true" : "false")" OnClick="SelectUatAsync" Disabled="_refreshing">@T["release.uat"]</RbiButton>
+        <RbiButton Variant="@(_environment == "prod" ? RbiButtonVariant.Primary : RbiButtonVariant.Secondary)" aria-pressed="@(_environment == "prod" ? "true" : "false")" OnClick="SelectProdAsync" Disabled="_refreshing">@T["release.prod"]</RbiButton>
     </div>
     @if (_error is not null)
     {
@@ -58,6 +58,9 @@ else
     private string? _error;
     private bool _authenticated, _loading = true, _refreshing, _disposed;
     protected override Task OnInitializedAsync() => LoadAsync();
+
+    private Task SelectUatAsync() => ChangeEnvironmentAsync("uat");
+    private Task SelectProdAsync() => ChangeEnvironmentAsync("prod");
 
     private async Task ChangeEnvironmentAsync(string environment)
     {
