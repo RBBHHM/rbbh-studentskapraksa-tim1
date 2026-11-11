@@ -80,7 +80,7 @@ public class LegalEntityService : ILegalEntityService
             .OrderByDescending(e => e.CreatedAt).ThenBy(e => e.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(e => MapToDto(e))
+            .Select(DtoProjection)
             .ToListAsync();
 
         return new LegalEntityListDTO
@@ -95,7 +95,7 @@ public class LegalEntityService : ILegalEntityService
     public async Task<List<LegalEntityDTO>> GetAllForExportAsync()
     {
         var items = await _context.LegalEntities.AsNoTracking().OrderBy(row => row.Name).ThenBy(row => row.Id).Take(5001)
-            .Select(row => MapToDto(row)).ToListAsync(_actor?.HttpContext?.RequestAborted ?? default);
+            .Select(DtoProjection).ToListAsync(_actor?.HttpContext?.RequestAborted ?? default);
         if (items.Count > 5000) throw new ValidationException("file", BackendMessages.Message("errors.workbook.export.limit"));
         return items;
     }
@@ -103,11 +103,10 @@ public class LegalEntityService : ILegalEntityService
     /// <inheritdoc />
     public async Task<LegalEntityDTO?> GetByIdAsync(Guid id)
     {
-        var entity = await _context.LegalEntities
-            .AsNoTracking()
-            .FirstOrDefaultAsync(e => e.Id == id && e.IsActive);
-
-        return entity is null ? null : MapToDto(entity);
+        return await _context.LegalEntities.AsNoTracking()
+            .Where(e => e.Id == id && e.IsActive)
+            .Select(DtoProjection)
+            .FirstOrDefaultAsync(_actor?.HttpContext?.RequestAborted ?? default);
     }
 
     /// <inheritdoc />
@@ -594,7 +593,10 @@ public class LegalEntityService : ILegalEntityService
         throw new ValidationException(BackendMessages.Message("workbook.column.date.invalid", field));
     }
 
-    private static LegalEntityDTO MapToDto(LegalEntity e) => new()
+    // Keep a single mapping for both EF's server-side SELECT projection and
+    // in-memory mutation/audit responses. Avoid hydrating entire entities for
+    // list/export/details; only DTO columns are transferred from SQL Server.
+    private static readonly System.Linq.Expressions.Expression<Func<LegalEntity, LegalEntityDTO>> DtoProjection = e => new LegalEntityDTO
     {
         Id = e.Id,
         IsResident = e.IsResident,
@@ -617,4 +619,7 @@ public class LegalEntityService : ILegalEntityService
         VerifiedBy = e.VerifiedBy,
         VerifiedAt = e.VerifiedAt
     };
+
+    private static readonly Func<LegalEntity, LegalEntityDTO> DtoMapper = DtoProjection.Compile();
+    private static LegalEntityDTO MapToDto(LegalEntity entity) => DtoMapper(entity);
 }
