@@ -575,6 +575,24 @@
     "profile.current": "Currently signed-in user",
     "profile.no-access": "No functional access assigned.",
     "profile.admin": "Administrator",
-    "guide.lead": "Only areas you can access are shown. Open a section for status meanings, input rules and business-flow guidance."
+    "guide.lead": "Only areas you can access are shown. Open a section for status meanings, input rules and business-flow guidance.",
+    "rolecatalog.title": "Role catalog",
+    "rolecatalog.description": "Manage database-backed application roles and their permissions.",
+    "rolecatalog.new": "New role",
+    "rolecatalog.edit": "Edit role",
+    "rolecatalog.name": "Role name",
+    "rolecatalog.display-name": "Display name",
+    "rolecatalog.permissions": "Permissions",
+    "rolecatalog.status": "Status",
+    "rolecatalog.active": "Active role",
+    "rolecatalog.protected": "System role – protected",
+    "rolecatalog.read-only": "Read only",
+    "rolecatalog.description-field": "Role description",
+    "rolecatalog.search": "Search roles",
+    "rolecatalog.search-action": "Search",
+    "rolecatalog.empty": "No roles match the search.",
+    "rolecatalog.total": "Total roles: {0}",
+    "rolecatalog.pages": "Role pages",
+    "rolecatalog.saved": "Role saved successfully."
   }
 }

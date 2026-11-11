@@ -575,6 +575,24 @@
     "profile.current": "Trenutno prijavljeni korisnik",
     "profile.no-access": "Nema dodijeljenih funkcionalnih pristupa.",
     "profile.admin": "Administrator",
-    "guide.lead": "Ovdje su prikazana samo područja kojima imate pristup. Otvorite cjelinu kada trebate značenje statusa, pravilo unosa ili objašnjenje poslovnog toka."
+    "guide.lead": "Ovdje su prikazana samo područja kojima imate pristup. Otvorite cjelinu kada trebate značenje statusa, pravilo unosa ili objašnjenje poslovnog toka.",
+    "rolecatalog.title": "Katalog rola",
+    "rolecatalog.description": "Upravljajte aplikacijskim rolama i njihovim dozvolama iz baze podataka.",
+    "rolecatalog.new": "Nova rola",
+    "rolecatalog.edit": "Uredi rolu",
+    "rolecatalog.name": "Naziv role",
+    "rolecatalog.display-name": "Prikazni naziv",
+    "rolecatalog.permissions": "Dozvole",
+    "rolecatalog.status": "Status",
+    "rolecatalog.active": "Aktivna rola",
+    "rolecatalog.protected": "Sistemska rola – zaštićena",
+    "rolecatalog.read-only": "Samo za čitanje",
+    "rolecatalog.description-field": "Opis role",
+    "rolecatalog.search": "Pretraži role",
+    "rolecatalog.search-action": "Pretraži",
+    "rolecatalog.empty": "Nema rola za zadani kriterij.",
+    "rolecatalog.total": "Ukupno rola: {0}",
+    "rolecatalog.pages": "Stranice rola",
+    "rolecatalog.saved": "Rola je uspješno sačuvana."
   }
 }
