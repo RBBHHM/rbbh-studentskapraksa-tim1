@@ -601,13 +601,13 @@
     "release.prod": "PROD",
     "release.empty": "Für diese Umgebung wurden noch keine GitHub-Releases veröffentlicht.",
     "release.version": "Version: {0}",
-    "release.github": "View on GitHub",
-    "legal.bank-lookup": "Search bank customers",
-    "legal.bank-placeholder": "Name, tax number or registry number",
-    "legal.bank-results": "Bank customer search results",
-    "legal.bank-type": "Enter at least 2 characters to search.",
-    "legal.bank-unavailable": "The bank customer reference source is currently unavailable.",
-    "legal.bank-selected": "Selected customer: {0}",
-    "errors.verification-provenance-required": "Verification is unavailable because the original record creator cannot be verified. Contact an administrator."
+    "release.github": "Auf GitHub ansehen",
+    "legal.bank-lookup": "Bankkunden suchen",
+    "legal.bank-placeholder": "Name, Steuernummer oder Registrierungsnummer",
+    "legal.bank-results": "Suchergebnisse für Bankkunden",
+    "legal.bank-type": "Geben Sie mindestens 2 Zeichen ein, um zu suchen.",
+    "legal.bank-unavailable": "Die Bankkundendatenquelle ist derzeit nicht verfügbar.",
+    "legal.bank-selected": "Ausgewählter Kunde: {0}",
+    "errors.verification-provenance-required": "Verifizierung nicht möglich, da die ursprüngliche erstellende Person des Eintrags nicht zuverlässig festgestellt werden kann. Wenden Sie sich an einen Administrator."
   }
 }
