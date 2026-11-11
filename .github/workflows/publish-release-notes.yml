@@ -43,6 +43,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify PROD promotes the exact already-tested UAT commit
+        shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          git fetch --force --tags origin
+          uat_commit="$(git rev-parse "refs/tags/uat-$TAG^{commit}")"
+          prod_commit="$(git rev-parse "refs/tags/$TAG^{commit}")"
+          test "$uat_commit" = "$prod_commit"
       - name: Validate production tag and require matching UAT release
         shell: bash
         env:
