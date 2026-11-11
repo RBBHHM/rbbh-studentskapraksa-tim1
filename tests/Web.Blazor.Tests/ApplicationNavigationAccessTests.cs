@@ -68,6 +68,42 @@ public sealed class ApplicationNavigationAccessTests
     }
 
     [Fact]
+    public async Task PermissionChecksDoNotOverlapInASharedScope()
+    {
+        var profile = new Mock<IProfileApi>();
+        profile.Setup(client => client.GetAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ApplicationProfile("id", "Fixture", "fixture", "fixture@example.test",
+                ["gost"], []));
+
+        var activeChecks = 0;
+        var checks = 0;
+        async Task<bool> CheckAsync()
+        {
+            if (Interlocked.Increment(ref activeChecks) != 1)
+                throw new InvalidOperationException("Shared authorization service was invoked concurrently.");
+            try
+            {
+                await Task.Yield();
+                Interlocked.Increment(ref checks);
+                return true;
+            }
+            finally
+            {
+                Interlocked.Decrement(ref activeChecks);
+            }
+        }
+
+        var permissions = new Mock<IRbiPermissionService>();
+        permissions.Setup(client => client.HasPermissionAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns((string _, CancellationToken _) => new ValueTask<bool>(CheckAsync()));
+
+        var access = await ApplicationNavigationAccess.ReadAsync(profile.Object, permissions.Object);
+        Assert.True(access.Reports && access.Physical && access.Legal && access.Limits && access.Capital);
+        Assert.Equal(5, checks);
+        Assert.Equal(0, activeChecks);
+    }
+
+    [Fact]
     public async Task CancelledRequestDoesNotFetchProfileOrCheckPermissions()
     {
         using var cancelled = new CancellationTokenSource();
