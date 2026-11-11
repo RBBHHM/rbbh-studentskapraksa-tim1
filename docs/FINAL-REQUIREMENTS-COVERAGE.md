@@ -39,7 +39,7 @@ The .NET solution build, all three .NET suites and every role-specific Playwrigh
 
 Every role's Playwright run also executes the shared specs: authorization matrix, shell/profile/guide, **Axe (WCAG 2 A/AA/2.1 AA) in light and dark themes**, keyboard focus order, notifications, role requests, and 375 px responsive checks. Suites were run one at a time with one worker.
 
-Not executed: a deployed-API browser run, a real Keycloak login, Lighthouse performance (PDF p. 4, deferred by the requester), and a manual screen-reader pass.
+Not executed: a deployed-API browser run, real Keycloak login and a manual screen-reader pass. Lighthouse now runs on the isolated fixture only (not production).
 
 ## Requirements
 
@@ -85,7 +85,7 @@ Frontend paths are under `Frontend/`; backend paths under `Backend/`. "BH" means
 | Bank customer lookup | `BankCustomerPicker.razor`, `LegalEntityForm`, `LegalEntitiesApi.CustomersAsync` | `api/bank-reference/customers` SELECT-only | `BankCustomerApiTests`, browser fixture and unavailable-source tests | PARTIAL | Real bank source and mapping must be configured and verified externally |
 | Four-eyes: creator cannot verify, hover hint | creator disabled buttons and localized safe server codes | `verification.self_denied` 403, `verification.provenance_required` 409 | physical/legal browser specs and `StructuredBusinessErrorTests` | VERIFIED | Deployed Keycloak subject binding requires live environment validation |
 | Case-insensitive search | list search | SQL collation | list-search tests (BH, InMemory) | PARTIAL | Real-SQL collation behaviour is a backend/DB item (LEG-05) |
-| Excel export/import with result dialog | `ImportFeedback`, result dialogs | `{imported,failed,errors,details}` | import specs (BH), backend integration | PARTIAL | Extra export columns (created/modified, JMBG) depend on the C3 workbook format |
+| Excel export/import with result dialog | `ImportFeedback`, result dialogs | `{imported,failed,errors,details}`; physical v3 export appends codebook description of special relationship; v1/v2 imports retained | backend export unit + import, browser specs | PARTIAL | Business owner must approve 26th export column; full round-trip with real SQL and legacy worksheets still needs run |
 | Next disabled, immediate field messages, no repeated bottom messages | `LiveValidation`, `FormSummary` | n/a | guard tests, form specs | VERIFIED | none |
 | Single focus ring, toggle contrast | `app.css` | n/a | Axe light/dark in every role | VERIFIED | none |
 
@@ -122,8 +122,8 @@ Frontend paths are under `Frontend/`; backend paths under `Backend/`. "BH" means
 
 | Requirement | Frontend | Backend | Test evidence | Status | Remaining |
 |---|---|---|---|---|---|
-| All text localized (BS/EN) | `Localization/bs.json`, `en.json`; `AppText` | n/a | key-parity and no-literal-text guard tests | VERIFIED | none |
-| Runtime language packs | `Api/LocalizationApi.cs`, `RuntimeResources.cs`, `AppText.Resolve` | `api/localization/languages`, `resources/{language}` (BS/EN/DE) | Frontend unit tests (`NotificationsApiTests.cs` resolves notification text through the runtime pack); backend `LocalizationHttpTests` (real SQL). No browser test of the runtime pack itself | PARTIAL | **DE exists only in the backend pack.** The frontend language picker offers BS and EN only; no DE UI catalog exists |
+| All UI messages localized (BS/EN/DE) | `Localization/bs.json`, `en.json`, `de.json`, 608 aligned keys and numeric placeholders | Existing RBI culture picker discovers Deutsch | Three-catalog parity tests; all-role Playwright language switching | VERIFIED IN BRANCH | Check linguistic/business signoff for specialist financial terminology |
+| Runtime language packs | `RuntimeResources` overrides translated strings, static locales are fallback | `api/localization/*`; `SeedFrontendLanguagePackResources` migration adds 1,824 strings (608 × BS/EN/DE) to existing DB codebooks, preserving edits; `Put` bumps version | `LocalizationSqlTests.FrontendResourcesAreEditableFromAllThreeRuntimeLanguageCodebooks` | VERIFIED IN BRANCH | Real bank migration and business-approved DE wording require owner signoff |
 | User guide with detail | `Guide.razor` | n/a | `GuideContentTests`, guide spec | VERIFIED | The guide's "States" list is an allow-listed static list |
 | Enter toggles checkbox; Enter/Space toggle accordion | `app.js`, native `<details>` | n/a | shell and guide specs | VERIFIED | none |
 | Pagination footer: total only | `.page-total` | n/a | `users.spec.ts` | VERIFIED | none |
@@ -131,8 +131,8 @@ Frontend paths are under `Frontend/`; backend paths under `Backend/`. "BH" means
 | No hardcoded options/text | guard tests | n/a | `MarkupContainsNoLiteralVisibleText` | VERIFIED | Two tracked static lists (Period, Guide) |
 | Responsive 375 px | `app.css` | n/a | 375 px spec in each page suite | VERIFIED | none |
 | Single README and onboarding | `README.md`, `docs/ONBOARDING.md` | n/a | review | VERIFIED | none |
-| Release notes page from GitHub | `Pages/ReleaseNotes.razor`, UAT/PROD selector | `GET api/release-notes`, cached GitHub public-release adapter | Backend and frontend unit tests, six-role Playwright with fixture releases | VERIFIED | No published GitHub Release entries currently exist in this repository |
-| Performance / Lighthouse | n/a | n/a | none | NOT TESTED | Deferred by the requester |
+| Release notes page from GitHub | `Pages/ReleaseNotes.razor`, UAT/PROD selector | `GET api/release-notes` with 5-min cache, matching UAT body on PROD | API tests, six-role Playwright, unit parity and no-phantom-version tests | VERIFIED IN BRANCH | UAT tag `uat-vX.Y.Z` creates notes; PROD tag `vX.Y.Z` requires approved matching UAT release and copies identical text. Tagging must follow a verified deployment and cannot itself prove the version was deployed |
+| Performance / Lighthouse | isolated native Blazor BrowserHost | `.github/workflows/lighthouse.yml` runs 4 Lighthouse 13.6.0 audits and uploads JSON reports | [CI 43074731770](https://github.com/RBBHHM/rbbh-studentskapraksa-tim1/actions/runs/43074731770): desktop dashboard/guide performance 99/99; mobile 79/82; all accessibility & best practices 100 | VERIFIED IN FIXTURE | Mobile LCP dashboard 5,143ms, guide 4,361ms; optimize on actual deployed authenticated infrastructure and remeasure |
 
 ### Platform and security
 
@@ -146,10 +146,44 @@ Frontend paths are under `Frontend/`; backend paths under `Backend/`. "BH" means
 ## Gaps in one place
 
 1. No frontend → deployed API → SQL browser run (BrowserHost is InMemory).
-2. 8-hour session is code-checked only.
+2. 8-hour session configuration is regression-tested; actual Keycloak expiry/refresh in a real browser remains an owner environment task.
 3. Role catalog and bank customer UI are implemented; production RBAC/catalog data and real bank source remain external.
 4. Four-eyes backend codes now reach localized UI via a validated typed transport; other domain errors remain status-based.
-5. DE has no frontend resource catalog.
-6. The release-notes page and GitHub-backed server route exist; there are no published GitHub Releases to display yet.
+5. DE frontend catalog is complete (608/608), but bank-approved terminology and real migration remain to verify.
+6. Release-note publishing is automated by UAT/PROD version tag workflows; version tags must follow deployment approval. No actual GitHub Releases are published yet.
 7. GCC mandatory mode, Finrep mapping, mail delivery and bank data need real external sources.
 8. Credential rotation and explicit owner-approved remediation of the already-public Git history are still required.
+
+
+## Complete PDF and POPRAVKE.txt review — pages 1–20 (11 November 2026)
+
+This register covers **every page** of `[Related Parties Register] Dokumentacija.pdf`, not only the earlier handoff matrix. "Source/test verified" means the code is present and tested on a fixture; it does not assert production integrations that have not been run.
+
+| PDF page | Area and requested behaviour | Implementation/evidence | Residual or ownership |
+|---|---|---|---|
+| 1 | Original specification cover and project identity | Original PDF preserved at repository root | No application change |
+| 2 | Overview and purpose of the related-party register | Main dashboard, profiles, business areas and protected navigation | Bank business owner accepts terminology |
+| 3 | Module organisation and scope | Blazor UI, ASP.NET Core API, EF Core model, integration and unit/browser test suites | External hosting depends on OCP |
+| 4 | Quality, architecture, automation, performance and Lighthouse | Solution builds under CI; Lighthouse dashboard/guide mobile and desktop, complete JSON reports | Fixture mobile 79/82; deployed performance/real-screen-reader still unmeasured |
+| 5 | Authentication, permissions and initial page | Keycloak/OIDC contract, backend application grants, virtual Guest, no separate sign-in page | Actual realm, subject/audience, token expiry and 8-hour session are external |
+| 6 | Database roles, requests, multi-role assignments, administrator flow and email | DB roles, role-request actions/inbox, protected role-catalog UI, last-admin guards | Real identity mapping, mail provider, requested historical AppUsers refactor requires bank DB migration decision |
+| 7 | Stable business data, logging, legal-person form | Legal CRUD, validation, safe errors, audit and source-aware fields | Production lookup source and data mapping are external |
+| 8 | Bank client/GCC lookup, form rules and workbook flows | Read-only bank customers/GCC pickers, no invented records, Excel validation/import/export | Actual `bosnadb` and legal tax/identifier source signoff external |
+| 9 | Legal status, verify, change/delete, immediate validation and UX | Four-eyes server author check; edit, delete, import; inline validation + focus | Browser with real SQL & production legal sample data not executed |
+| 10 | Physical identities, employees and related/family links | Physical CRUD, JMBG/passport/FBA validation, relatives, family tree and duplicate checks | HR reference/approved identities external |
+| 11 | Physical four-eyes, special relationship details and Excel columns | Controlled verification and 26-column v3 export with special-basis description read from codebook, plus creator/modified and linked ID columns; retains older imports | Real SQL round-trip and bank-approved 26th-column schema signoff |
+| 12 | Limits, codebook types, capital and historical dates | Limit picker/import/export and capital effective-date immutable revision history | Actual bank data and regulatory acceptance external |
+| 13 | Daily/monthly regulatory reports and Finrep | Role-scoped local generation/download/history; data origin explicitly displayed | Actual `Finrep_db.Monthlyhistory` schema/mapping and source tests external |
+| 14 | Role/period events, notifications, mail, report visibility | Recipient-scoped inbox + unread bell, workflow events; outbox/dispatcher tested with fixture | Real SMTP/HTTP provider and email delivery external |
+| 15 | User management and period locking/unlocking | Role assignment, status/last-admin controls; period approval/rejection/clarification, owner-only queue | Real production users, expected decision policies external |
+| 16 | Codebooks, search/cards/import, audit and user help | Generic code-list service, admin CRUD, audit badges/details, permission-aware guide | Audit coverage for every possible business action needs systematic production reconciliation |
+| 17 | API errors, test strategy, operational health and monitoring | Safe ProblemDetails, bounded structured codes, CI unit/SQL/E2E tests, DB readiness checks | Real Keycloak/mail/cache availability and alerting not established (operational task) |
+| 18 | Layout, accessibility, responsive navigation and keyboard support | Sidebar current page, mobile 375px, focus, light/dark Axe tests | Manual screen-reader testing on deployed environment outstanding |
+| 19 | No hardcoded labels, language configuration and runtime text editing | BS/EN/DE 608-key catalogs, SQL-language-codebook migration, runtime overrides with version invalidation | Bank-approved native German legal/financial terminology; additional legacy backend literals require curated cleanup |
+| 20 | Onboarding, release notes and final delivery | README, onboarding, UAT release generator, PROD verbatim reuse, Lighthouse workflow | Owner must publish tags after an approved deploy, provide external runtime integrations, and accept release procedures |
+
+### POPRAVKE.txt cross-check
+
+The POPRAVKE items were cross-checked with the earlier requirements matrix and this full-page review: legal entity identifier/residency, special relationship basis and associated description, additional Excel metadata and linked IDs, GCC and large-exposure fields, four-eyes, local language/runtime codebook editing, exact role-request authorizations, notification inbox, codebook/audit UX, navigation/guide/keyboard behavior, and version notes. Functions are marked **PARTIAL** above when only BrowserHost fixture or known internal evidence exists.
+
+**Controlled release gate (owner-owned):** Current tracked secrets remain blank; Git history scanner intentionally detects historical exposure, and image deployment is blocked until authorized remediation. Do not disable the gate or use fake production credentials.
