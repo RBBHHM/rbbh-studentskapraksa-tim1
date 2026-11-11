@@ -34,7 +34,7 @@ Not consumed although the contract has it: `api/auth/modules` (sidebar uses effe
 * **Reports** show `dataSource` as an origin label. `isAuthoritative` means origin, not regulatory acceptance, and the UI never says "reconciled".
 * **Capital** writes append immutable revisions; the page shows history and an as-of lookup (204 means "no value then").
 * **Session**: the RBI cookie is absolute 8 h with no sliding renewal; logout is a POST with antiforgery. The frontend does not call the backend logout.
-* **Localization**: the BS/EN catalogs in `Frontend/Localization` are authoritative for UI chrome and are guarded by key-parity and no-literal-text tests; the backend language pack (BS/EN/DE) supplies server-owned text such as notification titles. The language picker has no DE entry.
+* **Localization**: all 608 UI texts in BS/EN/DE have parity and placeholder checks. `SeedFrontendLanguagePackResources` migrates them to the existing database `LanguagePacks` without replacing approved translations; runtime resource versions invalidate caches immediately. Static resources are safe fallbacks.
 * **Code-list metadata** (created-by, last modified) is fetched separately and is advisory: if that call fails, the lists still render.
 
 ## Test harness and what it proves
@@ -80,9 +80,9 @@ python scripts/security/scan_git_secrets.py --ref HEAD
 1. **Credential rotation.** The old Keycloak client secret is still reachable from public `main`. The owner must rotate it and approve historic exposure remediation. Current tracked configuration is blank, but the full-history main scan correctly fails and image publication is blocked.
 2. **Production Keycloak** (client, realm session policy, audience) and the **8-hour session** need a real login test.
 3. **Real data sources**: bank reference (`bosnadb\HEAD`) for GCC/customers, Finrep monthly history, a mail provider.
-4. **Release notes**: GitHub-backed route and UAT/PROD page exist; no GitHub Releases have been published yet.
+4. **Release notes**: UAT `uat-vX.Y.Z` tags generate a published prerelease automatically. PROD `vX.Y.Z` tags must point to the exact same commit and reuse the original UAT notes verbatim. No releases have been published yet.
 5. **Structured errors**: four-eyes codes are now mapped safely; a full-domain message mapping is still open.
-6. **DE frontend catalog** remains a localization decision; role catalog and bank-customer UI are already implemented.
+6. **DE frontend catalog** has all 608 keys and automated browser/unit/SQL codebook tests. Specialist legal/financial wording needs bank approval; role-catalog and bank-customer UIs are already implemented.
 7. **Static status lists** (Period statuses, Guide states) stay allow-listed until the backend exposes catalogs.
 8. A **frontend → deployed API → SQL** browser smoke test needs a provisioned environment.
-9. **Lighthouse** performance pass is deferred.
+9. **Lighthouse** runs on the isolated BrowserHost: dashboard/guide desktop 99/99 and mobile 79/82; all accessibility and best practices 100. An authenticated, deployed mobile performance audit is still required.
