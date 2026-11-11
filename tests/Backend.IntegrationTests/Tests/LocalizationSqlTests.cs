@@ -26,6 +26,36 @@ public sealed class LocalizationSqlTests : LocalizationFixture
         Assert.Contains(changed.GetProperty("items").EnumerateArray(), row => row.GetProperty("resourceKey").GetString() == "new.runtime.label" && row.GetProperty("label").GetString() == "Runtime");
     }
     [SqlServerFact]
+    public async Task FrontendResourcesAreEditableFromAllThreeRuntimeLanguageCodebooks()
+    {
+        var root = new DirectoryInfo(AppContext.BaseDirectory);
+        while (root is not null && !File.Exists(Path.Combine(root.FullName, "RelatedPartiesRegister.slnx")))
+            root = root.Parent;
+        Assert.NotNull(root);
+        foreach (var language in new[] { "BS", "EN", "DE" })
+        {
+            using var catalog = JsonDocument.Parse(File.ReadAllText(
+                Path.Combine(root.FullName, "Frontend", "Localization", language.ToLowerInvariant() + ".json")));
+            var expected = catalog.RootElement.GetProperty("translations").EnumerateObject()
+                .Select(item => item.Name).ToHashSet(StringComparer.Ordinal);
+            Assert.Equal(608, expected.Count);
+            var response = await Pack(language);
+            var actual = response.GetProperty("items").EnumerateArray()
+                .Select(item => item.GetProperty("resourceKey").GetString()!).ToHashSet(StringComparer.Ordinal);
+            Assert.Empty(expected.Except(actual));
+        }
+        var before = await Pack("DE");
+        var prior = before.GetProperty("version").GetString();
+        Assert.Equal(HttpStatusCode.NoContent, (await Client.PutAsJsonAsync(
+            "/api/localization/resources/DE/guide.title", new { label = "Genehmigter deutscher Text" })).StatusCode);
+        var changed = await Pack("DE");
+        Assert.NotEqual(prior, changed.GetProperty("version").GetString());
+        Assert.Contains(changed.GetProperty("items").EnumerateArray(), item =>
+            item.GetProperty("resourceKey").GetString() == "guide.title" &&
+            item.GetProperty("label").GetString() == "Genehmigter deutscher Text");
+    }
+
+    [SqlServerFact]
     public async Task ResourceAndVersionRollbackWhenAuditFails()
     {
         var before = await Pack("BS");
