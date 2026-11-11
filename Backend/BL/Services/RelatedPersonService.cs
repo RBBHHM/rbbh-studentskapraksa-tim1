@@ -54,7 +54,7 @@ public class RelatedPersonService(
     private static readonly ExcelImportSchema.Column[] V3Columns =
     [
         .. V2Columns,
-        new("Opis osnova posebnog odnosa", "Special relationship basis description")
+        new("Opis osnova posebnog odnosa", "Opis osnova posebnog odnosa", "Special relationship basis description")
     ];
     private readonly ConnectedPartiesDbContext _dbContext = dbContext;
     private readonly IEmailService _emailService = emailService;
