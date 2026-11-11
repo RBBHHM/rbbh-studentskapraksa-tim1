@@ -14,20 +14,20 @@ Sources: `[Related Parties Register] Dokumentacija.pdf` (preserved at the reposi
 
 **What "tested" means here.** All browser (Playwright) evidence runs against `tests/Web.Blazor.BrowserHost`: the real Blazor frontend calling the **real backend controllers, services and validators in-process**, but on an **EF InMemory database** with a fixture identity. It does **not** prove real SQL Server behaviour, real Keycloak, the bank reference database, Finrep, or a real mail provider. Real-SQL evidence exists only for the backend integration suite (disposable SQL Server 2022 in CI, optionally LocalDB on Windows). A true frontend → deployed API → SQL browser run was **not** executed and is listed as a gap.
 
-## Test results on current main (11 November 2026)
+## Test results on final test PR #6 (11 November 2026; pending merge)
 
-CI evidence: https://github.com/RBBHHM/rbbh-studentskapraksa-tim1/actions/runs/43021204873
+CI evidence: https://github.com/RBBHHM/rbbh-studentskapraksa-tim1/actions/runs/43080936106
 
-The .NET solution build, all three .NET suites and every role-specific Playwright job passed on commit `0ae03b5c` ([verified run](https://github.com/RBBHHM/rbbh-studentskapraksa-tim1/actions/runs/43027523788)). The security history scan failed on the pre-existing exposed credential; image publication was correctly skipped. These tests use disposable SQL and an InMemory BrowserHost, not real Keycloak, bank data, Finrep or OCP.
+The .NET solution build, all three .NET suites, SQL workbook roundtrips, and every role-specific Playwright job passed on commit `496ed2b2` ([verified run](https://github.com/RBBHHM/rbbh-studentskapraksa-tim1/actions/runs/43080936106)). The security history scan failed on the pre-existing exposed credential; image publication was correctly skipped. These tests use disposable SQL and an InMemory BrowserHost, not real Keycloak, bank data, Finrep or OCP.
 
 | Suite | Result |
 |---|---|
 | Release build, whole solution, `-warnaserror` | 0 warnings, 0 errors |
-| Frontend unit (`tests/Web.Blazor.Tests`) | **252 passed, 0 failed, 0 skipped** (current main CI) |
-| Backend unit (`tests/Backend.UnitTests`) | **355 passed, 0 failed, 0 skipped** (current main CI) |
+| Frontend unit (`tests/Web.Blazor.Tests`) | **253 passed, 0 failed, 0 skipped** (PR #6 CI) |
+| Backend unit (`tests/Backend.UnitTests`) | **357 passed, 0 failed, 0 skipped** (PR #6 CI) |
 | Backend integration, without disposable SQL configuration | 309 passed, 0 failed, **86 skipped** (SQL-only tests; separate from current CI) |
-| Backend integration, isolated SQL Server 2022 (CI) | **395 passed, 0 failed, 0 skipped** (real SQL) |
-| Playwright admin (BrowserHost) | 142 passed |
+| Backend integration, isolated SQL Server 2022 (CI) | **400 passed, 0 failed, 0 skipped** (real SQL; includes two workbook transfers and SQL search) |
+| Playwright admin (BrowserHost) | **143 passed** (includes unconfirmed-identity banner and reload) |
 | Playwright FL | 60 passed |
 | Playwright PL | 60 passed |
 | Playwright kapital | 64 passed |
@@ -54,7 +54,7 @@ Frontend paths are under `Frontend/`; backend paths under `Backend/`. "BH" means
 | Roles not hardcoded | `T.Role`, profile-driven | DB-backed roles | `Web.Blazor.Tests` guard tests | VERIFIED | none |
 | Automatic Guest role | gost shell | virtual `gost` for unknown subjects | gost suite 50 (BH); backend integration | VERIFIED | none |
 | Login opens immediately | RBI middleware challenge | OIDC | `ProtectedRouteStartsTheIdentityChallengeWithoutSignInScreen` | PARTIAL | Real Keycloak redirect not run |
-| 8-hour session | RBI cookie, absolute 8 h, no sliding (`RbiAuthenticationDefaults.SessionLifetime`) | Backend cookie cap 8 h | Code inspection only | NOT TESTED | No automated expiry test; real token refresh depends on the realm policy (owner/Keycloak) |
+| 8-hour session | RBI cookie, absolute 8 h, no sliding (`RbiAuthenticationDefaults.SessionLifetime`) | Backend 8 h absolute cap | `FrontendSessionConfigurationTests`, `SessionCookieContractTests`, `AbsoluteSessionHttpTests` | PARTIAL | Configuration and controlled-clock expiry tested; real Keycloak refresh/SSO in an authenticated browser remains owner/environment validation |
 | Logout is a POST with antiforgery | RBI logout form | CSRF POST logout (legacy GET deprecated) | Shell specs click logout | VERIFIED | The frontend never calls the backend logout; the local cookie ends the session |
 | "Zatraži rolu" / "Promijeni rolu" modal | `Components/Registry/RoleRequestDialog.razor`, `RoleRequestButton.razor`, `MyProfile.razor`; `Api/RoleRequestsApi.cs` | `api/role-requests` | `role-requests.spec.ts`, `RoleRequestsApiTests.cs` (BH) | VERIFIED | none |
 | Admin approve/reject role requests | `Pages/RoleRequests.razor`; deterministic `decisionId` for safe replay | decision with `decisionId` + `expectedVersion` | `role-requests.spec.ts` (BH) | VERIFIED | none |
@@ -62,7 +62,7 @@ Frontend paths are under `Frontend/`; backend paths under `Backend/`. "BH" means
 | Role catalog UI | `Pages/RoleCatalog.razor`, dynamic DB permissions and safe admin editor | `api/role-catalog` GET/POST/PUT with protected system roles and optimistic version | `RoleCatalogApiTests`, six-role Playwright | VERIFIED | Production role grants must be provisioned by the owner |
 | User profile edit (username, names, email) | `Pages/Users.razor`, `UserDraft.cs`, `UserForm.razor`, `UsersApi.UpdateProfileAsync` | `PUT api/users/{id}` | `users.spec.ts` "profile fields ... editable", `UsersApiTests.cs` (BH) | VERIFIED | none |
 | Email suggestion editable, any domain | `UserDraft.cs` | email `maxLength 200` | `UsersApiTests.cs`, users spec | VERIFIED | none |
-| Unconfirmed-identity badge | `Users.razor` | `identityConfirmed` | none (no spec asserts the badge) | NOT TESTED | Add a fixture user with `identityConfirmed=false` and assert the badge |
+| Unconfirmed-identity badge | `Users.razor`, identity status from DB | `identityConfirmed` | `users.spec.ts` with unconfirmed fixture and reload | VERIFIED IN FIXTURE | Actual Keycloak subject-reconciliation remains an external identity test |
 | User deactivate/reactivate/delete, last-admin safety | `Users.razor` | mutation boundary + SQL app lock | users specs (BH); `UsersLastAdminSqlServerTests` (real SQL) | VERIFIED | none |
 | Duplicate user protection | form shows API error | unique indexes | users specs, backend integration | VERIFIED | none |
 
@@ -84,8 +84,8 @@ Frontend paths are under `Frontend/`; backend paths under `Backend/`. "BH" means
 | Large-exposure DA/NE | `LegalEntityForm`, column in `LegalEntities.razor` | nullable `isLargeExposure` | GCC test saves and displays it | VERIFIED | Business meaning/default for existing rows is a backend decision |
 | Bank customer lookup | `BankCustomerPicker.razor`, `LegalEntityForm`, `LegalEntitiesApi.CustomersAsync` | `api/bank-reference/customers` SELECT-only | `BankCustomerApiTests`, browser fixture and unavailable-source tests | PARTIAL | Real bank source and mapping must be configured and verified externally |
 | Four-eyes: creator cannot verify, hover hint | creator disabled buttons and localized safe server codes | `verification.self_denied` 403, `verification.provenance_required` 409 | physical/legal browser specs and `StructuredBusinessErrorTests` | VERIFIED | Deployed Keycloak subject binding requires live environment validation |
-| Case-insensitive search | list search | SQL collation | list-search tests (BH, InMemory) | PARTIAL | Real-SQL collation behaviour is a backend/DB item (LEG-05) |
-| Excel export/import with result dialog | `ImportFeedback`, result dialogs | `{imported,failed,errors,details}`; physical v3 export appends codebook description of special relationship; v1/v2 imports retained | backend export unit + import, browser specs | PARTIAL | Business owner must approve 26th export column; full round-trip with real SQL and legacy worksheets still needs run |
+| Case-insensitive search | list search | Explicit case-insensitive SQL collation | `RegistrySearchSqlTests`, BH list search (real isolated SQL + BrowserHost) | VERIFIED | Bank source-specific collation still requires source-owner verification |
+| Excel export/import with result dialog | `ImportFeedback`, result dialogs | `{imported,failed,errors,details}`; physical v3 description column, legacy v1/v2 accepted | `RegistryWorkbookSqlRoundtripTests` transfers legal/physical exports between independent migrated real-SQL databases; `RegistryWorkbookHttpTests` tests legacy formats and invalid rows | PARTIAL | Business owner approval of new 26th column and real bank data are external; SQL test of all historic workbook variants still desirable |
 | Next disabled, immediate field messages, no repeated bottom messages | `LiveValidation`, `FormSummary` | n/a | guard tests, form specs | VERIFIED | none |
 | Single focus ring, toggle contrast | `app.css` | n/a | Axe light/dark in every role | VERIFIED | none |
 
@@ -132,7 +132,7 @@ Frontend paths are under `Frontend/`; backend paths under `Backend/`. "BH" means
 | Responsive 375 px | `app.css` | n/a | 375 px spec in each page suite | VERIFIED | none |
 | Single README and onboarding | `README.md`, `docs/ONBOARDING.md` | n/a | review | VERIFIED | none |
 | Release notes page from GitHub | `Pages/ReleaseNotes.razor`, UAT/PROD selector | `GET api/release-notes` with 5-min cache, matching UAT body on PROD | API tests, six-role Playwright, unit parity and no-phantom-version tests | VERIFIED IN BRANCH | UAT tag `uat-vX.Y.Z` creates notes; PROD tag `vX.Y.Z` requires approved matching UAT release and copies identical text. Tagging must follow a verified deployment and cannot itself prove the version was deployed |
-| Performance / Lighthouse | isolated native Blazor BrowserHost | `.github/workflows/lighthouse.yml` runs 4 Lighthouse 13.6.0 audits and uploads JSON reports | [CI 43074731770](https://github.com/RBBHHM/rbbh-studentskapraksa-tim1/actions/runs/43074731770): desktop dashboard/guide performance 99/99; mobile 79/82; all accessibility & best practices 100 | VERIFIED IN FIXTURE | Mobile LCP dashboard 5,143ms, guide 4,361ms; optimize on actual deployed authenticated infrastructure and remeasure |
+| Performance / Lighthouse | isolated native Blazor BrowserHost | `.github/workflows/lighthouse.yml` records 4 independent Lighthouse reports and enforces baseline budgets (mobile ≥70, desktop ≥90; accessibility and best-practices ≥95; CLS ≤0.1) | [CI 43080935740](https://github.com/RBBHHM/rbbh-studentskapraksa-tim1/actions/runs/43080935740) passed fixture baseline; desktop 99/99, mobile ~77–83, accessibility/best-practices 100 | VERIFIED IN FIXTURE | Production/mobile throttling, full screen-reader review and real authenticated LCP require deployed infra; performance experiment that failed CI was reverted |
 
 ### Platform and security
 
@@ -146,7 +146,7 @@ Frontend paths are under `Frontend/`; backend paths under `Backend/`. "BH" means
 ## Gaps in one place
 
 1. No frontend → deployed API → SQL browser run (BrowserHost is InMemory).
-2. 8-hour session configuration is regression-tested; actual Keycloak expiry/refresh in a real browser remains an owner environment task.
+2. Eight-hour frontend OIDC/cookie configuration, backend expiry, and cookie non-sliding behavior are regression-tested; actual Keycloak expiry/refresh in a real browser remains an owner environment task.
 3. Role catalog and bank customer UI are implemented; production RBAC/catalog data and real bank source remain external.
 4. Four-eyes backend codes now reach localized UI via a validated typed transport; other domain errors remain status-based.
 5. DE frontend catalog is complete (608/608), but bank-approved terminology and real migration remain to verify.
