@@ -23,9 +23,9 @@ else if (_profile is not null)
     <section class="registry-guide" aria-label="@T["guide.title"]">
         <div class="guide-legend">@foreach (var state in States)
         { <div class="guide-legend__item"><Indicator Kind="@state" Label="@T["guide.status." + state]" /><div><h2 class="guide-legend__title">@T["guide.status." + state]</h2><p class="guide-legend__text">@T["guide.status." + state + ".description"]</p></div></div> }</div>
-        @foreach (var section in GuideContent.Visible(_profile))
+        @foreach (var section in _visibleSections)
         {
-            <details open="@(section.Id == GuideContent.Visible(_profile).First().Id)">
+            <details open="@(section.Id == _visibleSections[0].Id)">
                 <summary>
                     <span class="guide-section__icon"><AppIcon Name="SectionIcon(section.Id)" /></span>
                     <span class="guide-section__text"><strong>@T["guide." + section.Id + ".title"]</strong><span>@T["guide." + section.Id + ".summary"]</span></span>
@@ -44,15 +44,20 @@ else if (_profile is not null)
     private readonly CancellationToken _token;
     public Guide() => _token = _lifetime.Token;
     private ApplicationProfile? _profile;
+    private IReadOnlyList<GuideSection> _visibleSections = [];
     private bool _loading = true, _error, _authenticated;
     protected override Task OnInitializedAsync() => LoadAsync();
     private async Task LoadAsync()
     {
-        _loading = true; _error = false; _profile = null;
+        _loading = true; _error = false; _profile = null; _visibleSections = [];
         try
         {
             _authenticated = (await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true;
-            if (_authenticated) _profile = await Profile.GetAsync(_token);
+            if (_authenticated)
+            {
+                _profile = await Profile.GetAsync(_token);
+                _visibleSections = GuideContent.Visible(_profile);
+            }
         }
         catch (RegistryApiException) { _error = true; }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
