@@ -24,6 +24,7 @@
                 <nav class="app-nav__list" aria-label="@T["nav.area.administration"]">
                     <NavEntry Label="@T["users.title"]" Href="/app/admin/users" Icon="RbiIconName.Users" Active="@IsActive("app/admin/users")" />
                     <NavEntry Label="@T["roles.admin-title"]" Href="/app/admin/role-requests" Glyph="AppIconName.UserCog" Active="@IsActive("app/admin/role-requests")" />
+                    <NavEntry Label="@T["rolecatalog.title"]" Href="/app/admin/role-catalog" Glyph="AppIconName.UserCog" Active="@IsActive("app/admin/role-catalog")" />
                     <NavEntry Label="@T["period.title"]" Href="/app/admin/period" Glyph="AppIconName.CalendarClock" Active="@IsActive("app/admin/period")" />
                     <NavEntry Label="@T["codes.title"]" Href="/app/admin/code-lists" Glyph="AppIconName.BookOpen" Active="@IsActive("app/admin/code-lists")" />
                     <NavEntry Label="@T["audit.title"]" Href="/app/admin/audit" Glyph="AppIconName.ScrollText" Active="@IsActive("app/admin/audit")" />
@@ -34,6 +35,7 @@
     <AuthorizeView><Authorized>
         <nav class="app-nav__footer" aria-label="@T["guide.title"]">
             <NavEntry Label="@T["guide.title"]" Href="/app/guide" Glyph="AppIconName.BookOpenCheck" Active="@IsActive("app/guide")" />
+            <NavEntry Label="@T["release.title"]" Href="/app/release-notes" Glyph="AppIconName.FileChartColumn" Active="@IsActive("app/release-notes")" />
         </nav>
     </Authorized></AuthorizeView>
 </div>
@@ -44,7 +46,12 @@
     {
         Navigation.LocationChanged += RouteChanged;
         if ((await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated != true) return;
-        try { _admin = ApplicationAccess.IsAdministrator(await Profile.GetAsync()); _reports = await Permissions.HasPermissionAsync("reports.read"); _physical = await Permissions.HasPermissionAsync("fl.read"); _legal = await Permissions.HasPermissionAsync("pl.read"); _limits = await Permissions.HasPermissionAsync("limiti.read"); _capital = await Permissions.HasPermissionAsync("kapital.read"); }
+        try
+        {
+            var access = await ApplicationNavigationAccess.ReadAsync(Profile, Permissions);
+            (_admin, _reports, _physical, _legal, _limits, _capital) =
+                (access.Administrator, access.Reports, access.Physical, access.Legal, access.Limits, access.Capital);
+        }
         catch (RegistryApiException) { _physical = _legal = _limits = _capital = _admin = _reports = false; }
     }
     private void RouteChanged(object? sender, LocationChangedEventArgs args) => _ = InvokeAsync(StateHasChanged);

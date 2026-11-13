@@ -200,3 +200,19 @@ test("GCC lookup: unavailable source is stated honestly; an available source off
   const row = page.getByRole("row", { name: /Gcc Company/ });
   await expect(row).toContainText("1002 — Fixture Group B"); await expect(row.getByRole("cell", { name: "Da", exact: true })).toBeVisible();
 });
+
+test("bank customer lookup never invents data and can fill the legal form from an available source", async ({ page, request }) => {
+  await open(page); await page.getByRole("button", { name: "Novi zapis", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  const lookup = dialog.getByLabel("Pretraži klijente banke", { exact: true });
+  await lookup.fill("Fixture");
+  await expect(dialog.getByText("Izvor podataka o klijentima banke trenutno nije dostupan.", { exact: true })).toBeVisible();
+  await expect(dialog.getByRole("listbox", { name: "Rezultati pretrage klijenata" }).getByRole("option")).toHaveCount(0);
+  expect((await request.post("/__fixtures/bank-source-on", { headers })).status()).toBe(204);
+  await lookup.fill("123456789");
+  await expect(dialog.getByRole("listbox", { name: "Rezultati pretrage klijenata" }).getByRole("option").first()).toBeVisible();
+  await dialog.getByRole("listbox", { name: "Rezultati pretrage klijenata" }).getByRole("option").first().click();
+  await expect(dialog.getByLabel("Naziv", { exact: false })).toHaveValue("Fixture Bank Customer");
+  await expect(dialog.getByLabel("Porezni broj", { exact: false })).toHaveValue("1234567890125");
+  expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
+});

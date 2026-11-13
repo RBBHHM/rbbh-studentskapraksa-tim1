@@ -11,8 +11,8 @@ PR #4 shows conflicts because both lines changed the same authentication files a
 | `Backend/IoC/Extensions/Authentication/AuthenticationServiceExtensions.cs` | Removed the audience setting and its fail-closed check; set `ValidateAudience = false`; added `Console.WriteLine` of subject, username and audiences in JWT events (duplicated twice) | **Keep integration.** Audience is mandatory outside Development, token details are not logged. Only a harmless `MapInboundClaims` reordering existed on `main`, already equivalent here |
 | `Backend/Program.cs` | Per-request console log of subject, application user id, roles and permissions; unconditional `MigrateAsync()` in Development | **Keep integration.** No identity logging; migrations only when `Database:ApplyMigrations` is explicitly true in Development |
 | `Backend/BL/Services/KeycloakAdminService.cs` | Admin client id read from `KeycloakSettings:ClientId` | **Keep integration.** It must read `AdminClientId`; using the sign-in client id mixes two clients (backend finding ID-04) |
-| `docs/PRODUCTION-READINESS.md` | Dropped `KeycloakSettings__Audience` from required startup variables | **Keep integration.** Audience is still required, so the text must say so |
-| `docs/configuration/ENVIRONMENT-VARIABLES.md` | Dropped the audience row and added a stray note to the admin client row | **Keep integration.** Same reason; the stray fragment is not accurate |
+| `docs/PRODUCTION-READINESS.md` | Dropped `KeycloakSettings__Audience` from required startup variables | **Keep the consolidated state.** The file was folded into `README.md` and `docs/ONBOARDING.md` (which state that audience is required); the `main` edit would have re-introduced the weaker claim |
+| `docs/configuration/ENVIRONMENT-VARIABLES.md` | Dropped the audience row and added a stray note to the admin client row | **Keep the consolidated state.** Same reason; the `main` edit also added an inaccurate fragment |
 
 ## Other `main`-only changes (not conflicts) and what was done
 | Change on `main` | Decision |
@@ -22,7 +22,7 @@ PR #4 shows conflicts because both lines changed the same authentication files a
 | `AssemblyName` `DATA_CORE` in both web projects | Not carried; two projects with the same assembly name break the test host. The backend keeps the opt-in `UseLocalDataCoreAssemblyName` switch |
 | `Frontend/Platform/RBI.Authentication/IoC/Authentication.cs`: `PushedAuthorizationBehavior.Disable` | **Owner decision.** Not carried because it is a platform change with no test here. If login against the identity provider fails with a pushed-authorization error, this one line is the likely fix; add it behind a setting and test it |
 | `launchSettings.json`, `.csproj.user` (local debug profiles) | Not carried (developer-local) |
-| `[Related Parties Register] Dokumentacija.pdf`, four mapping workbooks and a `.msg` mail file | Not carried. They remain in `main`'s history for audit. The PDF is a requester document that must not be republished without permission; the workbooks and mail may contain internal data. Keep them locally or in an access-controlled store |
+| `[Related Parties Register] Dokumentacija.pdf` | **Retained in `main`** at the owner's request (the four mapping workbooks and the `.msg` mail file were already part of the candidate). Note the PDF is a requester document: keep the repository private or restrict access |
 | `docs/POPRAVKE.txt` | Already present on this branch |
 
 ## Evidence
@@ -47,3 +47,13 @@ Nothing here was executed. It needs repository-admin rights.
 
 ## Remaining production blockers
 Real Keycloak realm/audience configuration and the 8-hour session, bank reference and Finrep sources, a mail provider, shared session/data-protection keys on the platform, a deployed-API plus SQL browser smoke test, release-notes route, and the gaps listed in `docs/FINAL-REQUIREMENTS-COVERAGE.md`.
+
+## Final state of `main` after the update PR
+`main` keeps its full history (including the commit that exposed the credential, which is therefore still reachable from `main` and from this PR branch). The PR replaces the **content** of the tree with the tested candidate: application source, configuration, tests, migrations and current documentation.
+
+Legacy documentation was compared with the final documentation:
+* **Restored as current**: `docs/PRODUCTION-READINESS.md` and `docs/configuration/ENVIRONMENT-VARIABLES.md` (from Codex's sanitized backend branch, not `main`'s edited copies), plus the still-valid `docs/database/DB-CHANGE-WORKFLOW.md`, `docs/database/SQL-SERVER.md` (one sentence updated: Development may migrate only with an explicit `Database__ApplyMigrations=true`), `docs/testing/TEST-DATA-AND-SCENARIOS.md`, `docs/development/LOCAL-DEVELOPMENT.md`, `docs/deployment/OCP-IIS.md`, `Frontend/README.md`, `env-variables.md`.
+* **Rewritten to match the current system** (old text referenced React and the retired OpenAPI client): `docs/architecture/README.md`, `docs/CONVENTIONS.md`, `schema-overview.md`.
+* **Archived verbatim as history**: the 29 React-to-Blazor migration, hardening, handoff and inventory reports now live in `docs/archive/blazor-migration/` with a banner stating they are evidence, not instructions.
+
+Because history is preserved, **rotating the credential remains mandatory**.

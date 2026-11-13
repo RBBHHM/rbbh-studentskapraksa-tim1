@@ -28,7 +28,7 @@ Browser -> Blazor Server (Frontend) -> HTTPS JSON -> ASP.NET Core API (Backend) 
 - **Backend** applies business rules, authorization, period locks and audit. It is the only component that reaches the database.
 - **Keycloak** issues tokens. The frontend sends the bearer token to the API, which validates signature and claims.
 - **Code lists** (`CodeLists`, `CodeListDefinitions`) supply every dropdown and multi-select. Business option lists must not be hardcoded: a guard test fails the build when a literal option or a new static business list appears.
-- **Localization**: all visible text uses resource keys from `Frontend/Localization/bs.json` and `en.json`. A guard test fails the build on literal visible text, on unknown keys and on a BS/EN key mismatch.
+- **Localization**: all visible text uses resource keys from `Frontend/Localization/bs.json`, `en.json` and `de.json` (608 aligned keys). Three-language parity tests check missing keys, placeholders and literal visible text. Existing `Languages` and `LanguagePacks` codebooks override static resources for approved runtime edits; an unavailable API safely falls back to bundled translations.
 - **Errors** are returned as safe `ProblemDetails` with a trace ID; technical detail goes only to the log. Logs carry correlation IDs and must never contain tokens, passwords or client secrets.
 
 ## Repository layout
@@ -137,7 +137,7 @@ cd tests/Web.Blazor.Browser; npm ci; npx playwright install chromium
 $env:BROWSER_FIXTURE_ROLE = "admin"; npm test      # repeat for gost, kapital, PL, limiti, FL
 ```
 - `Web.Blazor.Tests` (xUnit) covers API clients, models, validation, localization and the source guards.
-- `Web.Blazor.Browser` (Playwright, workers=1, retries=0) covers role gates, mutations, validation, BS/EN, light and dark Axe, keyboard use and 375px layouts, once per role on the isolated BrowserHost.
+- `Web.Blazor.Browser` (Playwright, workers=1, retries=0) covers role gates, mutations, validation, BS/EN/DE language switching, light and dark Axe, keyboard use and 375px layouts, once per role on the isolated BrowserHost.
 - Backend SQL tests need `RBBH_TEST_SQLSERVER` pointing at a disposable server without an initial catalog; they create and drop their own databases. Never point tests at production. Skipped tests are not passes.
 - Manual testing stays for visual design, real Keycloak login, e-mail content and generated report content.
 
@@ -148,11 +148,53 @@ dotnet publish Frontend/RBBH.RelatedPartiesRegister.Web.csproj -c Release -o art
 docker build -f Backend/Dockerfile -t rbbh-api:local .
 docker build -f Frontend/Dockerfile -t rbbh-web:local .
 ```
-- Workflows: `build-and-push-image.yml`, `codeql.yml`, `deploy-to-ocp.yml`. Images are tagged `sha-<full commit>` and deployed pinned to `@sha256`. Rollback re-dispatches the deploy with the previous accepted tag and digest; the workflow does not down-migrate SQL.
-- GitHub environment variables: `ARTIFACTORY_REGISTRY`, `ARTIFACTORY_REPOSITORY`, `WEB_IMAGE_NAME`, `API_IMAGE_NAME`, `OCP_SERVER`, `OCP_PROJECT_NAME`, `OCP_PULL_SECRET`, `WEB_HEALTH_HOST`, `API_HEALTH_HOST`. Secrets: `ARTIFACTORY_USERNAME`, `ARTIFACTORY_TOKEN`, `TEST_SQL_SA_PASSWORD` (disposable CI SQL), `OCP_TOKEN`.
+- Workflows: `build-and-push-image.yml`, `codeql.yml`, `lighthouse.yml`, `publish-release-notes.yml`, `deploy-to-ocp.yml`. Images are tagged `sha-<full commit>` and deployed pinned to `@sha256`. Rollback re-dispatches the deploy with the previous accepted tag and digest; the workflow does not down-migrate SQL.
+- GitHub environment variables: `ARTIFACTORY_REGISTRY`, `ARTIFACTORY_REPOSITORY`, `WEB_IMAGE_NAME`, `API_IMAGE_NAME`, `OCP_SERVER`, `OCP_PROJECT_NAME`, `OCP_PULL_SECRET`, `WEB_HEALTH_HOST`, `API_HEALTH_HOST`. Secrets: `ARTIFACTORY_USERNAME`, `ARTIFACTORY_TOKEN`, `OCP_TOKEN`.
 - Health: `/health/live` (process only) and `/health/ready` (SQL connectivity, 503 on failure). Probe hosts must be in `AllowedHosts`. After a rollout also verify TLS and redirects, sign-in and permissions, deep links, notifications and the database state; an HTTP 200 alone is not enough.
 - Logs are structured with correlation IDs. `/metrics` must be reachable only through an approved network or auth policy. Alerting should cover error rate, database or Keycloak unavailability, failed migrations and report-generation failures.
 - Routine maintenance: security updates, controlled migrations, database backup, audit-log review, secret rotation, periodic role and permission review.
+
+The GitHub Actions test workflow uses a one-run SQL Server 2022 container with
+synthetic per-run credentials and automatically executes backend and six-role
+browser regressions on pushes to `main`. Publication remains gated by the
+full-history credential scanner. Latest passing test jobs:
+https://github.com/RBBHHM/rbbh-studentskapraksa-tim1/actions/runs/43021204873
+
+## Localization and versioned Release Notes
+
+The frontend automatically offers **Bosanski, English and Deutsch**. The migration
+`20261111184500_SeedFrontendLanguagePackResources` inserts **608 text keys for
+each language** (BS/EN/DE) into the existing language-codebook tables without
+overwriting business-edited strings. Apply the approved migration **before**
+starting a new release on a persistent SQL database. Administrators may update
+these records at runtime; the version change invalidates cached translations.
+
+Release Notes require **no manual source-code editing**. Once an approved UAT
+deployment of a specific commit has been verified, publish a lightweight tag:
+```bash
+git tag uat-v1.2.3 <approved-commit>
+git push origin uat-v1.2.3
+```
+GitHub Actions publishes an actual **UAT prerelease** with generated notes.
+After promoting **the exact same commit** to production and verifying the
+deployment, publish its production tag:
+```bash
+git tag v1.2.3 <same-approved-commit>
+git push origin v1.2.3
+```
+The workflow requires a matching previously published UAT Release and rejects
+different underlying commits; it copies the UAT note body verbatim to PROD.
+The read-only app page auto-discovers both from GitHub through a cached backend.
+Tags are a publication signal **after** approved deployment, not proof of
+a successful OCP deployment. No releases = honest empty state.
+
+`lighthouse.yml` runs four isolated Lighthouse audits on the test-only
+BrowserHost (dashboard and guide; mobile/desktop), uploads JSON reports, and
+summarizes performance, accessibility, best practices, LCP and CLS. These scores
+do **not** measure real OCP/Keycloak performance. Baseline desktop performance:
+99/99; mobile: 79/82. Accessibility and best practices: 100 for both pages on
+both form factors. See `docs/FINAL-REQUIREMENTS-COVERAGE.md` for the complete
+20-page PDF review, requirements evidence and remaining acceptance gaps.
 
 ## Release blockers
 | Severity | Item |

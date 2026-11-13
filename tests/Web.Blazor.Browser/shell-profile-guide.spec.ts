@@ -82,12 +82,21 @@ test("dashboard/profile/guide remain readable at375px without page overflow", as
     await page.screenshot({ path: info.outputPath(path === "/app" ? "dashboard-mobile.png" : path.split("/").at(-1) + "-mobile.png"), fullPage: true });
   }
 });
-test("BS/EN resources, culture cookie and backend language remain consistent across guide/profile/home", async ({ page, request }) => {
+test("BS/EN/DE resources, culture cookie and backend language remain consistent across guide/profile/home", async ({ page, request }) => {
   await visit(page, "/app/guide"); await chooseLanguage(page, "en"); await expect(page.getByRole("heading", { name: "User guide", exact: true })).toBeVisible(); await expect(page.locator("html")).toHaveAttribute("lang", "en");
-  await expect(page.getByRole("option", { name: /Deutsch|German/ })).toHaveCount(0); await page.reload(); await interactive(page); await expect(page.getByRole("heading", { name: "User guide", exact: true })).toBeVisible();
+  await expect(page.getByRole("option", { name: /Deutsch|German/ })).toHaveCount(1); await page.reload(); await interactive(page); await expect(page.getByRole("heading", { name: "User guide", exact: true })).toBeVisible();
   await page.getByRole("link", { name: "My profile", exact: true }).click(); await expect(page.getByRole("main").getByText("Effective permissions", { exact: true })).toBeVisible();
   expect((await (await request.get("/__fixtures/culture", { headers })).json()).language).toBe("en");
   await page.getByRole("link", { name: "Overview", exact: true }).click(); await expect(page.getByRole("main").getByRole("link", { name: "Open Individuals", exact: true })).toBeVisible();
+  await visit(page, "/app/guide"); await chooseLanguage(page, "de");
+  await expect(page.locator("html")).toHaveAttribute("lang", "de");
+  await expect(page.getByRole("heading", { name: "Benutzerhandbuch", exact: true })).toBeVisible();
+  await page.reload(); await interactive(page);
+  await expect(page.getByRole("heading", { name: "Benutzerhandbuch", exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "Mein Profil", exact: true }).first().click();
+  await expect(page.getByRole("main").getByText("Wirksame Berechtigungen", { exact: true })).toBeVisible();
+  expect((await (await request.get("/__fixtures/culture", { headers })).json()).language).toBe("de");
+  await chooseLanguage(page, "bs"); await expect(page.locator("html")).toHaveAttribute("lang", "bs");
 });
 
 test("dark guide retains WCAG AA contrast at desktop and375px", async ({ page }) => {

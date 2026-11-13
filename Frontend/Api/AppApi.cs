@@ -26,6 +26,8 @@ public static class AppApi
             services.AddScoped<ICodeListsApi, UnconfiguredCodeListsApi>();
             services.AddScoped<ILocalizationApi, UnconfiguredLocalizationApi>();
             services.AddScoped<IRoleRequestsApi, UnconfiguredRoleRequestsApi>();
+            services.AddScoped<IRoleCatalogApi, UnconfiguredRoleCatalogApi>();
+            services.AddScoped<IReleaseNotesApi, UnconfiguredReleaseNotesApi>();
             return null;
         }
         if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) ||
@@ -52,6 +54,8 @@ public static class AppApi
             services.AddScoped<ICodeListsApi, UnconfiguredCodeListsApi>();
             services.AddScoped<ILocalizationApi, UnconfiguredLocalizationApi>();
             services.AddScoped<IRoleRequestsApi, UnconfiguredRoleRequestsApi>();
+            services.AddScoped<IRoleCatalogApi, UnconfiguredRoleCatalogApi>();
+            services.AddScoped<IReleaseNotesApi, UnconfiguredReleaseNotesApi>();
             return uri;
         }
 
@@ -132,6 +136,16 @@ public static class AppApi
             options.Timeout = TimeSpan.FromSeconds(15);
         }).AddHttpMessageHandler<ApplicationCultureHandler>().AddRbiUserAccessToken();
         services.AddRbiApiClient<IRoleRequestsApi, RoleRequestsApi>("RoleRequests", options =>
+        {
+            options.BaseUrl = uri;
+            options.Timeout = TimeSpan.FromSeconds(15);
+        }).AddHttpMessageHandler<ApplicationCultureHandler>().AddRbiUserAccessToken();
+        services.AddRbiApiClient<IRoleCatalogApi, RoleCatalogApi>("RoleCatalog", options =>
+        {
+            options.BaseUrl = uri;
+            options.Timeout = TimeSpan.FromSeconds(15);
+        }).AddHttpMessageHandler<ApplicationCultureHandler>().AddRbiUserAccessToken();
+        services.AddRbiApiClient<IReleaseNotesApi, ReleaseNotesApi>("ReleaseNotes", options =>
         {
             options.BaseUrl = uri;
             options.Timeout = TimeSpan.FromSeconds(15);

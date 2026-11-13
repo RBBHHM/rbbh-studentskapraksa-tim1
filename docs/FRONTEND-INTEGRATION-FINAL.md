@@ -1,6 +1,6 @@
 # Frontend integration (final)
 
-This describes how the Blazor frontend is wired to the finalized backend on branch `integration/full-stack-final`, what was verified, and what is still open. The per-requirement view is in [FINAL-REQUIREMENTS-COVERAGE.md](FINAL-REQUIREMENTS-COVERAGE.md); the backend contract is [BACKEND-FRONTEND-CONTRACT-FINAL.md](BACKEND-FRONTEND-CONTRACT-FINAL.md).
+This describes how the Blazor frontend is wired to the finalized backend on branch `main`, what was verified, and what is still open. The per-requirement view is in [FINAL-REQUIREMENTS-COVERAGE.md](FINAL-REQUIREMENTS-COVERAGE.md); the backend contract is [BACKEND-FRONTEND-CONTRACT-FINAL.md](BACKEND-FRONTEND-CONTRACT-FINAL.md).
 
 ## Integrated endpoints
 
@@ -11,8 +11,9 @@ All clients are typed over the RBI transport (`IRbiApiTransport` / `IRbiApiFileT
 | Profile / session | `ProfileApi` | `GET api/auth/profile` |
 | Users | `UsersApi` | `api/users` (list, create), `PUT api/users/{id}` (profile), `{id}/role`, `{id}/reactivate`, `{id}/permanent` |
 | Role requests | `RoleRequestsApi` | `api/role-requests` (own list, create, admin review, `{id}/approve|reject` with `decisionId` + `expectedVersion`), `api/roles` |
+| Role catalog | `RoleCatalogApi` | `api/role-catalog` (list, permission catalog, create, optimistic update); Admin-only editing UI |
 | Notifications | `NotificationsApi` | `GET api/notifications`, `POST api/notifications/{id}/read` |
-| Legal persons | `LegalEntitiesApi` | `api/legal-entities` (incl. `{id}/limit-form-data`), `api/bank-reference/gcc`, `api/verification/legal-person/{id}`, workbook import/export |
+| Legal persons | `LegalEntitiesApi` | `api/legal-entities` (incl. `{id}/limit-form-data`), `api/bank-reference/gcc`, `api/bank-reference/customers`, `api/verification/legal-person/{id}`, workbook import/export |
 | Physical persons | `PhysicalPersonsApi` | `api/related-persons` (incl. `check-duplicate`, `{id}/relationship-tree`), `api/verification/physical-person/{id}`, workbook import/export |
 | Limits | `LimitsApi` | `api/limiti`, `api/limiti/import`, export |
 | Capital | `CapitalApi` | `api/capital`, `/history`, `/as-of` |
@@ -21,18 +22,19 @@ All clients are typed over the RBI transport (`IRbiApiTransport` / `IRbiApiFileT
 | Reports | `ReportsApi` | `api/reports` (daily, monthly, list, export all/client/generated) |
 | Audit | `AuditApi` | `api/audit-logs` |
 | Localization | `LocalizationApi` | `api/localization/languages`, `api/localization/resources/{language}` |
+| Release notes | `ReleaseNotesApi` | `GET api/release-notes?environment=uat|prod`, cached public GitHub Releases source |
 
-Not consumed although the contract has them: role catalog mutations, bank customer lookup, `api/modules`.
+Not consumed although the contract has it: `api/auth/modules` (sidebar uses effective profile permissions).
 
 ## Behaviours worth knowing
 
-* **Errors** reach the UI as an HTTP status only. The RBI transport does not expose the backend `code` extension, so four-eyes denials (`verification.self_denied`, `provenance_required`) display the generic forbidden/conflict text. The server still enforces them.
+* **Errors**: RBI transport now extracts only bounded, syntactically valid backend `code` values. Legal/physical verification maps the approved four-eyes denials (`verification.self_denied`, `verification.provenance_required`) to safe, localized text. Unapproved codes and untrusted upstream details are never displayed.
 * **Role-request decisions** derive `decisionId` deterministically from request id, version and action, so a repeated click replays instead of creating a second decision.
 * **GCC** returns 503 while no bank source is configured; the picker says the source is unavailable and offers nothing. The BrowserHost registers a *test-only* fixture source to exercise the available path.
 * **Reports** show `dataSource` as an origin label. `isAuthoritative` means origin, not regulatory acceptance, and the UI never says "reconciled".
 * **Capital** writes append immutable revisions; the page shows history and an as-of lookup (204 means "no value then").
 * **Session**: the RBI cookie is absolute 8 h with no sliding renewal; logout is a POST with antiforgery. The frontend does not call the backend logout.
-* **Localization**: the BS/EN catalogs in `Frontend/Localization` are authoritative for UI chrome and are guarded by key-parity and no-literal-text tests; the backend language pack (BS/EN/DE) supplies server-owned text such as notification titles. The language picker has no DE entry.
+* **Localization**: all 608 UI texts in BS/EN/DE have parity and placeholder checks. `SeedFrontendLanguagePackResources` migrates them to the existing database `LanguagePacks` without replacing approved translations; runtime resource versions invalidate caches immediately. Static resources are safe fallbacks.
 * **Code-list metadata** (created-by, last modified) is fetched separately and is advisory: if that call fails, the lists still render.
 
 ## Test harness and what it proves
@@ -75,12 +77,12 @@ python scripts/security/scan_git_secrets.py --ref HEAD
 
 ## Open items and dependencies
 
-1. **Credential rotation.** The old Keycloak client secret is still reachable from public `main`. The owner must rotate it; this branch does not contain it and its scan is clean. Do not merge to `main` before rotation and a decision on how to retire the old history.
+1. **Credential rotation.** The old Keycloak client secret is still reachable from public `main`. The owner must rotate it and approve historic exposure remediation. Current tracked configuration is blank, but the full-history main scan correctly fails and image publication is blocked.
 2. **Production Keycloak** (client, realm session policy, audience) and the **8-hour session** need a real login test.
 3. **Real data sources**: bank reference (`bosnadb\HEAD`) for GCC/customers, Finrep monthly history, a mail provider.
-4. **Release notes**: needs a backend route that reads GitHub server-side.
-5. **Structured errors**: extend the RBI transport to surface the backend `code`.
-6. **DE frontend catalog**, **role-catalog UI**, **bank-customer lookup UI** need a design decision.
+4. **Release notes**: UAT `uat-vX.Y.Z` tags generate a published prerelease automatically. PROD `vX.Y.Z` tags must point to the exact same commit and reuse the original UAT notes verbatim. No releases have been published yet.
+5. **Structured errors**: four-eyes codes are now mapped safely; a full-domain message mapping is still open.
+6. **DE frontend catalog** has all 608 keys and automated browser/unit/SQL codebook tests. Specialist legal/financial wording needs bank approval; role-catalog and bank-customer UIs are already implemented.
 7. **Static status lists** (Period statuses, Guide states) stay allow-listed until the backend exposes catalogs.
 8. A **frontend → deployed API → SQL** browser smoke test needs a provisioned environment.
-9. **Lighthouse** performance pass is deferred.
+9. **Lighthouse** runs on the isolated BrowserHost: dashboard/guide desktop 99/99 and mobile 79/82; all accessibility and best practices 100. An authenticated, deployed mobile performance audit is still required.

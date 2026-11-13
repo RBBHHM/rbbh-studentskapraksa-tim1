@@ -51,7 +51,7 @@ public sealed class RegistryWorkbookHttpTests : AuthenticatedApiFixture
         finally { await target.DisposeAsync(); }
     }
     [Fact]
-    public async Task PhysicalV2RoundtripResolvesChildBeforeParentAndPreservesDescriptionsWithoutHrMail()
+    public async Task PhysicalV3RoundtripResolvesChildBeforeParentAndPreservesDescriptionsWithoutHrMail()
     {
         var parent = await Client.PostAsJsonAsync("/api/related-persons", RegistryVerificationHttpTests.Physical());
         var id = (await parent.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
@@ -59,10 +59,10 @@ public sealed class RegistryWorkbookHttpTests : AuthenticatedApiFixture
         { firstName = "Child", lastName = "Fixture", residency = 2, passportNumber = "CHILD01", fbaId = "12345", relationBasis = "VL", relationDescription = "Child relationship description",
             specialRelationBasis = "UZA_PORODICA", relatedToPersonId = id, dateFrom = "2026-01-01", dateTo = "2027-12-31" })).StatusCode);
         using var original = new MemoryStream(await Export(false)); using var workbook = new XLWorkbook(original); var sheet = workbook.Worksheet(1);
-        Assert.Equal(25, sheet.LastColumnUsed()!.ColumnNumber());
+        Assert.Equal(26, sheet.LastColumnUsed()!.ColumnNumber());
         var child = sheet.Cell(2, 1).GetString() == "Child" ? 2 : 3; Assert.Equal("2801984175000", sheet.Cell(child, 18).GetString());
         // Order is intentionally reversed; import must resolve the graph, not rely on export sort.
-        if (child == 3) for (var column = 1; column <= 25; column++) { var value = sheet.Cell(2, column).Value; sheet.Cell(2, column).Value = sheet.Cell(3, column).Value; sheet.Cell(3, column).Value = value; }
+        if (child == 3) for (var column = 1; column <= 26; column++) { var value = sheet.Cell(2, column).Value; sheet.Cell(2, column).Value = sheet.Cell(3, column).Value; sheet.Cell(3, column).Value = value; }
         using var edited = new MemoryStream(); workbook.SaveAs(edited);
         var target = new RegistryWorkbookHttpTests(); await target.InitializeAsync();
         try
@@ -79,6 +79,33 @@ public sealed class RegistryWorkbookHttpTests : AuthenticatedApiFixture
         finally { await target.DisposeAsync(); }
         _mail.VerifyNoOtherCalls();
     }
+    [Fact]
+    public async Task PhysicalLegacyV2ExportShapeIsStillAcceptedForImports()
+    {
+        var create = await Client.PostAsJsonAsync("/api/related-persons", RegistryVerificationHttpTests.Physical());
+        Assert.Equal(HttpStatusCode.Created, create.StatusCode);
+        using var stream = new MemoryStream(await Export(false));
+        using var workbook = new XLWorkbook(stream);
+        var sheet = workbook.Worksheet(1);
+        Assert.Equal("Opis osnova posebnog odnosa", sheet.Cell(1, 26).GetString());
+        // Simulate a previously distributed 25-column file, not an empty v3 field.
+        sheet.Column(26).Delete();
+        Assert.Equal(25, sheet.LastColumnUsed()!.ColumnNumber());
+        using var buffer = new MemoryStream();
+        workbook.SaveAs(buffer);
+
+        var target = new RegistryWorkbookHttpTests();
+        await target.InitializeAsync();
+        try
+        {
+            var result = await target.Import(false, buffer.ToArray());
+            Assert.Equal(1, result.GetProperty("imported").GetInt32());
+            Assert.Equal(0, result.GetProperty("failed").GetInt32());
+            await target.InDatabase(async db => Assert.Single(await db.RelatedPersons.ToListAsync()));
+        }
+        finally { await target.DisposeAsync(); }
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]

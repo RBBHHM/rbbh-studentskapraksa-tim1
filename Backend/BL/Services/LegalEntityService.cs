@@ -1,6 +1,5 @@
 // File: src/RBBH.ConnectedParties/BL/Services/LegalEntityService.cs
 
-using System.Globalization;
 using RBBH.ConnectedParties.BL.ServiceInterfaces;
 using RBBH.ConnectedParties.DL.DTO;
 using RBBH.ConnectedParties.DL.DTO.LegalEntity;
@@ -8,7 +7,6 @@ using RBBH.ConnectedParties.DL.Entities.LegalEntity;
 using RBBH.ConnectedParties.DL.Persistence;
 using RBBH.ConnectedParties.Exceptions;
 using RBBH.ConnectedParties.Helpers.Validators;
-using RBBH.ConnectedParties.Helpers.Excel;
 using Microsoft.EntityFrameworkCore;
 
 namespace RBBH.ConnectedParties.BL.Services;
@@ -16,30 +14,9 @@ namespace RBBH.ConnectedParties.BL.Services;
 /// <summary>
 /// Implementacija servisa za upravljanje registrom povezanih pravnih lica.
 /// </summary>
-public class LegalEntityService : ILegalEntityService
+public partial class LegalEntityService : ILegalEntityService
 {
-    private static readonly ExcelImportSchema.Column[] ImportColumns =
-    [
-        new("Naziv / Name", "Naziv", "Name"),
-        new("Tip / Type", "Tip", "Type", "Rezidentnost", "Residency"),
-        new("Porezni broj / Tax number", "Porezni broj", "Tax number"),
-        new("FBA ID", "FBA ID"),
-        new("Matični broj / Registration number", "Matbroj", "Matični broj", "Registration number"),
-        new("Osnov povezanosti / Connection basis", "Osnov povezanosti", "Connection basis"),
-        new("Opis povezanosti / Connection description", "Opis povezanosti", "Connection description"),
-        new("Povezano lice s Bankom / Related to the Bank", "Pov. lice sa Bankom", "Povezano lice s Bankom", "Related to the Bank"),
-        new("Datum od / Date from", "Datum od", "Date from"),
-        new("Datum do / Date to", "Datum do", "Date to")
-    ];
-    private static readonly ExcelImportSchema.Column[] V2Columns =
-    [
-        .. ImportColumns,
-        new("Matični broj registracije", "Matični broj registracije", "Registration number"),
-        new("GCC broj", "GCC broj", "GCC number"), new("GCC naziv", "GCC naziv", "GCC name"),
-        new("Velika izloženost", "Velika izloženost", "Large exposure"),
-        new("Status", "Status"), new("Kreirao", "Kreirao", "Created by"), new("Kreirano", "Kreirano", "Created at"),
-        new("Izmijenio", "Izmijenio", "Modified by"), new("Izmijenjeno", "Izmijenjeno", "Modified at")
-    ];
+    // Excel import schema is defined alongside its implementation in the partial type.
     private readonly ConnectedPartiesDbContext _context;
     private readonly ILogger<LegalEntityService> _logger;
     private readonly IHttpContextAccessor? _actor;
@@ -74,14 +51,15 @@ public class LegalEntityService : ILegalEntityService
                     || (e.FbaId != null && e.FbaId.ToLower().Contains(term.ToLower())));
         }
 
-        var total = await query.CountAsync();
+        var cancellation = _actor?.HttpContext?.RequestAborted ?? default;
+        var total = await query.CountAsync(cancellation);
 
         var items = await query
             .OrderByDescending(e => e.CreatedAt).ThenBy(e => e.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(e => MapToDto(e))
-            .ToListAsync();
+            .Select(DtoProjection)
+            .ToListAsync(cancellation);
 
         return new LegalEntityListDTO
         {
@@ -95,7 +73,7 @@ public class LegalEntityService : ILegalEntityService
     public async Task<List<LegalEntityDTO>> GetAllForExportAsync()
     {
         var items = await _context.LegalEntities.AsNoTracking().OrderBy(row => row.Name).ThenBy(row => row.Id).Take(5001)
-            .Select(row => MapToDto(row)).ToListAsync(_actor?.HttpContext?.RequestAborted ?? default);
+            .Select(DtoProjection).ToListAsync(_actor?.HttpContext?.RequestAborted ?? default);
         if (items.Count > 5000) throw new ValidationException("file", BackendMessages.Message("errors.workbook.export.limit"));
         return items;
     }
@@ -103,11 +81,10 @@ public class LegalEntityService : ILegalEntityService
     /// <inheritdoc />
     public async Task<LegalEntityDTO?> GetByIdAsync(Guid id)
     {
-        var entity = await _context.LegalEntities
-            .AsNoTracking()
-            .FirstOrDefaultAsync(e => e.Id == id && e.IsActive);
-
-        return entity is null ? null : MapToDto(entity);
+        return await _context.LegalEntities.AsNoTracking()
+            .Where(e => e.Id == id && e.IsActive)
+            .Select(DtoProjection)
+            .FirstOrDefaultAsync(_actor?.HttpContext?.RequestAborted ?? default);
     }
 
     /// <inheritdoc />
@@ -425,170 +402,12 @@ public class LegalEntityService : ILegalEntityService
         }
     }
 
-    /// <inheritdoc />
-    public async Task<ImportResultDTO> ImportFromExcelAsync(Stream stream, string createdBy)
-    {
-        using var wb = ExcelImportSchema.OpenWorkbook(stream);
-        var ws = wb.Worksheets.First();
-        var lastRow = ws.LastRowUsed()?.RowNumber() ?? 1;
+    // Excel import and validation helpers are implemented in LegalEntityService.Import.cs.
 
-        var result = new ImportResultDTO();
-        var isV2 = ws.LastColumnUsed()?.ColumnNumber() == V2Columns.Length;
-        var schemaErrors = ExcelImportSchema.Validate(ws, isV2 ? V2Columns : ImportColumns);
-        if (schemaErrors.Count > 0)
-        {
-            result.Failed = Math.Max(lastRow - 1, 1);
-            result.Errors.AddRange(schemaErrors);
-            return result;
-        }
-        var choices = await Helpers.CodebookChoices.Load(_context, _actor?.HttpContext?.RequestAborted ?? default, "OsnovPovezanosti");
-        var usedTaxNumbers = (await _context.LegalEntities.IgnoreQueryFilters().AsNoTracking()
-            .Where(entity => entity.TaxNumber != null)
-            .Select(entity => entity.TaxNumber!)
-            .ToListAsync()).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var usedFbaIds = (await _context.LegalEntities.IgnoreQueryFilters().AsNoTracking()
-            .Where(entity => entity.FbaId != null)
-            .Select(entity => entity.FbaId!)
-            .ToListAsync()).ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        for (int row = 2; row <= lastRow; row++)
-        {
-            _actor?.HttpContext?.RequestAborted.ThrowIfCancellationRequested();
-            try
-            {
-                var name           = ExcelImportSchema.CellText(ws.Cell(row, 1));
-                var tipStr         = ExcelImportSchema.CellText(ws.Cell(row, 2));
-                var taxNumber      = ExcelImportSchema.CellText(ws.Cell(row, 3));
-                var fbaId          = ExcelImportSchema.CellText(ws.Cell(row, 4));
-                var matbroj        = ExcelImportSchema.CellText(ws.Cell(row, 5));
-                var basisOfConn    = ExcelImportSchema.CellText(ws.Cell(row, 6));
-                var connDesc       = ExcelImportSchema.CellText(ws.Cell(row, 7));
-                var connBankStr    = ExcelImportSchema.CellText(ws.Cell(row, 8));
-                var dateFromStr    = ExcelImportSchema.CellText(ws.Cell(row, 9));
-                var dateToStr      = ExcelImportSchema.CellText(ws.Cell(row, 10));
-
-                if (ws.Row(row).Cells(1, isV2 ? 14 : ImportColumns.Length).All(cell => string.IsNullOrWhiteSpace(cell.GetString())))
-                    continue; // Ignore only entirely empty rows, never an incomplete record.
-
-                if (string.IsNullOrWhiteSpace(basisOfConn))
-                    throw new ValidationException(BackendMessages.Message("validation.registry.connection.required"));
-
-                var isResident = tipStr.Equals("Rezident", StringComparison.OrdinalIgnoreCase) ||
-                    tipStr.Equals("Resident", StringComparison.OrdinalIgnoreCase);
-                var isNonResident = tipStr.Equals("Nerezident", StringComparison.OrdinalIgnoreCase) ||
-                    tipStr.Equals("Non-resident", StringComparison.OrdinalIgnoreCase) ||
-                    tipStr.Equals("Nonresident", StringComparison.OrdinalIgnoreCase);
-                if (!isResident && !isNonResident)
-                    throw new ValidationException(BackendMessages.Message("validation.registry.legal.residency.import"));
-
-                bool? connectedWithBank = connBankStr.Equals("DA", StringComparison.OrdinalIgnoreCase) ? true
-                    : connBankStr.Equals("YES", StringComparison.OrdinalIgnoreCase) ? true
-                    : connBankStr.Equals("NE", StringComparison.OrdinalIgnoreCase) ? false
-                    : connBankStr.Equals("NO", StringComparison.OrdinalIgnoreCase) ? false
-                    : null;
-
-                if (connectedWithBank is null)
-                    throw new ValidationException(BackendMessages.Message("validation.registry.bank.relation.import"));
-
-                DateTime? dateFrom = ParseOptionalDate(dateFromStr, "Datum od");
-                DateTime? dateTo   = ParseOptionalDate(dateToStr, "Datum do");
-
-                var dto = new CreateLegalEntityDTO
-                {
-                    IsResident         = isResident,
-                    TaxNumber          = isResident && !string.IsNullOrWhiteSpace(taxNumber) ? taxNumber : null,
-                    FbaId              = !isResident && !string.IsNullOrWhiteSpace(fbaId) ? fbaId : null,
-                    Name               = name,
-                    Matbroj            = string.IsNullOrWhiteSpace(matbroj) ? null : matbroj,
-                    BasisOfConnection  = basisOfConn,
-                    ConnectionDescription = string.IsNullOrWhiteSpace(connDesc) ? null : connDesc,
-                    ConnectedWithBank  = connectedWithBank,
-                    DateFrom           = dateFrom,
-                    DateTo             = dateTo,
-                    MaticniBroj = isV2 ? ExcelImportSchema.CellText(ws.Cell(row, 11)) : null,
-                    GccNumber = isV2 ? ExcelImportSchema.CellText(ws.Cell(row, 12)) : null,
-                    IsLargeExposure = isV2 ? ParseExposure(ExcelImportSchema.CellText(ws.Cell(row, 14))) : null
-                };
-                ValidateCreateDto(dto);
-                choices.Check("OsnovPovezanosti", dto.BasisOfConnection, "basisOfConnection");
-                var gcc = await ResolveGcc(dto.GccNumber);
-                if (dto.ConnectedWithBank is null)
-                    throw new ValidationException(BackendMessages.Message("validation.registry.bank.relation.import"));
-                var identifier = isResident ? taxNumber : fbaId;
-                var identifiers = isResident ? usedTaxNumbers : usedFbaIds;
-                if (!identifiers.Add(identifier))
-                    throw new ValidationException(isResident
-                        ? BackendMessages.Message("validation.registry.legal.tax.duplicate")
-                        : BackendMessages.Message("validation.registry.legal.fba.duplicate"));
-
-                var entity = new LegalEntity
-                {
-                    IsResident = dto.IsResident,
-                    TaxNumber = dto.IsResident ? dto.TaxNumber : null,
-                    FbaId = dto.IsResident ? null : dto.FbaId,
-                    Name = dto.Name,
-                    Matbroj = dto.Matbroj,
-                    MaticniBroj = dto.MaticniBroj,
-                    GccNumber = gcc?.Number, GccName = gcc?.Name, IsLargeExposure = dto.IsLargeExposure ?? false,
-                    BasisOfConnection = dto.BasisOfConnection,
-                    ConnectionDescription = dto.ConnectionDescription,
-                    ConnectedWithBank = dto.ConnectedWithBank,
-                    DateFrom = dto.DateFrom,
-                    DateTo = dto.DateTo,
-                    Status             = "Draft",
-                    IsActive           = true,
-                    CreatedAt          = DateTime.UtcNow,
-                    CreatorSubject = Helpers.RegistryVerification.CreatorSubject(_actor),
-                    CreatedBy          = createdBy
-                };
-
-                _context.LegalEntities.Add(entity);
-                result.Imported++;
-            }
-            catch (ValidationException exception)
-            {
-                result.Failed++;
-                result.Errors.Add(BackendMessages.Message("workbook.row.error", row, exception.ErrorMessage));
-                result.Details.Add(new(row, exception.Field ?? "row", "validation.invalid", exception.ErrorMessage));
-            }
-            catch (BusinessRuleException exception) when (exception.Status < 500)
-            {
-                result.Failed++; result.Errors.Add(BackendMessages.Message("workbook.row.error", row, exception.Message));
-                result.Details.Add(new(row, "gccNumber", exception.Code, exception.Message));
-            }
-            catch (Exception exception) when (exception is not OperationCanceledException and not OutOfMemoryException and not BusinessRuleException)
-            {
-                result.Failed++;
-                result.Errors.Add(BackendMessages.Message("workbook.row.unreadable", row));
-                result.Details.Add(new(row, "row", "import.invalid_row", "Provjerite format i vrijednosti polja."));
-                _logger.LogWarning("Legal import row could not be read. Row {Row}. FailureType {FailureType}", row, exception.GetType().Name);
-            }
-        }
-
-        if (result.Imported > 0)
-        {
-            _context.AuditLogs.Add(Helpers.BusinessAudit.Create("LegalEntity", "-", "IMPORT", createdBy, _actor, newValues: new { result.Imported, result.Failed }));
-            await _context.SaveChangesAsync(_actor?.HttpContext?.RequestAborted ?? default);
-        }
-
-        return result;
-    }
-
-    private static bool? ParseExposure(string value) => string.IsNullOrWhiteSpace(value) ? null
-        : value.Equals("DA", StringComparison.OrdinalIgnoreCase) || value.Equals("YES", StringComparison.OrdinalIgnoreCase) ? true
-        : value.Equals("NE", StringComparison.OrdinalIgnoreCase) || value.Equals("NO", StringComparison.OrdinalIgnoreCase) ? false
-        : throw new ValidationException("isLargeExposure", BackendMessages.Message("validation.registry.exposure.import"));
-
-    private static DateTime? ParseOptionalDate(string value, string field)
-    {
-        if (string.IsNullOrWhiteSpace(value)) return null;
-        if (DateTime.TryParse(value, CultureInfo.GetCultureInfo("bs-BA"), DateTimeStyles.None, out var date) ||
-            DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out date))
-            return date;
-        throw new ValidationException(BackendMessages.Message("workbook.column.date.invalid", field));
-    }
-
-    private static LegalEntityDTO MapToDto(LegalEntity e) => new()
+    // Keep a single mapping for both EF's server-side SELECT projection and
+    // in-memory mutation/audit responses. Avoid hydrating entire entities for
+    // list/export/details; only DTO columns are transferred from SQL Server.
+    private static readonly System.Linq.Expressions.Expression<Func<LegalEntity, LegalEntityDTO>> DtoProjection = e => new LegalEntityDTO
     {
         Id = e.Id,
         IsResident = e.IsResident,
@@ -611,4 +430,7 @@ public class LegalEntityService : ILegalEntityService
         VerifiedBy = e.VerifiedBy,
         VerifiedAt = e.VerifiedAt
     };
+
+    private static readonly Func<LegalEntity, LegalEntityDTO> DtoMapper = DtoProjection.Compile();
+    private static LegalEntityDTO MapToDto(LegalEntity entity) => DtoMapper(entity);
 }

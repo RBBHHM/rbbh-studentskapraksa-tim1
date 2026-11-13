@@ -6,8 +6,8 @@ namespace RBBH.RelatedPartiesRegister.Web.Components;
 
 /// <summary>
 /// Backend-owned language-pack text (notification, validation and workflow wording served by GET api/localization/resources/{language}).
-/// Loaded per circuit and refreshed after a short time so administrative edits become visible without a restart; it never replaces the
-/// frontend's static catalogs, it only answers keys those catalogs do not own.
+/// Loaded per circuit and refreshed after a short time so administrative edits become visible without a restart. Runtime
+/// language packs have precedence; the complete static BS/EN/DE catalogs are the safe fallback when the API is unavailable.
 /// </summary>
 public sealed class RuntimeResources(ILocalizationApi api)
 {

@@ -80,33 +80,26 @@ public class ReportService : IReportService
         return MapReportToDto(report);
     }
 
-    public async Task<ReportListDTO> GetDailyReportsAsync(int page, int pageSize)
+    public Task<ReportListDTO> GetDailyReportsAsync(int page, int pageSize) =>
+        ListReportsAsync("DAILY", page, pageSize);
+
+    public Task<ReportListDTO> GetMonthlyReportsAsync(int page, int pageSize) =>
+        ListReportsAsync("MONTHLY", page, pageSize);
+
+    // Both report lists use identical filtering, stable ordering and bounded
+    // pagination; centralizing their read path avoids diverging contracts.
+    private async Task<ReportListDTO> ListReportsAsync(string reportType, int page, int pageSize)
     {
-        page = Math.Clamp(page, 1, 1_000_000); pageSize = Math.Clamp(pageSize, 1, 200);
+        page = Math.Clamp(page, 1, 1_000_000);
+        pageSize = Math.Clamp(pageSize, 1, 200);
         var query = _context.Reports.AsNoTracking()
-            .Where(r => r.ReportType == "DAILY")
+            .Where(r => r.ReportType == reportType)
             .OrderByDescending(r => r.ReportDate).ThenByDescending(r => r.CreatedAt).ThenBy(r => r.Id);
 
         var total = await query.CountAsync(Cancellation);
         var items = await query
             .Skip((page - 1) * pageSize).Take(pageSize)
-            .Select(r => MapReportToDto(r))
-            .ToListAsync(Cancellation);
-
-        return new ReportListDTO { Items = items, Total = total, Page = page, PageSize = pageSize };
-    }
-
-    public async Task<ReportListDTO> GetMonthlyReportsAsync(int page, int pageSize)
-    {
-        page = Math.Clamp(page, 1, 1_000_000); pageSize = Math.Clamp(pageSize, 1, 200);
-        var query = _context.Reports.AsNoTracking()
-            .Where(r => r.ReportType == "MONTHLY")
-            .OrderByDescending(r => r.ReportDate).ThenByDescending(r => r.CreatedAt).ThenBy(r => r.Id);
-
-        var total = await query.CountAsync(Cancellation);
-        var items = await query
-            .Skip((page - 1) * pageSize).Take(pageSize)
-            .Select(r => MapReportToDto(r))
+            .Select(ReportDtoProjection)
             .ToListAsync(Cancellation);
 
         return new ReportListDTO { Items = items, Total = total, Page = page, PageSize = pageSize };
@@ -331,7 +324,10 @@ public class ReportService : IReportService
         cell.Style.Fill.BackgroundColor = bg;
     }
 
-    private static ReportDTO MapReportToDto(Report r) => new()
+    // DataSnapshot can hold a large historical JSON payload. Project only
+    // summary columns in SQL; loading the entity here would transfer all
+    // snapshot bytes for every item on the report list.
+    private static readonly System.Linq.Expressions.Expression<Func<Report, ReportDTO>> ReportDtoProjection = r => new ReportDTO
     {
         Id = r.Id,
         DataSource = r.DataSource ?? "legacy.unspecified",
@@ -343,6 +339,9 @@ public class ReportService : IReportService
         CreatedBy = r.CreatedBy,
         CreatedAt = r.CreatedAt
     };
+
+    private static readonly Func<Report, ReportDTO> ReportDtoMapper = ReportDtoProjection.Compile();
+    private static ReportDTO MapReportToDto(Report report) => ReportDtoMapper(report);
 
     /// <summary>Snapshot reda izloženosti/kapitala klijenta — koristi se za DataSnapshot izvještaja (Kapital modul).</summary>
     private sealed class ExposureSnapshotRow

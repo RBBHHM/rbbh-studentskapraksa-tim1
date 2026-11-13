@@ -115,6 +115,19 @@ test("deactivate/reactivate and permanent delete require confirmation and preser
   await other.getByRole("button", { name: "Obriši korisnika", exact: true }).click(); await page.getByRole("alertdialog").getByRole("button", { name: "Obriši", exact: true }).click(); await expect(other).toHaveCount(0);
   const state = await (await request.get("/__fixtures/users-state", { headers })).json(); expect(state.audit.map((entry: { action: string }) => entry.action)).toEqual(["DEACTIVATE", "REACTIVATE", "DELETE"]);
 });
+test("unconfirmed Keycloak identity is explicitly flagged, not silently displayed as verified", async ({ page, request }) => {
+  expect((await request.post("/__fixtures/users-unconfirmed", { headers })).status()).toBe(204);
+  await visit(page);
+  const row = page.getByRole("row").filter({ hasText: "unconfirmed@fixture.test" });
+  await expect(row).toBeVisible();
+  await expect(row.locator('[data-identity="unconfirmed"]')).toHaveText("Identitet nije potvrđen");
+  await expect(row).toContainText("FL");
+  await page.reload(); await interactive(page);
+  await expect(page.getByRole("row").filter({ hasText: "unconfirmed@fixture.test" })
+    .locator('[data-identity="unconfirmed"]')).toBeVisible();
+  expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
+});
+
 test("server paging exposes users beyond the source first twenty", async ({ page, request }) => {
   await request.post("/__fixtures/users-pages", { headers }); await visit(page);
   await page.getByRole("button", { name: "Sljedeća stranica", exact: true }).click(); await expect(page.getByText("Ukupno zapisa: 23", { exact: true })).toBeVisible(); await expect(page.locator("p.page-total")).toHaveCSS("border-radius", "999px"); await expect(page.getByText(/Stranica \d+ od/)).toHaveCount(0);

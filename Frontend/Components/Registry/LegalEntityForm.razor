@@ -7,6 +7,10 @@
         <legend class="app-visually-hidden">@T["legal.details"]</legend>
         <div class="registry-form-grid">
             <RbiField TValue="string" Label="@T["legal.name"]" Required For="@(() => Model.Name)"><RbiInput @bind-Value="Model.Name" maxlength="100" /></RbiField>
+            <div>
+                <label class="app-label" for="legal-bank-customer">@T["legal.bank-lookup"]</label>
+                <BankCustomerPicker Id="legal-bank-customer" Selected="BankCustomerSelected" />
+            </div>
             <RbiRadioGroup TValue="bool?" Label="@T["person.residency"]" Required @bind-Value="Model.IsResident" @bind-Value:after="Model.ResidencyChanged">
                 <RbiRadio TValue="bool?" Value="@((bool?)true)">@T["person.resident"]</RbiRadio><RbiRadio TValue="bool?" Value="@((bool?)false)">@T["person.nonresident"]</RbiRadio>
             </RbiRadioGroup>
@@ -57,6 +61,12 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (_focusErrors) { _focusErrors = false; await _summary.FocusAsync(); }
+    }
+    private void BankCustomerSelected(BankCustomerOption item)
+    {
+        Model.ApplyBankCustomer(item);
+        _context.NotifyFieldChanged(new(Model, nameof(Model.Name)));
+        _context.NotifyFieldChanged(new(Model, nameof(Model.TaxNumber)));
     }
     private void GccSelected(GccOption? item) { Model.GccNumber = item?.Number; Model.GccName = item?.Name; _context.NotifyFieldChanged(new(Model, nameof(Model.GccNumber))); }
     private void BasisChanged() => Model.ConnectionDescription = Bases.FirstOrDefault(item => item.Kod == Model.BasisOfConnection)?.Opis;

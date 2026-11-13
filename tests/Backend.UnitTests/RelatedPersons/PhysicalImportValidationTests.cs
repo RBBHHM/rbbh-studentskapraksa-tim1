@@ -4,6 +4,8 @@ using Moq;
 using RBBH.ConnectedParties.BL.ServiceInterfaces;
 using RBBH.ConnectedParties.BL.Services;
 using RBBH.ConnectedParties.Exceptions;
+using RBBH.ConnectedParties.DL.Entities.RelatedPersons;
+using RBBH.ConnectedParties.DL.Entities.Sifarnici;
 using UnitTests.Mocks.DB;
 
 namespace UnitTests.RelatedPersons;
@@ -29,6 +31,36 @@ public sealed class PhysicalImportValidationTests
         Assert.Equal(1, result.Failed);
         Assert.Contains("Ime je obavezno", Assert.Single(result.Errors));
         Assert.Empty(db.RelatedPersons);
+    }
+
+    [Fact]
+    public async Task PhysicalExportReadsSpecialRelationshipDescriptionFromCodebook()
+    {
+        await using var db = InMemoryContextFactory.Create();
+        db.CodeLists.Add(new CodeList
+        {
+            Kategorija = "OsnovPosebnogOdnosa",
+            Kod = "UPRAVA",
+            Naziv = "Mitglied des Vorstands",
+            Opis = "Approved codebook explanation",
+            KreiranDatum = DateTime.UtcNow,
+            KreiraoKorisnik = "fixture"
+        });
+        db.RelatedPersons.Add(new RelatedPerson
+        {
+            FirstName = "Example",
+            LastName = "Person",
+            SpecialRelationBasis = "UPRAVA",
+            RelationDescription = "Ordinary relation explanation",
+            CreatedBy = "fixture"
+        });
+        await db.SaveChangesAsync();
+        var service = new RelatedPersonService(db, Mock.Of<IEmailService>(), Options.Create(new EmailSettings()));
+        var result = await service.ExportData(default);
+        Assert.True(result.IsSuccessful);
+        var exported = Assert.Single(result.Value);
+        Assert.Equal("Approved codebook explanation", exported.SpecialRelationBasisDescription);
+        Assert.Equal("Ordinary relation explanation", exported.RelationDescription);
     }
 
     [Fact]

@@ -4,6 +4,7 @@
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthenticationState
 @inject IProfileApi Profile
+@inject RuntimeResources Runtime
 
 <a class="app-skip" href="#app-main">@T["nav.skip"]</a>
 <div class="app-shell" data-interactive="@(_interactive ? "true" : null)">
@@ -51,6 +52,7 @@
     {
         Navigation.LocationChanged += RouteChanged;
         if ((await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated != true) return;
+        await Runtime.EnsureAsync();
         try
         {
             var profile = await Profile.GetAsync();
@@ -67,7 +69,7 @@
     private void RouteChanged(object? sender, LocationChangedEventArgs args)
     {
         _menuOpen = false;
-        _ = InvokeAsync(StateHasChanged);
+        _ = InvokeAsync(async () => { await Runtime.EnsureAsync(); StateHasChanged(); });
     }
     public void Dispose() => Navigation.LocationChanged -= RouteChanged;
 }

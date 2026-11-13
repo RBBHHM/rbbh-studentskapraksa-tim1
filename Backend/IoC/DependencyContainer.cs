@@ -42,6 +42,8 @@ namespace RBBH.ConnectedParties.IoC
             services.AddScoped<RoleRequestService>();
             services.AddScoped<RoleCatalogService>();
             services.AddScoped<NotificationDispatcher>();
+            services.AddMemoryCache();
+            services.AddHttpClient<GitHubReleaseNotesService>(client => client.Timeout = TimeSpan.FromSeconds(8));
             services.AddSingleton<RuntimeLocalizationCache>();
             services.AddOptions<RuntimeLocalizationOptions>().Bind(configuration.GetSection("Localization"))
                 .Validate(options => !string.IsNullOrWhiteSpace(options.DefaultLanguage) && options.DefaultLanguage.Length <= 10 &&

@@ -79,7 +79,7 @@ public class LegalEntityController : ControllerBase
         var entity = await _legalEntityService.GetByIdAsync(id);
 
         if (entity is null)
-            return NotFound(Err($"Pravno lice s ID-om {id} nije pronađeno."));
+            return NotFound(Err(BackendMessages.Message("validation.registry.legal.id.missing", id)));
 
         return Ok(entity);
     }
@@ -116,7 +116,7 @@ public class LegalEntityController : ControllerBase
         var result = await _legalEntityService.GetLimitFormDataAsync(id);
 
         if (result is null)
-            return NotFound(Err($"Pravno lice s ID-om {id} nije pronađeno."));
+            return NotFound(Err(BackendMessages.Message("validation.registry.legal.id.missing", id)));
 
         return Ok(result);
     }

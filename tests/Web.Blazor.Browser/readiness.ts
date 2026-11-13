@@ -15,7 +15,7 @@ export async function openPhysical(page: Page) {
 export async function chooseLanguage(scope: Page | Locator, culture: string) {
   const page = "page" in scope && typeof scope.page === "function" ? scope.page() : (scope as Page);
   const navigated = page.waitForNavigation({ waitUntil: "load" });
-  await scope.getByLabel("Jezik", { exact: true }).selectOption(culture);
+  await scope.getByRole("combobox", { name: /^(Jezik|Language|Sprache)$/ }).selectOption(culture);
   await navigated;
   await interactive(page);
 }
