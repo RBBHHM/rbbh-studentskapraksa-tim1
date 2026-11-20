@@ -580,6 +580,7 @@
     "rolecatalog.description": "Manage database-backed application roles and their permissions.",
     "rolecatalog.new": "New role",
     "rolecatalog.edit": "Edit role",
+    "rolecatalog.invalid-name": "Use letters, numbers, periods, underscores or hyphens. The names admin and gost are reserved.",
     "rolecatalog.name": "Role name",
     "rolecatalog.display-name": "Display name",
     "rolecatalog.permissions": "Permissions",

@@ -36,7 +36,6 @@ test("admin can create a DB-backed role with selected permission and search for 
   await page.getByRole("button", { name: "Sačuvaj" }).click();
   await expect(page.getByRole("status").getByText("Rola je uspješno sačuvana.")).toBeVisible();
   await page.locator("#rolecatalog-search").fill("qa_custom");
-  await page.getByRole("button", { name: "Pretraži", exact: true }).click();
   await expect(page.getByRole("table").getByText("qa_custom", { exact: true })).toBeVisible();
   await expect(page.getByRole("table").getByText("QA Custom Role", { exact: true })).toBeVisible();
 });

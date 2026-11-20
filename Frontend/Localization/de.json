@@ -580,6 +580,7 @@
     "rolecatalog.description": "Verwalten Sie datenbankgestützte Anwendungsrollen und deren Berechtigungen.",
     "rolecatalog.new": "Neue Rolle",
     "rolecatalog.edit": "Rolle bearbeiten",
+    "rolecatalog.invalid-name": "Verwenden Sie Buchstaben, Zahlen, Punkte, Unterstriche oder Bindestriche. Die Namen admin und gost sind reserviert.",
     "rolecatalog.name": "Rollenname",
     "rolecatalog.display-name": "Anzeigename",
     "rolecatalog.permissions": "Berechtigungen",

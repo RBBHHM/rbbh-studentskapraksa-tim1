@@ -5,7 +5,7 @@
 
 @if (Open)
 {
-    <RbiDialog Open Class="registry-period-dialog" Title="@T[Purpose == "change" ? "roles.change-title" : "roles.request-title"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="OpenChangedAsync">
+    <RbiDialog Open Class="registry-period-dialog role-request-dialog" Title="@T[Purpose == "change" ? "roles.change-title" : "roles.request-title"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="OpenChangedAsync">
         <DialogBody>
             @if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
             else if (_loadFailed) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T["roles.options-unavailable"]" /><RbiButton OnClick="LoadAsync">@T["state.retry"]</RbiButton> }

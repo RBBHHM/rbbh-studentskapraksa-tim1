@@ -580,6 +580,7 @@
     "rolecatalog.description": "Upravljajte aplikacijskim rolama i njihovim dozvolama iz baze podataka.",
     "rolecatalog.new": "Nova rola",
     "rolecatalog.edit": "Uredi rolu",
+    "rolecatalog.invalid-name": "Koristite slova, brojeve, tačku, podvlaku ili crticu. Nazivi admin i gost su rezervisani.",
     "rolecatalog.name": "Naziv role",
     "rolecatalog.display-name": "Prikazni naziv",
     "rolecatalog.permissions": "Dozvole",

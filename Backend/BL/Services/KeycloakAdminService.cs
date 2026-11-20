@@ -33,19 +33,31 @@ public sealed class KeycloakAdminService
     public async Task<KeycloakIdentity?> FindByEmailAsync(string email, CancellationToken ct)
     {
         if (!IsEnabled || _http.BaseAddress is null || string.IsNullOrWhiteSpace(_client) || string.IsNullOrWhiteSpace(_secret))
+        {
+            _logger.LogWarning("Keycloak identity lookup configuration is incomplete. Enabled {Enabled}, realm endpoint configured {RealmConfigured}, service client configured {ClientConfigured}, service secret configured {SecretConfigured}",
+                IsEnabled, _http.BaseAddress is not null, !string.IsNullOrWhiteSpace(_client), !string.IsNullOrWhiteSpace(_secret));
             throw Unavailable();
+        }
         try
         {
             using var form = new FormUrlEncodedContent(new Dictionary<string, string>
             { ["client_id"] = _client, ["client_secret"] = _secret, ["grant_type"] = "client_credentials" });
             using var tokenResponse = await _http.PostAsync($"realms/{Uri.EscapeDataString(_realm)}/protocol/openid-connect/token", form, ct);
-            if (!tokenResponse.IsSuccessStatusCode) throw Unavailable();
+            if (!tokenResponse.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Keycloak identity lookup token request returned HTTP {StatusCode}", (int)tokenResponse.StatusCode);
+                throw Unavailable();
+            }
             using var token = await tokenResponse.Content.ReadFromJsonAsync<JsonDocument>(ct) ?? throw Unavailable();
             if (!token.RootElement.TryGetProperty("access_token", out var value) || value.ValueKind != JsonValueKind.String || string.IsNullOrEmpty(value.GetString())) throw Unavailable();
             using var request = new HttpRequestMessage(HttpMethod.Get, $"admin/realms/{Uri.EscapeDataString(_realm)}/users?email={Uri.EscapeDataString(email)}&exact=true&max=2");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", value.GetString());
             using var response = await _http.SendAsync(request, ct);
-            if (!response.IsSuccessStatusCode) throw Unavailable();
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Keycloak identity lookup user query returned HTTP {StatusCode}", (int)response.StatusCode);
+                throw Unavailable();
+            }
             var identities = await response.Content.ReadFromJsonAsync<List<KeycloakIdentity>>(ct) ?? [];
             var matches = identities.Where(item => string.Equals(item.Email?.Trim(), email.Trim(), StringComparison.OrdinalIgnoreCase)).Take(2).ToArray();
             if (matches.Length > 1) throw new BusinessRuleException(409, "identity.ambiguous");

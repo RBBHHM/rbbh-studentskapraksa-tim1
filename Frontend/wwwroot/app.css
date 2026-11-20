@@ -428,3 +428,25 @@ h1[tabindex="-1"]:focus, h1:focus-visible { outline: none; }
 .capital-state--active { background: var(--surface-brand-subtle); border-color: var(--border-brand); font-weight: 700; }
 .capital-state--corrected { text-decoration: line-through; }
 .codes-card__meta, .codes-meta { margin: .25rem .25rem 0; display: block; color: var(--text-secondary); font-size: var(--font-size-sm); font-weight: 400; }
+
+.role-catalog-search { width: min(100%, 24rem); margin-block-end: 1rem; }
+.role-catalog-search input { width: 100%; }
+.role-catalog-form, .role-request-dialog .registry-period-form {
+    display: grid;
+    gap: .75rem;
+}
+.role-catalog-form > input, .role-catalog-form > textarea, .role-request-dialog textarea {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    font: inherit;
+}
+.role-catalog-permissions, .role-catalog-permission-group { min-width: 0; }
+.role-catalog-permission-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+    gap: .5rem;
+    margin-block: .5rem;
+}
+.role-catalog-permission { display: flex; align-items: center; gap: .5rem; overflow-wrap: anywhere; }
+.role-catalog-permission input { flex: none; accent-color: var(--text-primary); }

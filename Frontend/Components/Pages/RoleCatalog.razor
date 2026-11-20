@@ -24,10 +24,10 @@ else
         <RbiButton OnClick="LoadAsync" Disabled="_refreshing">@T["state.retry"]</RbiButton>
     }
     @if (_notice is not null) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@T[_notice]" /></div> }
-    <div class="registry-controls">
-        <label class="app-label" for="rolecatalog-search">@T["rolecatalog.search"]</label>
-        <input id="rolecatalog-search" class="rbi-input" maxlength="100" @bind="_search" @bind:event="oninput" />
-        <RbiButton OnClick="SearchAsync" Disabled="@(_busy || _refreshing)">@T["rolecatalog.search-action"]</RbiButton>
+    <div class="role-catalog-search">
+        <input id="rolecatalog-search" type="search" class="rbi-input" maxlength="100"
+               aria-label="@T["rolecatalog.search"]" placeholder="@T["rolecatalog.search"]"
+               value="@_search" @oninput="SearchAsync" />
     </div>
     @if (_page.Items.Count == 0 && _error is null)
     {
@@ -78,20 +78,20 @@ else
 {
     <RbiDialog Open Class="app-form-dialog app-form-dialog--md" Title="@T[draft.Id is null ? "rolecatalog.new" : "rolecatalog.edit"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseDialog">
         <DialogBody>
-            <form class="registry-period-form" @onsubmit="SaveAsync" @onsubmit:preventDefault novalidate>
+            <form class="registry-period-form role-catalog-form" @onsubmit="SaveAsync" @onsubmit:preventDefault novalidate>
                 @if (draft.Id is null)
                 {
-                    <label class="app-label" for="rolecatalog-name">@T["rolecatalog.name"]</label>
-                    <input id="rolecatalog-name" class="rbi-input" maxlength="100" required @bind="draft.Name" @bind:event="oninput" />
+                    <label class="app-label" for="rolecatalog-name">@T["rolecatalog.name"] <span aria-hidden="true">*</span></label>
+                    <input id="rolecatalog-name" class="rbi-input" maxlength="100" required placeholder="@T["rolecatalog.name"]" @bind="draft.Name" @bind:event="oninput" />
                 }
                 else
                 {
                     <p><strong>@T["rolecatalog.name"]:</strong> @draft.Name</p>
                 }
-                <label class="app-label" for="rolecatalog-display-name">@T["rolecatalog.display-name"]</label>
-                <input id="rolecatalog-display-name" class="rbi-input" maxlength="100" required @bind="draft.DisplayName" @bind:event="oninput" />
+                <label class="app-label" for="rolecatalog-display-name">@T["rolecatalog.display-name"] <span aria-hidden="true">*</span></label>
+                <input id="rolecatalog-display-name" class="rbi-input" maxlength="100" required placeholder="@T["rolecatalog.display-name"]" @bind="draft.DisplayName" @bind:event="oninput" />
                 <label class="app-label" for="rolecatalog-description">@T["rolecatalog.description-field"]</label>
-                <textarea id="rolecatalog-description" class="rbi-textarea" rows="2" maxlength="500" @bind="draft.Description" @bind:event="oninput"></textarea>
+                <textarea id="rolecatalog-description" class="rbi-textarea" rows="2" maxlength="500" placeholder="@T["rolecatalog.description-field"]" @bind="draft.Description" @bind:event="oninput"></textarea>
                 @if (draft.Id is not null)
                 {
                     <label class="app-label" for="rolecatalog-active">
@@ -99,20 +99,30 @@ else
                         @T["rolecatalog.active"]
                     </label>
                 }
-                <fieldset class="registry-surface">
+                <fieldset class="registry-user-fieldset role-catalog-permissions">
                     <legend>@T["rolecatalog.permissions"]</legend>
                     @foreach (var group in _permissions.GroupBy(item => item.Module).OrderBy(item => item.Key))
                     {
-                        <h3>@group.Key</h3>
-                        @foreach (var permission in group)
-                        {
-                            <label class="app-label" for="@("rolecatalog-permission-" + permission.Id.ToString("N"))">
-                                <input id="@("rolecatalog-permission-" + permission.Id.ToString("N"))" type="checkbox" checked="@draft.PermissionIds.Contains(permission.Id)" @onchange="args => SelectPermission(permission.Id, args.Value is true)" />
-                                @permission.Code
-                            </label>
-                        }
+                        <fieldset class="role-catalog-permission-group">
+                            <legend>@group.Key</legend>
+                            @foreach (var permission in group)
+                            {
+                                <label class="role-catalog-permission" for="@("rolecatalog-permission-" + permission.Id.ToString("N"))">
+                                    <input id="@("rolecatalog-permission-" + permission.Id.ToString("N"))" type="checkbox" checked="@draft.PermissionIds.Contains(permission.Id)" @onchange="args => SelectPermission(permission.Id, args.Value is true)" />
+                                    @permission.Code
+                                </label>
+                            }
+                        </fieldset>
                     }
                 </fieldset>
+                @if ((draft.Id is null && string.IsNullOrWhiteSpace(draft.Name)) || string.IsNullOrWhiteSpace(draft.DisplayName))
+                {
+                    <p class="app-hint">@T["validation.required"]</p>
+                }
+                else if (!ValidDraft)
+                {
+                    <p class="app-error" role="status">@T["rolecatalog.invalid-name"]</p>
+                }
                 @if (_formError is not null) { <p role="alert" class="app-error">@T[_formError]</p> }
                 <div class="registry-toolbar">
                     <RbiButton Variant="RbiButtonVariant.Secondary" Disabled="_busy" OnClick="() => CloseDialog(false)">@T["common.cancel"]</RbiButton>
@@ -140,6 +150,7 @@ else
     private bool _disposed, _authenticated, _canRead, _canWrite, _loading = true, _refreshing, _busy;
     private int _pageNumber = 1;
     private string _search = "";
+    private CancellationTokenSource? _searchRequest;
     private string? _error, _formError, _notice;
     private RoleCatalogPage _page = new([], 0, 1, 20);
     private IReadOnlyList<RolePermissionOption> _permissions = [];
@@ -167,12 +178,13 @@ else
             _canRead = ApplicationAccess.IsAdministrator(profile) && profile.Permissions.Contains("ADMINISTRATION_VIEW");
             _canWrite = _canRead && profile.Permissions.Contains("ADMINISTRATION_MANAGE");
             if (!_canRead) return;
-            _page = await Api.ListAsync(_pageNumber, _search, _token);
-            _permissions = (await Api.PermissionsAsync(_token)).Items;
+            _page = await Api.ListAsync(_pageNumber, _search.Trim(), _token);
+            if (_canWrite && _permissions.Count == 0)
+                _permissions = (await Api.PermissionsAsync(_token)).Items;
             if (_pageNumber > TotalPages)
             {
                 _pageNumber = TotalPages;
-                _page = await Api.ListAsync(_pageNumber, _search, _token);
+                _page = await Api.ListAsync(_pageNumber, _search.Trim(), _token);
             }
         }
         catch (RegistryApiException exception) { _error = exception.MessageKey; }
@@ -180,8 +192,36 @@ else
         finally { _loading = false; _refreshing = false; }
     }
 
-    private async Task SearchAsync() { if (_busy || _refreshing) return; _pageNumber = 1; await LoadAsync(); }
-    private async Task ChangePageAsync(int page) { if (_busy || _refreshing || page < 1 || page > TotalPages) return; _pageNumber = page; await LoadAsync(); }
+    private async Task SearchAsync(ChangeEventArgs args)
+    {
+        if (_disposed) return;
+        _search = args.Value?.ToString() ?? "";
+        _searchRequest?.Cancel();
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(_token);
+        _searchRequest = request;
+        try
+        {
+            await Task.Delay(250, request.Token);
+            while (_refreshing || _busy)
+                await Task.Delay(50, request.Token);
+
+            var results = await Api.ListAsync(1, _search.Trim(), request.Token);
+            request.Token.ThrowIfCancellationRequested();
+            _pageNumber = 1;
+            _page = results;
+            _error = null;
+        }
+        catch (RegistryApiException exception)
+        {
+            if (!request.IsCancellationRequested) _error = exception.MessageKey;
+        }
+        catch (OperationCanceledException) when (request.IsCancellationRequested) { }
+        finally
+        {
+            if (ReferenceEquals(_searchRequest, request)) _searchRequest = null;
+        }
+    }
+    private async Task ChangePageAsync(int page) { if (_busy || _refreshing || _searchRequest is not null || page < 1 || page > TotalPages) return; _pageNumber = page; await LoadAsync(); }
     private void NewRole() { if (_canWrite && !_busy) { _formError = null; _draft = new(); } }
     private void EditRole(RoleDefinition role)
     {
