@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.SwaggerGen;
 using System.Reflection;
 
 namespace RBBH.ConnectedParties.IoC.Extensions.Swagger
@@ -24,6 +26,15 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Swagger
                     }
                 });
 
+                options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                {
+                    Type = SecuritySchemeType.Http,
+                    Scheme = "bearer",
+                    BearerFormat = "JWT",
+                    Description = "Paste a Keycloak access token."
+                });
+
+                options.OperationFilter<BearerAuthorizationOperationFilter>();
                 options.OperationFilter<AddCorrelationIdHeader>();
 
                 // Include XML comments if available
@@ -32,6 +43,24 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Swagger
             });
 
             return services;
+        }
+    }
+
+    public sealed class BearerAuthorizationOperationFilter : IOperationFilter
+    {
+        public void Apply(OpenApiOperation operation, OperationFilterContext context)
+        {
+            var metadata = context.ApiDescription.ActionDescriptor.EndpointMetadata;
+            if (metadata.OfType<IAllowAnonymous>().Any() || !metadata.OfType<IAuthorizeData>().Any())
+                return;
+
+            operation.Security.Add(new OpenApiSecurityRequirement
+            {
+                [new OpenApiSecurityScheme
+                {
+                    Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+                }] = Array.Empty<string>()
+            });
         }
     }
 }
