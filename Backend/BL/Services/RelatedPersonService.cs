@@ -298,7 +298,7 @@ public class RelatedPersonService(
         entity.JMBG = NormalizeIdentifier(entity.JMBG);
         entity.PassportNumber = NormalizeIdentifier(entity.PassportNumber)?.ToUpperInvariant();
         entity.FBAId = NormalizeIdentifier(entity.FBAId);
-        entity.ModifiedAt = DateTime.UtcNow;
+        entity.MarkModified(DateTime.UtcNow);
         entity.ModifiedBy = korisnik;
 
         _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("RelatedPerson", entity.Id.ToString(), "UPDATE", korisnik, actor,
@@ -328,7 +328,7 @@ public class RelatedPersonService(
         // Soft-delete matičnog lica
         var before = entity.Adapt<RelatedPersonResponseDTO>();
         entity.IsActive = false;
-        entity.ModifiedAt = now;
+        entity.MarkModified(now);
         entity.ModifiedBy = korisnik;
 
         // Povezana lica ostaju u registru; uklanja se samo veza prema obrisanom licu.
@@ -337,7 +337,7 @@ public class RelatedPersonService(
             _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("RelatedPerson", member.Id.ToString(), "UPDATE", korisnik, actor,
                 oldValues: new { relatedToPersonId = entity.Id }, newValues: new { relatedToPersonId = (Guid?)null }));
             member.RelatedToPersonId = null;
-            member.ModifiedAt = now;
+            member.MarkModified(now);
             member.ModifiedBy = korisnik;
         }
 
@@ -369,7 +369,7 @@ public class RelatedPersonService(
         entity.VerifiedBy = korisnik;
         entity.VerifiedAt = DateTime.UtcNow;
         entity.ModifiedBy = korisnik;
-        entity.ModifiedAt = DateTime.UtcNow;
+        entity.MarkModified(DateTime.UtcNow);
 
         _dbContext.AuditLogs.Add(Helpers.RegistryVerification.Audit("RelatedPerson", entity.Id, korisnik, actor));
         await _dbContext.SaveChangesAsync();

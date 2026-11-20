@@ -27,7 +27,7 @@ public sealed class RegistryVerificationSqlTests : AuthenticatedApiFixture
     }
 
     [SqlServerFact]
-    public async Task SimultaneousVerificationsUseRowVersionAndCommitExactlyOneAudit()
+    public async Task SimultaneousVerificationsCommitExactlyOneAudit()
     {
         var id = await CreateLegal();
         using var first = NewClient("reviewer"); using var second = NewClient("admin2");
@@ -71,7 +71,7 @@ public sealed class RegistryVerificationSqlTests : AuthenticatedApiFixture
             await db.Database.MigrateAsync();
             var row = await db.LegalEntities.SingleAsync();
             Assert.Null(row.CreatorSubject); Assert.Equal("Historical company", row.Name);
-            Assert.Equal("historical@example.test", row.CreatedBy); Assert.NotNull(row.Version);
+            Assert.Equal("historical@example.test", row.CreatedBy);
         }
         finally { await db.Database.EnsureDeletedAsync(); }
     }

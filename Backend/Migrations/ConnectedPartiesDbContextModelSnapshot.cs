@@ -244,6 +244,7 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasColumnName("RegistrationNumber");
 
                     b.Property<DateTime?>("ModifiedAt")
+                        .IsConcurrencyToken()
                         .HasColumnType("datetime2");
 
                     b.Property<string>("ModifiedBy")
@@ -270,11 +271,6 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<string>("VerifiedBy")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
-
-                    b.Property<byte[]>("Version")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
 
                     b.HasKey("Id");
 
@@ -715,6 +711,7 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasColumnType("bit");
 
                     b.Property<DateTime?>("ModifiedAt")
+                        .IsConcurrencyToken()
                         .HasColumnType("datetime2");
 
                     b.Property<string>("ModifiedBy")
@@ -763,11 +760,6 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<string>("VerifiedBy")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
-
-                    b.Property<byte[]>("Version")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
 
                     b.HasKey("Id");
 
@@ -1025,7 +1017,8 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(250)
-                        .HasColumnType("nvarchar(250)");
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("Label");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");

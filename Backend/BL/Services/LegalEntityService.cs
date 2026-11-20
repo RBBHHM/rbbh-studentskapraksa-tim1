@@ -170,7 +170,7 @@ public partial class LegalEntityService : ILegalEntityService
         entity.DateFrom = dto.DateFrom;
         entity.DateTo = dto.DateTo;
         entity.ModifiedBy = modifiedBy;
-        entity.ModifiedAt = DateTime.UtcNow;
+        entity.MarkModified(DateTime.UtcNow);
 
         _context.AuditLogs.Add(Helpers.BusinessAudit.Create("LegalEntity", entity.Id.ToString(), "UPDATE", modifiedBy, _actor, oldValues: before, newValues: MapToDto(entity)));
         await _context.SaveChangesAsync(_actor?.HttpContext?.RequestAborted ?? default);
@@ -192,7 +192,7 @@ public partial class LegalEntityService : ILegalEntityService
 
         entity.IsActive = false;
         entity.ModifiedBy = deletedBy;
-        entity.ModifiedAt = DateTime.UtcNow;
+        entity.MarkModified(DateTime.UtcNow);
 
         _context.AuditLogs.Add(Helpers.BusinessAudit.Create("LegalEntity", entity.Id.ToString(), "DELETE", deletedBy, _actor,
             oldValues: new { isActive = true }, newValues: new { isActive = false }));
@@ -219,7 +219,7 @@ public partial class LegalEntityService : ILegalEntityService
         entity.VerifiedBy = verifiedBy;
         entity.VerifiedAt = DateTime.UtcNow;
         entity.ModifiedBy = verifiedBy;
-        entity.ModifiedAt = DateTime.UtcNow;
+        entity.MarkModified(DateTime.UtcNow);
 
         _context.AuditLogs.Add(Helpers.RegistryVerification.Audit("LegalEntity", entity.Id, verifiedBy, _actor));
         await _context.SaveChangesAsync();

@@ -144,6 +144,7 @@ public partial class ConnectedPartiesDbContext : DbContext
 
         modelBuilder.Entity<Permission>(entity =>
         {
+            entity.Property(e => e.Description).HasColumnName("Label");
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.Code).IsUnique();
         });

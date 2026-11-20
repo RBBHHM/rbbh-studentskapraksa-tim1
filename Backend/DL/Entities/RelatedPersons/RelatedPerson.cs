@@ -128,14 +128,19 @@ public class RelatedPerson
     [StringLength(100)]
     public string? CreatorSubject { get; internal set; }
 
-    [Timestamp]
-    public byte[]? Version { get; set; }
+    internal void MarkModified(DateTime timestamp)
+    {
+        ModifiedAt = ModifiedAt is { } previous && previous >= timestamp
+            ? previous.AddTicks(1)
+            : timestamp;
+    }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     [StringLength(100)]
     public string CreatedBy { get; set; } = string.Empty;
 
+    [ConcurrencyCheck]
     public DateTime? ModifiedAt { get; set; }
 
     [StringLength(100)]
