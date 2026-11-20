@@ -10,6 +10,8 @@ public class LegalEntityConfiguration : IEntityTypeConfiguration<LegalEntity>
     public void Configure(EntityTypeBuilder<LegalEntity> builder)
     {
         builder.HasKey(e => e.Id);
+        builder.Property(e => e.MaticniBroj).HasColumnName("RegistrationNumber");
+        builder.Property(e => e.Matbroj).HasColumnName("BankCustomerNumber");
 
         // Porezni broj mora biti jedinstven kada je postavljen (rezidenti)
         builder.HasIndex(e => e.TaxNumber)

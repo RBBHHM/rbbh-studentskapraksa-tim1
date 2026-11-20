@@ -62,6 +62,14 @@ public partial class ConnectedPartiesDbContext : DbContext
         modelBuilder.Entity<CodeList>(entity =>
         {
             entity.ToTable("CodeListValues");
+            entity.Property(e => e.Naziv).HasColumnName("Name");
+            entity.Property(e => e.Opis).HasColumnName("Description");
+            entity.Property(e => e.Aktivan).HasColumnName("IsActive");
+            entity.Property(e => e.RedoslijedPrikaza).HasColumnName("DisplayOrder");
+            entity.Property(e => e.KreiranDatum).HasColumnName("CreatedAt");
+            entity.Property(e => e.KreiraoKorisnik).HasColumnName("CreatedBy");
+            entity.Property(e => e.IzmijenjenDatum).HasColumnName("ModifiedAt");
+            entity.Property(e => e.IzmijenioKorisnik).HasColumnName("ModifiedBy");
             entity.HasKey(e => e.ID);
             entity.HasIndex(e => e.Kategorija);
             entity.HasQueryFilter(e => e.Aktivan);

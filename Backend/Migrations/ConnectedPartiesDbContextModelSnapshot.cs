@@ -235,11 +235,13 @@ namespace RBBH.ConnectedParties.Migrations
 
                     b.Property<string>("Matbroj")
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("BankCustomerNumber");
 
                     b.Property<string>("MaticniBroj")
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("RegistrationNumber");
 
                     b.Property<DateTime?>("ModifiedAt")
                         .HasColumnType("datetime2");
@@ -1193,7 +1195,8 @@ namespace RBBH.ConnectedParties.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
 
                     b.Property<bool>("Aktivan")
-                        .HasColumnType("bit");
+                        .HasColumnType("bit")
+                        .HasColumnName("IsActive");
 
                     b.Property<Guid?>("DefinitionId")
                         .HasColumnType("uniqueidentifier");
@@ -1204,10 +1207,12 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<string>("IzmijenioKorisnik")
                         .HasMaxLength(100)
                         .IsUnicode(false)
-                        .HasColumnType("varchar(100)");
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("ModifiedBy");
 
                     b.Property<DateTime?>("IzmijenjenDatum")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("ModifiedAt");
 
                     b.Property<string>("Kategorija")
                         .IsRequired()
@@ -1222,13 +1227,15 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasColumnType("varchar(50)");
 
                     b.Property<DateTime>("KreiranDatum")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CreatedAt");
 
                     b.Property<string>("KreiraoKorisnik")
                         .IsRequired()
                         .HasMaxLength(100)
                         .IsUnicode(false)
-                        .HasColumnType("varchar(100)");
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("CreatedBy");
 
                     b.Property<string>("LanguageCode")
                         .HasMaxLength(10)
@@ -1237,7 +1244,8 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<string>("Naziv")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("Name");
 
                     b.Property<string>("NormalizedCategory")
                         .ValueGeneratedOnAddOrUpdate()
@@ -1253,10 +1261,12 @@ namespace RBBH.ConnectedParties.Migrations
 
                     b.Property<string>("Opis")
                         .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("Description");
 
                     b.Property<int?>("RedoslijedPrikaza")
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("DisplayOrder");
 
                     b.Property<string>("ResourceHelper")
                         .HasMaxLength(4000)
