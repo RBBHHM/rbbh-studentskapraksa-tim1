@@ -1097,13 +1097,8 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("NormalizedName")
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)")
-                        .HasComputedColumnSql("UPPER(LTRIM(RTRIM([Name])))", true);
+                        .UseCollation("Latin1_General_100_CI_AS");
 
                     b.Property<int>("Version")
                         .IsConcurrencyToken()
@@ -1114,10 +1109,10 @@ namespace RBBH.ConnectedParties.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.HasIndex("NormalizedName")
-                        .IsUnique();
-
-                    b.ToTable("Roles");
+                    b.ToTable("Roles", t =>
+                        {
+                            t.HasCheckConstraint("CK_Roles_Name_Trimmed", "DATALENGTH([Name]) = DATALENGTH(LTRIM(RTRIM([Name])))");
+                        });
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Role.RolePermission", b =>
@@ -1206,13 +1201,15 @@ namespace RBBH.ConnectedParties.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .IsUnicode(false)
-                        .HasColumnType("varchar(100)");
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("Category");
 
                     b.Property<string>("Kod")
                         .IsRequired()
                         .HasMaxLength(50)
                         .IsUnicode(false)
-                        .HasColumnType("varchar(50)");
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("Code");
 
                     b.Property<DateTime>("KreiranDatum")
                         .HasColumnType("datetime2")
@@ -1239,13 +1236,13 @@ namespace RBBH.ConnectedParties.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)")
-                        .HasComputedColumnSql("UPPER(LTRIM(RTRIM([Kategorija])))", true);
+                        .HasComputedColumnSql("UPPER(LTRIM(RTRIM([Category])))", true);
 
                     b.Property<string>("NormalizedCode")
                         .ValueGeneratedOnAddOrUpdate()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)")
-                        .HasComputedColumnSql("UPPER(LTRIM(RTRIM([Kod])))", true);
+                        .HasComputedColumnSql("UPPER(LTRIM(RTRIM([Code])))", true);
 
                     b.Property<string>("Opis")
                         .HasMaxLength(500)
@@ -1324,13 +1321,8 @@ namespace RBBH.ConnectedParties.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .IsUnicode(false)
-                        .HasColumnType("varchar(100)");
-
-                    b.Property<string>("NormalizedName")
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasComputedColumnSql("UPPER(LTRIM(RTRIM([Name])))", true);
+                        .HasColumnType("varchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS");
 
                     b.Property<int>("Version")
                         .IsConcurrencyToken()
@@ -1341,10 +1333,10 @@ namespace RBBH.ConnectedParties.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.HasIndex("NormalizedName")
-                        .IsUnique();
-
-                    b.ToTable("CodeListDefinitions");
+                    b.ToTable("CodeListDefinitions", t =>
+                        {
+                            t.HasCheckConstraint("CK_CodeListDefinitions_Name_Trimmed", "DATALENGTH([Name]) = DATALENGTH(LTRIM(RTRIM([Name])))");
+                        });
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Users.AppUser", b =>
@@ -1364,7 +1356,8 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(200)")
+                        .UseCollation("Latin1_General_100_CI_AS");
 
                     b.Property<string>("FirstName")
                         .IsRequired()
@@ -1395,22 +1388,11 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("NormalizedEmail")
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)")
-                        .HasComputedColumnSql("UPPER(LTRIM(RTRIM([Email])))", true);
-
-                    b.Property<string>("NormalizedUsername")
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasComputedColumnSql("UPPER(LTRIM(RTRIM([Username])))", true);
-
                     b.Property<string>("Username")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS");
 
                     b.HasKey("Id");
 
@@ -1420,16 +1402,15 @@ namespace RBBH.ConnectedParties.Migrations
                     b.HasIndex("KeycloakId")
                         .IsUnique();
 
-                    b.HasIndex("NormalizedEmail")
-                        .IsUnique();
-
-                    b.HasIndex("NormalizedUsername")
-                        .IsUnique();
-
                     b.HasIndex("Username")
                         .IsUnique();
 
-                    b.ToTable("AppUsers");
+                    b.ToTable("AppUsers", t =>
+                        {
+                            t.HasCheckConstraint("CK_AppUsers_Email_Trimmed", "DATALENGTH([Email]) = DATALENGTH(LTRIM(RTRIM([Email])))");
+
+                            t.HasCheckConstraint("CK_AppUsers_Username_Trimmed", "DATALENGTH([Username]) = DATALENGTH(LTRIM(RTRIM([Username])))");
+                        });
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Authorization.RequestedRole", b =>

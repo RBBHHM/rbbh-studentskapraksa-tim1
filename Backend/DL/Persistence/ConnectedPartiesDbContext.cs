@@ -62,6 +62,8 @@ public partial class ConnectedPartiesDbContext : DbContext
         modelBuilder.Entity<CodeList>(entity =>
         {
             entity.ToTable("CodeListValues");
+            entity.Property(e => e.Kategorija).HasColumnName("Category");
+            entity.Property(e => e.Kod).HasColumnName("Code");
             entity.Property(e => e.Naziv).HasColumnName("Name");
             entity.Property(e => e.Opis).HasColumnName("Description");
             entity.Property(e => e.Aktivan).HasColumnName("IsActive");
@@ -74,8 +76,8 @@ public partial class ConnectedPartiesDbContext : DbContext
             entity.HasIndex(e => e.Kategorija);
             entity.HasQueryFilter(e => e.Aktivan);
             entity.HasOne(e => e.Definition).WithMany().HasForeignKey(e => e.DefinitionId).OnDelete(DeleteBehavior.Restrict);
-            entity.Property<string>("NormalizedCategory").HasMaxLength(100).HasComputedColumnSql("UPPER(LTRIM(RTRIM([Kategorija])))", stored: true);
-            entity.Property<string>("NormalizedCode").HasMaxLength(50).HasComputedColumnSql("UPPER(LTRIM(RTRIM([Kod])))", stored: true);
+            entity.Property<string>("NormalizedCategory").HasMaxLength(100).HasComputedColumnSql("UPPER(LTRIM(RTRIM([Category])))", stored: true);
+            entity.Property<string>("NormalizedCode").HasMaxLength(50).HasComputedColumnSql("UPPER(LTRIM(RTRIM([Code])))", stored: true);
             entity.HasIndex("NormalizedCategory", "NormalizedCode").IsUnique().HasFilter(null);
             entity.Property(e => e.ResourceKey).UseCollation("Latin1_General_100_CI_AS");
             entity.HasIndex(e => new { e.Kategorija, e.LanguageCode, e.ResourceKey }).IsUnique()
@@ -85,8 +87,9 @@ public partial class ConnectedPartiesDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.Name).IsUnique();
-            entity.Property<string>("NormalizedName").HasMaxLength(100).HasComputedColumnSql("UPPER(LTRIM(RTRIM([Name])))", stored: true);
-            entity.HasIndex("NormalizedName").IsUnique().HasFilter(null);
+            entity.Property(e => e.Name).UseCollation("Latin1_General_100_CI_AS");
+            entity.ToTable(table => table.HasCheckConstraint("CK_CodeListDefinitions_Name_Trimmed",
+                "DATALENGTH([Name]) = DATALENGTH(LTRIM(RTRIM([Name])))"));
         });
 
         modelBuilder.Entity<AppUser>(entity =>
@@ -95,12 +98,15 @@ public partial class ConnectedPartiesDbContext : DbContext
             entity.HasIndex(e => e.KeycloakId).IsUnique();
             entity.HasIndex(e => e.Username).IsUnique();
             entity.HasIndex(e => e.Email).IsUnique();
-            entity.Property<string>("NormalizedEmail").HasMaxLength(200)
-                .HasComputedColumnSql("UPPER(LTRIM(RTRIM([Email])))", stored: true);
-            entity.Property<string>("NormalizedUsername").HasMaxLength(100)
-                .HasComputedColumnSql("UPPER(LTRIM(RTRIM([Username])))", stored: true);
-            entity.HasIndex("NormalizedEmail").IsUnique().HasFilter(null);
-            entity.HasIndex("NormalizedUsername").IsUnique().HasFilter(null);
+            entity.Property(e => e.Email).UseCollation("Latin1_General_100_CI_AS");
+            entity.Property(e => e.Username).UseCollation("Latin1_General_100_CI_AS");
+            entity.ToTable(table =>
+            {
+                table.HasCheckConstraint("CK_AppUsers_Email_Trimmed",
+                    "DATALENGTH([Email]) = DATALENGTH(LTRIM(RTRIM([Email])))");
+                table.HasCheckConstraint("CK_AppUsers_Username_Trimmed",
+                    "DATALENGTH([Username]) = DATALENGTH(LTRIM(RTRIM([Username])))");
+            });
         });
 
         modelBuilder.Entity<AuditLog>(entity =>
@@ -116,8 +122,9 @@ public partial class ConnectedPartiesDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.Name).IsUnique();
-            entity.Property<string>("NormalizedName").HasMaxLength(100).HasComputedColumnSql("UPPER(LTRIM(RTRIM([Name])))", stored: true);
-            entity.HasIndex("NormalizedName").IsUnique().HasFilter(null);
+            entity.Property(e => e.Name).UseCollation("Latin1_General_100_CI_AS");
+            entity.ToTable(table => table.HasCheckConstraint("CK_Roles_Name_Trimmed",
+                "DATALENGTH([Name]) = DATALENGTH(LTRIM(RTRIM([Name])))"));
         });
 
         modelBuilder.Entity<UserRole>(entity =>
