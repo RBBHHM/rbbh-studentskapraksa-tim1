@@ -7,13 +7,19 @@ public class LimitConfiguration : IEntityTypeConfiguration<Limit>
 {
     public void Configure(EntityTypeBuilder<Limit> builder)
     {
-        builder.ToTable("Limiti");
+        builder.ToTable("Limits");
 
         builder.HasKey(e => e.Id);
 
         builder.Property(e => e.TipLimita)
+               .HasColumnName("LimitType")
                .HasMaxLength(100)
                .IsRequired();
+
+        builder.Property(e => e.OdobreniLimit).HasColumnName("ApprovedLimit");
+        builder.Property(e => e.RokOcekivaneUtilizacije).HasColumnName("ExpectedUtilizationDate");
+        builder.Property(e => e.MaksimalnaOcekivanaUtilizacija).HasColumnName("MaximumExpectedUtilization");
+        builder.Property(e => e.Komentar).HasColumnName("Comment");
 
         builder.Property(e => e.CreatedBy)
                .HasMaxLength(100)

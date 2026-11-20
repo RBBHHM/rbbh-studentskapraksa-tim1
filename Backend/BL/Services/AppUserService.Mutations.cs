@@ -150,8 +150,10 @@ public partial class AppUserService
     private async Task ReplaceLocalRoles(Guid userId, IReadOnlyCollection<Guid> roleIds, string actorEmail, CancellationToken cancellationToken)
     {
         var existing = await _db.UserRoles.Where(item => item.UserId == userId).ToListAsync(cancellationToken);
+        var modifiedAt = DateTime.UtcNow;
+        var targetRoleIds = roleIds.ToHashSet();
         foreach (var item in existing)
-            item.IsActive = roleIds.Contains(item.RoleId);
+            item.SetActive(targetRoleIds.Contains(item.RoleId), actorEmail, modifiedAt);
 
         var existingRoleIds = existing.Select(item => item.RoleId).ToHashSet();
         foreach (var roleId in roleIds.Where(roleId => !existingRoleIds.Contains(roleId)))

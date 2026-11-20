@@ -61,6 +61,7 @@ public partial class ConnectedPartiesDbContext : DbContext
         });
         modelBuilder.Entity<CodeList>(entity =>
         {
+            entity.ToTable("CodeListValues");
             entity.HasKey(e => e.ID);
             entity.HasIndex(e => e.Kategorija);
             entity.HasQueryFilter(e => e.Aktivan);

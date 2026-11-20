@@ -20,5 +20,19 @@ public class UserRole
 
     public string CreatedBy { get; set; } = string.Empty;
 
+    public DateTime? ModifiedAt { get; set; }
+
+    [StringLength(100)]
+    public string? ModifiedBy { get; set; }
+
+    internal void SetActive(bool isActive, string actor, DateTime timestamp)
+    {
+        if (IsActive == isActive) return;
+
+        IsActive = isActive;
+        ModifiedBy = actor;
+        ModifiedAt = timestamp;
+    }
+
     public virtual Role Role { get; set; } = null!;
 }

@@ -313,13 +313,15 @@ namespace RBBH.ConnectedParties.Migrations
 
                     b.Property<string>("Komentar")
                         .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("Comment");
 
                     b.Property<Guid>("LegalEntityId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal?>("MaksimalnaOcekivanaUtilizacija")
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("MaximumExpectedUtilization");
 
                     b.Property<DateTime?>("ModifiedAt")
                         .HasColumnType("datetime2");
@@ -329,15 +331,18 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<decimal?>("OdobreniLimit")
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("ApprovedLimit");
 
                     b.Property<DateTime?>("RokOcekivaneUtilizacije")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("ExpectedUtilizationDate");
 
                     b.Property<string>("TipLimita")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("LimitType");
 
                     b.HasKey("Id");
 
@@ -349,7 +354,7 @@ namespace RBBH.ConnectedParties.Migrations
 
                     b.HasIndex("TipLimita");
 
-                    b.ToTable("Limiti", (string)null);
+                    b.ToTable("Limits", (string)null);
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Notifications.ApplicationNotification", b =>
@@ -1156,6 +1161,13 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<Guid>("RoleId")
                         .HasColumnType("uniqueidentifier");
 
@@ -1276,7 +1288,7 @@ namespace RBBH.ConnectedParties.Migrations
                         .IsUnique()
                         .HasFilter("[LanguageCode] IS NOT NULL AND [ResourceKey] IS NOT NULL");
 
-                    b.ToTable("CodeLists");
+                    b.ToTable("CodeListValues", (string)null);
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Sifarnici.CodeListDefinition", b =>

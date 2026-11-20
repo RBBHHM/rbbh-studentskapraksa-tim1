@@ -201,7 +201,7 @@ public static class DevelopmentDataSeeder
                 if (existing is null)
                     db.UserRoles.Add(new UserRole { UserId = localAdmin.Id, RoleId = role.Id, CreatedBy = "seed" });
                 else
-                    existing.IsActive = true;
+                    existing.SetActive(true, "seed", DateTime.UtcNow);
             }
         }
 

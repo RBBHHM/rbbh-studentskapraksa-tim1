@@ -125,10 +125,14 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
                 var removesAdmin = existing.Any(item => item.IsActive && item.Role.Name == ApplicationAccessRoles.Administrator && !targets.Contains(item.RoleId));
                 if (removesAdmin && await ActiveAdmins().Select(user => user.Id).Distinct().Take(2).CountAsync(ct) <= 1)
                     throw Conflict("users.final_admin");
-                foreach (var assignment in existing) assignment.IsActive = targets.Contains(assignment.RoleId);
+                var actor = AuthenticatedActor.Username(Principal);
+                var modifiedAt = DateTime.UtcNow;
+                foreach (var assignment in existing)
+                    assignment.SetActive(targets.Contains(assignment.RoleId), actor, modifiedAt);
                 foreach (var roleId in targets.Except(existing.Select(item => item.RoleId)))
-                    db.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = roleId, CreatedBy = AuthenticatedActor.Username(Principal) });
-                user.ModifiedAt = DateTime.UtcNow; user.ModifiedBy = AuthenticatedActor.Username(Principal);
+                    db.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = roleId, CreatedBy = actor });
+                user.ModifiedAt = modifiedAt;
+                user.ModifiedBy = actor;
             }
             row.Status = outcome; row.DecisionId = input.DecisionId; row.DecisionNote = input.Note?.Trim();
             row.ProcessedAt = DateTime.UtcNow; row.ProcessedBy = Subject; row.Version++;
