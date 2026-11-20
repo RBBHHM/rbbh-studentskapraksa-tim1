@@ -23,8 +23,8 @@ public class RelatedPersonConfiguration : IEntityTypeConfiguration<RelatedPerson
                .HasMaxLength(20);
 
         builder.Property(e => e.JMBG).HasMaxLength(13);
-        builder.Property(e => e.PassportNumber).HasMaxLength(50);
-        builder.Property(e => e.FBAId).HasMaxLength(50);
+        builder.Property(e => e.PassportNumber).HasMaxLength(50).UseCollation("Latin1_General_100_CI_AS");
+        builder.Property(e => e.FBAId).HasMaxLength(50).UseCollation("Latin1_General_100_CI_AS");
 
         builder.Property(e => e.RelationBasis).HasMaxLength(500);
         builder.Property(e => e.RelationDescription).HasMaxLength(1000);
@@ -38,10 +38,13 @@ public class RelatedPersonConfiguration : IEntityTypeConfiguration<RelatedPerson
         builder.HasIndex(e => e.JMBG).IsUnique().HasFilter("[IsActive] = 1 AND [JMBG] IS NOT NULL");
         builder.HasIndex(e => e.FBAId).IsUnique().HasFilter("[IsActive] = 1 AND [FBAId] IS NOT NULL");
         builder.HasIndex(e => e.PassportNumber).IsUnique().HasFilter("[IsActive] = 1 AND [PassportNumber] IS NOT NULL");
-        builder.Property<string>("NormalizedPassport").HasMaxLength(50).HasComputedColumnSql("UPPER(LTRIM(RTRIM([PassportNumber])))", stored: true);
-        builder.HasIndex("NormalizedPassport").IsUnique().HasFilter("[IsActive] = 1 AND [PassportNumber] IS NOT NULL");
-        builder.Property<string>("NormalizedFbaId").HasMaxLength(50).HasComputedColumnSql("UPPER(LTRIM(RTRIM([FBAId])))", stored: true);
-        builder.HasIndex("NormalizedFbaId").IsUnique().HasFilter("[IsActive] = 1 AND [FBAId] IS NOT NULL");
+        builder.ToTable(table =>
+        {
+            table.HasCheckConstraint("CK_RelatedPersons_PassportNumber_Trimmed",
+                "DATALENGTH([PassportNumber]) = DATALENGTH(LTRIM(RTRIM([PassportNumber])))");
+            table.HasCheckConstraint("CK_RelatedPersons_FBAId_Trimmed",
+                "DATALENGTH([FBAId]) = DATALENGTH(LTRIM(RTRIM([FBAId])))");
+        });
         builder.HasIndex(e => e.Status);
         builder.HasIndex(e => e.RelatedToPersonId);
 

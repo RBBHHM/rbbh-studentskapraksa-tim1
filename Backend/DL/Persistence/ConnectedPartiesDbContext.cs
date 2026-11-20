@@ -61,9 +61,8 @@ public partial class ConnectedPartiesDbContext : DbContext
         });
         modelBuilder.Entity<CodeList>(entity =>
         {
-            entity.ToTable("CodeListValues");
-            entity.Property(e => e.Kategorija).HasColumnName("Category");
-            entity.Property(e => e.Kod).HasColumnName("Code");
+            entity.Property(e => e.Kategorija).HasColumnName("Category").UseCollation("Latin1_General_100_CI_AS");
+            entity.Property(e => e.Kod).HasColumnName("Code").UseCollation("Latin1_General_100_CI_AS");
             entity.Property(e => e.Naziv).HasColumnName("Name");
             entity.Property(e => e.Opis).HasColumnName("Description");
             entity.Property(e => e.Aktivan).HasColumnName("IsActive");
@@ -76,9 +75,14 @@ public partial class ConnectedPartiesDbContext : DbContext
             entity.HasIndex(e => e.Kategorija);
             entity.HasQueryFilter(e => e.Aktivan);
             entity.HasOne(e => e.Definition).WithMany().HasForeignKey(e => e.DefinitionId).OnDelete(DeleteBehavior.Restrict);
-            entity.Property<string>("NormalizedCategory").HasMaxLength(100).HasComputedColumnSql("UPPER(LTRIM(RTRIM([Category])))", stored: true);
-            entity.Property<string>("NormalizedCode").HasMaxLength(50).HasComputedColumnSql("UPPER(LTRIM(RTRIM([Code])))", stored: true);
-            entity.HasIndex("NormalizedCategory", "NormalizedCode").IsUnique().HasFilter(null);
+            entity.HasIndex(e => new { e.Kategorija, e.Kod }).IsUnique();
+            entity.ToTable("CodeListValues", table =>
+            {
+                table.HasCheckConstraint("CK_CodeListValues_Category_Trimmed",
+                    "DATALENGTH([Category]) = DATALENGTH(LTRIM(RTRIM([Category])))");
+                table.HasCheckConstraint("CK_CodeListValues_Code_Trimmed",
+                    "DATALENGTH([Code]) = DATALENGTH(LTRIM(RTRIM([Code])))");
+            });
             entity.Property(e => e.ResourceKey).UseCollation("Latin1_General_100_CI_AS");
             entity.HasIndex(e => new { e.Kategorija, e.LanguageCode, e.ResourceKey }).IsUnique()
                 .HasFilter("[LanguageCode] IS NOT NULL AND [ResourceKey] IS NOT NULL");

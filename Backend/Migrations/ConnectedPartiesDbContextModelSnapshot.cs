@@ -696,7 +696,8 @@ namespace RBBH.ConnectedParties.Migrations
 
                     b.Property<string>("FBAId")
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS");
 
                     b.Property<string>("FirstName")
                         .IsRequired()
@@ -728,21 +729,10 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("NormalizedFbaId")
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasComputedColumnSql("UPPER(LTRIM(RTRIM([FBAId])))", true);
-
-                    b.Property<string>("NormalizedPassport")
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasComputedColumnSql("UPPER(LTRIM(RTRIM([PassportNumber])))", true);
-
                     b.Property<string>("PassportNumber")
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS");
 
                     b.Property<Guid?>("RelatedToPersonId")
                         .HasColumnType("uniqueidentifier");
@@ -797,14 +787,6 @@ namespace RBBH.ConnectedParties.Migrations
                         .IsUnique()
                         .HasFilter("[IsActive] = 1 AND [JMBG] IS NOT NULL");
 
-                    b.HasIndex("NormalizedFbaId")
-                        .IsUnique()
-                        .HasFilter("[IsActive] = 1 AND [FBAId] IS NOT NULL");
-
-                    b.HasIndex("NormalizedPassport")
-                        .IsUnique()
-                        .HasFilter("[IsActive] = 1 AND [PassportNumber] IS NOT NULL");
-
                     b.HasIndex("PassportNumber")
                         .IsUnique()
                         .HasFilter("[IsActive] = 1 AND [PassportNumber] IS NOT NULL");
@@ -813,7 +795,12 @@ namespace RBBH.ConnectedParties.Migrations
 
                     b.HasIndex("Status");
 
-                    b.ToTable("RelatedPersons");
+                    b.ToTable("RelatedPersons", t =>
+                        {
+                            t.HasCheckConstraint("CK_RelatedPersons_FBAId_Trimmed", "DATALENGTH([FBAId]) = DATALENGTH(LTRIM(RTRIM([FBAId])))");
+
+                            t.HasCheckConstraint("CK_RelatedPersons_PassportNumber_Trimmed", "DATALENGTH([PassportNumber]) = DATALENGTH(LTRIM(RTRIM([PassportNumber])))");
+                        });
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Report.Capital", b =>
@@ -1202,14 +1189,16 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(100)
                         .IsUnicode(false)
                         .HasColumnType("varchar(100)")
-                        .HasColumnName("Category");
+                        .HasColumnName("Category")
+                        .UseCollation("Latin1_General_100_CI_AS");
 
                     b.Property<string>("Kod")
                         .IsRequired()
                         .HasMaxLength(50)
                         .IsUnicode(false)
                         .HasColumnType("varchar(50)")
-                        .HasColumnName("Code");
+                        .HasColumnName("Code")
+                        .UseCollation("Latin1_General_100_CI_AS");
 
                     b.Property<DateTime>("KreiranDatum")
                         .HasColumnType("datetime2")
@@ -1231,18 +1220,6 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)")
                         .HasColumnName("Name");
-
-                    b.Property<string>("NormalizedCategory")
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasComputedColumnSql("UPPER(LTRIM(RTRIM([Category])))", true);
-
-                    b.Property<string>("NormalizedCode")
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasComputedColumnSql("UPPER(LTRIM(RTRIM([Code])))", true);
 
                     b.Property<string>("Opis")
                         .HasMaxLength(500)
@@ -1276,14 +1253,19 @@ namespace RBBH.ConnectedParties.Migrations
 
                     b.HasIndex("Kategorija");
 
-                    b.HasIndex("NormalizedCategory", "NormalizedCode")
+                    b.HasIndex("Kategorija", "Kod")
                         .IsUnique();
 
                     b.HasIndex("Kategorija", "LanguageCode", "ResourceKey")
                         .IsUnique()
                         .HasFilter("[LanguageCode] IS NOT NULL AND [ResourceKey] IS NOT NULL");
 
-                    b.ToTable("CodeListValues", (string)null);
+                    b.ToTable("CodeListValues", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_CodeListValues_Category_Trimmed", "DATALENGTH([Category]) = DATALENGTH(LTRIM(RTRIM([Category])))");
+
+                            t.HasCheckConstraint("CK_CodeListValues_Code_Trimmed", "DATALENGTH([Code]) = DATALENGTH(LTRIM(RTRIM([Code])))");
+                        });
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Sifarnici.CodeListDefinition", b =>
