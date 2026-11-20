@@ -16,13 +16,6 @@ public class PeriodLock
     public bool IsLocked { get; set; }
     [Timestamp] public byte[]? Version { get; set; }
 
-    /// <summary>
-    /// Historical migration boundary only. Runtime reads/writes the null global row;
-    /// no username prefix or department-specific lock contract remains.
-    /// </summary>
-    [StringLength(50)]
-    public string? Department { get; set; }
-
     [StringLength(100)]
     public string? LockedBy { get; set; }
     public DateTime? LockedAt { get; set; }

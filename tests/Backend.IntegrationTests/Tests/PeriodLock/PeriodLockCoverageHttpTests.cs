@@ -74,7 +74,7 @@ public sealed class PeriodLockCoverageHttpTests : IAsyncLifetime
         await using var scope = _app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
         var now = DateTime.UtcNow;
-        var row = await db.PeriodLocks.FirstOrDefaultAsync(item => item.Year == now.Year && item.Month == now.Month && item.Department == null);
+        var row = await db.PeriodLocks.FirstOrDefaultAsync(item => item.Year == now.Year && item.Month == now.Month);
         if (row is null) db.PeriodLocks.Add(new RBBH.ConnectedParties.DL.Entities.PeriodLock.PeriodLock { Year = now.Year, Month = now.Month, IsLocked = locked, CreatedBy = "test" });
         else row.IsLocked = locked;
         await db.SaveChangesAsync();

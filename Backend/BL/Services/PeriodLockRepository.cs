@@ -16,7 +16,7 @@ public class PeriodLockRepository(ConnectedPartiesDbContext db) : IPeriodLockRep
     public async Task<PeriodLock?> GetByPeriodAsync(int year, int month)
     {
         return await db.PeriodLocks
-            .Where(p => p.Year == year && p.Month == month && p.Department == null)
+            .Where(p => p.Year == year && p.Month == month)
             .FirstOrDefaultAsync();
     }
 
@@ -31,22 +31,12 @@ public class PeriodLockRepository(ConnectedPartiesDbContext db) : IPeriodLockRep
         var now = DateTime.UtcNow;
         bool isPast = year < now.Year || (year == now.Year && month < now.Month);
 
-        // Historical Department values never override the global state.
-        // Check global lock (Department = null)
         var globalLock = await GetByPeriodAsync(year, month);
-        if (globalLock is not null)
-            return globalLock.IsLocked;
-
-        // Historical department records are not an authoritative global unlock.
-        // Fail closed until an operator reconciles them to the canonical null row.
-        return isPast || await db.PeriodLocks.AnyAsync(row => row.Year == year && row.Month == month && row.Department != null);
+        return globalLock?.IsLocked ?? isPast;
     }
 
     public async Task<PeriodLock> CreateAsync(PeriodLock periodLock)
     {
-        periodLock.Department = null;
-        if (await db.PeriodLocks.AnyAsync(row => row.Year == periodLock.Year && row.Month == periodLock.Month && row.Department != null))
-            throw new ApplicationException(BackendMessages.Message("errors.period.reconciliation.required"));
         db.PeriodLocks.Add(periodLock);
         await db.SaveChangesAsync();
         return periodLock;
@@ -54,7 +44,6 @@ public class PeriodLockRepository(ConnectedPartiesDbContext db) : IPeriodLockRep
 
     public async Task<PeriodLock> UpdateAsync(PeriodLock periodLock)
     {
-        periodLock.Department = null;
         periodLock.ModifiedAt = DateTime.UtcNow;
         db.PeriodLocks.Update(periodLock);
         await db.SaveChangesAsync();

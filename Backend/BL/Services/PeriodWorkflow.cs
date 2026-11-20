@@ -64,7 +64,7 @@ public sealed class PeriodWorkflow(ConnectedPartiesDbContext db, IConfiguration 
     {
         Period(year, month); var now = DateTime.UtcNow;
         var row = await db.PeriodLocks.IgnoreQueryFilters().SingleOrDefaultAsync(row => row.Year == year && row.Month == month, ct);
-        if (row is not null && (!row.IsActive || row.Department is not null))
+        if (row is { IsActive: false })
             throw new BusinessRuleException(409, "period.reconciliation_required");
         if (locked && row?.IsLocked == true)
         { if (system) return; throw new BusinessRuleException(400, "period.already_locked"); }
