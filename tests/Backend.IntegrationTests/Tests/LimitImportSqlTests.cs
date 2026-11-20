@@ -40,10 +40,10 @@ public sealed class LimitImportSqlTests : LimitImportFixture
             if (response.StatusCode == HttpStatusCode.OK) imported += (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("imported").GetInt32();
             else Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         Assert.Equal(1, imported);
-        await InDatabase(async db => { Assert.Equal(2, await db.Limiti.CountAsync()); Assert.Equal(2, await db.AuditLogs.CountAsync()); Assert.Single(await db.Limiti.Where(row => row.ImportFingerprint != null).ToListAsync()); });
+        await InDatabase(async db => { Assert.Equal(2, await db.Limiti.CountAsync()); Assert.Equal(2, await db.AuditLogs.CountAsync()); });
     }
     [SqlServerFact]
-    public async Task NullableImportKeyMigrationRetainsAllPreexistingLimitsWithoutBackfill()
+    public async Task MigrationRetainsAllPreexistingLimits()
     {
         var connection = new SqlConnectionStringBuilder(Environment.GetEnvironmentVariable(SqlServerFactAttribute.Variable))
         { InitialCatalog = "RBBH_LIMIT_UPGRADE_" + Guid.NewGuid().ToString("N") };
@@ -56,7 +56,7 @@ public sealed class LimitImportSqlTests : LimitImportFixture
             for (var index = 0; index < 2; index++)
                 await db.Database.ExecuteSqlInterpolatedAsync($"INSERT Limiti (LegalEntityId,TipLimita,OdobreniLimit,CreatedBy,CreatedAt) VALUES ({party},{"TYPE"},{100.50m},{"original"},{DateTime.UtcNow})");
             await db.Database.MigrateAsync(); var rows = await db.Limiti.ToListAsync(); Assert.Equal(2, rows.Count);
-            Assert.All(rows, row => { Assert.Null(row.ImportFingerprint); Assert.Equal(100.50m, row.OdobreniLimit); Assert.Equal("original", row.CreatedBy); });
+            Assert.All(rows, row => { Assert.Equal(100.50m, row.OdobreniLimit); Assert.Equal("original", row.CreatedBy); });
         }
         finally { await db.Database.EnsureDeletedAsync(); }
     }

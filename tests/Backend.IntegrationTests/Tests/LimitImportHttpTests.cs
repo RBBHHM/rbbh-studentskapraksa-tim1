@@ -60,7 +60,7 @@ public sealed class LimitImportHttpTests : LimitImportFixture
             await target.InDatabase(async db =>
             {
                 var row = await db.Limiti.SingleAsync(); Assert.Equal(target.Party, row.LegalEntityId); Assert.Equal(100.50m, row.OdobreniLimit); Assert.Equal(new DateTime(2026, 12, 15), row.RokOcekivaneUtilizacije);
-                Assert.Equal("creator", row.CreatedBy); Assert.NotNull(row.ImportFingerprint); Assert.Empty(db.Capitals); Assert.Empty(db.CapitalRevisions);
+                Assert.Equal("creator", row.CreatedBy); Assert.Empty(db.Capitals); Assert.Empty(db.CapitalRevisions);
                 var audit = await db.AuditLogs.SingleAsync(); using var data = JsonDocument.Parse(audit.NewValues!); Assert.Equal(row.Id, data.RootElement.GetProperty("ids")[0].GetInt32());
             });
         }

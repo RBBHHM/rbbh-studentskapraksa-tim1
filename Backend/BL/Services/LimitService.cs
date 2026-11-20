@@ -7,8 +7,6 @@ using RBBH.ConnectedParties.DL.Persistence;
 using RBBH.ConnectedParties.Exceptions.Validations;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using RBBH.ConnectedParties.DL.DTO;
 using RBBH.ConnectedParties.Helpers.Excel;
@@ -144,7 +142,6 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
         entitet.ModifiedAt = DateTime.UtcNow;
         entitet.ModifiedBy = korisnik;
 
-        if (entitet.ImportFingerprint is not null) entitet.ImportFingerprint = Fingerprint(entitet);
         _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("Limit", entitet.Id.ToString(CultureInfo.InvariantCulture), "UPDATE", korisnik, actor, before, Snapshot(entitet)));
         await _dbContext.SaveChangesAsync(actor?.HttpContext?.RequestAborted ?? default);
         return await GetByID(entitet.Id);
@@ -219,7 +216,6 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
                 }
                 var value = new Limit { LegalEntityId = matches[0], TipLimita = type, OdobreniLimit = approved, MaksimalnaOcekivanaUtilizacija = utilization,
                     RokOcekivaneUtilizacije = date, Komentar = string.IsNullOrWhiteSpace(comment) ? null : comment, CreatedBy = korisnik, CreatedAt = DateTime.UtcNow };
-                value.ImportFingerprint = Fingerprint(value);
                 if (!fileKeys.Add(Key(value))) { Failure(row, "row", "import.duplicate", BackendMessages.Message("validation.limits.import.duplicate")); continue; }
                 pending.Add((row, value));
             }
@@ -263,10 +259,9 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
     private static RowKey Key(Limit row) => new(row.LegalEntityId, row.TipLimita.Trim().ToUpperInvariant(),
         row.OdobreniLimit?.ToString("G29", CultureInfo.InvariantCulture), row.MaksimalnaOcekivanaUtilizacija?.ToString("G29", CultureInfo.InvariantCulture),
         row.RokOcekivaneUtilizacije?.Ticks, string.IsNullOrWhiteSpace(row.Komentar) ? null : row.Komentar.Trim());
-    private static string Fingerprint(Limit row) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(Key(row)))));
     private static Limit Copy(Limit row) => new() { LegalEntityId = row.LegalEntityId, TipLimita = row.TipLimita, OdobreniLimit = row.OdobreniLimit,
         MaksimalnaOcekivanaUtilizacija = row.MaksimalnaOcekivanaUtilizacija, RokOcekivaneUtilizacije = row.RokOcekivaneUtilizacije, Komentar = row.Komentar,
-        CreatedAt = row.CreatedAt, CreatedBy = row.CreatedBy, ImportFingerprint = row.ImportFingerprint };
+        CreatedAt = row.CreatedAt, CreatedBy = row.CreatedBy };
     private async Task<int[]> PersistNew(IReadOnlyList<Limit> templates, string username, string action, CancellationToken ct)
     {
         var auditId = Guid.NewGuid();
@@ -281,9 +276,22 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
             }
             var rows = templates.Select(Copy).ToArray();
             RBBH.ConnectedParties.DL.Entities.Audit.AuditLog? audit = null;
-            await using var transaction = _dbContext.Database.IsRelational() ? await _dbContext.Database.BeginTransactionAsync(ct) : null;
+            await using var transaction = _dbContext.Database.IsRelational()
+                ? await _dbContext.Database.BeginTransactionAsync(action == "IMPORT"
+                    ? System.Data.IsolationLevel.Serializable : System.Data.IsolationLevel.ReadCommitted, ct)
+                : null;
             try
             {
+                if (action == "IMPORT")
+                {
+                    var partyIds = rows.Select(row => row.LegalEntityId).Distinct().ToArray();
+                    var persistedRows = await _dbContext.Limiti.AsNoTracking()
+                        .Where(row => partyIds.Contains(row.LegalEntityId)).ToListAsync(ct);
+                    var persistedKeys = persistedRows.Select(Key).ToHashSet();
+                    if (rows.Any(row => persistedKeys.Contains(Key(row))))
+                        throw new Exceptions.BusinessRuleException(409, "import.duplicate", BackendMessages.Message("validation.limits.import.existing"));
+                }
+
                 _dbContext.Limiti.AddRange(rows);
                 if (_dbContext.Database.IsRelational()) await _dbContext.SaveChangesAsync(ct);
                 var ids = rows.Select(row => row.Id).ToArray();

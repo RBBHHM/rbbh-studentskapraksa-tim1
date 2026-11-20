@@ -35,6 +35,5 @@ public class LimitConfiguration : IEntityTypeConfiguration<Limit>
 
         builder.HasIndex(e => e.LegalEntityId);
         builder.HasIndex(e => e.TipLimita);
-        builder.HasIndex(e => e.ImportFingerprint).IsUnique().HasFilter("[ImportFingerprint] IS NOT NULL");
     }
 }
