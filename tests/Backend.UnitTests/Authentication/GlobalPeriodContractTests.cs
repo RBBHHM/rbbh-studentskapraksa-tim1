@@ -40,6 +40,27 @@ public sealed class GlobalPeriodContractTests
         await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => second.SaveChangesAsync());
     }
 
+    [Fact]
+    public async Task StaleDecisionCannotOverwriteANewerUnlockRequestDecision()
+    {
+        var options = new DbContextOptionsBuilder<ConnectedPartiesDbContext>()
+            .UseInMemoryDatabase("unlock-concurrency-" + Guid.NewGuid()).Options;
+        await using var first = new ConnectedPartiesDbContext(options);
+        await using var second = new ConnectedPartiesDbContext(options);
+        var original = new UnlockRequest { Year = 2026, Month = 11 };
+        first.UnlockRequests.Add(original);
+        await first.SaveChangesAsync();
+
+        var stale = await second.UnlockRequests.SingleAsync();
+        original.Status = "APPROVED";
+        original.ModifiedAt = DateTime.UtcNow;
+        await first.SaveChangesAsync();
+
+        stale.Status = "REJECTED";
+        stale.ModifiedAt = DateTime.UtcNow;
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => second.SaveChangesAsync());
+    }
+
     private static ConnectedPartiesDbContext Database() => new(new DbContextOptionsBuilder<ConnectedPartiesDbContext>()
         .UseInMemoryDatabase("global-contract-" + Guid.NewGuid()).Options);
 }

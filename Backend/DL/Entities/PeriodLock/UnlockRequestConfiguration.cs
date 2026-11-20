@@ -23,6 +23,7 @@ public class UnlockRequestConfiguration : IEntityTypeConfiguration<UnlockRequest
         builder.Property(e => e.AdminNote).HasMaxLength(1000);
         builder.Property(e => e.CreatedBy).HasMaxLength(100).IsRequired();
         builder.Property(e => e.ModifiedBy).HasMaxLength(100);
+        builder.Property(e => e.ModifiedAt).IsConcurrencyToken();
 
         // Soft delete filter
         builder.HasQueryFilter(e => e.IsActive);

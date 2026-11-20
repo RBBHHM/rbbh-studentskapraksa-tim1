@@ -45,7 +45,7 @@ public class UnlockRequestRepository(ConnectedPartiesDbContext db) : IUnlockRequ
             ?? throw new Exceptions.BusinessRuleException(404, "request.not_found");
         if (original.Status != "NEEDS_INFO" || await db.UnlockRequests.AnyAsync(row => row.ParentRequestId == id, cancellationToken))
             throw new Exceptions.BusinessRuleException(409, "request.invalid_state");
-        original.ModifiedAt = DateTime.UtcNow;
+        original.MarkModified(DateTime.UtcNow);
         original.ModifiedBy = response.CreatedBy;
         response.ParentRequestId = original.Id;
         response.RequestedBySubject = ownerSubject;
@@ -69,7 +69,7 @@ public class UnlockRequestRepository(ConnectedPartiesDbContext db) : IUnlockRequ
         request.ProcessedBy = processedBy;
         request.ProcessedAt = now;
         request.ModifiedBy = processedBy;
-        request.ModifiedAt = now;
+        request.MarkModified(now);
         db.UnlockRequests.Update(request);
         return await db.SaveChangesAsync() > 0;
     }
@@ -84,7 +84,7 @@ public class UnlockRequestRepository(ConnectedPartiesDbContext db) : IUnlockRequ
         request.ProcessedBy = processedBy;
         request.ProcessedAt = now;
         request.ModifiedBy = processedBy;
-        request.ModifiedAt = now;
+        request.MarkModified(now);
         db.UnlockRequests.Update(request);
         return await db.SaveChangesAsync() > 0;
     }
@@ -101,7 +101,7 @@ public class UnlockRequestRepository(ConnectedPartiesDbContext db) : IUnlockRequ
             request.ProcessedBy = approvedBy;
             request.ProcessedAt = now;
             request.ModifiedBy = approvedBy;
-            request.ModifiedAt = now;
+            request.MarkModified(now);
         }
         db.UnlockRequests.UpdateRange(requests);
         await db.SaveChangesAsync();

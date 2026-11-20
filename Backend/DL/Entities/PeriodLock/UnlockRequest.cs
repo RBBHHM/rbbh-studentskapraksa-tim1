@@ -23,8 +23,6 @@ public class UnlockRequest
     [StringLength(100)]
     public string? RequestedBySubject { get; internal set; }
     public Guid? ParentRequestId { get; set; }
-    [Timestamp]
-    public byte[]? Version { get; set; }
 
     public int Year { get; set; }
     public int Month { get; set; }
@@ -59,4 +57,11 @@ public class UnlockRequest
     public DateTime? ModifiedAt { get; set; }
 
     public bool IsActive { get; set; } = true;
+
+    internal void MarkModified(DateTime timestamp)
+    {
+        ModifiedAt = ModifiedAt is { } previous && previous >= timestamp
+            ? previous.AddTicks(1)
+            : timestamp;
+    }
 }

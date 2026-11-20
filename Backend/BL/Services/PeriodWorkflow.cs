@@ -79,7 +79,7 @@ public sealed class PeriodWorkflow(ConnectedPartiesDbContext db, IConfiguration 
         else { row.UnlockedBy = actor.Username; row.UnlockedAt = now; }
         foreach (var request in pending)
         {
-            request.Status = "APPROVED"; request.ProcessedAt = now; request.ProcessedBy = actor.Username; request.ModifiedAt = now; request.ModifiedBy = actor.Username;
+            request.Status = "APPROVED"; request.ProcessedAt = now; request.ProcessedBy = actor.Username; request.MarkModified(now); request.ModifiedBy = actor.Username;
         }
         Audit($"{year}-{month:D2}", locked ? "PERIOD_LOCK" : "PERIOD_UNLOCK", actor, new { isLocked = wasLocked }, new { isLocked = locked, year, month, approvedRequestIds = pending.Select(request => request.Id) });
         var eventKey = $"period:{year}-{month:D2}:{Guid.NewGuid():N}";
@@ -106,7 +106,7 @@ public sealed class PeriodWorkflow(ConnectedPartiesDbContext db, IConfiguration 
         var request = await db.UnlockRequests.SingleOrDefaultAsync(row => row.Id == id && row.Status == "PENDING", ct)
             ?? throw new BusinessRuleException(404, "period.request_not_pending");
         request.Status = reject ? "REJECTED" : "NEEDS_INFO"; request.AdminNote = note.Trim(); request.ProcessedBy = actor.Username;
-        request.ProcessedAt = DateTime.UtcNow; request.ModifiedAt = request.ProcessedAt; request.ModifiedBy = actor.Username;
+        var now = DateTime.UtcNow; request.ProcessedAt = now; request.MarkModified(now); request.ModifiedBy = actor.Username;
         Audit(id.ToString(), reject ? "UNLOCK_REQUEST_REJECTED" : "UNLOCK_REQUEST_NEEDS_INFO", actor, new { status = "PENDING" }, new { request.Status, note, id });
         await Owner(request, $"period-request:{id}:{request.Status}", reject ? "rejected" : "needsinfo", new { year = request.Year, month = request.Month, message = note, actor = actor.Username }, ct);
         await db.SaveChangesAsync(ct);
@@ -122,7 +122,7 @@ public sealed class PeriodWorkflow(ConnectedPartiesDbContext db, IConfiguration 
         var response = new UnlockRequest { ParentRequestId = id, RequestedBySubject = actor.Subject, RequestedBy = actor.Username,
             RequestedByEmail = actor.Email, Year = original.Year, Month = original.Month, Reason = "[ODGOVOR] " + message.Trim(),
             Status = "PENDING", CreatedBy = actor.Username, CreatedAt = now };
-        original.ModifiedAt = now; original.ModifiedBy = actor.Username; db.UnlockRequests.Add(response);
+        original.MarkModified(now); original.ModifiedBy = actor.Username; db.UnlockRequests.Add(response);
         Audit(id.ToString(), "UNLOCK_REQUEST", actor, null, new { type = "user_response", originalRequestId = id, responseId = response.Id, year = original.Year, month = original.Month });
         await NotifyMailbox(mailbox, $"period-request:{response.Id}:response", "response", new { year = original.Year, month = original.Month, requester = actor.Username, message = message.Trim() }, ct);
         await db.SaveChangesAsync(ct);
