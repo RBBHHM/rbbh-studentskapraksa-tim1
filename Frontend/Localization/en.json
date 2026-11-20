@@ -196,7 +196,7 @@
     "roles.request-title": "Request a role",
     "roles.change-title": "Change role",
     "roles.request-help": "Choose one or more roles to add. Administrators will review the request.",
-    "roles.change-help": "The roles you choose will replace your current roles. You can add a note for the administrators.",
+    "roles.change-help": "This form sends a request to an administrator for approval. Your roles change only after approval. You can add a note to your request.",
     "roles.choose": "Roles",
     "roles.note": "Note (optional)",
     "roles.note-placeholder": "Reason for the request",

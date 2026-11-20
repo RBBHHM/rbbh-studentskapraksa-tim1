@@ -196,7 +196,7 @@
     "roles.request-title": "Rolle beantragen",
     "roles.change-title": "Rolle wechseln",
     "roles.request-help": "Wählen Sie eine oder mehrere zusätzliche Rollen. Administratoren prüfen den Antrag.",
-    "roles.change-help": "Die ausgewählten Rollen ersetzen Ihre bisherigen Rollen. Sie können eine Bemerkung für die Administratoren hinzufügen.",
+    "roles.change-help": "Mit diesem Formular senden Sie einen Antrag zur Genehmigung an die Administration. Ihre Rollen ändern sich erst nach der Genehmigung. Sie können eine Bemerkung hinzufügen.",
     "roles.choose": "Rollen",
     "roles.note": "Bemerkung (optional)",
     "roles.note-placeholder": "Begründung des Antrags",

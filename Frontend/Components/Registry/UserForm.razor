@@ -5,14 +5,12 @@
 <EditForm EditContext="_context" OnSubmit="SubmitAsync" FormName="application-user" class="registry-user-form" novalidate>
     <fieldset disabled="@_submission.IsSubmitting">
         <legend class="app-visually-hidden">@T[Model.Id is null ? "users.create" : "users.edit"]</legend>
-        {
-            <div class="registry-form-grid">
-                <RbiField TValue="string" Id="user-username" Label="@T["users.username"]" Required For="@(() => Model.Username)"><RbiInput Id="user-username" @bind-Value="Model.Username" @bind-Value:after="Model.UsernameChanged" maxlength="100" /></RbiField>
-                <RbiField TValue="string" Id="user-firstname" Label="@T["person.first-name"]" Required For="@(() => Model.FirstName)"><RbiInput Id="user-firstname" @bind-Value="Model.FirstName" maxlength="100" /></RbiField>
-                <RbiField TValue="string" Id="user-lastname" Label="@T["person.last-name"]" Required For="@(() => Model.LastName)"><RbiInput Id="user-lastname" @bind-Value="Model.LastName" maxlength="100" /></RbiField>
-                <RbiField TValue="string" Id="user-email" Label="@T["users.email"]" Required For="@(() => Model.Email)"><RbiInput Id="user-email" @bind-Value="Model.Email" Type="RbiInputType.Email" /></RbiField>
-            </div>
-        }
+        <div class="registry-form-grid">
+            <RbiField TValue="string" Id="user-username" Label="@T["users.username"]" Required For="@(() => Model.Username)"><RbiInput Id="user-username" @bind-Value="Model.Username" @bind-Value:after="Model.UsernameChanged" maxlength="100" /></RbiField>
+            <RbiField TValue="string" Id="user-firstname" Label="@T["person.first-name"]" Required For="@(() => Model.FirstName)"><RbiInput Id="user-firstname" @bind-Value="Model.FirstName" maxlength="100" /></RbiField>
+            <RbiField TValue="string" Id="user-lastname" Label="@T["person.last-name"]" Required For="@(() => Model.LastName)"><RbiInput Id="user-lastname" @bind-Value="Model.LastName" maxlength="100" /></RbiField>
+            <RbiField TValue="string" Id="user-email" Label="@T["users.email"]" Required For="@(() => Model.Email)"><RbiInput Id="user-email" @bind-Value="Model.Email" Type="RbiInputType.Email" /></RbiField>
+        </div>
         <fieldset class="registry-user-fieldset"><legend class="app-required-legend">@T["users.accesses"]</legend><p>@T["users.multiple"]</p>
             <div class="registry-user-accesses">@foreach (var choice in Model.Roles)
             {
