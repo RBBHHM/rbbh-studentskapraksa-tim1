@@ -74,7 +74,7 @@ public sealed class PeriodWorkflow(ConnectedPartiesDbContext db, IConfiguration 
         if (!locked && row is { IsLocked: false } && pending.Count == 0) return; // No false repeat audit/broadcast.
         bool? wasLocked = row?.IsLocked;
         if (row is null) { row = new() { Year = year, Month = month, CreatedBy = actor.Username, CreatedAt = now }; db.PeriodLocks.Add(row); }
-        row.IsLocked = locked; row.ModifiedAt = now; row.ModifiedBy = actor.Username;
+        row.IsLocked = locked; row.MarkModified(now); row.ModifiedBy = actor.Username;
         if (locked) { row.LockedBy = actor.Username; row.LockedAt = now; row.UnlockedAt = null; row.UnlockedBy = null; }
         else { row.UnlockedBy = actor.Username; row.UnlockedAt = now; }
         foreach (var request in pending)

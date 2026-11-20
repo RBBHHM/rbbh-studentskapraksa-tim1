@@ -483,6 +483,7 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<DateTime?>("ModifiedAt")
+                        .IsConcurrencyToken()
                         .HasColumnType("datetime2");
 
                     b.Property<string>("ModifiedBy")
@@ -498,11 +499,6 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<string>("UnlockedBy")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
-
-                    b.Property<byte[]>("Version")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
 
                     b.Property<int>("Year")
                         .HasColumnType("int");

@@ -19,6 +19,27 @@ public sealed class GlobalPeriodContractTests
         Assert.Equal(locked, await new PeriodLockRepository(db).IsCurrentPeriodLockedAsync());
     }
 
+    [Fact]
+    public async Task StaleUpdateCannotOverwriteANewerPeriodLock()
+    {
+        var options = new DbContextOptionsBuilder<ConnectedPartiesDbContext>()
+            .UseInMemoryDatabase("period-concurrency-" + Guid.NewGuid()).Options;
+        await using var first = new ConnectedPartiesDbContext(options);
+        await using var second = new ConnectedPartiesDbContext(options);
+        var original = new PeriodLock { Year = 2026, Month = 11 };
+        first.PeriodLocks.Add(original);
+        await first.SaveChangesAsync();
+
+        var stale = await second.PeriodLocks.SingleAsync();
+        original.IsLocked = true;
+        original.ModifiedAt = DateTime.UtcNow;
+        await first.SaveChangesAsync();
+
+        stale.ModifiedAt = DateTime.UtcNow;
+        stale.ModifiedBy = "stale-writer";
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => second.SaveChangesAsync());
+    }
+
     private static ConnectedPartiesDbContext Database() => new(new DbContextOptionsBuilder<ConnectedPartiesDbContext>()
         .UseInMemoryDatabase("global-contract-" + Guid.NewGuid()).Options);
 }

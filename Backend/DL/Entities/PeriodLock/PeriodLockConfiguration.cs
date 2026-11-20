@@ -16,6 +16,7 @@ public class PeriodLockConfiguration : IEntityTypeConfiguration<PeriodLock>
         builder.Property(e => e.UnlockedBy).HasMaxLength(100);
         builder.Property(e => e.CreatedBy).HasMaxLength(100).IsRequired();
         builder.Property(e => e.ModifiedBy).HasMaxLength(100);
+        builder.Property(e => e.ModifiedAt).IsConcurrencyToken();
 
         // Soft delete filter — nikad fizički DELETE
         builder.HasQueryFilter(e => e.IsActive);

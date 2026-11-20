@@ -44,8 +44,8 @@ public class PeriodLockRepository(ConnectedPartiesDbContext db) : IPeriodLockRep
 
     public async Task<PeriodLock> UpdateAsync(PeriodLock periodLock)
     {
-        periodLock.ModifiedAt = DateTime.UtcNow;
         db.PeriodLocks.Update(periodLock);
+        periodLock.MarkModified(DateTime.UtcNow);
         await db.SaveChangesAsync();
         return periodLock;
     }

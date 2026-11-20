@@ -14,7 +14,6 @@ public class PeriodLock
     public int Year { get; set; }
     public int Month { get; set; }
     public bool IsLocked { get; set; }
-    [Timestamp] public byte[]? Version { get; set; }
 
     [StringLength(100)]
     public string? LockedBy { get; set; }
@@ -34,4 +33,11 @@ public class PeriodLock
     public DateTime? ModifiedAt { get; set; }
 
     public bool IsActive { get; set; } = true;
+
+    internal void MarkModified(DateTime timestamp)
+    {
+        ModifiedAt = ModifiedAt is { } previous && previous >= timestamp
+            ? previous.AddTicks(1)
+            : timestamp;
+    }
 }
