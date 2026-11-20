@@ -7,6 +7,11 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      route:
+        description: 'Optional additional fixture route, for example /app/admin/role-catalog'
+        type: string
+        required: false
 
 permissions:
   contents: read
@@ -76,32 +81,59 @@ jobs:
             --quiet --preset=desktop --only-categories=performance,accessibility,best-practices \
             --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" \
             --output=json --output-path=artifacts/lighthouse/guide-desktop.json
+      - name: Audit the requested fixture page
+        if: github.event_name == 'workflow_dispatch' && inputs.route != ''
+        env:
+          LIGHTHOUSE_ROUTE: ${{ inputs.route }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$LIGHTHOUSE_ROUTE" =~ ^/app(/[a-z0-9-]+)*$ ]]; then
+            echo "Use an application route such as /app/admin/role-catalog."
+            exit 1
+          fi
+          for device in mobile desktop; do
+            preset=()
+            if [[ "$device" == desktop ]]; then preset+=(--preset=desktop); fi
+          npx --yes lighthouse@13.6.0 "http://127.0.0.1:5273${LIGHTHOUSE_ROUTE}"\
+            "${preset[@]}" --quiet --only-categories=performance,accessibility,best-practices\
+            --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage"\
+            --output=json --output-path="artifacts/lighthouse/requested-$device.json"
+          done
       - name: Verify and summarize Lighthouse metrics
+        env:
+          LIGHTHOUSE_ROUTE: ${{ inputs.route }}
         shell: bash
         run: |
           python3 - <<'PY'
           import json
+          import os
           from pathlib import Path
           audits = sorted(Path("artifacts/lighthouse").glob("*.json"))
-          assert len(audits) == 4, "Expected mobile and desktop dashboard/guide reports"
+          requested_route = os.environ.get("LIGHTHOUSE_ROUTE", "")
+          assert len(audits) == (6 if requested_route else 4), "Expected mobile and desktop reports"
+          baseline_routes = {"dashboard": "/app", "guide": "/app/guide", "requested": requested_route}
           with open(Path("artifacts/lighthouse") / "summary.md", "w") as out:
               out.write("| Page | Performance | Accessibility | Best practices | LCP (ms) | CLS |\n")
               out.write("|---|---:|---:|---:|---:|---:|\n")
               for file in audits:
                   report = json.loads(file.read_text())
                   assert not report.get("runtimeError"), report.get("runtimeError")
-                  assert report["finalDisplayedUrl"].startswith("http://127.0.0.1:5273/app")
+                  page_name, _ = file.stem.rsplit("-", 1)
+                  expected_url = "http://127.0.0.1:5273" + baseline_routes[page_name]
+                  assert report["finalDisplayedUrl"] == expected_url, report["finalDisplayedUrl"]
                   score = lambda name: round(report["categories"][name]["score"] * 100)
                   lcp = round(report["audits"]["largest-contentful-paint"]["numericValue"])
                   cls = round(report["audits"]["cumulative-layout-shift"]["numericValue"], 3)
                   # Guard proven fixture baselines while avoiding flaky score
                   # assertions that overstate production performance.
-                  min_performance = 70 if file.stem.endswith("-mobile") else 90
-                  assert score("performance") >= min_performance, (
-                      f"{file.name}: performance fell below fixture floor {min_performance}")
-                  assert score("accessibility") >= 95, f"{file.name}: WCAG accessibility regression"
-                  assert score("best-practices") >= 95, f"{file.name}: best-practices regression"
-                  assert cls <= 0.1, f"{file.name}: cumulative layout shift regression"
+                  if page_name != "requested":
+                      min_performance = 70 if file.stem.endswith("-mobile") else 90
+                      assert score("performance") >= min_performance, (
+                          f"{file.name}: performance fell below fixture floor {min_performance}")
+                      assert score("accessibility") >= 95, f"{file.name}: WCAG accessibility regression"
+                      assert score("best-practices") >= 95, f"{file.name}: best-practices regression"
+                      assert cls <= 0.1, f"{file.name}: cumulative layout shift regression"
                   line = f"| {file.stem} | {score('performance')} | {score('accessibility')} | {score('best-practices')} | {lcp} | {cls} |"
                   print(line)
                   out.write(line + "\n")

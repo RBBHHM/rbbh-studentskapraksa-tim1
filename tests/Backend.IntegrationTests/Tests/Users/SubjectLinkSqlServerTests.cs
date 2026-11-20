@@ -29,7 +29,6 @@ public sealed class SubjectLinkSqlServerTests
             var migrated = await db.AppUsers.AsNoTracking().SingleAsync(user => user.Id == id);
             Assert.Equal(placeholder, migrated.KeycloakId);
             Assert.False(migrated.KeycloakSubjectConfirmed);
-            Assert.Null(migrated.KeycloakSubjectLinkedAt);
             var principal = new ClaimsPrincipal(new ClaimsIdentity([
                 new Claim("sub", "real-fixture-subject"), new Claim(ClaimTypes.Email, "subject@example.test"), new Claim("email_verified", "true")], "Fixture"));
             Assert.Null((await new ApplicationIdentityResolver(db).ResolveAsync(principal)).User);
@@ -40,7 +39,6 @@ public sealed class SubjectLinkSqlServerTests
             var linked = await fresh.AppUsers.SingleAsync(user => user.Id == id);
             Assert.Equal("real-fixture-subject", linked.KeycloakId);
             Assert.True(linked.KeycloakSubjectConfirmed);
-            Assert.NotNull(linked.KeycloakSubjectLinkedAt);
             var audit = Assert.Single(await fresh.AuditLogs.ToListAsync());
             Assert.Equal("SUBJECT_LINK", audit.Action);
             Assert.Equal("real-fixture-subject", audit.UserId);

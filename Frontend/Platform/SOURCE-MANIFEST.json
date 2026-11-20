@@ -1211,9 +1211,9 @@
     "path": "Frontend/Platform/RBI.DesignSystem/RBI.DesignSystem.csproj",
     "source": "DesignSystem/RBI.DesignSystem.csproj",
     "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
-    "sha256": "f6a038a7d7c52a5160be5431fc91935bd7c500d0507ab782374bf5132eec27ca",
+    "sha256": "2e19356121e9b77ad2df610e1aafd8b8be48b5df661b2e54680ebb6153fc1140",
     "upstream_sha256": "f6a038a7d7c52a5160be5431fc91935bd7c500d0507ab782374bf5132eec27ca",
-    "adaptation": null
+    "adaptation": "Resolve the Razor language version from the installed SDK"
   },
   {
     "path": "Frontend/Platform/RBI.DesignSystem/README.md",
@@ -1627,9 +1627,9 @@
     "path": "Frontend/Platform/RBI.Authorization/RBI.Authorization.csproj",
     "source": "Auth/Authorization/RBI.Authorization.csproj",
     "revision": "8f0f5fe7622df6472ab636c43ba875fa279b0a8f",
-    "sha256": "5fdcf8c04dae2d86ab56a7291af4632a6e78dafb521a45aee5afa373d51dd954",
+    "sha256": "ab6cd55fc8034bd9fdf7034c1771468611389d45490bf5610ab8f4a40b637ad4",
     "upstream_sha256": "5fdcf8c04dae2d86ab56a7291af4632a6e78dafb521a45aee5afa373d51dd954",
-    "adaptation": null
+    "adaptation": "Resolve the Razor language version from the installed SDK"
   },
   {
     "path": "Frontend/Platform/RBI.Authorization/README.md",

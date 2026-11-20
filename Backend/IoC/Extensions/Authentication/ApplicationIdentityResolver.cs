@@ -58,7 +58,6 @@ public sealed class ApplicationIdentityResolver(ConnectedPartiesDbContext db, IC
             var previousIdentifier = row.KeycloakId;
             row.KeycloakId = subject;
             row.KeycloakSubjectConfirmed = true;
-            row.KeycloakSubjectLinkedAt = DateTime.UtcNow;
             row.ModifiedAt = DateTime.UtcNow;
             row.ModifiedBy = Helpers.AuthenticatedActor.Username(principal);
             await db.SaveChangesAsync();

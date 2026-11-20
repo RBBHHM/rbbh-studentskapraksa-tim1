@@ -28,7 +28,7 @@ public sealed class SummaryProjectionSqlTests
     private static Expression<Func<TEntity, TDto>> Projection<TEntity, TDto>(Type owner, string field)
     {
         var value = owner.GetField(field, BindingFlags.NonPublic | BindingFlags.Static)?.GetValue(null);
-        return Assert.IsType<Expression<Func<TEntity, TDto>>>(value);
+        return Assert.IsAssignableFrom<Expression<Func<TEntity, TDto>>>(value);
     }
 
     [Fact]

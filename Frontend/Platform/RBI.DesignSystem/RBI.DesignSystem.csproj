@@ -2,7 +2,7 @@
   <PropertyGroup>
     <PackageId>RBI.DesignSystem</PackageId>
     <Description>Reusable RBI-branded Blazor components, design tokens and static assets.</Description>
-    <RazorLangVersion>10.0</RazorLangVersion>
+    <RazorLangVersion>Latest</RazorLangVersion>
   </PropertyGroup>
 
   <ItemGroup>

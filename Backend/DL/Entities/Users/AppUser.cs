@@ -17,7 +17,6 @@ public class AppUser
     public string KeycloakId { get; set; } = string.Empty;
 
     public bool KeycloakSubjectConfirmed { get; set; }
-    public DateTime? KeycloakSubjectLinkedAt { get; set; }
 
     [Required]
     [StringLength(100)]

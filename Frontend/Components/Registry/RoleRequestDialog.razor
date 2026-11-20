@@ -58,8 +58,16 @@
         _loading = true; _loadFailed = false;
         try
         {
-            var options = await Api.OptionsAsync(_lifetime.Token);
-            var current = (await Profile.GetAsync(_lifetime.Token)).Roles.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var optionsTask = Api.OptionsAsync(_lifetime.Token);
+            HashSet<string> current = new(StringComparer.OrdinalIgnoreCase);
+            if (Purpose == "change")
+            {
+                var profileTask = Profile.GetAsync(_lifetime.Token);
+                await Task.WhenAll(optionsTask, profileTask);
+                current.UnionWith((await profileTask).Roles);
+            }
+
+            var options = await optionsTask;
             _choices = options.Items.Select(role => new Choice { Id = role.Id, Name = role.Name, Label = role.DisplayName is { Length: > 0 } ? role.DisplayName : T.Role(role.Name), Selected = Purpose == "change" && current.Contains(role.Name) }).ToList();
         }
         catch (RegistryApiException) { _loadFailed = true; }

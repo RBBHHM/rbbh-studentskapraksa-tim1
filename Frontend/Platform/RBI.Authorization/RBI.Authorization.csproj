@@ -2,7 +2,7 @@
   <PropertyGroup>
     <PackageId>RBI.Authorization</PackageId>
     <Description>Permission-based authorization for RBI Blazor and ASP.NET Core applications.</Description>
-    <RazorLangVersion>10.0</RazorLangVersion>
+    <RazorLangVersion>Latest</RazorLangVersion>
   </PropertyGroup>
 
   <ItemGroup>

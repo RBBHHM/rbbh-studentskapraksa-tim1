@@ -114,7 +114,7 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
                     if (await db.AppUsers.AnyAsync(user => user.KeycloakId == row.RequesterSubject || user.Email.Trim().ToUpper() == email || user.Username.Trim().ToUpper() == name, ct))
                         throw Conflict("identity.reconciliation_required");
                     user = new AppUser { KeycloakId = row.RequesterSubject, KeycloakSubjectConfirmed = true,
-                        KeycloakSubjectLinkedAt = DateTime.UtcNow, Username = row.Username, FirstName = row.FirstName,
+                        Username = row.Username, FirstName = row.FirstName,
                         LastName = row.LastName, Email = row.Email, CreatedBy = AuthenticatedActor.Username(Principal) };
                     db.AppUsers.Add(user);
                 }

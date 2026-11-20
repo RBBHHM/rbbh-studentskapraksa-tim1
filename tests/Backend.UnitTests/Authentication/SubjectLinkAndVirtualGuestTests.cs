@@ -59,11 +59,9 @@ public sealed class SubjectLinkAndVirtualGuestTests
             Assert.False(result.Denied); Assert.True(result.User!.KeycloakSubjectConfirmed);
         }
         await using var read = Store(name); var saved = await read.AppUsers.SingleAsync();
-        Assert.Equal("real-subject", saved.KeycloakId); Assert.NotNull(saved.KeycloakSubjectLinkedAt);
-        var linkedAt = saved.KeycloakSubjectLinkedAt;
+        Assert.Equal("real-subject", saved.KeycloakId);
         var later = await new ApplicationIdentityResolver(read).ResolveAsync(Identity(email: "new-address@example.test", verified: false));
         Assert.Equal(saved.Id, later.User!.Id); Assert.False(later.Denied);
-        Assert.Equal(linkedAt, later.User.KeycloakSubjectLinkedAt);
         Assert.Equal("SUBJECT_LINK", Assert.Single(await read.AuditLogs.ToListAsync()).Action);
     }
 

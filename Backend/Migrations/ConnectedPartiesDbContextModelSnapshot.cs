@@ -1373,9 +1373,6 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<bool>("KeycloakSubjectConfirmed")
                         .HasColumnType("bit");
 
-                    b.Property<DateTime?>("KeycloakSubjectLinkedAt")
-                        .HasColumnType("datetime2");
-
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(100)

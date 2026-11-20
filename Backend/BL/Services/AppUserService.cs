@@ -115,7 +115,6 @@ public partial class AppUserService(ConnectedPartiesDbContext dbContext, Keycloa
         {
             KeycloakId = keycloakId, // Unconfirmed placeholder when provider administration is disabled.
             KeycloakSubjectConfirmed = _keycloakAdmin.IsEnabled && !string.IsNullOrEmpty(keycloakId),
-            KeycloakSubjectLinkedAt = _keycloakAdmin.IsEnabled ? DateTime.UtcNow : null,
             Username = dto.Username.Trim(),
             FirstName = dto.FirstName.Trim(),
             LastName = dto.LastName.Trim(),
