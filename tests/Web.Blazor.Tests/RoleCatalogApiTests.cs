@@ -36,7 +36,7 @@ public sealed class RoleCatalogApiTests
         await using var provider = Client(request =>
         {
             url = request.RequestUri!.PathAndQuery;
-            return Json(HttpStatusCode.OK, "{\"items\":[{\"id\":\"11111111-1111-1111-1111-111111111111\",\"name\":\"custom\",\"displayName\":\"Custom\",\"description\":null,\"isActive\":true,\"version\":1,\"permissionIds\":[],\"isProtected\":false}],\"total\":1,\"page\":2,\"pageSize\":20}");
+            return Json(HttpStatusCode.OK, "{\"items\":[{\"id\":\"11111111-1111-1111-1111-111111111111\",\"name\":\"custom\",\"displayName\":\"Custom\",\"description\":null,\"isActive\":true,\"version\":\"2026-11-01T00:00:00Z\",\"permissionIds\":[],\"isProtected\":false}],\"total\":1,\"page\":2,\"pageSize\":20}");
         });
         var page = await provider.GetRequiredService<IRoleCatalogApi>().ListAsync(2, "A&B");
         Assert.Equal("/api/role-catalog?page=2&pageSize=20&search=A%26B", url);
@@ -63,7 +63,7 @@ public sealed class RoleCatalogApiTests
         {
             method = request.Method; path = request.RequestUri!.AbsolutePath;
             payload = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
-            return Json(HttpStatusCode.Created, "{\"id\":\"11111111-1111-1111-1111-111111111111\",\"name\":\"custom\",\"displayName\":\"Custom\",\"isActive\":true,\"version\":1,\"permissionIds\":[],\"isProtected\":false}");
+            return Json(HttpStatusCode.Created, "{\"id\":\"11111111-1111-1111-1111-111111111111\",\"name\":\"custom\",\"displayName\":\"Custom\",\"isActive\":true,\"version\":\"2026-11-01T00:00:00Z\",\"permissionIds\":[],\"isProtected\":false}");
         });
         await provider.GetRequiredService<IRoleCatalogApi>().CreateAsync(new("custom", "Custom", null, []));
         Assert.Equal(HttpMethod.Post, method); Assert.Equal("/api/role-catalog", path);
@@ -79,12 +79,12 @@ public sealed class RoleCatalogApiTests
         {
             method = request.Method; path = request.RequestUri!.AbsolutePath;
             payload = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
-            return Json(HttpStatusCode.OK, "{\"id\":\"11111111-1111-1111-1111-111111111111\",\"name\":\"custom\",\"displayName\":\"Changed\",\"isActive\":true,\"version\":4,\"permissionIds\":[],\"isProtected\":false}");
+            return Json(HttpStatusCode.OK, "{\"id\":\"11111111-1111-1111-1111-111111111111\",\"name\":\"custom\",\"displayName\":\"Changed\",\"isActive\":true,\"version\":\"2026-11-04T00:00:00Z\",\"permissionIds\":[],\"isProtected\":false}");
         });
-        await provider.GetRequiredService<IRoleCatalogApi>().UpdateAsync(id, new("Changed", null, true, 3, []));
+        await provider.GetRequiredService<IRoleCatalogApi>().UpdateAsync(id, new("Changed", null, true, new DateTime(2026, 11, 3, 0, 0, 0, DateTimeKind.Utc), []));
         Assert.Equal(HttpMethod.Put, method);
         Assert.Equal($"/api/role-catalog/{id:D}", path);
-        Assert.Contains("\"expectedVersion\":3", payload);
+        Assert.Contains("\"expectedVersion\":\"2026-11-03T00:00:00Z\"", payload);
     }
 
     [Theory]
@@ -94,7 +94,7 @@ public sealed class RoleCatalogApiTests
     {
         await using var provider = Client(_ => Json(status, "{\"detail\":\"private-identity\"}"));
         var error = await Assert.ThrowsAsync<RegistryApiException>(() =>
-            provider.GetRequiredService<IRoleCatalogApi>().UpdateAsync(Guid.NewGuid(), new("Changed", null, true, 1, [])));
+            provider.GetRequiredService<IRoleCatalogApi>().UpdateAsync(Guid.NewGuid(), new("Changed", null, true, new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc), [])));
         Assert.Equal(status, error.StatusCode);
         Assert.DoesNotContain("private-identity", error.ToString());
     }

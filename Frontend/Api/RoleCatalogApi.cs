@@ -3,13 +3,13 @@ using RBI.ApiCore;
 namespace RBBH.RelatedPartiesRegister.Web.Api;
 
 public sealed record RoleDefinition(Guid Id, string Name, string DisplayName, string? Description,
-    bool IsActive, int Version, IReadOnlyList<Guid> PermissionIds, bool IsProtected);
+    bool IsActive, DateTime Version, IReadOnlyList<Guid> PermissionIds, bool IsProtected);
 public sealed record RoleCatalogPage(IReadOnlyList<RoleDefinition> Items, int Total, int Page, int PageSize);
 public sealed record RolePermissionOption(Guid Id, string Code, string Module, string? Description);
 public sealed record RolePermissionOptions(IReadOnlyList<RolePermissionOption> Items);
 public sealed record CreateRoleDefinition(string Name, string DisplayName, string? Description, Guid[] PermissionIds);
 public sealed record UpdateRoleDefinition(string DisplayName, string? Description, bool IsActive,
-    int ExpectedVersion, Guid[] PermissionIds);
+    DateTime ExpectedVersion, Guid[] PermissionIds);
 
 public interface IRoleCatalogApi
 {

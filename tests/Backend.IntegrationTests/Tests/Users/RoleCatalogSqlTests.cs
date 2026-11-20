@@ -17,13 +17,13 @@ public sealed class RoleCatalogSqlTests : RoleCatalogFixture
     public async Task ConcurrentCatalogUpdatesCommitOneVersionAndOneAudit()
     {
         var role = await CreateCatalog(); using var other = NewClient("reviewer");
-        var input = new UpdateRoleCatalogDTO("Concurrent", "Retained", true, 1, []);
+        var input = new UpdateRoleCatalogDTO("Concurrent", "Retained", true, role.Version, []);
         var results = await Task.WhenAll(Client.PutAsJsonAsync($"/api/role-catalog/{role.Id}", input), other.PutAsJsonAsync($"/api/role-catalog/{role.Id}", input));
         Assert.Single(results, row => row.StatusCode == HttpStatusCode.OK);
         Assert.Single(results, row => row.StatusCode == HttpStatusCode.Conflict);
         await InDatabase(async db =>
         {
-            Assert.Equal(2, (await db.Roles.SingleAsync(row => row.Id == role.Id)).Version);
+            Assert.True((await db.Roles.SingleAsync(row => row.Id == role.Id)).ModifiedAt > role.Version);
             Assert.Empty(await db.RolePermissions.Where(row => row.RoleId == role.Id).ToListAsync());
             Assert.Equal(1, await db.AuditLogs.CountAsync(row => row.Action == "ROLE_CATALOG_UPDATE"));
         });
@@ -37,11 +37,11 @@ public sealed class RoleCatalogSqlTests : RoleCatalogFixture
             CREATE TRIGGER FixtureRejectCatalogAudit ON AuditLogs AFTER INSERT AS
             BEGIN IF EXISTS(SELECT 1 FROM inserted WHERE Action = 'ROLE_CATALOG_UPDATE') THROW 51000, 'fixture audit failure', 1; END
             """));
-        Assert.Equal(HttpStatusCode.InternalServerError, (await Client.PutAsJsonAsync($"/api/role-catalog/{role.Id}", new UpdateRoleCatalogDTO("Changed", null, false, 1, []))).StatusCode);
+        Assert.Equal(HttpStatusCode.InternalServerError, (await Client.PutAsJsonAsync($"/api/role-catalog/{role.Id}", new UpdateRoleCatalogDTO("Changed", null, false, role.Version, []))).StatusCode);
         await InDatabase(async db =>
         {
             var stored = await db.Roles.SingleAsync(row => row.Id == role.Id);
-            Assert.Equal(role.DisplayName, stored.DisplayName); Assert.True(stored.IsActive); Assert.Equal(1, stored.Version);
+            Assert.Equal(role.DisplayName, stored.DisplayName); Assert.True(stored.IsActive); Assert.Null(stored.ModifiedAt);
             Assert.Equal(role.PermissionIds, await db.RolePermissions.Where(row => row.RoleId == role.Id).Select(row => row.PermissionId).ToArrayAsync());
             Assert.Single(db.AuditLogs);
         });
@@ -73,7 +73,7 @@ public sealed class RoleCatalogSqlTests : RoleCatalogFixture
                 {
                     await db.Database.MigrateAsync();
                     var role = await db.Roles.SingleAsync(); Assert.Equal(roleId, role.Id); Assert.Equal("existing-role", role.Name);
-                    Assert.Null(role.DisplayName); Assert.Null(role.Description); Assert.Equal(1, role.Version);
+                    Assert.Null(role.DisplayName); Assert.Null(role.Description); Assert.Null(role.ModifiedAt);
                     Assert.Equal(permissionId, (await db.RolePermissions.SingleAsync()).PermissionId);
                     Assert.Equal("original", role.CreatedBy);
                 }

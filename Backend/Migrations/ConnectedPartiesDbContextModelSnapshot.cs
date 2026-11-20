@@ -1068,6 +1068,7 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasColumnType("bit");
 
                     b.Property<DateTime?>("ModifiedAt")
+                        .IsConcurrencyToken()
                         .HasColumnType("datetime2");
 
                     b.Property<string>("ModifiedBy")
@@ -1078,10 +1079,6 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)")
                         .UseCollation("Latin1_General_100_CI_AS");
-
-                    b.Property<int>("Version")
-                        .IsConcurrencyToken()
-                        .HasColumnType("int");
 
                     b.HasKey("Id");
 

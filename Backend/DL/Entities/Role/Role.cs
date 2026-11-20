@@ -14,7 +14,6 @@ public class Role
 
     [StringLength(100)] public string? DisplayName { get; set; }
     [StringLength(500)] public string? Description { get; set; }
-    [ConcurrencyCheck] public int Version { get; set; } = 1;
 
     public bool IsActive { get; set; } = true;
 
@@ -22,6 +21,7 @@ public class Role
 
     public string CreatedBy { get; set; } = string.Empty;
 
+    [ConcurrencyCheck]
     public DateTime? ModifiedAt { get; set; }
 
     public string? ModifiedBy { get; set; }

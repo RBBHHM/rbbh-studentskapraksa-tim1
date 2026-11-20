@@ -41,7 +41,7 @@ public sealed class RoleCatalogHttpTests : RoleCatalogFixture
         Assert.Equal(HttpStatusCode.OK, (await Client.PostAsJsonAsync($"/api/role-requests/{requestId}/approve", new { decisionId = Guid.NewGuid(), expectedVersion = 1 })).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await applicant.GetAsync("/api/role-catalog")).StatusCode);
         // Read permission is not permission to mutate catalog/grants, even if body overposts a provider role.
-        Assert.Equal(HttpStatusCode.Forbidden, (await applicant.PutAsJsonAsync($"/api/role-catalog/{role.Id}", new UpdateRoleCatalogDTO("Forged", null, false, 1, []))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await applicant.PutAsJsonAsync($"/api/role-catalog/{role.Id}", new UpdateRoleCatalogDTO("Forged", null, false, role.Version, []))).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await Client.PutAsJsonAsync($"/api/role-catalog/{role.Id}", new UpdateRoleCatalogDTO(role.DisplayName, role.Description, false, role.Version, role.PermissionIds))).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await applicant.GetAsync("/api/role-catalog")).StatusCode);
         await InDatabase(async db =>
@@ -62,7 +62,7 @@ public sealed class RoleCatalogHttpTests : RoleCatalogFixture
             guest = (await db.Roles.SingleAsync(row => row.Name == ApplicationAccessRoles.Guest)).Id;
             db.UserRoles.Add(new UserRole { UserId = (await db.AppUsers.SingleAsync(row => row.KeycloakId == "creator")).Id, RoleId = role.Id }); await db.SaveChangesAsync();
         });
-        var edit = new UpdateRoleCatalogDTO("Changed", null, false, 1, []);
+        var edit = new UpdateRoleCatalogDTO("Changed", null, false, role.Version, []);
         Assert.Equal(HttpStatusCode.Conflict, (await Client.PutAsJsonAsync($"/api/role-catalog/{admin}", edit)).StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, (await Client.PutAsJsonAsync($"/api/role-catalog/{guest}", edit)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await Client.PutAsJsonAsync($"/api/role-catalog/{role.Id}", edit)).StatusCode);
@@ -76,11 +76,11 @@ public sealed class RoleCatalogHttpTests : RoleCatalogFixture
         Assert.Equal(HttpStatusCode.Conflict, (await Client.PostAsJsonAsync("/api/role-catalog", new CreateRoleCatalogDTO(" CUSTOM-REVIEWER ", "Duplicate", null, []))).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await Client.PostAsJsonAsync("/api/role-catalog", new CreateRoleCatalogDTO("admin", "Forbidden", null, []))).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await Client.PostAsJsonAsync("/api/role-catalog", new CreateRoleCatalogDTO("unknown-grant", "Unknown", null, [Guid.NewGuid()]))).StatusCode);
-        Assert.Equal(HttpStatusCode.BadRequest, (await Client.PutAsJsonAsync($"/api/role-catalog/{role.Id}", new UpdateRoleCatalogDTO("Invalid", null, true, 1, [role.PermissionIds[0], role.PermissionIds[0]]))).StatusCode);
-        var first = await Client.PutAsJsonAsync($"/api/role-catalog/{role.Id}", new UpdateRoleCatalogDTO("Updated", null, true, 1, []));
+        Assert.Equal(HttpStatusCode.BadRequest, (await Client.PutAsJsonAsync($"/api/role-catalog/{role.Id}", new UpdateRoleCatalogDTO("Invalid", null, true, role.Version, [role.PermissionIds[0], role.PermissionIds[0]]))).StatusCode);
+        var first = await Client.PutAsJsonAsync($"/api/role-catalog/{role.Id}", new UpdateRoleCatalogDTO("Updated", null, true, role.Version, []));
         Assert.Equal(HttpStatusCode.OK, first.StatusCode);
-        Assert.Equal(2, (await first.Content.ReadFromJsonAsync<RoleCatalogDTO>())!.Version);
-        Assert.Equal(HttpStatusCode.Conflict, (await Client.PutAsJsonAsync($"/api/role-catalog/{role.Id}", new UpdateRoleCatalogDTO("Stale", null, false, 1, []))).StatusCode);
+        Assert.True((await first.Content.ReadFromJsonAsync<RoleCatalogDTO>())!.Version > role.Version);
+        Assert.Equal(HttpStatusCode.Conflict, (await Client.PutAsJsonAsync($"/api/role-catalog/{role.Id}", new UpdateRoleCatalogDTO("Stale", null, false, role.Version, []))).StatusCode);
         await InDatabase(async db => { Assert.Empty(await db.RolePermissions.Where(row => row.RoleId == role.Id).ToListAsync()); Assert.Equal(2, await db.AuditLogs.CountAsync()); });
     }
 }
