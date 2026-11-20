@@ -289,7 +289,7 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
                         .Where(row => partyIds.Contains(row.LegalEntityId)).ToListAsync(ct);
                     var persistedKeys = persistedRows.Select(Key).ToHashSet();
                     if (rows.Any(row => persistedKeys.Contains(Key(row))))
-                        throw new Exceptions.BusinessRuleException(409, "import.duplicate", BackendMessages.Message("validation.limits.import.existing"));
+                        throw new Exceptions.BusinessRuleException(409, "request.concurrent_change", BackendMessages.Message("validation.limits.import.existing"));
                 }
 
                 _dbContext.Limiti.AddRange(rows);
