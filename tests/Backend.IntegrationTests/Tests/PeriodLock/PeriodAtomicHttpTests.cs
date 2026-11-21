@@ -40,8 +40,8 @@ public abstract class PeriodAtomicFixture : AuthenticatedApiFixture
             foreach (var part in new[] { "title", "body" })
             {
                 var key = $"notifications.period.{kind}.{part}";
-                db.CodeLists.Add(new() { Kategorija = packs.Name, Kod = Guid.NewGuid().ToString("N"), Naziv = key, LanguageCode = "BS", ResourceKey = key,
-                    ResourceLabel = part == "title" ? "Period notification" : kind is "locked" or "unlocked" ? "Actor {actor}: {month}/{year}" : "Message: {message}\nPeriod: {month}/{year}", KreiraoKorisnik = "fixture" });
+                db.CodeLists.Add(new() { Kategorija = packs.Name, Kod = Guid.NewGuid().ToString("N"), Naziv = key, Localization = new() { Category = "LanguagePacks", LanguageCode = "BS", ResourceKey = key,
+                    ResourceLabel = part == "title" ? "Period notification" : kind is "locked" or "unlocked" ? "Actor {actor}: {month}/{year}" : "Message: {message}\nPeriod: {month}/{year}" }, KreiraoKorisnik = "fixture" });
             }
             await db.SaveChangesAsync();
         });

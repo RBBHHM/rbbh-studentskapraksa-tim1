@@ -48,8 +48,8 @@ public sealed class ControllerResourcesSqlTests : RoleCatalogFixture
         Assert.Contains("erforderlich", german.GetProperty("errors").GetProperty("displayName")[0].GetString());
         await InDatabase(async db =>
         {
-            var legacy = await db.CodeLists.SingleAsync(row => row.LanguageCode == "DE" && row.ResourceKey == "validation.registry.name.required");
-            legacy.ResourceKey = legacy.ResourceKey!.ToUpperInvariant(); legacy.ResourceLabel = "Legacy-Name erforderlich"; await db.SaveChangesAsync();
+            var legacy = await db.CodeLists.SingleAsync(row => row.Localization!.LanguageCode == "DE" && row.Localization!.ResourceKey == "validation.registry.name.required");
+            legacy.Localization!.ResourceKey = legacy.Localization!.ResourceKey!.ToUpperInvariant(); legacy.Localization!.ResourceLabel = "Legacy-Name erforderlich"; await db.SaveChangesAsync();
         });
         var legacyResponse = await (await Client.PostAsJsonAsync("/api/legal-entities", missingName)).Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("Legacy-Name erforderlich", legacyResponse.GetProperty("errors").GetProperty("name")[0].GetString());

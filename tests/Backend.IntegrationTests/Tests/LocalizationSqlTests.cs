@@ -62,7 +62,7 @@ public sealed class LocalizationSqlTests : LocalizationFixture
         await InDatabase(db => db.Database.ExecuteSqlRawAsync("CREATE TRIGGER FixtureRejectResourceAudit ON AuditLogs AFTER INSERT AS BEGIN THROW 51000, 'fixture failure', 1; END"));
         Assert.Equal(HttpStatusCode.InternalServerError, (await Client.PutAsJsonAsync("/api/localization/resources/BS/rollback.resource", new { label = "No" })).StatusCode);
         var after = await Pack("BS"); Assert.Equal(before.GetProperty("version").GetString(), after.GetProperty("version").GetString());
-        await InDatabase(async db => { Assert.False(await db.CodeLists.AnyAsync(row => row.ResourceKey == "rollback.resource")); Assert.Empty(db.AuditLogs); });
+        await InDatabase(async db => { Assert.False(await db.CodeLists.AnyAsync(row => row.Localization != null && row.Localization.ResourceKey == "rollback.resource")); Assert.Empty(db.AuditLogs); });
     }
     [SqlServerFact]
     public async Task BatchedCodebookImportRollsBackEveryValueIfAuditCannotBePersisted()

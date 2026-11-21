@@ -1,3 +1,4 @@
+using System.Net;
 using RBBH.ConnectedParties.DL.Entities.Role;
 using RBBH.ConnectedParties.DL.Entities.Sifarnici;
 using RBBH.ConnectedParties.DL.Entities.Users;
@@ -7,12 +8,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace RBBH.ConnectedParties.DL.Persistence;
 
-public partial class ConnectedPartiesDbContext : DbContext
+public partial class ConnectedPartiesDbContext(
+    DbContextOptions<ConnectedPartiesDbContext> options, IHttpContextAccessor? httpContextAccessor = null) : DbContext(options)
 {
-    public ConnectedPartiesDbContext(DbContextOptions<ConnectedPartiesDbContext> options)
-        : base(options)
-    {
-    }
 
     public virtual DbSet<RBBH.ConnectedParties.DL.Entities.Role.Role> Roles { get; set; }
     public virtual DbSet<UserRole> UserRoles { get; set; }
@@ -62,7 +60,7 @@ public partial class ConnectedPartiesDbContext : DbContext
         modelBuilder.Entity<CodeList>(entity =>
         {
             entity.Property(e => e.Kategorija).HasColumnName("Category").UseCollation("Latin1_General_100_CI_AS");
-            entity.Property(e => e.Kod).HasColumnName("Code").UseCollation("Latin1_General_100_CI_AS");
+            entity.Property(e => e.Kod).HasColumnName("ValueKey").UseCollation("Latin1_General_100_CI_AS");
             entity.Property(e => e.Naziv).HasColumnName("Name");
             entity.Property(e => e.Opis).HasColumnName("Description");
             entity.Property(e => e.Aktivan).HasColumnName("IsActive");
@@ -78,12 +76,17 @@ public partial class ConnectedPartiesDbContext : DbContext
             {
                 table.HasCheckConstraint("CK_CodeListValues_Category_Trimmed",
                     "DATALENGTH([Category]) = DATALENGTH(LTRIM(RTRIM([Category])))");
-                table.HasCheckConstraint("CK_CodeListValues_Code_Trimmed",
-                    "DATALENGTH([Code]) = DATALENGTH(LTRIM(RTRIM([Code])))");
+                table.HasCheckConstraint("CK_CodeListValues_ValueKey_Trimmed",
+                    "DATALENGTH([ValueKey]) = DATALENGTH(LTRIM(RTRIM([ValueKey])))");
             });
-            entity.Property(e => e.ResourceKey).UseCollation("Latin1_General_100_CI_AS");
-            entity.HasIndex(e => new { e.Kategorija, e.LanguageCode, e.ResourceKey }).IsUnique()
-                .HasFilter("[LanguageCode] IS NOT NULL AND [ResourceKey] IS NOT NULL");
+            entity.OwnsOne(e => e.Localization, localization =>
+            {
+                localization.ToTable("CodeListLocalization");
+                localization.Property(row => row.Category).UseCollation("Latin1_General_100_CI_AS");
+                localization.Property(row => row.ResourceKey).UseCollation("Latin1_General_100_CI_AS");
+                localization.HasIndex(row => new { row.Category, row.LanguageCode, row.ResourceKey })
+                    .IsUnique().HasFilter("[LanguageCode] IS NOT NULL AND [ResourceKey] IS NOT NULL");
+            });
         });
         modelBuilder.Entity<CodeListDefinition>(entity =>
         {
@@ -193,10 +196,29 @@ public partial class ConnectedPartiesDbContext : DbContext
         }
     }
 
+    private void NormalizeNewAuditAddresses()
+    {
+        var requestAddress = httpContextAccessor?.HttpContext?.Connection.RemoteIpAddress;
+        foreach (var entry in ChangeTracker.Entries<AuditLog>().Where(entry => entry.State == EntityState.Added))
+        {
+            var address = IPAddress.TryParse(entry.Entity.IpAddress, out var suppliedAddress)
+                ? suppliedAddress
+                : requestAddress;
+            if (address?.IsIPv4MappedToIPv6 == true)
+                address = address.MapToIPv4();
+
+            entry.Entity.IpAddress = address is null || IPAddress.IsLoopback(address)
+                || address.Equals(IPAddress.Any) || address.Equals(IPAddress.IPv6Any)
+                ? null
+                : address.ToString();
+        }
+    }
+
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
         ProtectCreatorIdentity();
         ProtectCapitalRevisions();
+        NormalizeNewAuditAddresses();
         TouchCodebookVersions();
         return base.SaveChanges(acceptAllChangesOnSuccess);
     }
@@ -206,6 +228,7 @@ public partial class ConnectedPartiesDbContext : DbContext
         cancellationToken.ThrowIfCancellationRequested();
         ProtectCreatorIdentity();
         ProtectCapitalRevisions();
+        NormalizeNewAuditAddresses();
         var categories = ChangedCodebookCategories();
         if (categories.Length > 0 || ChangeTracker.Entries<CodeListDefinition>().Any(entry => entry.State is EntityState.Added or EntityState.Modified))
         {

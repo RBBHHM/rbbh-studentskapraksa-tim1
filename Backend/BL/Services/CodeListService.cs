@@ -256,7 +256,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
     /// </summary>
     private async Task<bool> JeVrijednostUUpotrebi(string kategorija, string kod)
     {
-        if (await _dbContext.CodeLists.IgnoreQueryFilters().AnyAsync(row => row.LanguageCode == kod && row.ResourceKey != null)) return true;
+        if (await _dbContext.CodeLists.IgnoreQueryFilters().AnyAsync(row => row.Localization != null && row.Localization.LanguageCode == kod && row.Localization.ResourceKey != null)) return true;
         return kategorija switch
         {
             "OsnovPovezanosti" =>

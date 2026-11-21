@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.EntityFrameworkCore;
+using RBBH.ConnectedParties.DL.Persistence;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -47,8 +49,10 @@ public sealed class ProductionHostingHttpTests
     [InlineData("10.20.30.41", "public.example.test", "http", "10.20.30.41", "public.example.test")]
     // The trusted peer can forward address/proto; an unapproved host alone is ignored.
     [InlineData("10.20.30.40", "attacker.example.test", "https", "203.0.113.9", "public.example.test")]
+    [InlineData("::ffff:192.0.2.15", "public.example.test", "http", "192.0.2.15", "public.example.test")]
+    [InlineData("::1", "public.example.test", "http", null, "public.example.test")]
     public async Task OnlyApprovedProxyAndPublicHostCanRewriteSchemeAndAuditAddress(
-        string remote, string forwardedHost, string scheme, string address, string host)
+        string remote, string forwardedHost, string scheme, string? address, string host)
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Production" });
         builder.WebHost.UseTestServer();
@@ -59,14 +63,17 @@ public sealed class ProductionHostingHttpTests
             ["AllowedHosts"] = "public.example.test"
         });
         builder.Services.AddApplicationForwardedHeaders(builder.Configuration, builder.Environment);
+        builder.Services.AddHttpContextAccessor();
+        var database = Guid.NewGuid().ToString();
+        builder.Services.AddDbContext<ConnectedPartiesDbContext>(options => options.UseInMemoryDatabase(database));
         await using var app = builder.Build();
         app.Use(async (context, next) => { context.Connection.RemoteIpAddress = IPAddress.Parse(remote); await next(); });
         app.UseForwardedHeaders();
-        app.MapGet("/context", (Microsoft.AspNetCore.Http.HttpContext context) => new
+        app.MapPost("/audit", async (Microsoft.AspNetCore.Http.HttpContext context, ConnectedPartiesDbContext db) =>
         {
-            scheme = context.Request.Scheme,
-            address = context.Connection.RemoteIpAddress?.ToString(),
-            host = context.Request.Host.Host
+            db.AuditLogs.Add(new() { TableName = "Role", Action = "UPDATE", RecordId = "test", Username = "tester" });
+            await db.SaveChangesAsync();
+            return new { scheme = context.Request.Scheme, host = context.Request.Host.Host };
         });
         await app.StartAsync();
         using var client = app.GetTestClient();
@@ -74,9 +81,13 @@ public sealed class ProductionHostingHttpTests
         client.DefaultRequestHeaders.Add("X-Forwarded-For", "203.0.113.9");
         client.DefaultRequestHeaders.Add("X-Forwarded-Proto", "https");
         client.DefaultRequestHeaders.Add("X-Forwarded-Host", forwardedHost);
-        var json = await client.GetFromJsonAsync<JsonElement>("/context");
+        using var response = await client.PostAsync("/audit", null);
+        response.EnsureSuccessStatusCode();
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal(scheme, json.GetProperty("scheme").GetString());
-        Assert.Equal(address, json.GetProperty("address").GetString());
+        await using var scope = app.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+        Assert.Equal(address, (await db.AuditLogs.SingleAsync()).IpAddress);
         Assert.Equal(host, json.GetProperty("host").GetString());
     }
 }

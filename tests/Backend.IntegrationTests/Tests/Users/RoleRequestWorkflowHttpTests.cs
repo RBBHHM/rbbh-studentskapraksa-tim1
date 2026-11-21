@@ -43,7 +43,7 @@ public abstract class RoleRequestFixture : AuthenticatedApiFixture
                 {
                     var key = $"notifications.role.request.{outcome}.{part}";
                     db.CodeLists.Add(new() { Kategorija = "LanguagePacks", Kod = Guid.NewGuid().ToString("N"), Naziv = key,
-                        ResourceKey = key, LanguageCode = "BS", ResourceLabel = "Fixture notification " + outcome, KreiraoKorisnik = "fixture" });
+                        Localization = new() { Category = "LanguagePacks", ResourceKey = key, LanguageCode = "BS", ResourceLabel = "Fixture notification " + outcome }, KreiraoKorisnik = "fixture" });
                 }
                 await db.SaveChangesAsync();
             }

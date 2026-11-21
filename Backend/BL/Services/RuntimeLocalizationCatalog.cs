@@ -55,17 +55,17 @@ public sealed class RuntimeLocalizationCatalog(ConnectedPartiesDbContext db, IOp
         if (cache.Values.TryGetValue(cacheKey, out RuntimeResourcePack? existing)) return existing!;
         var fallback = DefaultLanguage;
         var rows = await db.CodeLists.AsNoTracking().Where(row => row.Kategorija == Settings.LanguagePacksCodebook &&
-                row.ResourceKey != null && row.LanguageCode != null && (row.LanguageCode == language || row.LanguageCode == fallback) &&
+                row.Localization != null && row.Localization.ResourceKey != null && row.Localization.LanguageCode != null && (row.Localization!.LanguageCode == language || row.Localization!.LanguageCode == fallback) &&
                 !db.CodeListDefinitions.Any(definition => definition.Name == row.Kategorija && !definition.IsActive)).Take(10_001).ToListAsync(ct);
         if (rows.Count > 10_000) throw new BusinessRuleException(503, "localization.catalog_limit");
-        var defaults = rows.Where(row => row.LanguageCode == fallback).ToDictionary(row => row.ResourceKey!, StringComparer.OrdinalIgnoreCase);
-        var requested = rows.Where(row => row.LanguageCode == language).ToDictionary(row => row.ResourceKey!, StringComparer.OrdinalIgnoreCase);
+        var defaults = rows.Where(row => row.Localization!.LanguageCode == fallback).ToDictionary(row => row.Localization!.ResourceKey!, StringComparer.OrdinalIgnoreCase);
+        var requested = rows.Where(row => row.Localization!.LanguageCode == language).ToDictionary(row => row.Localization!.ResourceKey!, StringComparer.OrdinalIgnoreCase);
         var keys = defaults.Keys.Concat(requested.Keys).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase);
         var items = keys.Select(key =>
         {
             defaults.TryGetValue(key, out var baseline); requested.TryGetValue(key, out var preferred);
-            return new RuntimeResource(key, preferred?.ResourceLabel ?? baseline?.ResourceLabel ?? key,
-                preferred?.ResourceHelper ?? baseline?.ResourceHelper, preferred?.ResourcePlaceholder ?? baseline?.ResourcePlaceholder);
+            return new RuntimeResource(key, preferred?.Localization?.ResourceLabel ?? baseline?.Localization?.ResourceLabel ?? key,
+                preferred?.Localization?.ResourceHelper ?? baseline?.Localization?.ResourceHelper, preferred?.Localization?.ResourcePlaceholder ?? baseline?.Localization?.ResourcePlaceholder);
         }).ToArray();
         var pack = new RuntimeResourcePack(language, fallback, version, items);
         cache.Values.Set(cacheKey, pack, new MemoryCacheEntryOptions { Size = Math.Max(1, items.Length), SlidingExpiration = TimeSpan.FromMinutes(10) });
@@ -108,7 +108,7 @@ public sealed class RuntimeLocalizationCatalog(ConnectedPartiesDbContext db, IOp
             throw new BusinessRuleException(400, "localization.invalid_resource");
         var normalized = key.ToUpperInvariant();
         var row = await db.CodeLists.IgnoreQueryFilters().SingleOrDefaultAsync(row => row.Kategorija == Settings.LanguagePacksCodebook &&
-            row.LanguageCode == language && row.ResourceKey != null && row.ResourceKey.ToUpper() == normalized, ct);
+            row.Localization != null && row.Localization.LanguageCode == language && row.Localization.ResourceKey != null && row.Localization.ResourceKey.ToUpper() == normalized, ct);
         if (row is null && !Regex.IsMatch(key, "^[a-z][a-z0-9]*(\\.[a-z][a-z0-9]*)+$", RegexOptions.CultureInvariant))
             throw new BusinessRuleException(400, "localization.invalid_key");
         if (row?.IsSystemRequired == true && !input.IsActive)
@@ -122,10 +122,12 @@ public sealed class RuntimeLocalizationCatalog(ConnectedPartiesDbContext db, IOp
         if (row is null)
         {
             row = new CodeList { Kategorija = definition.Name, Kod = Guid.NewGuid().ToString("N"),
-                Naziv = key, ResourceKey = key, LanguageCode = language, KreiranDatum = now, KreiraoKorisnik = actor };
+                Naziv = key, Localization = new() { Category = definition.Name, ResourceKey = key, LanguageCode = language }, KreiranDatum = now, KreiraoKorisnik = actor };
             db.CodeLists.Add(row);
         }
-        row.ResourceLabel = input.Label; row.ResourceHelper = input.Helper; row.ResourcePlaceholder = input.Placeholder;
+        row.Localization!.ResourceLabel = input.Label;
+        row.Localization.ResourceHelper = input.Helper;
+        row.Localization.ResourcePlaceholder = input.Placeholder;
         row.Aktivan = input.IsActive; row.IzmijenjenDatum = now; row.IzmijenioKorisnik = actor;
         db.AuditLogs.Add(new() { TableName = "CodeList", RecordId = row.Kod, Action = "LOCALIZATION_UPDATE",
             Username = actor, Timestamp = now, NewValues = System.Text.Json.JsonSerializer.Serialize(new { language, key, input.IsActive }) });

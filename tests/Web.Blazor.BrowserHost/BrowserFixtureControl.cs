@@ -340,7 +340,7 @@ internal static partial class BrowserHostProgram
                                 foreach (var (language, key, label) in new[] {
                                     ("BS", "notifications.fixture.title", "Rola dodijeljena"), ("BS", "notifications.fixture.body", "Odobrena rola {role}."),
                                     ("EN", "notifications.fixture.title", "Role granted"), ("EN", "notifications.fixture.body", "Role {role} was approved.") })
-                                    db.CodeLists.Add(new CodeList { Kategorija = "LanguagePacks", Kod = language + ":" + key, Naziv = key, LanguageCode = language, ResourceKey = key, ResourceLabel = label, KreiraoKorisnik = "fixture" });
+                                    db.CodeLists.Add(new CodeList { Kategorija = "LanguagePacks", Kod = language + ":" + key, Naziv = key, Localization = new() { Category = "LanguagePacks", LanguageCode = language, ResourceKey = key, ResourceLabel = label }, KreiraoKorisnik = "fixture" });
                                 var now = DateTime.UtcNow;
                                 db.Notifications.AddRange(
                                     new ApplicationNotification { RecipientSubject = "fixture-user", RecipientEmail = "fixture@example.test", EventKey = "fixture.a", TitleKey = "notifications.fixture.title", BodyKey = "notifications.fixture.body", ParametersJson = "{\"role\":\"FL\"}", Route = "/app/profile", CreatedAt = now.AddMinutes(-1) },
@@ -360,7 +360,7 @@ internal static partial class BrowserHostProgram
                                     Action = "INSERT",
                                     UserId = "fixture-user",
                                     Username = "fixture-auditor",
-                                    IpAddress = "127.0.0.1",
+                                    IpAddress = "192.0.2.15",
                                     NewValues = System.Text.Json.JsonSerializer.Serialize(new { note = "<img src=x onerror=\"window.__auditExecuted=true\">audit-body-needle" })
                                 });
                             break;
@@ -373,7 +373,6 @@ internal static partial class BrowserHostProgram
                                     TableName = "RelatedPerson",
                                     RecordId = $"audit-record-{index:D3}",
                                     Action = "INSERT",
-                                    UserId = "fixture-user",
                                     Username = $"audit-page-{index:D3}",
                                     Timestamp = DateTime.UtcNow.AddMinutes(-index)
                                 });

@@ -1171,7 +1171,7 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(50)
                         .IsUnicode(false)
                         .HasColumnType("varchar(50)")
-                        .HasColumnName("Code")
+                        .HasColumnName("ValueKey")
                         .UseCollation("Latin1_General_100_CI_AS");
 
                     b.Property<DateTime>("KreiranDatum")
@@ -1185,10 +1185,6 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasColumnType("varchar(100)")
                         .HasColumnName("CreatedBy");
 
-                    b.Property<string>("LanguageCode")
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
                     b.Property<string>("Naziv")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -1200,23 +1196,6 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasColumnType("nvarchar(500)")
                         .HasColumnName("Description");
 
-                    b.Property<string>("ResourceHelper")
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
-
-                    b.Property<string>("ResourceKey")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)")
-                        .UseCollation("Latin1_General_100_CI_AS");
-
-                    b.Property<string>("ResourceLabel")
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
-
-                    b.Property<string>("ResourcePlaceholder")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
                     b.HasKey("ID");
 
                     b.HasIndex("Kategorija");
@@ -1224,15 +1203,11 @@ namespace RBBH.ConnectedParties.Migrations
                     b.HasIndex("Kategorija", "Kod")
                         .IsUnique();
 
-                    b.HasIndex("Kategorija", "LanguageCode", "ResourceKey")
-                        .IsUnique()
-                        .HasFilter("[LanguageCode] IS NOT NULL AND [ResourceKey] IS NOT NULL");
-
                     b.ToTable("CodeListValues", null, t =>
                         {
                             t.HasCheckConstraint("CK_CodeListValues_Category_Trimmed", "DATALENGTH([Category]) = DATALENGTH(LTRIM(RTRIM([Category])))");
 
-                            t.HasCheckConstraint("CK_CodeListValues_Code_Trimmed", "DATALENGTH([Code]) = DATALENGTH(LTRIM(RTRIM([Code])))");
+                            t.HasCheckConstraint("CK_CodeListValues_ValueKey_Trimmed", "DATALENGTH([ValueKey]) = DATALENGTH(LTRIM(RTRIM([ValueKey])))");
                         });
                 });
 
@@ -1477,6 +1452,56 @@ namespace RBBH.ConnectedParties.Migrations
                         .IsRequired();
 
                     b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Sifarnici.CodeList", b =>
+                {
+                    b.OwnsOne("RBBH.ConnectedParties.DL.Entities.Sifarnici.CodeListLocalization", "Localization", b1 =>
+                        {
+                            b1.Property<int>("CodeListID")
+                                .HasColumnType("int");
+
+                            b1.Property<string>("Category")
+                                .IsRequired()
+                                .HasMaxLength(100)
+                                .IsUnicode(false)
+                                .HasColumnType("varchar(100)")
+                                .UseCollation("Latin1_General_100_CI_AS");
+
+                            b1.Property<string>("LanguageCode")
+                                .HasMaxLength(10)
+                                .HasColumnType("nvarchar(10)");
+
+                            b1.Property<string>("ResourceHelper")
+                                .HasMaxLength(4000)
+                                .HasColumnType("nvarchar(4000)");
+
+                            b1.Property<string>("ResourceKey")
+                                .HasMaxLength(200)
+                                .HasColumnType("nvarchar(200)")
+                                .UseCollation("Latin1_General_100_CI_AS");
+
+                            b1.Property<string>("ResourceLabel")
+                                .HasMaxLength(4000)
+                                .HasColumnType("nvarchar(4000)");
+
+                            b1.Property<string>("ResourcePlaceholder")
+                                .HasMaxLength(500)
+                                .HasColumnType("nvarchar(500)");
+
+                            b1.HasKey("CodeListID");
+
+                            b1.HasIndex("Category", "LanguageCode", "ResourceKey")
+                                .IsUnique()
+                                .HasFilter("[LanguageCode] IS NOT NULL AND [ResourceKey] IS NOT NULL");
+
+                            b1.ToTable("CodeListLocalization", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("CodeListID");
+                        });
+
+                    b.Navigation("Localization");
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Authorization.RoleRequest", b =>

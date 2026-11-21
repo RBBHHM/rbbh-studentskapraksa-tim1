@@ -70,7 +70,7 @@ public sealed class PeriodAtomicSqlTests : PeriodAtomicFixture
             await db.Database.ExecuteSqlRawAsync("UPDATE CodeLists SET ResourceLabel = N'Operator maintained label' WHERE Kategorija = 'LanguagePacks' AND LanguageCode = 'BS' AND ResourceKey = 'errors.request.invalid.title'");
             await db.Database.MigrateAsync(); var period = await db.PeriodLocks.SingleAsync(); Assert.True(period.IsLocked); Assert.Equal("original", period.LockedBy);
             var request = await db.UnlockRequests.SingleAsync(); Assert.Equal("NEEDS_INFO", request.Status); Assert.Equal(new string('X', 500), request.Reason); Assert.Equal("proven-subject", request.RequestedBySubject);
-            Assert.Equal("Operator maintained label", (await db.CodeLists.SingleAsync(row => row.LanguageCode == "BS" && row.ResourceKey == "errors.request.invalid.title")).ResourceLabel);
+            Assert.Equal("Operator maintained label", (await db.CodeLists.SingleAsync(row => row.Localization!.LanguageCode == "BS" && row.Localization!.ResourceKey == "errors.request.invalid.title")).Localization!.ResourceLabel);
             Assert.Empty(db.AuditLogs); Assert.Empty(db.Notifications);
         }
         finally { await db.Database.EnsureDeletedAsync(); }

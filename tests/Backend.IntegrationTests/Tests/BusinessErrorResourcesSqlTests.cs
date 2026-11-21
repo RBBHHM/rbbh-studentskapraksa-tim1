@@ -65,17 +65,29 @@ public sealed class BusinessErrorResourcesSqlTests : RoleCatalogFixture
         try
         {
             await db.GetService<IMigrator>().MigrateAsync("20261103084605_AddAdministrativeRoleCatalog");
-            db.CodeLists.Add(new() { Kategorija = "LanguagePacks", Kod = Guid.NewGuid().ToString("N"), Naziv = "Existing translation",
-                LanguageCode = "DE", ResourceKey = "errors.roles.not.found", ResourceLabel = "Approved existing label", KreiraoKorisnik = "original" });
-            await db.SaveChangesAsync();
+            var valueKey = Guid.NewGuid().ToString("N");
+            var createdAt = DateTime.UtcNow;
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT dbo.CodeLists (Kategorija, Kod, Naziv, Aktivan, KreiraoKorisnik, KreiranDatum, IsSystemRequired,
+                    DefinitionId, LanguageCode, ResourceKey, ResourceLabel, ResourceHelper, ResourcePlaceholder)
+                SELECT N'LanguagePacks', {valueKey}, N'Existing translation', 1, N'original', {createdAt}, 0,
+                    Id, N'DE', N'errors.roles.not.found', N'Approved existing label', N'Existing helper', N'Existing placeholder'
+                FROM dbo.CodeListDefinitions
+                WHERE Name = N'LanguagePacks';
+                """);
             await db.Database.MigrateAsync();
             foreach (var language in new[] { "BS", "EN", "DE" })
             {
-                var keys = await db.CodeLists.Where(row => row.Kategorija == "LanguagePacks" && row.LanguageCode == language).Select(row => row.ResourceKey).ToArrayAsync();
+                var keys = await db.CodeLists.Where(row => row.Kategorija == "LanguagePacks" && row.Localization!.LanguageCode == language).Select(row => row.Localization!.ResourceKey).ToArrayAsync();
                 Assert.Empty(BackendMessages.All.Keys.Except(keys!));
             }
-            Assert.Equal("Approved existing label", (await db.CodeLists.SingleAsync(row => row.LanguageCode == "DE" && row.ResourceKey == "errors.roles.not.found")).ResourceLabel);
-            Assert.Equal(3, await db.CodeLists.CountAsync(row => row.ResourceKey == "errors.roles.not.found"));
+            var translation = await db.CodeLists.SingleAsync(row => row.Localization!.LanguageCode == "DE"
+                && row.Localization.ResourceKey == "errors.roles.not.found");
+            Assert.Equal(valueKey, translation.Kod);
+            Assert.Equal("Approved existing label", translation.Localization!.ResourceLabel);
+            Assert.Equal("Existing helper", translation.Localization.ResourceHelper);
+            Assert.Equal("Existing placeholder", translation.Localization.ResourcePlaceholder);
+            Assert.Equal(3, await db.CodeLists.CountAsync(row => row.Localization!.ResourceKey == "errors.roles.not.found"));
         }
         finally { await db.Database.EnsureDeletedAsync(); }
     }

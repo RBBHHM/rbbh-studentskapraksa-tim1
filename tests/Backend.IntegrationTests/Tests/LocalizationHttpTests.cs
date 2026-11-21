@@ -65,7 +65,7 @@ public sealed class LocalizationHttpTests : LocalizationFixture
         using var response = await Client.PutAsJsonAsync($"/api/localization/resources/{language}/{key}", new { label });
         Assert.Equal((HttpStatusCode)status, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync(); Assert.DoesNotContain("SqlException", content);
-        await InDatabase(async db => { Assert.Empty(db.AuditLogs); Assert.False(await db.CodeLists.AnyAsync(row => row.ResourceKey != null)); });
+        await InDatabase(async db => { Assert.Empty(db.AuditLogs); Assert.False(await db.CodeLists.AnyAsync(row => row.Localization != null && row.Localization.ResourceKey != null)); });
     }
     [Fact]
     public async Task LegacyKeyCasingIsReadableAndUpdatableButCannotBeIntroducedAsNew()
@@ -74,12 +74,12 @@ public sealed class LocalizationHttpTests : LocalizationFixture
         {
             var definition = await db.CodeListDefinitions.SingleAsync(row => row.Name == "LanguagePacks");
             db.CodeLists.Add(new() { Kategorija = definition.Name, Kod = "LEGACY", Naziv = "LegacyKey",
-                LanguageCode = "BS", ResourceKey = "LegacyKey", ResourceLabel = "Before", KreiraoKorisnik = "fixture" });
+                Localization = new() { Category = "LanguagePacks", LanguageCode = "BS", ResourceKey = "LegacyKey", ResourceLabel = "Before" }, KreiraoKorisnik = "fixture" });
             await db.SaveChangesAsync();
         });
         Assert.Equal(HttpStatusCode.NoContent, (await Client.PutAsJsonAsync("/api/localization/resources/BS/legacykey", new { label = "After" })).StatusCode);
         Assert.Equal("After", (await Pack("BS")).GetProperty("items")[0].GetProperty("label").GetString());
-        await InDatabase(async db => Assert.Equal("LegacyKey", (await db.CodeLists.SingleAsync(row => row.ResourceKey != null)).ResourceKey));
+        await InDatabase(async db => Assert.Equal("LegacyKey", (await db.CodeLists.SingleAsync(row => row.Localization != null && row.Localization.ResourceKey != null)).Localization!.ResourceKey));
     }
     [Fact]
     public async Task ResourceWritesRequireDatabaseAdminWhileGuestCanReadAndAnonymousCannot()
