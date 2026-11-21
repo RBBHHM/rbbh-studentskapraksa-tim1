@@ -48,7 +48,7 @@ public sealed class LimitImportHttpTests : LimitImportFixture
     public async Task CreationAuditIdentifiesGeneratedRowAndRoundtripRebindsBusinessIdentityWithoutTrustingMetadata()
     {
         await Seed(); var id = await Create();
-        await InDatabase(async db => { var audit = await db.AuditLogs.SingleAsync(); Assert.Equal(id.ToString(), audit.RecordId); Assert.Equal("creator", audit.UserId); });
+        await InDatabase(async db => { var audit = await db.AuditLogs.SingleAsync(); Assert.Equal(id.ToString(), audit.RecordId); Assert.Equal("creator", audit.Username); });
         using var original = new MemoryStream(await File()); using var workbook = new XLWorkbook(original); var sheet = workbook.Worksheet(1);
         Assert.Equal(18, sheet.LastColumnUsed()!.ColumnNumber()); sheet.Cell(2, 15).Value = "Forged actor"; sheet.Cell(2, 12).Value = 999999;
         using var edited = new MemoryStream(); workbook.SaveAs(edited);

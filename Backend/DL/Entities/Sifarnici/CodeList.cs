@@ -12,8 +12,6 @@ public class CodeList
 {
     [Key]
     public int ID { get; set; }
-    public Guid? DefinitionId { get; set; }
-    public CodeListDefinition? Definition { get; set; }
     public bool IsSystemRequired { get; set; }
     [StringLength(10)] public string? LanguageCode { get; set; }
     [StringLength(200)] public string? ResourceKey { get; set; }

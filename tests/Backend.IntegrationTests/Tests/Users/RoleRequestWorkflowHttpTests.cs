@@ -37,12 +37,12 @@ public abstract class RoleRequestFixture : AuthenticatedApiFixture
                 var languages = new RBBH.ConnectedParties.DL.Entities.Sifarnici.CodeListDefinition { Name = "Languages", CreatedBy = "fixture" };
                 var packs = new RBBH.ConnectedParties.DL.Entities.Sifarnici.CodeListDefinition { Name = "LanguagePacks", CreatedBy = "fixture" };
                 db.CodeListDefinitions.AddRange(languages, packs);
-                db.CodeLists.Add(new() { Kategorija = "Languages", DefinitionId = languages.Id, Kod = "BS", Naziv = "Bosanski", KreiraoKorisnik = "fixture" });
+                db.CodeLists.Add(new() { Kategorija = "Languages", Kod = "BS", Naziv = "Bosanski", KreiraoKorisnik = "fixture" });
                 foreach (var outcome in new[] { "submitted", "approved", "rejected" })
                 foreach (var part in new[] { "title", "body", "detail" })
                 {
                     var key = $"notifications.role.request.{outcome}.{part}";
-                    db.CodeLists.Add(new() { Kategorija = "LanguagePacks", DefinitionId = packs.Id, Kod = Guid.NewGuid().ToString("N"), Naziv = key,
+                    db.CodeLists.Add(new() { Kategorija = "LanguagePacks", Kod = Guid.NewGuid().ToString("N"), Naziv = key,
                         ResourceKey = key, LanguageCode = "BS", ResourceLabel = "Fixture notification " + outcome, KreiraoKorisnik = "fixture" });
                 }
                 await db.SaveChangesAsync();

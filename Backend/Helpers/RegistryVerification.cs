@@ -25,7 +25,6 @@ internal static class RegistryVerification
     internal static AuditLog Audit(string table, Guid id, string displayActor, IHttpContextAccessor? accessor) => new()
     {
         TableName = table, RecordId = id.ToString(), Action = "VERIFY",
-        UserId = CreatorSubject(accessor)!,
         Username = accessor?.HttpContext?.User.FindFirst("preferred_username")?.Value ?? displayActor,
         IpAddress = accessor?.HttpContext?.Connection.RemoteIpAddress?.ToString(),
         NewValues = "{\"status\":\"Verified\"}", Timestamp = DateTime.UtcNow

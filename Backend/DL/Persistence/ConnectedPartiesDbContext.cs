@@ -74,7 +74,6 @@ public partial class ConnectedPartiesDbContext : DbContext
             entity.HasKey(e => e.ID);
             entity.HasIndex(e => e.Kategorija);
             entity.HasQueryFilter(e => e.Aktivan);
-            entity.HasOne(e => e.Definition).WithMany().HasForeignKey(e => e.DefinitionId).OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(e => new { e.Kategorija, e.Kod }).IsUnique();
             entity.ToTable("CodeListValues", table =>
             {

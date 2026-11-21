@@ -59,9 +59,9 @@ public sealed class AuditQuerySqlTests : AuthenticatedApiFixture
     private Task Seed() => InDatabase(async db =>
     {
         db.AuditLogs.AddRange(
-            new AuditLog { TableName = Area, RecordId = "ordinary-day", Action = "INSERT", UserId = "creator",
+            new AuditLog { TableName = Area, RecordId = "ordinary-day", Action = "INSERT",
                 Username = "creator", Timestamp = new DateTime(2026, 11, 1, 23, 59, 59, DateTimeKind.Utc) },
-            new AuditLog { TableName = Area, RecordId = "last-day", Action = "INSERT", UserId = "creator",
+            new AuditLog { TableName = Area, RecordId = "last-day", Action = "INSERT",
                 Username = "creator", Timestamp = new DateTime(9999, 12, 31, 23, 59, 59, DateTimeKind.Utc) });
         await db.SaveChangesAsync();
     });

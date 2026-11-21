@@ -185,7 +185,7 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
             .Select((value, index) => string.IsNullOrWhiteSpace(value) ? null : index + ":" + value.Trim().ToUpperInvariant()).OfType<string>().ToArray();
         var identity = parties.SelectMany(row => PartyKeys(row.TaxNumber, row.FbaId, row.MaticniBroj, row.Matbroj).Select(key => (key, row.Id)))
             .GroupBy(row => row.key).ToDictionary(group => group.Key, group => group.Select(row => row.Id).Distinct().ToArray());
-        var types = (await _dbContext.CodeLists.Where(row => row.Kategorija == "VrstaLimita" && (row.Definition == null || row.Definition.IsActive)).Select(row => row.Kod).ToListAsync(ct)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var types = (await _dbContext.CodeLists.Where(row => row.Kategorija == "VrstaLimita" && !_dbContext.CodeListDefinitions.Any(definition => definition.Name == row.Kategorija && !definition.IsActive)).Select(row => row.Kod).ToListAsync(ct)).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var pending = new List<(int Row, Limit Value)>(); var fileKeys = new HashSet<RowKey>();
         void Failure(int row, string field, string code, string message)
         { result.Failed++; result.Errors.Add(BackendMessages.Message("workbook.row.error", row, message)); result.Details.Add(new(row, field, code, message)); }
@@ -378,7 +378,7 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
         if (fieldsError is not null) return Result<LimitResponseDTO>.ValidationError(fieldsError);
         var kod = tipLimita.Trim().ToUpper();
         var tipLimitaPostoji = await _dbContext.CodeLists.AsNoTracking()
-            .AnyAsync(c => c.Kategorija.ToUpper() == "VRSTALIMITA" && c.Kod.ToUpper() == kod && c.Aktivan && (c.Definition == null || c.Definition.IsActive));
+            .AnyAsync(c => c.Kategorija.ToUpper() == "VRSTALIMITA" && c.Kod.ToUpper() == kod && c.Aktivan && !_dbContext.CodeListDefinitions.Any(definition => definition.Name == c.Kategorija && !definition.IsActive));
         if (!tipLimitaPostoji)
             return Result<LimitResponseDTO>.ValidationError(BackendMessages.Message("validation.limits.type.unknown", tipLimita));
 

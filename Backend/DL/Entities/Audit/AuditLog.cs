@@ -25,9 +25,6 @@ public class AuditLog
     public string? OldValues { get; set; }
     public string? NewValues { get; set; }
 
-    [Required][StringLength(200)]
-    public string UserId { get; set; } = string.Empty;
-
     [Required][StringLength(100)]
     public string Username { get; set; } = string.Empty;
 

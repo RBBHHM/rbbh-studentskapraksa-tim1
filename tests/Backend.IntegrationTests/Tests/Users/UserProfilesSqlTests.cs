@@ -47,7 +47,7 @@ public sealed class UserProfilesSqlTests : AuthenticatedApiFixture
         {
             var audit = await db.AuditLogs.OrderBy(row => row.Timestamp).ToListAsync();
             Assert.Equal(new[] { "CREATE", "UPDATE", "ROLE_ASSIGN", "DEACTIVATE", "REACTIVATE", "DELETE" }, audit.Select(row => row.Action));
-            Assert.All(audit, row => { Assert.Equal("creator", row.UserId); Assert.Equal("creator", row.Username); });
+            Assert.All(audit, row => { Assert.Equal("creator", row.Username); });
             Assert.False(await db.AppUsers.AnyAsync(row => row.Id == id));
         });
     }

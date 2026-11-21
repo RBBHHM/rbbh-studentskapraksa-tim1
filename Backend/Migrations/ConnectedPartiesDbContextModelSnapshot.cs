@@ -56,11 +56,6 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<DateTime>("Timestamp")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
                     b.Property<string>("Username")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -1150,9 +1145,6 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasColumnType("bit")
                         .HasColumnName("IsActive");
 
-                    b.Property<Guid?>("DefinitionId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<bool>("IsSystemRequired")
                         .HasColumnType("bit");
 
@@ -1230,8 +1222,6 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasColumnType("nvarchar(500)");
 
                     b.HasKey("ID");
-
-                    b.HasIndex("DefinitionId");
 
                     b.HasIndex("Kategorija");
 
@@ -1491,16 +1481,6 @@ namespace RBBH.ConnectedParties.Migrations
                         .IsRequired();
 
                     b.Navigation("Role");
-                });
-
-            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Sifarnici.CodeList", b =>
-                {
-                    b.HasOne("RBBH.ConnectedParties.DL.Entities.Sifarnici.CodeListDefinition", "Definition")
-                        .WithMany()
-                        .HasForeignKey("DefinitionId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Definition");
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Authorization.RoleRequest", b =>

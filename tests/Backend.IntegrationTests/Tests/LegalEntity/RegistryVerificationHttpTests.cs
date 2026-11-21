@@ -65,7 +65,7 @@ public class RegistryVerificationHttpTests : AuthenticatedApiFixture
         await InDatabase(async db =>
         {
             var audit = Assert.Single(await db.AuditLogs.Where(row => row.Action == "VERIFY").ToListAsync());
-            Assert.Equal("reviewer", audit.UserId);
+
             Assert.Equal("reviewer", audit.Username);
         });
     }

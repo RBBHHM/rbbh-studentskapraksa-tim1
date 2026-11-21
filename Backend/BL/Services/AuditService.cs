@@ -15,7 +15,6 @@ public class AuditService(ConnectedPartiesDbContext db) : IAuditService
             Action    = entry.Action,
             OldValues = entry.OldValues,
             NewValues = entry.NewValues,
-            UserId    = entry.UserId,
             Username  = entry.Username,
             IpAddress = entry.IpAddress,
             Timestamp = DateTime.UtcNow

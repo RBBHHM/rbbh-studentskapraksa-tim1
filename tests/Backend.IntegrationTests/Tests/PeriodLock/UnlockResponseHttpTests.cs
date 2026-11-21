@@ -118,7 +118,7 @@ public sealed class UnlockResponseHttpTests : IAsyncLifetime
             "The controller adds '[ODGOVOR] ' before storing; no live SQL was executed.");
         var audit = Assert.Single(await db.AuditLogs.ToListAsync());
         Assert.Equal("UNLOCK_REQUEST", audit.Action); Assert.Equal(_originalId.ToString(), audit.RecordId);
-        Assert.Equal("period-fixture", audit.Username); Assert.Equal("period-fixture-subject", audit.UserId); Assert.Contains("user_response", audit.NewValues);
+        Assert.Equal("period-fixture", audit.Username); Assert.Contains("user_response", audit.NewValues);
         var delivery = Assert.Single(await db.NotificationDeliveries.Include(row => row.Notification).ToListAsync());
         Assert.Null(delivery.DeliveredAt); Assert.Equal("admin@example.test", delivery.Notification.RecipientEmail);
         Assert.Equal("", delivery.Notification.RecipientSubject); // Configured mailbox is not an invented inbox identity.

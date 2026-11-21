@@ -11,7 +11,7 @@ namespace RBBH.ConnectedParties.BL.Services;
 /// <summary>
 /// PL-36 + PL-37: Implementacija CRUD operacija nad šifarnikom s provjerom upotrebe pri brisanju.
 /// </summary>
-public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListService
+public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAccessor? accessor = null) : ICodeListService
 {
     private readonly ConnectedPartiesDbContext _dbContext = dbContext;
 
@@ -42,7 +42,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
             return Result<List<CodeListDropdownDTO>>.ValidationError(BackendMessages.Message("validation.codelist.category.required"));
 
         var items = await _dbContext.CodeLists
-            .Where(x => x.Kategorija == kategorija && x.Aktivan && (x.Definition == null || x.Definition.IsActive))
+            .Where(x => x.Kategorija == kategorija && x.Aktivan && !_dbContext.CodeListDefinitions.Any(definition => definition.Name == x.Kategorija && !definition.IsActive))
             .OrderBy(x => x.RedoslijedPrikaza ?? int.MaxValue)
             .ThenBy(x => x.Naziv)
             .ProjectToType<CodeListDropdownDTO>()
@@ -126,7 +126,6 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
             definition = new CodeListDefinition { Name = category, CreatedBy = korisnik };
             _dbContext.CodeListDefinitions.Add(definition);
         }
-        entitet.DefinitionId = definition.Id;
         definition.ModifiedBy = korisnik;
         _dbContext.CodeLists.Add(entitet);
         AddAudit(entitet.Kategorija, entitet.Kod, entitet.IzmijenjenDatum is null ? "CODELIST_ADD" : "CODELIST_UPDATE", korisnik);
@@ -301,7 +300,8 @@ public class CodeListService(ConnectedPartiesDbContext dbContext) : ICodeListSer
 
     private void AddAudit(string category, string? code, string action, string actor) => _dbContext.AuditLogs.Add(new()
     {
-        TableName = "CodeList", RecordId = category, Action = action, UserId = actor, Username = actor,
+        TableName = "CodeList", RecordId = category, Action = action, Username = actor,
+        IpAddress = accessor?.HttpContext?.Connection.RemoteIpAddress?.ToString(),
         Timestamp = DateTime.UtcNow, NewValues = System.Text.Json.JsonSerializer.Serialize(new { category, code })
     });
 

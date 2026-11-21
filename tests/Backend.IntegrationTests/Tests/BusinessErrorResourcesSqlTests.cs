@@ -66,7 +66,6 @@ public sealed class BusinessErrorResourcesSqlTests : RoleCatalogFixture
         {
             await db.GetService<IMigrator>().MigrateAsync("20261103084605_AddAdministrativeRoleCatalog");
             db.CodeLists.Add(new() { Kategorija = "LanguagePacks", Kod = Guid.NewGuid().ToString("N"), Naziv = "Existing translation",
-                DefinitionId = (await db.CodeListDefinitions.SingleAsync(row => row.Name == "LanguagePacks")).Id,
                 LanguageCode = "DE", ResourceKey = "errors.roles.not.found", ResourceLabel = "Approved existing label", KreiraoKorisnik = "original" });
             await db.SaveChangesAsync();
             await db.Database.MigrateAsync();

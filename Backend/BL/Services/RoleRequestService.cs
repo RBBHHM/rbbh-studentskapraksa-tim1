@@ -170,7 +170,7 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
         review ? row.Username : null, review ? row.Email : null);
     private AuditLog Audit(RoleRequest row, string action, object? before, object after) => new()
     {
-        TableName = "RoleRequest", RecordId = row.Id.ToString(), Action = action, UserId = Subject,
+        TableName = "RoleRequest", RecordId = row.Id.ToString(), Action = action,
         Username = Principal.FindFirst("preferred_username")?.Value ?? Subject,
         IpAddress = accessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
         OldValues = before is null ? null : JsonSerializer.Serialize(before), NewValues = JsonSerializer.Serialize(after)

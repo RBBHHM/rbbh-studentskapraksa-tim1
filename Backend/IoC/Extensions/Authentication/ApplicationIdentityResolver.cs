@@ -66,7 +66,6 @@ public sealed class ApplicationIdentityResolver(ConnectedPartiesDbContext db, IC
                 TableName = "AppUser",
                 RecordId = row.Id.ToString(),
                 Action = "SUBJECT_LINK",
-                UserId = subject,
                 Username = row.ModifiedBy,
                 OldValues = System.Text.Json.JsonSerializer.Serialize(new { legacyIdentifier = previousIdentifier }),
                 NewValues = System.Text.Json.JsonSerializer.Serialize(new { confirmedSubject = subject })

@@ -28,7 +28,7 @@ public sealed class PeriodWorkflow(ConnectedPartiesDbContext db, IConfiguration 
         return Mailbox(email) ? email! : throw new BusinessRuleException(503, "period.notification_setup");
     }
     private void Audit(string id, string action, Actor actor, object? before, object after) => db.AuditLogs.Add(new()
-    { TableName = "PeriodLock", RecordId = id, Action = action, UserId = actor.Subject, Username = actor.Username,
+    { TableName = "PeriodLock", RecordId = id, Action = action, Username = actor.Username,
         IpAddress = actor.Ip, Timestamp = DateTime.UtcNow, OldValues = before is null ? null : JsonSerializer.Serialize(before), NewValues = JsonSerializer.Serialize(after) });
     private void Notice(string? subject, string email, string eventKey, string kind, object parameters, string route = "/app/admin/period")
     {

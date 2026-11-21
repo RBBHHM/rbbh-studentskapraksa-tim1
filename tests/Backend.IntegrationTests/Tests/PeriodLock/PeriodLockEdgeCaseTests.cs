@@ -272,7 +272,7 @@ namespace IntegrationTests.Tests.PeriodLock
 
             log.Should().NotBeNull("Lock mora kreirati AuditLog s Action=PERIOD_LOCK");
             log!.Username.Should().NotBeNullOrEmpty("Username mora biti popunjen");
-            log.UserId.Should().NotBeNullOrEmpty("UserId mora biti popunjen");
+
             log.Timestamp.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(10));
         }
 
@@ -295,7 +295,7 @@ namespace IntegrationTests.Tests.PeriodLock
 
             log.Should().NotBeNull("Unlock mora kreirati AuditLog s Action=PERIOD_UNLOCK");
             log!.Username.Should().NotBeNullOrEmpty("Username mora biti popunjen");
-            log.UserId.Should().NotBeNullOrEmpty("UserId mora biti popunjen");
+
             log.Timestamp.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(10));
         }
     }

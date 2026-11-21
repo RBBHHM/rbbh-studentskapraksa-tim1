@@ -35,12 +35,12 @@ public abstract class PeriodAtomicFixture : AuthenticatedApiFixture
         {
             if (await db.CodeListDefinitions.AnyAsync(row => row.Name == "Languages")) return;
             var languages = new CodeListDefinition { Name = "Languages", CreatedBy = "fixture" }; var packs = new CodeListDefinition { Name = "LanguagePacks", CreatedBy = "fixture" };
-            db.CodeListDefinitions.AddRange(languages, packs); db.CodeLists.Add(new() { Kategorija = "Languages", DefinitionId = languages.Id, Kod = "BS", Naziv = "BS", KreiraoKorisnik = "fixture" });
+            db.CodeListDefinitions.AddRange(languages, packs); db.CodeLists.Add(new() { Kategorija = "Languages", Kod = "BS", Naziv = "BS", KreiraoKorisnik = "fixture" });
             foreach (var kind in new[] { "requested", "response", "needsinfo", "rejected", "locked", "unlocked" })
             foreach (var part in new[] { "title", "body" })
             {
                 var key = $"notifications.period.{kind}.{part}";
-                db.CodeLists.Add(new() { DefinitionId = packs.Id, Kategorija = packs.Name, Kod = Guid.NewGuid().ToString("N"), Naziv = key, LanguageCode = "BS", ResourceKey = key,
+                db.CodeLists.Add(new() { Kategorija = packs.Name, Kod = Guid.NewGuid().ToString("N"), Naziv = key, LanguageCode = "BS", ResourceKey = key,
                     ResourceLabel = part == "title" ? "Period notification" : kind is "locked" or "unlocked" ? "Actor {actor}: {month}/{year}" : "Message: {message}\nPeriod: {month}/{year}", KreiraoKorisnik = "fixture" });
             }
             await db.SaveChangesAsync();

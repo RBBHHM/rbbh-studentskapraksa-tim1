@@ -27,7 +27,7 @@ public abstract class LocalizationFixture : AuthenticatedApiFixture
             var packs = new CodeListDefinition { Name = "LanguagePacks", CreatedBy = "fixture", IsSystemRequired = true };
             db.CodeListDefinitions.AddRange(languages, packs);
             foreach (var code in new[] { "BS", "EN", "DE" })
-                db.CodeLists.Add(new() { DefinitionId = languages.Id, Kategorija = languages.Name, Kod = code, Naziv = code,
+                db.CodeLists.Add(new() { Kategorija = languages.Name, Kod = code, Naziv = code,
                     KreiraoKorisnik = "fixture", IsSystemRequired = true });
             await db.SaveChangesAsync();
         });
@@ -73,7 +73,7 @@ public sealed class LocalizationHttpTests : LocalizationFixture
         await Seed(); await InDatabase(async db =>
         {
             var definition = await db.CodeListDefinitions.SingleAsync(row => row.Name == "LanguagePacks");
-            db.CodeLists.Add(new() { DefinitionId = definition.Id, Kategorija = definition.Name, Kod = "LEGACY", Naziv = "LegacyKey",
+            db.CodeLists.Add(new() { Kategorija = definition.Name, Kod = "LEGACY", Naziv = "LegacyKey",
                 LanguageCode = "BS", ResourceKey = "LegacyKey", ResourceLabel = "Before", KreiraoKorisnik = "fixture" });
             await db.SaveChangesAsync();
         });

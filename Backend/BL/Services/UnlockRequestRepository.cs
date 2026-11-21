@@ -53,7 +53,7 @@ public class UnlockRequestRepository(ConnectedPartiesDbContext db) : IUnlockRequ
         db.AuditLogs.Add(new DL.Entities.Audit.AuditLog
         {
             TableName = audit.TableName, RecordId = audit.RecordId, Action = audit.Action,
-            UserId = audit.UserId, Username = audit.Username, IpAddress = audit.IpAddress,
+            Username = audit.Username, IpAddress = audit.IpAddress,
             OldValues = audit.OldValues, NewValues = audit.NewValues, Timestamp = DateTime.UtcNow
         });
         await db.SaveChangesAsync(cancellationToken);

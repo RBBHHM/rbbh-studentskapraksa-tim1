@@ -41,7 +41,7 @@ public sealed class SubjectLinkSqlServerTests
             Assert.True(linked.KeycloakSubjectConfirmed);
             var audit = Assert.Single(await fresh.AuditLogs.ToListAsync());
             Assert.Equal("SUBJECT_LINK", audit.Action);
-            Assert.Equal("real-fixture-subject", audit.UserId);
+
             Assert.Equal("real-fixture-subject", audit.Username); // No display-name claim: opaque subject is the safe fallback.
             Assert.Contains(placeholder, audit.OldValues);
             Assert.Contains("real-fixture-subject", audit.NewValues);

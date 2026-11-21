@@ -52,7 +52,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
         var definition = new CodeListDefinition { Name = name, Description = dto.Description?.Trim(), CreatedBy = korisnik };
         db.CodeListDefinitions.Add(definition);
         db.AuditLogs.Add(new() { TableName = "CodeList", RecordId = definition.Id.ToString(), Action = "CODELIST_ADD",
-            UserId = korisnik, Username = korisnik, Timestamp = DateTime.UtcNow });
+            Username = korisnik, IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(), Timestamp = DateTime.UtcNow });
         await db.SaveChangesAsync(HttpContext.RequestAborted);
 
 
@@ -76,7 +76,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
         if (definition.Version != input.ExpectedVersion) return Conflict(new ProblemDetails { Status = 409, Title = BackendMessages.Message("errors.codelist.concurrent.change") });
         var actor = GetKorisnik(); definition.Description = input.Description?.Trim(); definition.ModifiedBy = actor;
         db.AuditLogs.Add(new() { TableName = "CodeList", RecordId = definition.Id.ToString(), Action = "CODELIST_UPDATE",
-            UserId = actor, Username = actor, Timestamp = DateTime.UtcNow });
+            Username = actor, IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(), Timestamp = DateTime.UtcNow });
         await db.SaveChangesAsync(ct);
         return Ok(new { definition.Id, definition.Name, definition.Description, definition.Version, definition.ModifiedAt, definition.ModifiedBy });
     }
@@ -391,13 +391,13 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
                 preview.Errors.Add(BackendMessages.Message("workbook.codelist.code.duplicate", val));
                 continue;
             }
-            db.CodeLists.Add(new() { Kategorija = definition.Name, DefinitionId = definition.Id, Kod = code, Naziv = val,
+            db.CodeLists.Add(new() { Kategorija = definition.Name, Kod = code, Naziv = val,
                 KreiraoKorisnik = korisnik, KreiranDatum = DateTime.UtcNow });
             preview.Imported++;
         }
         definition.ModifiedBy = korisnik;
         db.AuditLogs.Add(new() { TableName = "CodeList", RecordId = definition.Name, Action = "IMPORT",
-            UserId = korisnik, Username = korisnik, Timestamp = DateTime.UtcNow,
+            Username = korisnik, IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(), Timestamp = DateTime.UtcNow,
             NewValues = System.Text.Json.JsonSerializer.Serialize(new { imported = preview.Imported, failed = preview.Errors.Count }) });
         await db.SaveChangesAsync(HttpContext.RequestAborted);
 
