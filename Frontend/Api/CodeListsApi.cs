@@ -5,10 +5,10 @@ namespace RBBH.RelatedPartiesRegister.Web.Api;
 
 public sealed record CodeCategories(IReadOnlyList<string> Categories);
 public sealed record CodeValue(int Id, string Category, string Code, string Value, string? Description,
-    int? DisplayOrder, bool IsActive, string? ModifiedBy, DateTime? ModifiedAt);
+    bool IsActive, string? ModifiedBy, DateTime? ModifiedAt);
 public sealed record CodeValues(string Category, IReadOnlyList<CodeValue> Items);
-public sealed record CreateCodeValue(string Kategorija, string Kod, string Naziv, string? Opis, int? RedoslijedPrikaza, bool Aktivan);
-public sealed record UpdateCodeValue(string Naziv, string? Opis, int? RedoslijedPrikaza, bool Aktivan);
+public sealed record CreateCodeValue(string Kategorija, string Kod, string Naziv, string? Opis, bool Aktivan);
+public sealed record UpdateCodeValue(string Naziv, string? Opis, bool Aktivan);
 public sealed record CodeImportPreview(int TotalRows, IReadOnlyList<string> ToImport, IReadOnlyList<string> Duplicates,
     IReadOnlyList<string> Errors, int Imported);
 /// <summary>Administrative metadata of a code list definition (who created it and who changed it last).</summary>

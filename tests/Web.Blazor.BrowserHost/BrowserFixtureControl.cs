@@ -80,7 +80,7 @@ internal static partial class BrowserHostProgram
                         var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
                         await context.Response.WriteAsJsonAsync(new
                         {
-                            values = await db.CodeLists.IgnoreQueryFilters().OrderBy(item => item.ID).Select(item => new { item.ID, item.Kategorija, item.Kod, item.Naziv, item.Opis, item.RedoslijedPrikaza, item.Aktivan, item.IzmijenioKorisnik }).ToArrayAsync(),
+                            values = await db.CodeLists.IgnoreQueryFilters().OrderBy(item => item.ID).Select(item => new { item.ID, item.Kategorija, item.Kod, item.Naziv, item.Opis, item.Aktivan, item.IzmijenioKorisnik }).ToArrayAsync(),
                             definitions = await db.CodeListDefinitions.Select(item => new { item.Name, item.Description, item.IsActive }).ToArrayAsync(),
                             audit = await db.AuditLogs.OrderBy(item => item.Timestamp).Select(item => new { item.Action, item.RecordId, item.Username, item.NewValues }).ToArrayAsync()
                         }); return;

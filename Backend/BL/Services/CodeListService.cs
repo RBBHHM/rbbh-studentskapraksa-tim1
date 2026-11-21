@@ -43,8 +43,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
 
         var items = await _dbContext.CodeLists
             .Where(x => x.Kategorija == kategorija && x.Aktivan && !_dbContext.CodeListDefinitions.Any(definition => definition.Name == x.Kategorija && !definition.IsActive))
-            .OrderBy(x => x.RedoslijedPrikaza ?? int.MaxValue)
-            .ThenBy(x => x.Naziv)
+            .OrderBy(x => x.Naziv).ThenBy(x => x.ID)
             .ProjectToType<CodeListDropdownDTO>()
             .ToListAsync();
 
@@ -62,8 +61,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
             // soft-deactivated values. Dropdowns intentionally use the filtered query above.
             .IgnoreQueryFilters()
             .Where(x => x.Kategorija == kategorija)
-            .OrderBy(x => x.RedoslijedPrikaza ?? int.MaxValue)
-            .ThenBy(x => x.Naziv)
+            .OrderBy(x => x.Naziv).ThenBy(x => x.ID)
             .ProjectToType<CodeListResponseDTO>()
             .ToListAsync();
 
@@ -112,7 +110,6 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
             Kod               = code,
             Naziv             = dto.Naziv.Trim(),
             Opis              = dto.Opis?.Trim(),
-            RedoslijedPrikaza = dto.RedoslijedPrikaza,
             Aktivan           = dto.Aktivan,
             KreiranDatum      = DateTime.UtcNow,
             KreiraoKorisnik   = korisnik,
@@ -164,7 +161,6 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
         // Ažuriramo dopuštena polja (Kategorija i Kod se ne mijenjaju)
         entitet.Naziv             = dto.Naziv.Trim();
         entitet.Opis              = dto.Opis?.Trim();
-        entitet.RedoslijedPrikaza = dto.RedoslijedPrikaza;
         entitet.Aktivan           = dto.Aktivan;
         entitet.IzmijenjenDatum   = DateTime.UtcNow;
         entitet.IzmijenioKorisnik = korisnik;

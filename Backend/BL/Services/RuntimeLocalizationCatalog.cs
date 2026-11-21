@@ -36,7 +36,7 @@ public sealed class RuntimeLocalizationCatalog(ConnectedPartiesDbContext db, IOp
     {
         items = await db.CodeLists.AsNoTracking().Where(row => row.Kategorija == Settings.LanguagesCodebook &&
                 !db.CodeListDefinitions.Any(definition => definition.Name == row.Kategorija && !definition.IsActive))
-            .OrderBy(row => row.RedoslijedPrikaza).ThenBy(row => row.Kod)
+            .OrderBy(row => row.Kod)
             .Select(row => new { code = row.Kod, name = row.Naziv }).ToListAsync(ct)
     };
 

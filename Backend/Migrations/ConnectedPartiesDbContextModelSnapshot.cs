@@ -1200,10 +1200,6 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasColumnType("nvarchar(500)")
                         .HasColumnName("Description");
 
-                    b.Property<int?>("RedoslijedPrikaza")
-                        .HasColumnType("int")
-                        .HasColumnName("DisplayOrder");
-
                     b.Property<string>("ResourceHelper")
                         .HasMaxLength(4000)
                         .HasColumnType("nvarchar(4000)");

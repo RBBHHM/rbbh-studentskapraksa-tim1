@@ -120,7 +120,6 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
             code = x.Kod,
             value = x.Naziv,
             description = x.Opis,
-            displayOrder = x.RedoslijedPrikaza,
             isActive = x.Aktivan,
             modifiedBy = x.IzmijenioKorisnik ?? x.KreiraoKorisnik,
             modifiedAt = x.IzmijenjenDatum ?? x.KreiranDatum
@@ -182,8 +181,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
         {
             Kategorija = kategorija,
             Kod = ValueCode(request.Value.Trim()),
-            Naziv = request.Value.Trim(),
-            RedoslijedPrikaza = null
+            Naziv = request.Value.Trim()
         };
 
         var result = await _codeListService.Create(dto, korisnik);
@@ -265,7 +263,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
         if (string.IsNullOrWhiteSpace(kategorija) || kategorija.Length > 100)
             return BadRequest(new ProblemDetails { Status = 400, Title = BackendMessages.Message("errors.codelist.name.invalid") });
         var values = await db.CodeLists.AsNoTracking().Where(row => row.Kategorija == kategorija)
-            .OrderBy(row => row.RedoslijedPrikaza).ThenBy(row => row.Naziv).ThenBy(row => row.ID)
+            .OrderBy(row => row.Naziv).ThenBy(row => row.ID)
             .Select(row => row.Naziv).Take(5001).ToListAsync(ct);
         if (values.Count > 5000) return BadRequest(new ProblemDetails { Status = 400, Title = BackendMessages.Message("errors.workbook.export.limit") });
         var bytes = RBBH.ConnectedParties.Helpers.Excel.RegistryExcelExporter.Create("Šifrarnik", ["Vrijednost"],

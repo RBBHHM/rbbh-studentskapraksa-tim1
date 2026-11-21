@@ -11,7 +11,6 @@
         {
             <RbiField TValue="string" Id="code-key" Label="@T["codes.code"]" Required For="@(() => Model.Code)"><RbiInput Id="code-key" @bind-Value="Model.Code" Disabled="@(Model.Id is not null)" maxlength="50" /></RbiField>
 
-            <RbiField TValue="string" Id="code-order" Label="@T["codes.order"]" For="@(() => Model.Order)"><RbiInput Id="code-order" @bind-Value="Model.Order" inputmode="numeric" /></RbiField>
         }
         <RbiField TValue="string" Id="code-description" Label="@T[Model.Definition ? "codes.purpose" : "codes.description"]" For="@(() => Model.Description)"><RbiTextArea Id="code-description" @bind-Value="Model.Description" maxlength="500" /></RbiField>
         @if (!Model.Definition) { <RbiCheckbox @bind-Value="Model.Active">@T["codes.active"]</RbiCheckbox> }

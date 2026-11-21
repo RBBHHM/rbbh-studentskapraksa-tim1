@@ -49,11 +49,6 @@ public class CodeList
     public string? Opis { get; set; }
 
     /// <summary>
-    /// Redoslijed prikazivanja u padajućem meniju
-    /// </summary>
-    public int? RedoslijedPrikaza { get; set; }
-
-    /// <summary>
     /// Da li je vrijednost aktivna (soft-delete flag)
     /// </summary>
     public bool Aktivan { get; set; } = true;

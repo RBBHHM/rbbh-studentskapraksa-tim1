@@ -12,7 +12,6 @@ public class CodeListResponseDTO
     public string Kod { get; set; } = null!;
     public string Naziv { get; set; } = null!;
     public string? Opis { get; set; }
-    public int? RedoslijedPrikaza { get; set; }
     public bool Aktivan { get; set; }
 
     // Audit polja
@@ -33,7 +32,6 @@ public class CreateCodeListDTO
     public string Kod { get; set; } = null!;
     public string Naziv { get; set; } = null!;
     public string? Opis { get; set; }
-    public int? RedoslijedPrikaza { get; set; }
     public bool Aktivan { get; set; } = true;
 }
 
@@ -41,13 +39,12 @@ public class CreateCodeListDTO
 
 /// <summary>
 /// Tijelo zahtjeva za ažuriranje postojeće vrijednosti šifarnika.
-/// Kod i Kategorija se ne mijenjaju — samo Naziv, Opis, Redoslijed.
+/// Kod i Kategorija se ne mijenjaju — samo Naziv, Opis i status.
 /// </summary>
 public class UpdateCodeListDTO
 {
     public string Naziv { get; set; } = null!;
     public string? Opis { get; set; }
-    public int? RedoslijedPrikaza { get; set; }
     public bool Aktivan { get; set; } = true;
 }
 

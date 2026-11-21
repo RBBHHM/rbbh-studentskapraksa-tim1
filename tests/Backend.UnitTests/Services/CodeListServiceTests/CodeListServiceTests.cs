@@ -53,13 +53,12 @@ namespace UnitTests.Services.CodeListServiceTests
 
         private const string Kategorija = "VrstaLimita";
 
-        private static CodeList NewEntity(string kod, string naziv, bool aktivan = true, int? redoslijed = null) => new()
+        private static CodeList NewEntity(string kod, string naziv, bool aktivan = true) => new()
         {
             Kategorija = Kategorija,
             Kod = kod,
             Naziv = naziv,
             Aktivan = aktivan,
-            RedoslijedPrikaza = redoslijed,
             KreiranDatum = DateTime.UtcNow,
             KreiraoKorisnik = "seed"
         };

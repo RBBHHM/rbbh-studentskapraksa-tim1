@@ -166,7 +166,7 @@ Languages/LanguagePacks are two definitions alongside ordinary application codeb
 
 GET `/api/code-lists` returns `{categories:string[]}`; `/categories/definitions` returns `{items:[{id,name,description,isActive,isSystemRequired,version,createdAt,createdBy,modifiedAt,modifiedBy}]}`. Use **modified** names, not lastModified. POST categories name2–100/description500→201; PUT categories/{name} `{description?:string,expectedVersion:int}`→200 definition metadata (no rename); stale 409. DELETE category/value soft-deletes under system/reference protection, not destructive schema changes.
 
-GET category response `{category,items:[{id,category,code,value,description,displayOrder,isActive,modifiedBy,modifiedAt}]}` differs from GET id's CodeListResponseDTO (kategorija/kod/naziv/opis/aktivan and audit fields). Full POST/PUT DTO uses Bosnian property names; simple POST category uses `{value}`. Dropdown route is authenticated read and returns `[{kod,naziv,opis}]`, no id/value fields. Value mutation response `{id,value,isActive,modifiedBy,modifiedAt}`; delete `{message}`. Full value create requires kategorija<=100,kod<=50,naziv<=200; opis optional<=500. Name/code nonblank. Definition and value identity/code read-only on updates. Uniqueness preflight/SQL keys, referenced/system guards and atomic audit apply; do not expect DELETE to always succeed.
+GET category response `{category,items:[{id,category,code,value,description,isActive,modifiedBy,modifiedAt}]}` differs from GET id's CodeListResponseDTO (kategorija/kod/naziv/opis/aktivan and audit fields). Full POST/PUT DTO uses Bosnian property names; simple POST category uses `{value}`. Dropdown route is authenticated read and returns `[{kod,naziv,opis}]`, no id/value fields. Value mutation response `{id,value,isActive,modifiedBy,modifiedAt}`; delete `{message}`. Full value create requires kategorija<=100,kod<=50,naziv<=200; opis optional<=500. Name/code nonblank. Definition and value identity/code read-only on updates. Uniqueness preflight/SQL keys, referenced/system guards and atomic audit apply; do not expect DELETE to always succeed.
 
 Sources: [runtime](../Backend/BL/Services/RuntimeLocalizationCatalog.cs), [codebook controller](../Backend/API/Controllers/CodeListController.cs), [codebook service](../Backend/BL/Services/CodeListService.cs), [dropdown](../Backend/API/Controllers/ReferenceDataController.cs).
 
@@ -595,7 +595,6 @@ Source: [CodeListDTO.cs](../Backend/DL/DTO/Sifarnici/CodeListDTO.cs).
 | `kod` | string or null | not explicitly required by schema |
 | `naziv` | string or null | not explicitly required by schema |
 | `opis` | string or null | not explicitly required by schema |
-| `redoslijedPrikaza` | integer(int32) or null | not explicitly required by schema |
 | `aktivan` | boolean | not explicitly required by schema |
 | `kreiranDatum` | string(date-time) | not explicitly required by schema |
 | `kreiraoKorisnik` | string or null | not explicitly required by schema |
@@ -611,7 +610,6 @@ Source: [CodeListDTO.cs](../Backend/DL/DTO/Sifarnici/CodeListDTO.cs).
 | `kod` | string or null | not explicitly required by schema |
 | `naziv` | string or null | not explicitly required by schema |
 | `opis` | string or null | not explicitly required by schema |
-| `redoslijedPrikaza` | integer(int32) or null | not explicitly required by schema |
 | `aktivan` | boolean | not explicitly required by schema |
 
 ### CreateCodeListDefinitionDTO
@@ -1184,7 +1182,6 @@ Source: [CodeListDTO.cs](../Backend/DL/DTO/Sifarnici/CodeListDTO.cs).
 | --- | --- | --- |
 | `naziv` | string or null | not explicitly required by schema |
 | `opis` | string or null | not explicitly required by schema |
-| `redoslijedPrikaza` | integer(int32) or null | not explicitly required by schema |
 | `aktivan` | boolean | not explicitly required by schema |
 
 ### UpdateCodeListDefinitionDTO

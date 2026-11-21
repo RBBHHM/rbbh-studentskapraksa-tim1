@@ -66,7 +66,6 @@ public partial class ConnectedPartiesDbContext : DbContext
             entity.Property(e => e.Naziv).HasColumnName("Name");
             entity.Property(e => e.Opis).HasColumnName("Description");
             entity.Property(e => e.Aktivan).HasColumnName("IsActive");
-            entity.Property(e => e.RedoslijedPrikaza).HasColumnName("DisplayOrder");
             entity.Property(e => e.KreiranDatum).HasColumnName("CreatedAt");
             entity.Property(e => e.KreiraoKorisnik).HasColumnName("CreatedBy");
             entity.Property(e => e.IzmijenjenDatum).HasColumnName("ModifiedAt");
