@@ -87,6 +87,17 @@ public sealed class RoleCatalogApiTests
         Assert.Contains("\"expectedVersion\":\"2026-11-03T00:00:00Z\"", payload);
     }
 
+    [Fact]
+    public async Task DuplicateNameMapsToTheLocalizedAlertKey()
+    {
+        await using var provider = Client(_ => Json(HttpStatusCode.Conflict,
+            """{"code":"roles.duplicate_name","detail":"private-identity"}"""));
+        var error = await Assert.ThrowsAsync<RegistryApiException>(() =>
+            provider.GetRequiredService<IRoleCatalogApi>().CreateAsync(new("custom", "Custom", null, [])));
+        Assert.Equal("errors.roles.duplicate.name", error.MessageKey);
+        Assert.DoesNotContain("private-identity", error.ToString());
+    }
+
     [Theory]
     [InlineData(HttpStatusCode.Forbidden)]
     [InlineData(HttpStatusCode.Conflict)]

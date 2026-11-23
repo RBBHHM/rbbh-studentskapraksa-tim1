@@ -39,3 +39,20 @@ test("admin can create a DB-backed role with selected permission and search for 
   await expect(page.getByRole("table").getByText("qa_custom", { exact: true })).toBeVisible();
   await expect(page.getByRole("table").getByText("QA Custom Role", { exact: true })).toBeVisible();
 });
+
+test("duplicate role shows an alert and fields adapt to smaller screens", async ({ page }) => {
+  test.skip(!admin, "Requires actual database-owned admin grant");
+  await page.goto("/app/admin/role-catalog"); await interactive(page);
+  await page.getByRole("button", { name: "Nova rola" }).click();
+  const dialog = page.getByRole("dialog", { name: "Nova rola" });
+  const columns = dialog.locator(".role-catalog-permission-grid");
+  await expect(columns).toHaveCSS("grid-template-columns", /^\S+ \S+$/);
+  await dialog.locator("#rolecatalog-name").fill("FL");
+  await dialog.locator("#rolecatalog-display-name").fill("Duplikat");
+  await dialog.getByRole("button", { name: "Sačuvaj" }).click();
+  await expect(dialog.getByRole("alert")).toHaveText("Rola s odabranim nazivom već postoji.");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(columns).toHaveCSS("grid-template-columns", /^\S+$/);
+  await dialog.locator("#rolecatalog-name").fill("nova_qa_rola");
+  await expect(dialog.getByRole("alert")).toHaveCount(0);
+});

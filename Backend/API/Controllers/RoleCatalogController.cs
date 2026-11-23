@@ -23,6 +23,15 @@ public sealed class RoleCatalogController(RoleCatalogService catalog) : Controll
     public async Task<IActionResult> Create(CreateRoleCatalogDTO input, CancellationToken ct)
     {
         var row = await catalog.Create(input, ct);
+        if (row is null)
+            return Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                detail: Localization.BackendMessages.Message("errors.roles.duplicate.name"),
+                extensions: new Dictionary<string, object?>
+                {
+                    ["code"] = "roles.duplicate_name",
+                    ["resourceKey"] = "errors.roles.duplicate.name"
+                });
         return Created($"/api/role-catalog/{row.Id}", row);
     }
 

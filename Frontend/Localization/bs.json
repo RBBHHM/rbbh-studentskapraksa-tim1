@@ -576,6 +576,7 @@
     "profile.no-access": "Nema dodijeljenih funkcionalnih pristupa.",
     "profile.admin": "Administrator",
     "guide.lead": "Ovdje su prikazana samo područja kojima imate pristup. Otvorite cjelinu kada trebate značenje statusa, pravilo unosa ili objašnjenje poslovnog toka.",
+    "errors.roles.duplicate.name": "Rola s odabranim nazivom već postoji.",
     "rolecatalog.title": "Katalog rola",
     "rolecatalog.description": "Upravljajte aplikacijskim rolama i njihovim dozvolama iz baze podataka.",
     "rolecatalog.new": "Nova rola",

@@ -43,7 +43,7 @@ public sealed class RoleCatalogApi(IRbiApiTransport transport) : IRoleCatalogApi
     {
         token.ThrowIfCancellationRequested();
         if (!result.IsSuccess || result.Value is null || (valid is not null && !valid(result.Value)))
-            throw new RegistryApiException(result.Error?.StatusCode);
+            throw new RegistryApiException(result.Error?.StatusCode, result.Error?.Code);
         return result.Value;
     }
 }

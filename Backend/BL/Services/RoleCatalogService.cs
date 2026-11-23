@@ -46,7 +46,7 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
             .Select(row => new { row.Id, row.Code, row.Module, row.Description }).ToListAsync(ct)
     };
 
-    public Task<RoleCatalogDTO> Create(CreateRoleCatalogDTO input, CancellationToken ct) => Locked<RoleCatalogDTO>(async () =>
+    public Task<RoleCatalogDTO?> Create(CreateRoleCatalogDTO input, CancellationToken ct) => Locked<RoleCatalogDTO?>(async () =>
     {
         await EnsureAdmin(ct);
         var name = input.Name?.Trim() ?? "";
@@ -55,7 +55,7 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
         Validate(input.DisplayName, input.Description, input.PermissionIds);
         var normalized = name.ToUpperInvariant();
         if (await db.Roles.AnyAsync(row => row.Name.Trim().ToUpper() == normalized, ct))
-            throw new BusinessRuleException(409, "roles.duplicate_name");
+            return null;
         await ValidatePermissions(input.PermissionIds, ct);
         var row = new Role { Name = name, DisplayName = input.DisplayName.Trim(), Description = input.Description?.Trim(),
             CreatedBy = AuthenticatedActor.Username(Actor) };

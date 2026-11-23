@@ -24,6 +24,7 @@ else
     }
     @if (_notice is not null) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@T[_notice]" /></div> }
     <div class="role-catalog-search">
+        <RbiIcon Name="RbiIconName.Search" />
         <input id="rolecatalog-search" type="search" class="rbi-input" maxlength="100"
                aria-label="@T["rolecatalog.search"]" placeholder="@T["rolecatalog.search"]"
                value="@_search" @oninput="SearchAsync" />
@@ -75,22 +76,30 @@ else
 }
 @if (_draft is { } draft)
 {
-    <RbiDialog Open Class="app-form-dialog app-form-dialog--md" Title="@T[draft.Id is null ? "rolecatalog.new" : "rolecatalog.edit"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseDialog">
+    <RbiDialog Open Class="app-form-dialog role-catalog-dialog" Title="@T[draft.Id is null ? "rolecatalog.new" : "rolecatalog.edit"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseDialog">
         <DialogBody>
-            <form class="registry-period-form role-catalog-form" @onsubmit="SaveAsync" @onsubmit:preventDefault novalidate>
-                @if (draft.Id is null)
-                {
-                    <label class="app-label" for="rolecatalog-name">@T["rolecatalog.name"] <span aria-hidden="true">*</span></label>
-                    <input id="rolecatalog-name" class="rbi-input" maxlength="100" required placeholder="@T["rolecatalog.name"]" @bind="draft.Name" @bind:event="oninput" />
-                }
-                else
-                {
-                    <p><strong>@T["rolecatalog.name"]:</strong> @draft.Name</p>
-                }
-                <label class="app-label" for="rolecatalog-display-name">@T["rolecatalog.display-name"] <span aria-hidden="true">*</span></label>
-                <input id="rolecatalog-display-name" class="rbi-input" maxlength="100" required placeholder="@T["rolecatalog.display-name"]" @bind="draft.DisplayName" @bind:event="oninput" />
-                <label class="app-label" for="rolecatalog-description">@T["rolecatalog.description-field"]</label>
-                <textarea id="rolecatalog-description" class="rbi-textarea" rows="2" maxlength="500" placeholder="@T["rolecatalog.description-field"]" @bind="draft.Description" @bind:event="oninput"></textarea>
+            <form class="role-catalog-form" @onsubmit="SaveAsync" @onsubmit:preventDefault novalidate>
+                <div class="role-catalog-fields">
+                    <div class="role-catalog-field">
+                        <label for="rolecatalog-name">@T["rolecatalog.name"] @if (draft.Id is null) { <span aria-hidden="true">*</span> }</label>
+                        @if (draft.Id is null)
+                        {
+                            <input id="rolecatalog-name" class="rbi-input" maxlength="100" required @bind="draft.Name" @bind:event="oninput" @bind:after="ClearFormError" />
+                        }
+                        else
+                        {
+                            <input id="rolecatalog-name" class="rbi-input" value="@draft.Name" readonly />
+                        }
+                    </div>
+                    <div class="role-catalog-field">
+                        <label for="rolecatalog-display-name">@T["rolecatalog.display-name"] <span aria-hidden="true">*</span></label>
+                        <input id="rolecatalog-display-name" class="rbi-input" maxlength="100" required @bind="draft.DisplayName" @bind:event="oninput" />
+                    </div>
+                    <div class="role-catalog-field role-catalog-field--wide">
+                        <label for="rolecatalog-description">@T["rolecatalog.description-field"]</label>
+                        <textarea id="rolecatalog-description" class="rbi-textarea" rows="2" maxlength="500" @bind="draft.Description" @bind:event="oninput"></textarea>
+                    </div>
+                </div>
                 @if (draft.Id is not null)
                 {
                     <label class="app-label" for="rolecatalog-active">
@@ -98,21 +107,23 @@ else
                         @T["rolecatalog.active"]
                     </label>
                 }
-                <fieldset class="registry-user-fieldset role-catalog-permissions">
+                <fieldset class="role-catalog-permissions">
                     <legend>@T["rolecatalog.permissions"]</legend>
-                    @foreach (var group in _permissions.GroupBy(item => item.Module).OrderBy(item => item.Key))
-                    {
-                        <fieldset class="role-catalog-permission-group">
-                            <legend>@group.Key</legend>
-                            @foreach (var permission in group)
-                            {
-                                <label class="role-catalog-permission" for="@("rolecatalog-permission-" + permission.Id.ToString("N"))">
-                                    <input id="@("rolecatalog-permission-" + permission.Id.ToString("N"))" type="checkbox" checked="@draft.PermissionIds.Contains(permission.Id)" @onchange="args => SelectPermission(permission.Id, args.Value is true)" />
-                                    @permission.Code
-                                </label>
-                            }
-                        </fieldset>
-                    }
+                    <div class="role-catalog-permission-grid">
+                        @foreach (var group in _permissions.GroupBy(item => item.Module).OrderBy(item => item.Key))
+                        {
+                            <fieldset class="role-catalog-permission-group">
+                                <legend>@group.Key</legend>
+                                @foreach (var permission in group)
+                                {
+                                    <label class="role-catalog-permission" for="@("rolecatalog-permission-" + permission.Id.ToString("N"))">
+                                        <input id="@("rolecatalog-permission-" + permission.Id.ToString("N"))" type="checkbox" checked="@draft.PermissionIds.Contains(permission.Id)" @onchange="args => SelectPermission(permission.Id, args.Value is true)" />
+                                        @permission.Code
+                                    </label>
+                                }
+                            </fieldset>
+                        }
+                    </div>
                 </fieldset>
                 @if ((draft.Id is null && string.IsNullOrWhiteSpace(draft.Name)) || string.IsNullOrWhiteSpace(draft.DisplayName))
                 {
@@ -122,7 +133,10 @@ else
                 {
                     <p class="app-error" role="status">@T["rolecatalog.invalid-name"]</p>
                 }
-                @if (_formError is not null) { <p role="alert" class="app-error">@T[_formError]</p> }
+                @if (_formError is not null)
+                {
+                    <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_formError]" Announcement="RbiAlertAnnouncement.Assertive" />
+                }
                 <div class="registry-toolbar">
                     <RbiButton Variant="RbiButtonVariant.Secondary" Disabled="_busy" OnClick="() => CloseDialog(false)">@T["common.cancel"]</RbiButton>
                     <RbiButton Type="RbiButtonType.Submit" Disabled="@(_busy || !ValidDraft)">@T["common.save"]</RbiButton>
@@ -243,6 +257,11 @@ else
         if (selected) _draft.PermissionIds.Add(id);
         else _draft.PermissionIds.Remove(id);
     }
+    private void ClearFormError()
+    {
+        if (_formError == "errors.roles.duplicate.name") _formError = null;
+    }
+
     private void CloseDialog(bool open) { if (!open && !_busy) _draft = null; }
 
     private async Task SaveAsync()

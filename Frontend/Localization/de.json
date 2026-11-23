@@ -576,6 +576,7 @@
     "profile.no-access": "Kein funktionaler Zugriff zugewiesen.",
     "profile.admin": "Administrator",
     "guide.lead": "Es werden nur Bereiche angezeigt, auf die Sie Zugriff haben. Öffnen Sie einen Abschnitt, um Statusbedeutungen, Eingaberegeln und Abläufe zu erfahren.",
+    "errors.roles.duplicate.name": "Eine Rolle mit diesem Namen existiert bereits.",
     "rolecatalog.title": "Rollenkatalog",
     "rolecatalog.description": "Verwalten Sie datenbankgestützte Anwendungsrollen und deren Berechtigungen.",
     "rolecatalog.new": "Neue Rolle",
