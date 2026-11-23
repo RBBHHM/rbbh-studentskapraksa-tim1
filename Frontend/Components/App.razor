@@ -11,13 +11,21 @@
     <script src="_content/RBI.DesignSystem/rbi-theme.js"></script>
     <link rel="stylesheet" href="_content/RBI.DesignSystem/rbi-design-system.css" />
     <link rel="stylesheet" href="app.css" />
-    <HeadOutlet @rendermode="InteractiveServer" />
+    <HeadOutlet @rendermode="PageRenderMode" />
 </head>
 
 <body>
-    <Routes @rendermode="InteractiveServer" />
+    <Routes @rendermode="PageRenderMode" />
     <script src="app.js"></script>
-    <script src="_framework/blazor.web.js"></script>
+    @if (PageRenderMode is not null)
+    {
+        <script src="_framework/blazor.web.js"></script>
+    }
 </body>
 
 </html>
+
+@code {
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+    private IComponentRenderMode? PageRenderMode => HttpContext.AcceptsInteractiveRouting() ? InteractiveServer : null;
+}

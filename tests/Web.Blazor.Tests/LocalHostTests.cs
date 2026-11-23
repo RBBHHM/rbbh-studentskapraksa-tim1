@@ -74,7 +74,7 @@ public sealed class LocalHostTests
     }
 
     [Fact]
-    public async Task FailedIdentityCallbackRedirectsToAnAnonymousErrorPage()
+    public async Task FailedIdentityCallbackRedirectsToAnAnonymousStaticErrorPage()
     {
         await using var app = new ChallengeApp();
         using var client = app.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
@@ -87,7 +87,11 @@ public sealed class LocalHostTests
         }));
         Assert.Equal(HttpStatusCode.Redirect, failure.StatusCode);
         Assert.Equal("/error", failure.Headers.Location?.OriginalString);
-        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/error")).StatusCode);
+        var errorPage = await client.GetAsync("/error");
+        Assert.Equal(HttpStatusCode.OK, errorPage.StatusCode);
+        var html = await errorPage.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("_framework/blazor.web.js", html);
+        Assert.DoesNotContain("<!--Blazor:", html);
     }
 
     [Theory]
@@ -117,6 +121,7 @@ public sealed class LocalHostTests
         Assert.DoesNotContain("/authentication/login", html);
         Assert.Contains("<option value=\"de\">Deutsch</option>", html);
         Assert.Contains("RBI.DesignSystem/rbi-design-system.css", html);
+        Assert.Contains("_framework/blazor.web.js", html);
     }
 
     [Fact]
