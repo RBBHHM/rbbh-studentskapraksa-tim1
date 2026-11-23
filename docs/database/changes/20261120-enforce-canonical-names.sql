@@ -141,15 +141,10 @@ IF NOT EXISTS (
     WHERE [MigrationId] = N'20261120150620_EnforceCanonicalNamesWithoutDuplicateColumns'
 )
 BEGIN
-    DROP INDEX [IX_AppUsers_Email] ON [AppUsers];
-    DECLARE @var7 nvarchar(max);
-    SELECT @var7 = QUOTENAME([d].[name])
-    FROM [sys].[default_constraints] [d]
-    INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
-    WHERE ([d].[parent_object_id] = OBJECT_ID(N'[AppUsers]') AND [c].[name] = N'Email');
-    IF @var7 IS NOT NULL EXEC(N'ALTER TABLE [AppUsers] DROP CONSTRAINT ' + @var7 + ';');
-    ALTER TABLE [AppUsers] ALTER COLUMN [Email] nvarchar(200) COLLATE Latin1_General_100_CI_AS NOT NULL;
-    CREATE UNIQUE INDEX [IX_AppUsers_Email] ON [AppUsers] ([Email]);
+    DROP INDEX IF EXISTS [IX_AppUsers_Email] ON [dbo].[AppUsers];
+    ALTER TABLE [dbo].[AppUsers]
+        ALTER COLUMN [Email] nvarchar(200) COLLATE Latin1_General_100_CI_AS NOT NULL;
+    CREATE UNIQUE INDEX [IX_AppUsers_Email] ON [dbo].[AppUsers] ([Email]);
 END;
 
 IF NOT EXISTS (

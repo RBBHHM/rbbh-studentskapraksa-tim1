@@ -77,16 +77,13 @@ namespace RBBH.ConnectedParties.Api.Migrations
                 oldType: "nvarchar(100)",
                 oldMaxLength: 100);
 
-            migrationBuilder.AlterColumn<string>(
-                name: "Email",
-                table: "AppUsers",
-                type: "nvarchar(200)",
-                maxLength: 200,
-                nullable: false,
-                collation: "Latin1_General_100_CI_AS",
-                oldClrType: typeof(string),
-                oldType: "nvarchar(200)",
-                oldMaxLength: 200);
+            // Some existing databases reached this migration without the legacy email index.
+            migrationBuilder.Sql("""
+                DROP INDEX IF EXISTS [IX_AppUsers_Email] ON [dbo].[AppUsers];
+                ALTER TABLE [dbo].[AppUsers]
+                    ALTER COLUMN [Email] nvarchar(200) COLLATE Latin1_General_100_CI_AS NOT NULL;
+                CREATE UNIQUE INDEX [IX_AppUsers_Email] ON [dbo].[AppUsers] ([Email]);
+                """);
 
             migrationBuilder.AddCheckConstraint(
                 name: "CK_Roles_Name_Trimmed",

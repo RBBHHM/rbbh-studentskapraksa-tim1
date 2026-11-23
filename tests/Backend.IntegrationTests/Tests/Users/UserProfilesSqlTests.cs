@@ -82,6 +82,33 @@ public sealed class UserProfilesSqlTests : AuthenticatedApiFixture
     }
 
     [SqlServerFact]
+    public async Task CanonicalNamesMigrationRecreatesMissingUniqueEmailIndex()
+    {
+        var connection = new SqlConnectionStringBuilder(Environment.GetEnvironmentVariable(SqlServerFactAttribute.Variable))
+        { InitialCatalog = "RBBH_EMAIL_INDEX_" + Guid.NewGuid().ToString("N") };
+        await using var db = new ConnectedPartiesDbContext(
+            new DbContextOptionsBuilder<ConnectedPartiesDbContext>().UseSqlServer(connection.ConnectionString).Options);
+        try
+        {
+            var migrator = db.GetService<IMigrator>();
+            await migrator.MigrateAsync("20261120150505_NormalizeCodeListKeyColumnNames");
+            await db.Database.ExecuteSqlRawAsync("DROP INDEX IF EXISTS [IX_AppUsers_Email] ON [dbo].[AppUsers];");
+
+            await migrator.MigrateAsync("20261120150620_EnforceCanonicalNamesWithoutDuplicateColumns");
+
+            Assert.Equal(1, await db.Database.SqlQueryRaw<int>("""
+                SELECT COUNT(*) AS [Value] FROM sys.indexes
+                WHERE object_id = OBJECT_ID(N'dbo.AppUsers') AND name = N'IX_AppUsers_Email'
+                    AND is_unique = 1 AND is_disabled = 0
+                """).SingleAsync());
+        }
+        finally
+        {
+            await db.Database.EnsureDeletedAsync();
+        }
+    }
+
+    [SqlServerFact]
     public async Task IdentityConstraintPreflightRejectsDuplicatesWithoutDeletingOrReassigningData()
     {
         var connection = new SqlConnectionStringBuilder(Environment.GetEnvironmentVariable(SqlServerFactAttribute.Variable))
