@@ -226,13 +226,10 @@ internal static partial class BrowserHostProgram
         {
             builder.UseEnvironment("Development");
             builder.UseContentRoot(Path.Combine(FindRoot(), "Frontend"));
-            builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["Authentication:Authority"] = "",
-                ["Authentication:ClientId"] = "",
-                ["Authentication:ClientSecret"] = "",
-                ["Apis:BaseUrl"] = "http://backend.fixture/"
-            }));
+            builder.UseSetting("Authentication:Authority", "");
+            builder.UseSetting("Authentication:ClientId", "");
+            builder.UseSetting("Authentication:ClientSecret", "");
+            builder.UseSetting("Apis:BaseUrl", "http://backend.fixture/");
             builder.ConfigureTestServices(services =>
             {
                 services.Configure<Microsoft.AspNetCore.Components.Server.CircuitOptions>(options => options.DetailedErrors = true);

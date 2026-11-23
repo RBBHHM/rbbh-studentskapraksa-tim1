@@ -21,8 +21,7 @@
         }
     </Actions>
 </HeroBar>
-@if (!_authenticated && !_loading) { <IdentityNotice /> }
-else if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
+@if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
 else if (!_canRead && _error is null) { <RbiAlert Title="@T["errors.forbidden"]" /> }
 else
 {

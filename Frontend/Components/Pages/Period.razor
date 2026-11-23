@@ -9,8 +9,7 @@
 <PageTitle>@T["period.title"]</PageTitle>
 <HeroBar Title="@T["period.title"]" Description="@T["period.subtitle"]">
 </HeroBar>
-@if (!_authenticated && !_loading) { <IdentityNotice /> }
-else if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
+@if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
 else if (_error is not null) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_error]" /><RbiButton OnClick="LoadAsync">@T["state.retry"]</RbiButton> }
 else if (!_canRead) { <RbiAlert Title="@T["errors.forbidden"]" /> }
 else if (_current is { } current)

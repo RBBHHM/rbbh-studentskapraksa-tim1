@@ -12,8 +12,7 @@
 <PageTitle>@T["reports.title"]</PageTitle>
 <HeroBar Title="@T["reports.title"]" Description="@T["reports.subtitle"]">
 </HeroBar>
-@if (!_authenticated && !_refreshing) { <IdentityNotice /> }
-else if (_authenticated && !_canRead && !_refreshing)
+@if (_authenticated && !_canRead && !_refreshing)
 {
     <RbiAlert Title="@T[_loadError ?? "errors.forbidden"]" />
     <RbiButton OnClick="LoadAsync">@T["state.retry"]</RbiButton>

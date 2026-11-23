@@ -69,7 +69,7 @@ internal sealed class RbiOpenIdConnectEvents(
             "OIDC remote authentication failed. FailureType={FailureType}",
             context.Failure?.GetType().Name ?? "unknown");
         context.HandleResponse();
-        context.Response.Redirect("/?authentication=failed");
+        context.Response.Redirect("/error");
         return Task.CompletedTask;
     }
 }

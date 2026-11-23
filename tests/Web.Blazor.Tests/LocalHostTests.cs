@@ -1,7 +1,13 @@
 using System.Net;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Protocols;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 
 namespace Web.Blazor.Tests;
 
@@ -17,19 +23,18 @@ public sealed class LocalHostTests
             if (directory is null) throw new InvalidOperationException("Migration solution not found.");
             builder.UseContentRoot(Path.Combine(directory.FullName, "Frontend"));
             builder.UseEnvironment("Development");
-            builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(
-                new Dictionary<string, string?>
-                {
-                    ["Apis:BaseUrl"] = "",
-                    ["Authentication:Authority"] = "",
-                    ["Authentication:ClientId"] = "",
-                    ["Authentication:ClientSecret"] = ""
-                }));
+            builder.UseSetting("Apis:BaseUrl", "");
+            builder.UseSetting("Authentication:Authority", "");
+            builder.UseSetting("Authentication:ClientId", "");
+            builder.UseSetting("Authentication:ClientSecret", "");
         }
     }
 
     private sealed class ChallengeApp : WebApplicationFactory<Program>
     {
+        internal OpenIdConnectOptions Oidc => Services.GetRequiredService<IOptionsMonitor<OpenIdConnectOptions>>()
+            .Get("RBI.OpenIdConnect");
+
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.UseContentRoot(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "Frontend"));
@@ -39,19 +44,50 @@ public sealed class LocalHostTests
             builder.UseSetting("Authentication:Authority", "https://identity.invalid/realms/test");
             builder.UseSetting("Authentication:ClientId", "test-client");
             builder.UseSetting("Authentication:ClientSecret", "test-secret");
+            builder.ConfigureTestServices(services => services.PostConfigure<OpenIdConnectOptions>(
+                "RBI.OpenIdConnect", options => options.ConfigurationManager =
+                    new StaticConfigurationManager<OpenIdConnectConfiguration>(new()
+                    {
+                        Issuer = "https://identity.invalid/realms/test",
+                        AuthorizationEndpoint = "https://identity.invalid/realms/test/protocol/openid-connect/auth"
+                    })));
         }
     }
 
-    [Fact]
-    public async Task ProtectedRouteStartsTheIdentityChallengeWithoutSignInScreen()
+    [Theory]
+    [InlineData("/")]
+    [InlineData("/profile")]
+    [InlineData("/app/legal-persons?search=test")]
+    [InlineData("/app/admin/users")]
+    public async Task ProtectedRouteChallengesKeycloakDirectlyAndPreservesReturnUrl(string route)
     {
         await using var app = new ChallengeApp();
         using var client = app.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
-        var response = await client.GetAsync("/app/legal-persons");
+        var response = await client.GetAsync(route);
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        var target = response.Headers.Location!.OriginalString;
-        Assert.StartsWith("/authentication/login?returnUrl=", target);
-        Assert.Contains(Uri.EscapeDataString("/app/legal-persons"), target);
+        var target = response.Headers.Location!;
+        Assert.Equal("identity.invalid", target.Host);
+        Assert.Equal("/realms/test/protocol/openid-connect/auth", target.AbsolutePath);
+        var query = QueryHelpers.ParseQuery(target.Query);
+        Assert.Equal("test-client", query["client_id"].ToString());
+        Assert.Equal(route, app.Oidc.StateDataFormat.Unprotect(query["state"].ToString())!.RedirectUri);
+    }
+
+    [Fact]
+    public async Task FailedIdentityCallbackRedirectsToAnAnonymousErrorPage()
+    {
+        await using var app = new ChallengeApp();
+        using var client = app.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        var challenge = await client.GetAsync("/app");
+        var state = QueryHelpers.ParseQuery(challenge.Headers.Location!.Query)["state"].ToString();
+        var failure = await client.GetAsync(QueryHelpers.AddQueryString("/signin-oidc", new Dictionary<string, string?>
+        {
+            ["error"] = "server_error",
+            ["state"] = state
+        }));
+        Assert.Equal(HttpStatusCode.Redirect, failure.StatusCode);
+        Assert.Equal("/error", failure.Headers.Location?.OriginalString);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/error")).StatusCode);
     }
 
     [Theory]

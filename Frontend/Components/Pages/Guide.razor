@@ -16,7 +16,6 @@
 </div>
 </div>
 @if (_loading) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
-else if (!_authenticated) { <IdentityNotice /> }
 else if (_error) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T["profile.unavailable"]" /><RbiButton OnClick="LoadAsync">@T["state.retry"]</RbiButton> }
 else if (_profile is not null)
 {

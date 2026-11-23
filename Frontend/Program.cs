@@ -45,23 +45,14 @@ app.UseRbiLocalization();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
-if (identityConfigured.Enabled)
-{
-    // Protected pages start the identity challenge directly; there is no intermediate sign-in screen.
-    app.Use(async (context, next) =>
-    {
-        var document = HttpMethods.IsGet(context.Request.Method) && context.Request.Path.StartsWithSegments("/app")
-            && context.User.Identity?.IsAuthenticated != true;
-        if (document) context.Response.Redirect("/authentication/login?returnUrl=" + Uri.EscapeDataString(context.Request.Path + context.Request.QueryString));
-        else await next();
-    });
-}
-
 app.MapStaticAssets();
 app.MapRbiLocalizationEndpoints();
 if (identityConfigured.Enabled) app.MapRbiAuthenticationEndpoints();
-app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+var pages = app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
+if (identityConfigured.Enabled)
+    pages.RequireAuthorization();
+else
+    pages.AllowAnonymous();
 
 app.Run();
 
