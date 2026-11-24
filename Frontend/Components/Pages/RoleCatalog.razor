@@ -62,7 +62,7 @@ else
                             {
                                 <div class="role-catalog-actions">
                                     <RbiButton Variant="RbiButtonVariant.Secondary" Disabled="@(_busy || _refreshing)" OnClick="() => EditRole(role)">@T["rolecatalog.edit"]</RbiButton>
-                                    <RbiButton Variant="RbiButtonVariant.Ghost" Disabled="@(_busy || _refreshing)" OnClick="() => ConfirmDelete(role)">@T["common.delete"]</RbiButton>
+                                    <RbiButton Variant="RbiButtonVariant.Ghost" Class="role-catalog-delete" Disabled="@(_busy || _refreshing)" OnClick="() => ConfirmDelete(role)">@T["common.delete"]</RbiButton>
                                 </div>
                             }
                             else
@@ -95,12 +95,16 @@ else
         <DialogBody>
             <form class="role-catalog-form" @onsubmit="SaveAsync" @onsubmit:preventDefault novalidate>
                 <div class="role-catalog-fields">
-                    <input id="rolecatalog-name" class="rbi-input" maxlength="100" required readonly="@(draft.Id is not null)"
-                           aria-label="@T["rolecatalog.name"]" placeholder="@T["rolecatalog.name"]"
-                           @bind="draft.Name" @bind:event="oninput" @bind:after="ClearFormError" />
-                    <textarea id="rolecatalog-description" class="rbi-textarea" rows="2" maxlength="500"
-                              aria-label="@T["rolecatalog.description-field"]" placeholder="@T["rolecatalog.description-field"]"
-                              @bind="draft.Description" @bind:event="oninput"></textarea>
+                    <div class="role-catalog-field">
+                        <label for="rolecatalog-name">@T["rolecatalog.name"]</label>
+                        <input id="rolecatalog-name" class="rbi-input" maxlength="100" required readonly="@(draft.Id is not null)"
+                               @bind="draft.Name" @bind:event="oninput" @bind:after="ClearFormError" />
+                    </div>
+                    <div class="role-catalog-field">
+                        <label for="rolecatalog-description">@T["rolecatalog.description-field"]</label>
+                        <textarea id="rolecatalog-description" class="rbi-textarea" rows="2" maxlength="500"
+                                  @bind="draft.Description" @bind:event="oninput"></textarea>
+                    </div>
                 </div>
                 @if (draft.Id is not null)
                 {
