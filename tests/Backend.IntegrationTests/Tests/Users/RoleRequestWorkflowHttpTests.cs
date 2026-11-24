@@ -196,6 +196,9 @@ public sealed class RoleRequestWorkflowHttpTests : RoleRequestFixture
         var reviewEmail = Assert.Single(messages, item => item.To == "creator@example.test").Html;
         Assert.Contains($"https://app.example.test/app/admin/role-requests?requestId={id:D}", reviewEmail);
         Assert.Contains("rbi-bank-mono-pos.png", reviewEmail);
+        Assert.Contains("Amalia-Regular.woff2", reviewEmail);
+        Assert.Contains("Amalia-Bold.woff2", reviewEmail);
+        Assert.Contains("align=\"center\"", reviewEmail);
         Assert.Contains("Raiffeisen Bank BiH", reviewEmail);
 
         var decisionEmail = Assert.Single(messages, item => item.To == "mail-applicant@example.test").Html;

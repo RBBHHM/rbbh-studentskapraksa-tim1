@@ -21,8 +21,6 @@ public sealed class LegalImportValidationTests
         { "matbroj", new string('1', 50), true },
         { "matbroj", new string('1', 51), false },
         { "matbroj", "١٢٣", false },
-        { "description", new string('a', 500), true },
-        { "description", new string('a', 501), false },
         { "fbaId", "١٢٣", false },
         { "fbaId", "12345678901", false }
     };
@@ -38,7 +36,6 @@ public sealed class LegalImportValidationTests
         {
             case "name": dto.Name = value; break;
             case "matbroj": dto.Matbroj = value; break;
-            case "description": dto.ConnectionDescription = value; break;
             case "fbaId": dto.FbaId = value; break;
         }
         using var stream = Workbook(dto);
@@ -50,7 +47,6 @@ public sealed class LegalImportValidationTests
             var stored = Assert.Single(db.LegalEntities);
             Assert.Equal(dto.Name, stored.Name);
             Assert.Equal(dto.Matbroj, stored.Matbroj);
-            Assert.Equal(dto.ConnectionDescription, stored.ConnectionDescription);
         }
         else
         {
@@ -62,7 +58,7 @@ public sealed class LegalImportValidationTests
             var update = new UpdateLegalEntityDTO
             {
                 Name = dto.Name, IsResident = dto.IsResident, FbaId = dto.FbaId, Matbroj = dto.Matbroj,
-                BasisOfConnection = dto.BasisOfConnection, ConnectionDescription = dto.ConnectionDescription,
+                BasisOfConnection = dto.BasisOfConnection,
                 ConnectedWithBank = dto.ConnectedWithBank, DateFrom = dto.DateFrom
             };
             await Assert.ThrowsAsync<ValidationException>(() => service.UpdateAsync(original.Id, update, "fixture"));
@@ -102,7 +98,7 @@ public sealed class LegalImportValidationTests
     private static CreateLegalEntityDTO Valid() => new()
     {
         Name = "Kompanija Ž", IsResident = false, FbaId = "123", Matbroj = "456",
-        BasisOfConnection = "VL", ConnectionDescription = "Opis povezanosti", ConnectedWithBank = true,
+        BasisOfConnection = "VL", ConnectedWithBank = true,
         DateFrom = new DateTime(2026, 1, 1)
     };
 
@@ -115,7 +111,7 @@ public sealed class LegalImportValidationTests
         {
             var dto = rows[row];
             string[] values = [dto.Name, "Nerezident", "", dto.FbaId!, dto.Matbroj!, dto.BasisOfConnection,
-                dto.ConnectionDescription!, "DA", "01.01.2026", ""];
+                new string('a', 501), "DA", "01.01.2026", ""];
             for (var column = 0; column < values.Length; column++) sheet.Cell(row + 2, column + 1).Value = values[column];
         }
         var stream = new MemoryStream(); workbook.SaveAs(stream); stream.Position = 0; return stream;

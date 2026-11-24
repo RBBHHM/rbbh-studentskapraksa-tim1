@@ -156,11 +156,11 @@ else
         {
             // Fetch the current detail to preserve server-only Matbroj on update.
             if (entity is not null) entity = await Api.GetAsync(entity.Id, _token);
-            _editingId = entity?.Id; _bases = PhysicalPersonOptions.Bases(T); _fallback = false;
+            _editingId = entity?.Id; _bases = PhysicalPersonOptions.Bases(T).Select(option => option with { Opis = null }).ToArray(); _fallback = false;
             try
             {
                 var bases = await References.OptionsAsync("OsnovPovezanosti", _token);
-                if (bases.Count > 0) _bases = bases.Select(item => item with { Opis = item.Opis ?? _bases.FirstOrDefault(fallback => fallback.Kod == item.Kod)?.Opis }).ToArray(); else _fallback = true;
+                if (bases.Count > 0) _bases = bases; else _fallback = true;
             }
             catch (RegistryApiException) { _fallback = true; }
             if (entity is not null && !_bases.Any(option => option.Kod == entity.BasisOfConnection))

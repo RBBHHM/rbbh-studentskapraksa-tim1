@@ -41,7 +41,7 @@ public sealed class LegalEntitiesApiTests
             Assert.False(body.RootElement.TryGetProperty("status", out _));
             return Json("{\"id\":\"" + id + "\",\"name\":\"Updated\",\"isResident\":false,\"status\":\"Verified\"}");
         });
-        await provider.GetRequiredService<ILegalEntitiesApi>().SaveAsync(id, new(false, null, "12345", "123456", "Updated", "ORIGINAL", "ZOB-2-V-5", "Description", true, new(2026, 1, 1), null));
+        await provider.GetRequiredService<ILegalEntitiesApi>().SaveAsync(id, new(false, null, "12345", "123456", "Updated", "ORIGINAL", "ZOB-2-V-5", true, new(2026, 1, 1), null));
     }
     [Fact]
     public async Task ImportUsesApprovedMultipartTransport()

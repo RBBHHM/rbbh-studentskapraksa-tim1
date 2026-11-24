@@ -55,9 +55,6 @@ public class LegalEntity
     [StringLength(100)]
     public string BasisOfConnection { get; set; } = string.Empty;
 
-    [StringLength(500)]
-    public string? ConnectionDescription { get; set; }
-
     // ── Veza s bankom ─────────────────────────────────────────────────────────
 
     /// <summary>Da li je pravno lice povezano lice sa Bankom (DA/NE).</summary>
@@ -80,9 +77,6 @@ public class LegalEntity
     [Required]
     [StringLength(100)]
     public string CreatedBy { get; set; } = string.Empty;
-
-    [StringLength(100)]
-    public string? CreatorSubject { get; internal set; }
 
     internal void MarkModified(DateTime timestamp)
     {

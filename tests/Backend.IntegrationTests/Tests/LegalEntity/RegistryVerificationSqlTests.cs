@@ -68,9 +68,24 @@ public sealed class RegistryVerificationSqlTests : AuthenticatedApiFixture
             await db.GetService<IMigrator>().MigrateAsync("20261026115804_ConfirmKeycloakSubjects");
             var id = Guid.NewGuid();
             await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO LegalEntities (Id, IsResident, Name, BasisOfConnection, Status, CreatedBy, CreatedAt, IsActive) VALUES ({id}, {false}, {"Historical company"}, {"VL"}, {"Draft"}, {"historical@example.test"}, {DateTime.UtcNow}, {true})");
+            await db.GetService<IMigrator>().MigrateAsync("20261124101000_EnsureUniqueUserIdentityAndUpdateRoleRequestCopy");
+            var provenId = Guid.NewGuid();
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT INTO LegalEntities (Id, IsResident, FbaId, Name, BasisOfConnection, Status, CreatedBy, CreatedAt, IsActive, CreatorSubject)
+                VALUES ({provenId}, {false}, {"145"}, {"Known company"}, {"VL"}, {"Draft"}, {"original"}, {DateTime.UtcNow}, {true}, {"opaque-subject"})
+                """);
+            await db.Database.ExecuteSqlRawAsync("ALTER TABLE dbo.LegalEntities ADD [Version] rowversion;");
             await db.Database.MigrateAsync();
-            var row = await db.LegalEntities.SingleAsync();
-            Assert.Null(row.CreatorSubject); Assert.Equal("Historical company", row.Name);
+
+            var origin = await db.LegalEntityVerificationOrigins.SingleAsync();
+            Assert.Equal(provenId, origin.LegalEntityId);
+            Assert.Equal("opaque-subject", origin.Subject);
+            Assert.Equal(0, await db.Database.SqlQueryRaw<int>("""
+                SELECT COUNT(*) AS [Value] FROM sys.columns
+                WHERE object_id = OBJECT_ID(N'dbo.LegalEntities') AND name IN (N'CreatorSubject', N'ConnectionDescription', N'Version')
+                """).SingleAsync());
+            var row = await db.LegalEntities.SingleAsync(entity => entity.Id == id);
+            Assert.Equal("Historical company", row.Name);
             Assert.Equal("historical@example.test", row.CreatedBy);
         }
         finally { await db.Database.EnsureDeletedAsync(); }

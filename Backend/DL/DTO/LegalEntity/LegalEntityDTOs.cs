@@ -37,9 +37,6 @@ public class CreateLegalEntityDTO
     [StringLength(100)]
     public string BasisOfConnection { get; set; } = string.Empty;
 
-    [StringLength(500)]
-    public string? ConnectionDescription { get; set; }
-
     public bool? ConnectedWithBank { get; set; }
 
     public DateTime? DateFrom { get; set; }
@@ -75,9 +72,6 @@ public class UpdateLegalEntityDTO
     [Required(ErrorMessageResourceType = typeof(BackendValidationMessages), ErrorMessageResourceName = nameof(BackendValidationMessages.ConnectionRequired))]
     [StringLength(100)]
     public string BasisOfConnection { get; set; } = string.Empty;
-
-    [StringLength(500)]
-    public string? ConnectionDescription { get; set; }
 
     public bool? ConnectedWithBank { get; set; }
 

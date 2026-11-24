@@ -34,7 +34,6 @@ namespace UnitTests.Services.LegalEntityServiceTests
             TaxNumber = ValidTaxNumber,
             Name = "Rezidentno DOO",
             BasisOfConnection = "Vlasništvo",
-            ConnectionDescription = "Opis povezanosti",
             ConnectedWithBank = true,
             DateFrom = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
         };
@@ -45,7 +44,6 @@ namespace UnitTests.Services.LegalEntityServiceTests
             FbaId = "1234567890",
             Name = "Nerezidentno LLC",
             BasisOfConnection = "Vlasništvo",
-            ConnectionDescription = "Opis povezanosti",
             ConnectedWithBank = true,
             DateFrom = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
         };

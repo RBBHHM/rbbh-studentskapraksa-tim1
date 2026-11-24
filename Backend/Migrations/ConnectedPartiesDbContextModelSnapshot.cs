@@ -185,19 +185,11 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<bool?>("ConnectedWithBank")
                         .HasColumnType("bit");
 
-                    b.Property<string>("ConnectionDescription")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("CreatorSubject")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
@@ -282,6 +274,21 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasFilter("\"TaxNumber\" IS NOT NULL");
 
                     b.ToTable("LegalEntities");
+                });
+
+            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntityVerificationOrigin", b =>
+                {
+                    b.Property<Guid>("LegalEntityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("LegalEntityId");
+
+                    b.ToTable("LegalEntityVerificationOrigins");
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Limiti.Limit", b =>
@@ -1355,6 +1362,15 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Navigation("Request");
 
                     b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntityVerificationOrigin", b =>
+                {
+                    b.HasOne("RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntity", null)
+                        .WithOne()
+                        .HasForeignKey("RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntityVerificationOrigin", "LegalEntityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Limiti.Limit", b =>

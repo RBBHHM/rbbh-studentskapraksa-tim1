@@ -63,7 +63,6 @@ public sealed class LegalEntityDraft
         if (IsResident == false && !Regex.IsMatch(FbaId?.Trim() ?? "", "^[0-9]{1,10}$")) Error(nameof(FbaId), "validation.fba");
         if (!string.IsNullOrEmpty(MaticniBroj) && !Regex.IsMatch(MaticniBroj.Trim(), "^[0-9]{0,50}$")) Error(nameof(MaticniBroj), "legal.validation.registration");
         if (string.IsNullOrWhiteSpace(BasisOfConnection) || BasisOfConnection.Length > 100) Error(nameof(BasisOfConnection), "validation.required");
-        if (string.IsNullOrWhiteSpace(ConnectionDescription) || ConnectionDescription.Length > 500) Error(nameof(ConnectionDescription), "validation.required");
         if (ConnectedWithBank is null) Error(nameof(ConnectedWithBank), "validation.required");
         if (!string.IsNullOrEmpty(GccNumber) && !Regex.IsMatch(GccNumber.Trim(), "^[0-9]{1,50}$")) Error(nameof(GccNumber), "legal.validation.gcc");
         if (DateFrom is null) Error(nameof(DateFrom), "validation.date");
@@ -76,7 +75,7 @@ public sealed class LegalEntityDraft
         static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
         return new(IsResident!.Value, IsResident == true ? Clean(TaxNumber) : null, Clean(MaticniBroj),
             IsResident == false ? Clean(FbaId) : null, Name!.Trim(), PreservedMatbroj, BasisOfConnection!,
-            ConnectionDescription, ConnectedWithBank, DateFrom, DateTo, Clean(GccNumber), IsLargeExposure);
+            ConnectedWithBank, DateFrom, DateTo, Clean(GccNumber), IsLargeExposure);
     }
     public static bool ValidTaxNumber(string? value)
     {

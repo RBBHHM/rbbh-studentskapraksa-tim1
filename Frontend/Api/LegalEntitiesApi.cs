@@ -23,7 +23,7 @@ public sealed record LegalEntity(Guid Id, bool IsResident, string? TaxNumber, st
 }
 public sealed record LegalEntityPage(IReadOnlyList<LegalEntity> Items, int Total, int Page, int PageSize);
 public sealed record LegalEntityRequest(bool IsResident, string? TaxNumber, string? MaticniBroj,
-    string? FbaId, string Name, string? Matbroj, string BasisOfConnection, string? ConnectionDescription,
+    string? FbaId, string Name, string? Matbroj, string BasisOfConnection,
     bool? ConnectedWithBank, DateTime? DateFrom, DateTime? DateTo, string? GccNumber = null, bool? IsLargeExposure = null);
 public sealed record GccOption(string? Number, string? Name);
 public sealed record GccPage(IReadOnlyList<GccOption> Items, int Total, int Page, int PageSize);

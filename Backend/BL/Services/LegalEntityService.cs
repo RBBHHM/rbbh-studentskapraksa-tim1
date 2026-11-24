@@ -61,6 +61,8 @@ public partial class LegalEntityService : ILegalEntityService
             .Select(DtoProjection)
             .ToListAsync(cancellation);
 
+        await FillConnectionDescriptions(items, cancellation);
+
         return new LegalEntityListDTO
         {
             Items = items,
@@ -75,16 +77,20 @@ public partial class LegalEntityService : ILegalEntityService
         var items = await _context.LegalEntities.AsNoTracking().OrderBy(row => row.Name).ThenBy(row => row.Id).Take(5001)
             .Select(DtoProjection).ToListAsync(_actor?.HttpContext?.RequestAborted ?? default);
         if (items.Count > 5000) throw new ValidationException("file", BackendMessages.Message("errors.workbook.export.limit"));
+        await FillConnectionDescriptions(items, _actor?.HttpContext?.RequestAborted ?? default);
         return items;
     }
 
     /// <inheritdoc />
     public async Task<LegalEntityDTO?> GetByIdAsync(Guid id)
     {
-        return await _context.LegalEntities.AsNoTracking()
+        var cancellation = _actor?.HttpContext?.RequestAborted ?? default;
+        var item = await _context.LegalEntities.AsNoTracking()
             .Where(e => e.Id == id && e.IsActive)
             .Select(DtoProjection)
-            .FirstOrDefaultAsync(_actor?.HttpContext?.RequestAborted ?? default);
+            .FirstOrDefaultAsync(cancellation);
+        if (item is not null) await FillConnectionDescriptions([item], cancellation);
+        return item;
     }
 
     /// <inheritdoc />
@@ -111,24 +117,23 @@ public partial class LegalEntityService : ILegalEntityService
             IsLargeExposure = dto.IsLargeExposure ?? false,
             Matbroj = string.IsNullOrWhiteSpace(dto.Matbroj) ? null : dto.Matbroj.Trim(),
             BasisOfConnection = dto.BasisOfConnection.Trim(),
-            ConnectionDescription = dto.ConnectionDescription?.Trim(),
             ConnectedWithBank = dto.ConnectedWithBank,
             DateFrom = dto.DateFrom,
             DateTo = dto.DateTo,
             Status = "Draft",
-            CreatorSubject = Helpers.RegistryVerification.CreatorSubject(_actor),
             CreatedBy = createdBy,
             CreatedAt = DateTime.UtcNow,
             IsActive = true
         };
 
-        _context.LegalEntities.Add(entity);
+        AddNewEntity(entity);
         _context.AuditLogs.Add(Helpers.BusinessAudit.Create("LegalEntity", entity.Id.ToString(), "INSERT", createdBy, _actor, newValues: MapToDto(entity)));
+        var result = await WithConnectionDescription(entity);
         await _context.SaveChangesAsync(_actor?.HttpContext?.RequestAborted ?? default);
 
         _logger.LogInformation("Legal entity created.");
 
-        return MapToDto(entity);
+        return result;
     }
 
     /// <inheritdoc />
@@ -165,7 +170,6 @@ public partial class LegalEntityService : ILegalEntityService
         entity.MaticniBroj = string.IsNullOrWhiteSpace(dto.MaticniBroj) ? null : dto.MaticniBroj.Trim();
         entity.Matbroj = string.IsNullOrWhiteSpace(dto.Matbroj) ? null : dto.Matbroj.Trim();
         entity.BasisOfConnection = dto.BasisOfConnection.Trim();
-        entity.ConnectionDescription = dto.ConnectionDescription?.Trim();
         entity.ConnectedWithBank = dto.ConnectedWithBank;
         entity.DateFrom = dto.DateFrom;
         entity.DateTo = dto.DateTo;
@@ -173,11 +177,12 @@ public partial class LegalEntityService : ILegalEntityService
         entity.MarkModified(DateTime.UtcNow);
 
         _context.AuditLogs.Add(Helpers.BusinessAudit.Create("LegalEntity", entity.Id.ToString(), "UPDATE", modifiedBy, _actor, oldValues: before, newValues: MapToDto(entity)));
+        var result = await WithConnectionDescription(entity);
         await _context.SaveChangesAsync(_actor?.HttpContext?.RequestAborted ?? default);
 
         _logger.LogInformation("Legal entity updated.");
 
-        return MapToDto(entity);
+        return result;
     }
 
     /// <inheritdoc />
@@ -214,7 +219,10 @@ public partial class LegalEntityService : ILegalEntityService
         if (string.Equals(entity.Status, "Verified", StringComparison.OrdinalIgnoreCase))
             throw new ValidationException("status", BackendMessages.Message("validation.registry.legal.verified"));
 
-        Helpers.RegistryVerification.Authorize(entity.CreatorSubject, _actor);
+        var subject = await _context.LegalEntityVerificationOrigins.AsNoTracking()
+            .Where(origin => origin.LegalEntityId == id).Select(origin => origin.Subject)
+            .SingleOrDefaultAsync(_actor?.HttpContext?.RequestAborted ?? default);
+        Helpers.RegistryVerification.Authorize(subject, _actor);
         entity.Status = "Verified";
         entity.VerifiedBy = verifiedBy;
         entity.VerifiedAt = DateTime.UtcNow;
@@ -222,11 +230,12 @@ public partial class LegalEntityService : ILegalEntityService
         entity.MarkModified(DateTime.UtcNow);
 
         _context.AuditLogs.Add(Helpers.RegistryVerification.Audit("LegalEntity", entity.Id, verifiedBy, _actor));
+        var result = await WithConnectionDescription(entity);
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("Legal entity verified.");
 
-        return MapToDto(entity);
+        return result;
     }
         /// <inheritdoc />
     public async Task<List<LegalEntityLookupDTO>> SearchForLimitsAsync(string? search) =>
@@ -297,7 +306,7 @@ public partial class LegalEntityService : ILegalEntityService
 
     private static void ValidateCreateDto(CreateLegalEntityDTO dto)
     {
-        ValidateStoredFields(dto.Name, dto.MaticniBroj, dto.Matbroj, dto.BasisOfConnection, dto.ConnectionDescription);
+        ValidateStoredFields(dto.Name, dto.MaticniBroj, dto.Matbroj, dto.BasisOfConnection);
         if (dto.IsResident)
         {
             if (string.IsNullOrWhiteSpace(dto.TaxNumber))
@@ -320,7 +329,7 @@ public partial class LegalEntityService : ILegalEntityService
         if (string.IsNullOrWhiteSpace(dto.BasisOfConnection))
             throw new ValidationException("basisOfConnection", BackendMessages.Message("validation.registry.connection.required"));
 
-        ValidateRequiredBusinessFields(dto.ConnectionDescription, dto.DateFrom);
+        ValidateStartDate(dto.DateFrom);
 
         if (dto.DateFrom.HasValue && dto.DateTo.HasValue && dto.DateTo < dto.DateFrom)
             throw new ValidationException("dateTo", BackendMessages.Message("validation.registry.date.order"));
@@ -328,7 +337,7 @@ public partial class LegalEntityService : ILegalEntityService
 
     private static void ValidateUpdateDto(UpdateLegalEntityDTO dto)
     {
-        ValidateStoredFields(dto.Name, dto.MaticniBroj, dto.Matbroj, dto.BasisOfConnection, dto.ConnectionDescription);
+        ValidateStoredFields(dto.Name, dto.MaticniBroj, dto.Matbroj, dto.BasisOfConnection);
         if (dto.IsResident)
         {
             if (string.IsNullOrWhiteSpace(dto.TaxNumber))
@@ -346,20 +355,18 @@ public partial class LegalEntityService : ILegalEntityService
             throw new ValidationException("name", BackendMessages.Message("validation.registry.name.required"));
         if (string.IsNullOrWhiteSpace(dto.BasisOfConnection))
             throw new ValidationException("basisOfConnection", BackendMessages.Message("validation.registry.connection.required"));
-        ValidateRequiredBusinessFields(dto.ConnectionDescription, dto.DateFrom);
+        ValidateStartDate(dto.DateFrom);
         if (dto.DateFrom.HasValue && dto.DateTo.HasValue && dto.DateTo < dto.DateFrom)
             throw new ValidationException("dateTo", BackendMessages.Message("validation.registry.date.order"));
     }
 
     private static void ValidateStoredFields(string name, string? maticniBroj, string? matbroj,
-        string basis, string? description)
+        string basis)
     {
         if (name?.Length > 100)
             throw new ValidationException("name", BackendMessages.Message("validation.registry.name.length"));
         if (basis?.Length > 100)
             throw new ValidationException("basisOfConnection", BackendMessages.Message("validation.registry.connection.length"));
-        if (description?.Length > 500)
-            throw new ValidationException("connectionDescription", BackendMessages.Message("validation.registry.description.length"));
         ValidateOptionalNumber(maticniBroj, "maticniBroj");
         ValidateOptionalNumber(matbroj, "matbroj");
     }
@@ -372,10 +379,8 @@ public partial class LegalEntityService : ILegalEntityService
             throw new ValidationException(field, BackendMessages.Message("validation.registry.registration.length"));
     }
 
-    private static void ValidateRequiredBusinessFields(string? connectionDescription, DateTime? dateFrom)
+    private static void ValidateStartDate(DateTime? dateFrom)
     {
-        if (string.IsNullOrWhiteSpace(connectionDescription))
-            throw new ValidationException("connectionDescription", BackendMessages.Message("validation.registry.description.required"));
         if (!dateFrom.HasValue)
             throw new ValidationException("dateFrom", BackendMessages.Message("validation.registry.start.required"));
     }
@@ -402,6 +407,42 @@ public partial class LegalEntityService : ILegalEntityService
         }
     }
 
+    private void AddNewEntity(LegalEntity entity)
+    {
+        var subject = Helpers.RegistryVerification.CreatorSubject(_actor);
+        _context.LegalEntities.Add(entity);
+        if (subject is not null)
+            _context.LegalEntityVerificationOrigins.Add(new() { LegalEntityId = entity.Id, Subject = subject });
+    }
+
+    private async Task<LegalEntityDTO> WithConnectionDescription(LegalEntity entity)
+    {
+        var item = MapToDto(entity);
+        await FillConnectionDescriptions([item], _actor?.HttpContext?.RequestAborted ?? default);
+        return item;
+    }
+
+    private async Task FillConnectionDescriptions(IReadOnlyCollection<LegalEntityDTO> items, CancellationToken ct)
+    {
+        if (items.Count == 0) return;
+
+        // Exact codes win. An unambiguous legacy label remains readable, including archived codebook values.
+        var options = await _context.CodeLists.IgnoreQueryFilters().AsNoTracking()
+            .Where(value => value.Kategorija.ToUpper() == "OSNOVPOVEZANOSTI")
+            .Select(value => new { value.Kod, value.Naziv, value.Opis }).ToListAsync(ct);
+        var codes = options.ToDictionary(value => value.Kod.Trim(), StringComparer.OrdinalIgnoreCase);
+        var legacyLabels = options.GroupBy(value => value.Naziv.Trim(), StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() == 1)
+            .ToDictionary(group => group.Key, group => group.Single(), StringComparer.OrdinalIgnoreCase);
+
+        foreach (var item in items)
+        {
+            var basis = item.BasisOfConnection.Trim();
+            if (codes.TryGetValue(basis, out var option) || legacyLabels.TryGetValue(basis, out option))
+                item.ConnectionDescription = option.Opis;
+        }
+    }
+
     // Excel import and validation helpers are implemented in LegalEntityService.Import.cs.
 
     // Keep a single mapping for both EF's server-side SELECT projection and
@@ -418,7 +459,6 @@ public partial class LegalEntityService : ILegalEntityService
         GccNumber = e.GccNumber, GccName = e.GccName, IsLargeExposure = e.IsLargeExposure,
         Matbroj = e.Matbroj,
         BasisOfConnection = e.BasisOfConnection,
-        ConnectionDescription = e.ConnectionDescription,
         ConnectedWithBank = e.ConnectedWithBank,
         DateFrom = e.DateFrom,
         DateTo = e.DateTo,

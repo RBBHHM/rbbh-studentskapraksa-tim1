@@ -12,7 +12,6 @@ public sealed class LegalEntityDraftTests
         FbaId = "123456",
         MaticniBroj = "12345",
         BasisOfConnection = "ZOB-2-V-5",
-        ConnectionDescription = "Relationship",
         ConnectedWithBank = false,
         DateFrom = new(2026, 1, 1)
     };

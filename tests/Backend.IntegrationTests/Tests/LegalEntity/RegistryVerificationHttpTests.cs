@@ -44,7 +44,7 @@ public class RegistryVerificationHttpTests : AuthenticatedApiFixture
         Assert.Contains("verification.self_denied", await response.Content.ReadAsStringAsync());
         await InDatabase(async db =>
         {
-            var creator = legal ? (await db.LegalEntities.FindAsync(id))!.CreatorSubject : (await db.RelatedPersons.FindAsync(id))!.CreatorSubject;
+            var creator = legal ? (await db.LegalEntityVerificationOrigins.FindAsync(id))!.Subject : (await db.RelatedPersons.FindAsync(id))!.CreatorSubject;
             Assert.Equal("creator", creator);
             Assert.Empty(await db.AuditLogs.Where(row => row.Action == "VERIFY").ToListAsync());
         });
@@ -100,11 +100,11 @@ public class RegistryVerificationHttpTests : AuthenticatedApiFixture
         var id = await CreateRecord(true);
         await InDatabase(async db =>
         {
-            var row = (await db.LegalEntities.FindAsync(id))!;
-            db.Entry(row).Property("CreatorSubject").CurrentValue = "forged";
+            var row = (await db.LegalEntityVerificationOrigins.FindAsync(id))!;
+            db.Entry(row).Property("Subject").CurrentValue = "forged";
             await Assert.ThrowsAsync<RBBH.ConnectedParties.Exceptions.BusinessRuleException>(() => db.SaveChangesAsync());
         });
-        await InDatabase(async db => Assert.Equal("creator", (await db.LegalEntities.FindAsync(id))!.CreatorSubject));
+        await InDatabase(async db => Assert.Equal("creator", (await db.LegalEntityVerificationOrigins.FindAsync(id))!.Subject));
     }
 
     [Fact]

@@ -22,6 +22,7 @@ public partial class LegalEntityService
         new("FBA ID", "FBA ID"),
         new("Matični broj / Registration number", "Matbroj", "Matični broj", "Registration number"),
         new("Osnov povezanosti / Connection basis", "Osnov povezanosti", "Connection basis"),
+        // Keep this output column for legacy workbooks; description is resolved from the codebook on read.
         new("Opis povezanosti / Connection description", "Opis povezanosti", "Connection description"),
         new("Povezano lice s Bankom / Related to the Bank", "Pov. lice sa Bankom", "Povezano lice s Bankom", "Related to the Bank"),
         new("Datum od / Date from", "Datum od", "Date from"),
@@ -80,7 +81,6 @@ public partial class LegalEntityService
                 var fbaId          = ExcelImportSchema.CellText(ws.Cell(row, 4));
                 var matbroj        = ExcelImportSchema.CellText(ws.Cell(row, 5));
                 var basisOfConn    = ExcelImportSchema.CellText(ws.Cell(row, 6));
-                var connDesc       = ExcelImportSchema.CellText(ws.Cell(row, 7));
                 var connBankStr    = ExcelImportSchema.CellText(ws.Cell(row, 8));
                 var dateFromStr    = ExcelImportSchema.CellText(ws.Cell(row, 9));
                 var dateToStr      = ExcelImportSchema.CellText(ws.Cell(row, 10));
@@ -119,7 +119,6 @@ public partial class LegalEntityService
                     Name               = name,
                     Matbroj            = string.IsNullOrWhiteSpace(matbroj) ? null : matbroj,
                     BasisOfConnection  = basisOfConn,
-                    ConnectionDescription = string.IsNullOrWhiteSpace(connDesc) ? null : connDesc,
                     ConnectedWithBank  = connectedWithBank,
                     DateFrom           = dateFrom,
                     DateTo             = dateTo,
@@ -149,18 +148,16 @@ public partial class LegalEntityService
                     MaticniBroj = dto.MaticniBroj,
                     GccNumber = gcc?.Number, GccName = gcc?.Name, IsLargeExposure = dto.IsLargeExposure ?? false,
                     BasisOfConnection = dto.BasisOfConnection,
-                    ConnectionDescription = dto.ConnectionDescription,
                     ConnectedWithBank = dto.ConnectedWithBank,
                     DateFrom = dto.DateFrom,
                     DateTo = dto.DateTo,
                     Status             = "Draft",
                     IsActive           = true,
                     CreatedAt          = DateTime.UtcNow,
-                    CreatorSubject = Helpers.RegistryVerification.CreatorSubject(_actor),
                     CreatedBy          = createdBy
                 };
 
-                _context.LegalEntities.Add(entity);
+                AddNewEntity(entity);
                 result.Imported++;
             }
             catch (ValidationException exception)

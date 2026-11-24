@@ -460,7 +460,6 @@ internal static partial class BrowserHostProgram
                                     MaticniBroj = "12345",
                                     Matbroj = "789456123",
                                     BasisOfConnection = "ZOB-2-V-5",
-                                    ConnectionDescription = "Fixture relationship description",
                                     ConnectedWithBank = true,
                                     DateFrom = new(2026, 1, 1),
                                     Status = "Draft",
@@ -468,7 +467,8 @@ internal static partial class BrowserHostProgram
                                     IsActive = true,
                                     CreatedAt = new DateTime(2026, 1, 1).AddMinutes(index)
                                 });
-                                foreach (var seeded in db.ChangeTracker.Entries<RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntity>().ToArray()) seeded.Property("CreatorSubject").CurrentValue = "fixture-author-subject"; // a proven creator other than the fixture user, so four-eyes verification can succeed
+                                foreach (var seeded in db.ChangeTracker.Entries<RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntity>().ToArray())
+                                    db.LegalEntityVerificationOrigins.Add(new() { LegalEntityId = seeded.Entity.Id, Subject = "fixture-author-subject" });
                                 await db.SaveChangesAsync();
                             }
                             break;

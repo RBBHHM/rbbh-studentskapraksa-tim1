@@ -63,7 +63,7 @@ public sealed class NotificationDispatcher(ConnectedPartiesDbContext db, IEmailS
                 var link = origin is not null && route.StartsWith("/app/", StringComparison.Ordinal) ? origin + route : null;
                 var html = roleStatus is not null
                     ? RoleRequestMail.Build(roleStatus, title, encodedText, link,
-                        origin is null ? null : origin + "/_content/RBI.DesignSystem/assets/logos/rbi-bank-mono-pos.png", localization.DefaultLanguage)
+                        origin, localization.DefaultLanguage)
                     : $"<p>{encodedText}</p>" + (link is null ? "" : $"<a href=\"{WebUtility.HtmlEncode(link)}\">{WebUtility.HtmlEncode(title)}</a>");
                 await mail.SendApplicationNotificationAsync(row.Notification.RecipientEmail, title, html, ct);
                 delivered++;

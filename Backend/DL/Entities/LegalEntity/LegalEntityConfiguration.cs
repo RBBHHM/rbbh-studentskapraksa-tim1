@@ -30,7 +30,8 @@ public class LegalEntityConfiguration : IEntityTypeConfiguration<LegalEntity>
         builder.Property(e => e.TaxNumber).HasMaxLength(13);
         builder.Property(e => e.FbaId).HasMaxLength(50);
         builder.Property(e => e.BasisOfConnection).HasMaxLength(100).IsRequired();
-        builder.Property(e => e.ConnectionDescription).HasMaxLength(500);
+        builder.HasOne<LegalEntityVerificationOrigin>().WithOne()
+            .HasForeignKey<LegalEntityVerificationOrigin>(origin => origin.LegalEntityId);
         builder.Property(e => e.Status).HasMaxLength(50).IsRequired();
         builder.Property(e => e.CreatedBy).HasMaxLength(100).IsRequired();
         builder.Property(e => e.ModifiedBy).HasMaxLength(100);

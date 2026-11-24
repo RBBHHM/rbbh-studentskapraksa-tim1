@@ -185,10 +185,16 @@ public partial class ConnectedPartiesDbContext(
             throw new Exceptions.BusinessRuleException(409, "capital.immutable_revision");
     }
 
+    public DbSet<DL.Entities.LegalEntity.LegalEntityVerificationOrigin> LegalEntityVerificationOrigins =>
+        Set<DL.Entities.LegalEntity.LegalEntityVerificationOrigin>();
+
     private void ProtectCreatorIdentity()
     {
+        if (ChangeTracker.Entries<DL.Entities.LegalEntity.LegalEntityVerificationOrigin>()
+            .Any(entry => entry.State is EntityState.Modified or EntityState.Deleted))
+            throw new Exceptions.BusinessRuleException(409, "verification.creator_immutable");
         foreach (var entry in ChangeTracker.Entries().Where(entry => entry.State == EntityState.Modified &&
-                     (entry.Entity is DL.Entities.LegalEntity.LegalEntity || entry.Entity is DL.Entities.RelatedPersons.RelatedPerson)))
+                     entry.Entity is DL.Entities.RelatedPersons.RelatedPerson))
         {
             var creator = entry.Property("CreatorSubject");
             if (!Equals(creator.OriginalValue, creator.CurrentValue))

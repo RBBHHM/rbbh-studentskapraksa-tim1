@@ -36,7 +36,6 @@ public sealed class LegalEntityHttpValidationTests : IAsyncLifetime
         FbaId = "123456",
         MaticniBroj = "12345",
         BasisOfConnection = "ZOB-2-V-5",
-        ConnectionDescription = "Fixture relationship",
         ConnectedWithBank = true,
         DateFrom = new(2026, 1, 1),
         DateTo = new(2026, 12, 31)
@@ -78,6 +77,35 @@ public sealed class LegalEntityHttpValidationTests : IAsyncLifetime
         Assert.DoesNotContain("123456", await duplicate.Content.ReadAsStringAsync());
         await using var scope = _app.Services.CreateAsyncScope();
         Assert.Equal(1, await scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>().LegalEntities.CountAsync());
+    }
+
+    [Fact]
+    public async Task ConnectionDescriptionFollowsCodebookAndIgnoresLegacyClientValue()
+    {
+        await using var scope = _app.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+        db.CodeListDefinitions.Add(new() { Name = "OsnovPovezanosti", CreatedBy = "fixture" });
+        var basis = new RBBH.ConnectedParties.DL.Entities.Sifarnici.CodeList
+        {
+            Kategorija = "OsnovPovezanosti", Kod = "ZOB-2-V-5", Naziv = "Fixture label",
+            Opis = "Original codebook description", KreiraoKorisnik = "fixture"
+        };
+        db.CodeLists.Add(basis);
+        await db.SaveChangesAsync();
+
+        using var created = await _client.PostAsJsonAsync("/api/legal-entities", new
+        {
+            name = "Fixture Company", isResident = false, fbaId = "123456", basisOfConnection = "Fixture label",
+            connectedWithBank = true, dateFrom = "2026-01-01", connectionDescription = "Legacy client value"
+        });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var entity = await created.Content.ReadFromJsonAsync<LegalEntityDTO>();
+        Assert.Equal("Original codebook description", entity!.ConnectionDescription);
+
+        basis.Opis = "Updated codebook description";
+        await db.SaveChangesAsync();
+        var details = await _client.GetFromJsonAsync<LegalEntityDTO>($"/api/legal-entities/{entity.Id}");
+        Assert.Equal("Updated codebook description", details!.ConnectionDescription);
     }
 
     [Fact]
