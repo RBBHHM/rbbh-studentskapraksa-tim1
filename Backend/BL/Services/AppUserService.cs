@@ -1,4 +1,3 @@
-using RBBH.ConnectedParties.Exceptions;
 using RBBH.ConnectedParties.BL.ServiceInterfaces;
 using RBBH.ConnectedParties.DL.DTO.Users;
 using RBBH.ConnectedParties.DL.Persistence;
@@ -18,40 +17,41 @@ public partial class AppUserService(ConnectedPartiesDbContext dbContext, Keycloa
     public async Task<Result<GetUsersResponseDTO>> GetUsersAsync(
         int page, int pageSize, string? search, string? role)
     {
+        var ct = accessor?.HttpContext?.RequestAborted ?? CancellationToken.None;
         page = Math.Max(page, 1);
         pageSize = Math.Clamp(pageSize, 1, 200);
         var query = _db.AppUsers.AsNoTracking().AsQueryable();
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var term = search.Trim();
-            query = _db.Database.IsRelational()
-                ? query.Where(u => EF.Functions.Like(u.FirstName, $"%{term}%")
-                    || EF.Functions.Like(u.LastName, $"%{term}%")
-                    || EF.Functions.Like(u.Username, $"%{term}%"))
-                : query.Where(u => u.FirstName.ToLower().Contains(term.ToLower())
-                    || u.LastName.ToLower().Contains(term.ToLower())
-                    || u.Username.ToLower().Contains(term.ToLower()));
+            var term = search.Trim().ToUpperInvariant();
+            query = query.Where(user => user.Username.ToUpper().Contains(term)
+                || user.Email.ToUpper().Contains(term)
+                || (user.FirstName + " " + user.LastName).ToUpper().Contains(term));
         }
 
         if (!string.IsNullOrWhiteSpace(role))
         {
-            var normalizedRole = role.ToUpperInvariant();
-            query = query.Where(user => _db.UserRoles.Any(assignment => assignment.UserId == user.Id && assignment.IsActive &&
-                assignment.Role.IsActive && assignment.Role.Name.ToUpper() == normalizedRole));
+            var normalizedRole = role.Trim().ToUpperInvariant();
+            var activeAssignments = _db.UserRoles.Where(assignment => assignment.IsActive && assignment.Role.IsActive);
+            query = normalizedRole == ApplicationAccessRoles.Guest.ToUpperInvariant()
+                ? query.Where(user => user.IsActive && !activeAssignments.Any(assignment =>
+                    assignment.UserId == user.Id && assignment.Role.Name != ApplicationAccessRoles.Guest))
+                : query.Where(user => activeAssignments.Any(assignment => assignment.UserId == user.Id &&
+                    assignment.Role.Name.ToUpper() == normalizedRole));
         }
-        var total = await query.CountAsync();
+        var total = await query.CountAsync(ct);
         var users = await query.OrderBy(user => user.LastName).ThenBy(user => user.FirstName).ThenBy(user => user.Id)
-            .Skip((int)Math.Min((long)(page - 1) * pageSize, int.MaxValue)).Take(pageSize).ToListAsync();
+            .Skip((int)Math.Min((long)(page - 1) * pageSize, int.MaxValue)).Take(pageSize).ToListAsync(ct);
         var userIds = users.Select(user => user.Id).ToList();
         var userRoles = await _db.UserRoles.AsNoTracking()
             .Where(ur => userIds.Contains(ur.UserId) && ur.IsActive)
             .Join(_db.Roles.Where(role => role.IsActive && role.Name != ApplicationAccessRoles.Guest),
                 ur => ur.RoleId, r => r.Id, (ur, r) => new { ur.UserId, r.Name })
-            .ToListAsync();
+            .ToListAsync(ct);
         var rolesByUser = userRoles.GroupBy(x => x.UserId)
             .ToDictionary(g => g.Key, g => g.Select(x => x.Name).ToList());
         var grants = await _db.RolePermissions.Where(mapping => mapping.Role.IsActive && mapping.Permission.IsActive)
-            .Select(mapping => new { Role = mapping.Role.Name, Permission = mapping.Permission.Code }).ToListAsync();
+            .Select(mapping => new { Role = mapping.Role.Name, Permission = mapping.Permission.Code }).ToListAsync(ct);
 
         var result = users.Select(u => new UserDTO
         {
@@ -101,20 +101,13 @@ public partial class AppUserService(ConnectedPartiesDbContext dbContext, Keycloa
         KeycloakIdentity? identity = null;
         if (_keycloakAdmin.IsEnabled)
         {
-            try
-            {
-                identity = await _keycloakAdmin.FindByEmailAsync(normalizedEmail, ct);
-                if (identity is null)
-                    return Result<UserDTO>.ValidationError(BackendMessages.Message("validation.users.identity.missing"), code: "users.identity_missing");
-            }
-            catch (BusinessRuleException error) when (error.Code == "identity.provider_unavailable")
-            {
-                // Keep the local profile pending. Explicit grants require a confirmed subject.
-            }
-            catch (BusinessRuleException error) when (error.Code == "identity.ambiguous")
-            {
-                return Result<UserDTO>.ValidationError(error.Message, code: error.Code);
-            }
+            var lookup = await _keycloakAdmin.FindByEmailAsync(normalizedEmail, ct);
+            if (lookup.Status == KeycloakLookupStatus.Missing)
+                return Result<UserDTO>.ValidationError(BackendMessages.Message("validation.users.identity.missing"), code: "users.identity_missing");
+            if (lookup.Status == KeycloakLookupStatus.Ambiguous)
+                return Result<UserDTO>.ValidationError(BackendMessages.Message("errors.identity.ambiguous"), code: "identity.ambiguous");
+            // An unavailable lookup leaves the local profile pending, without effective grants.
+            identity = lookup.Identity;
         }
         var keycloakId = identity?.Subject ?? Guid.NewGuid().ToString();
         dto.Username = identity?.Username ?? dto.Username;

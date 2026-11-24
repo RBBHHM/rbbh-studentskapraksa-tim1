@@ -11,6 +11,19 @@ namespace IntegrationTests.Tests.Users;
 public sealed class UserProfilesHttpTests : UsersHttpFixture
 {
     [Fact]
+    public async Task SearchAndRoleFilterApplyTogetherBeforePagination()
+    {
+        var matching = await AddUser(ApplicationAccessRoles.PhysicalPersons, "search-match@example.test");
+        await AddUser(ApplicationAccessRoles.LegalPersons, "search-other@example.test");
+
+        var page = await _client.GetFromJsonAsync<GetUsersResponseDTO>("/api/users?search=search-&role=fl&pageSize=1");
+
+        Assert.NotNull(page);
+        Assert.Equal(1, page.Total);
+        Assert.Equal(matching, Assert.Single(page.Users).Id);
+    }
+
+    [Fact]
     public async Task ProfileEditsPreserveSubjectRolesAndActiveStateDespiteOverposting()
     {
         var id = await AddUser(ApplicationAccessRoles.PhysicalPersons, "old@example.test");

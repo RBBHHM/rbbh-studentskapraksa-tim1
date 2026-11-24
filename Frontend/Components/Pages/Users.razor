@@ -25,6 +25,21 @@ else if (!_canRead) { <RbiAlert Title="@T["errors.forbidden"]" /> }
 else
 {
     @if (_notice is not null) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@T[_notice]" /></div> }
+    <div class="registry-controls users-list-filters">
+        <div class="role-catalog-search">
+            <RbiIcon Name="RbiIconName.Search" />
+            <input type="search" class="rbi-input" maxlength="200" value="@_search"
+                   aria-label="@T["users.search"]" placeholder="@T["users.search"]" @oninput="SearchAsync" />
+        </div>
+        <select class="rbi-control rbi-select" aria-label="@T["users.role-filter"]" value="@_roleFilter" @onchange="FilterRoleAsync">
+            <option value="">@T["users.all-roles"]</option>
+            <option value="@GuestRole">@RoleLabel(GuestRole)</option>
+            @foreach (var role in _roles.Roles.Where(role => !role.Name.Equals(GuestRole, StringComparison.OrdinalIgnoreCase)))
+            {
+                <option value="@role.Name">@RoleLabel(role.Name)</option>
+            }
+        </select>
+    </div>
     @if (_result.Users.Count == 0) { <div class="registry-surface"><RegistryEmpty Body="@T["users.empty"]" /></div> }
     else
     {
@@ -32,7 +47,7 @@ else
             <thead><tr><th scope="col">@T["users.user"]</th><th scope="col">@T["users.email"]</th><th scope="col">@T["users.col-accesses"]</th><th scope="col" class="registry-center">@T["users.status"]</th>@if (_canWrite) { <th scope="col" class="registry-center registry-actions-cell">@T["users.actions"]</th> }</tr></thead>
             <tbody>@foreach (var user in _result.Users)
             {
-                <tr @key="user.Id"><td><strong>@user.FirstName @user.LastName</strong><br /><span class="registry-sub">@user.Username</span></td><td>@user.Email</td><td>@(user.IsActive && user.Roles.Count == 0 ? RoleLabel("gost") : string.Join(", ", user.Roles.Select(RoleLabel)))@if (!user.IdentityConfirmed) { <br /><span class="registry-sub" data-identity="unconfirmed">@T["users.identity-unconfirmed"]</span> }</td><td class="registry-center"><Indicator Kind="@(user.IsActive ? "active" : "inactive")" Label="@T[user.IsActive ? "users.active" : "users.inactive"]" /></td>
+                <tr @key="user.Id"><td><strong>@user.FirstName @user.LastName</strong><br /><span class="registry-sub">@user.Username</span></td><td>@user.Email</td><td>@(user.IsActive && user.Roles.Count == 0 ? RoleLabel(GuestRole) : string.Join(", ", user.Roles.Select(RoleLabel)))@if (!user.IdentityConfirmed) { <br /><span class="registry-sub" data-identity="unconfirmed">@T["users.identity-unconfirmed"]</span> }</td><td class="registry-center"><Indicator Kind="@(user.IsActive ? "active" : "inactive")" Label="@T[user.IsActive ? "users.active" : "users.inactive"]" /></td>
                 @if (_canWrite)
                 {
                     <td class="registry-actions-cell"><div class="registry-row-actions">
@@ -61,6 +76,7 @@ else
     <RbiAlertDialog Open Class="@("registry-users-dialog" + (!_delete && !target.IsActive ? " app-confirm--primary" : ""))" Title="@T[_delete ? "users.delete-title" : target.IsActive ? "users.deactivate-title" : "users.reactivate-title"]" Description="@T.Format(_delete ? "users.delete-description" : "users.state-description", target.Username)" CancelLabel="@T["common.cancel"]" ConfirmLabel="@T[_delete ? "common.delete" : target.IsActive ? "users.deactivate" : "users.reactivate"]" Confirming="_busy" ConfirmLoadingLabel="@T["state.loading"]" OnConfirm="MutateAsync" OnCancel="CancelConfirmation" OpenChanged="CloseConfirmation" />
 }
 @code {
+    private const string GuestRole = "gost";
     private readonly CancellationTokenSource _lifetime = new();
     private readonly CancellationToken _token;
     public Users() => _token = _lifetime.Token;
@@ -70,6 +86,8 @@ else
     private UserDraft? _draft;
     private ApplicationUser? _target;
     private string? _error;
+    private string _search = "", _roleFilter = "";
+    private CancellationTokenSource? _filterRequest;
     private int _page = 1;
     private bool _disposed, _authenticated, _canRead, _canWrite, _busy, _loading = true, _refreshing, _loaded, _delete;
     private string? _notice;
@@ -78,48 +96,86 @@ else
     private bool IsSelf(ApplicationUser user) => _profile?.ApplicationUserId is { } id ? user.Id == id
         : !string.IsNullOrWhiteSpace(_profile?.Email) && string.Equals(_profile.Email.Trim(), user.Email.Trim(), StringComparison.OrdinalIgnoreCase);
     protected override Task OnInitializedAsync() => LoadAsync();
-    private async Task LoadAsync()
+    private Task LoadAsync() => LoadAsync(_token);
+    private async Task LoadAsync(CancellationToken token)
     {
         if (_disposed || _refreshing) return; _loading = !_loaded; _refreshing = true; _error = null;
         try
         {
             _authenticated = (await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true;
             if (!_authenticated) return;
-            _profile = await Profile.GetAsync(_token);
+            _profile = await Profile.GetAsync(token);
             _canRead = ApplicationAccess.IsAdministrator(_profile) && _profile.Permissions.Contains("ADMINISTRATION_VIEW");
             _canWrite = _canRead && _profile.Permissions.Contains("ADMINISTRATION_MANAGE");
             if (!_canRead) return;
-            _roles = await Api.RolesAsync(_token); _result = await Api.ListAsync(_page, _token);
-            if (_page > TotalPages) { _page = TotalPages; _result = await Api.ListAsync(_page, _token); }
+            if (!_loaded) _roles = await Api.RolesAsync(token);
+            _result = await Api.ListAsync(_page, token, _search, _roleFilter);
+            if (_page > TotalPages) { _page = TotalPages; _result = await Api.ListAsync(_page, token, _search, _roleFilter); }
             _loaded = true;
         }
         catch (RegistryApiException exception) { _error = exception.MessageKey; }
-        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         finally { _loading = _refreshing = false; }
     }
+    private Task SearchAsync(ChangeEventArgs args)
+    {
+        _search = args.Value?.ToString() ?? "";
+        return ChangeFiltersAsync(debounce: true);
+    }
+
+    private Task FilterRoleAsync(ChangeEventArgs args)
+    {
+        _roleFilter = args.Value?.ToString() ?? "";
+        return ChangeFiltersAsync(debounce: false);
+    }
+
+    private async Task ChangeFiltersAsync(bool debounce)
+    {
+        if (_disposed) return;
+        _filterRequest?.Cancel();
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(_token);
+        _filterRequest = request;
+        try
+        {
+            if (debounce) await Task.Delay(250, request.Token);
+            while (_refreshing || _busy) await Task.Delay(50, request.Token);
+            request.Token.ThrowIfCancellationRequested();
+            _page = 1;
+            await LoadAsync(request.Token);
+        }
+        catch (OperationCanceledException) when (request.IsCancellationRequested) { }
+        finally { if (ReferenceEquals(_filterRequest, request)) _filterRequest = null; }
+    }
+
     private void Edit(ApplicationUser? user) { if (_canWrite && !_busy && !_refreshing && (user is null || !IsSelf(user))) _draft = UserDraft.From(user, _roles); }
     private void CloseEditor(bool open) { if (!open && !_busy) _draft = null; }
-    private async Task SaveAsync(UserDraft draft)
+    private async Task<string?> SaveAsync(UserDraft draft)
     {
-        if (!_canWrite) throw new RegistryApiException(System.Net.HttpStatusCode.Forbidden);
-        if (draft.Id is { } ownId && _result.Users.Any(user => user.Id == ownId && IsSelf(user))) throw new RegistryApiException(System.Net.HttpStatusCode.Forbidden);
-        if (_busy) return; _busy = true;
+        if (!_canWrite) return "errors.forbidden";
+        if (_busy) return null;
+        _busy = true;
         try
         {
             if (draft.Id is { } id)
             {
-                var current = _result.Users.Single(user => user.Id == id);
-                if (draft.ProfileChanged) await Api.UpdateProfileAsync(id, draft.Username.Trim(), draft.FirstName.Trim(), draft.LastName.Trim(), draft.Email.Trim(), _token);
-                if (draft.RolesChanged(current)) await Api.UpdateRolesAsync(id, draft.SelectedRoles, _token);
+                var current = _result.Users.SingleOrDefault(user => user.Id == id);
+                if (current is null || IsSelf(current)) return "errors.forbidden";
+                if (draft.ProfileChanged && await Api.UpdateProfileAsync(id, draft.Username.Trim(), draft.FirstName.Trim(),
+                        draft.LastName.Trim(), draft.Email.Trim(), _token) is { } profileError)
+                    return profileError;
+                if (draft.RolesChanged(current) && await Api.UpdateRolesAsync(id, draft.SelectedRoles, _token) is { } roleError)
+                    return roleError;
+                _notice = "toast.user-role";
             }
             else
             {
-                var created = await Api.CreateAsync(draft.ToRequest(), _token);
+                var result = await Api.CreateAsync(draft.ToRequest(), _token);
+                if (result.User is not { } created) return result.ErrorKey ?? "errors.unavailable";
                 _notice = created.IdentityConfirmed || draft.SelectedRoles.Length == 0 ? "toast.user-created" : "toast.user-created-pending";
             }
-            if (draft.Id is not null) _notice = "toast.user-role";
             await LoadAsync();
             _draft = null;
+            return null;
         }
         finally { _busy = false; }
     }
@@ -143,6 +199,6 @@ else
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         finally { _busy = false; _target = null; }
     }
-    private async Task ChangePageAsync(int page) { if (_busy || _refreshing || page < 1 || page > TotalPages) return; _page = page; await LoadAsync(); }
+    private async Task ChangePageAsync(int page) { if (_busy || _refreshing || _filterRequest is not null || page < 1 || page > TotalPages) return; _page = page; await LoadAsync(); }
     public void Dispose() { _disposed = true; _lifetime.Cancel(); _lifetime.Dispose(); }
 }

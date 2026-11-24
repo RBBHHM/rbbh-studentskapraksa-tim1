@@ -75,6 +75,18 @@ public sealed class UsersApiTests
         Assert.Equal(RoleId, Assert.Single((await api.RolesAsync()).Roles).Id);
     }
     [Fact]
+    public async Task ListEncodesSearchAndRoleAndKeepsTheRequestedPage()
+    {
+        await using var provider = Client(request =>
+        {
+            Assert.Equal("/api/users?page=2&pageSize=20&search=qa%2Btest%40example.test&role=FL",
+                request.RequestUri!.PathAndQuery);
+            return Task.FromResult(Json(HttpStatusCode.OK, new { users = Array.Empty<object>(), total = 0, page = 2, pageSize = 20 }));
+        });
+        await provider.GetRequiredService<IUsersApi>().ListAsync(2, search: " qa+test@example.test ", role: "FL");
+    }
+
+    [Fact]
     public async Task CreationUsesLocalApplicationRoleIdsAndDoesNotInventPasswordOrRealmRoles()
     {
         var request = Draft().ToRequest();
@@ -86,7 +98,7 @@ public sealed class UsersApiTests
             Assert.False(body.RootElement.TryGetProperty("password", out _)); Assert.False(body.RootElement.TryGetProperty("realmRoles", out _));
             return Json(HttpStatusCode.Created, new ApplicationUser(Guid.NewGuid(), "fixture", "First", "Last", request.Email, ["FL"], ["FL_VIEW"], true));
         });
-        Assert.Equal("FL", Assert.Single((await provider.GetRequiredService<IUsersApi>().CreateAsync(request)).Roles));
+        Assert.Equal("FL", Assert.Single((await provider.GetRequiredService<IUsersApi>().CreateAsync(request)).User!.Roles));
     }
     [Theory]
     [InlineData("roles", "PUT", "/role")]
@@ -135,24 +147,24 @@ public sealed class UsersApiTests
         draft.Roles[0].Selected = false; Assert.True(draft.RolesChanged(user));
     }
     [Theory]
-    [InlineData(400)]
-    [InlineData(403)]
-    [InlineData(409)]
-    public async Task RejectedMutationKeepsStatusWithoutExposingRawBackendDetails(int status)
+    [InlineData(400, "errors.validation")]
+    [InlineData(403, "errors.forbidden")]
+    [InlineData(409, "users.safety-conflict")]
+    public async Task RejectedMutationReturnsLocalizedErrorWithoutThrowing(int status, string key)
     {
         await using var provider = Client(_ => Task.FromResult(Json((HttpStatusCode)status, new { detail = "private-fixture-marker" })));
-        var error = await Assert.ThrowsAsync<RegistryApiException>(() => provider.GetRequiredService<IUsersApi>().UpdateRolesAsync(Guid.NewGuid(), []));
-        Assert.Equal(status, (int?)error.StatusCode); Assert.DoesNotContain("private-fixture-marker", error.ToString());
+        var error = await provider.GetRequiredService<IUsersApi>().UpdateRolesAsync(Guid.NewGuid(), []);
+        Assert.Equal(key, error);
     }
     [Fact]
     public async Task DuplicateCreateUsesTheSpecificValidationMessage()
     {
         await using var provider = Client(_ => Task.FromResult(Json(HttpStatusCode.Conflict,
             new { code = "users.duplicate", detail = "private-fixture-marker" })));
-        var error = await Assert.ThrowsAsync<RegistryApiException>(() => provider.GetRequiredService<IUsersApi>()
-            .CreateAsync(new("existing", "First", "Last", "existing@example.test", [])));
-        Assert.Equal("users.create-duplicate", error.MessageKey);
-        Assert.DoesNotContain("private-fixture-marker", error.ToString());
+        var result = await provider.GetRequiredService<IUsersApi>()
+            .CreateAsync(new("existing", "First", "Last", "existing@example.test", []));
+        Assert.Null(result.User);
+        Assert.Equal("users.create-duplicate", result.ErrorKey);
     }
 
     [Fact]

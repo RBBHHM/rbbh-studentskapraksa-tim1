@@ -1,7 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using RBBH.ConnectedParties.Exceptions;
 
 namespace RBBH.ConnectedParties.BL.Services;
 
@@ -30,13 +29,13 @@ public sealed class KeycloakAdminService
         _http.MaxResponseContentBufferSize = 1024 * 1024;
     }
 
-    public async Task<KeycloakIdentity?> FindByEmailAsync(string email, CancellationToken ct)
+    public async Task<KeycloakLookupResult> FindByEmailAsync(string email, CancellationToken ct)
     {
         if (!IsEnabled || _http.BaseAddress is null || string.IsNullOrWhiteSpace(_client) || string.IsNullOrWhiteSpace(_secret))
         {
             _logger.LogWarning("Keycloak identity lookup configuration is incomplete. Enabled {Enabled}, realm endpoint configured {RealmConfigured}, service client configured {ClientConfigured}, service secret configured {SecretConfigured}",
                 IsEnabled, _http.BaseAddress is not null, !string.IsNullOrWhiteSpace(_client), !string.IsNullOrWhiteSpace(_secret));
-            throw Unavailable();
+            return new(KeycloakLookupStatus.Unavailable);
         }
         try
         {
@@ -46,34 +45,37 @@ public sealed class KeycloakAdminService
             if (!tokenResponse.IsSuccessStatusCode)
             {
                 _logger.LogWarning("Keycloak identity lookup token request returned HTTP {StatusCode}", (int)tokenResponse.StatusCode);
-                throw Unavailable();
+                return new(KeycloakLookupStatus.Unavailable);
             }
-            using var token = await tokenResponse.Content.ReadFromJsonAsync<JsonDocument>(ct) ?? throw Unavailable();
-            if (!token.RootElement.TryGetProperty("access_token", out var value) || value.ValueKind != JsonValueKind.String || string.IsNullOrEmpty(value.GetString())) throw Unavailable();
+            using var token = await tokenResponse.Content.ReadFromJsonAsync<JsonDocument>(ct);
+            if (token is null || token.RootElement.ValueKind != JsonValueKind.Object) return new(KeycloakLookupStatus.Unavailable);
+            if (!token.RootElement.TryGetProperty("access_token", out var value) || value.ValueKind != JsonValueKind.String || string.IsNullOrEmpty(value.GetString())) return new(KeycloakLookupStatus.Unavailable);
             using var request = new HttpRequestMessage(HttpMethod.Get, $"admin/realms/{Uri.EscapeDataString(_realm)}/users?email={Uri.EscapeDataString(email)}&exact=true&max=2");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", value.GetString());
             using var response = await _http.SendAsync(request, ct);
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning("Keycloak identity lookup user query returned HTTP {StatusCode}", (int)response.StatusCode);
-                throw Unavailable();
+                return new(KeycloakLookupStatus.Unavailable);
             }
             var identities = await response.Content.ReadFromJsonAsync<List<KeycloakIdentity>>(ct) ?? [];
             var matches = identities.Where(item => string.Equals(item.Email?.Trim(), email.Trim(), StringComparison.OrdinalIgnoreCase)).Take(2).ToArray();
-            if (matches.Length > 1) throw new BusinessRuleException(409, "identity.ambiguous");
+            if (matches.Length > 1) return new(KeycloakLookupStatus.Ambiguous);
             var match = matches.SingleOrDefault();
-            if (match is not null && (string.IsNullOrWhiteSpace(match.Subject) || match.Subject.Length > 100)) throw Unavailable();
-            return match;
+            if (match is not null && (string.IsNullOrWhiteSpace(match.Subject) || match.Subject.Length > 100)) return new(KeycloakLookupStatus.Unavailable);
+            return match is null ? new(KeycloakLookupStatus.Missing) : new(KeycloakLookupStatus.Found, match);
         }
         catch (Exception error) when (error is HttpRequestException or JsonException || error is TaskCanceledException && !ct.IsCancellationRequested)
         {
             _logger.LogWarning("Identity lookup failed. FailureType {FailureType}", error.GetType().Name);
-            throw Unavailable();
+            return new(KeycloakLookupStatus.Unavailable);
         }
     }
 
-    private static BusinessRuleException Unavailable() => new(503, "identity.provider_unavailable");
 }
+
+public enum KeycloakLookupStatus { Found, Missing, Unavailable, Ambiguous }
+public sealed record KeycloakLookupResult(KeycloakLookupStatus Status, KeycloakIdentity? Identity = null);
 
 public sealed record KeycloakIdentity([property: JsonPropertyName("id")] string Subject, string? Username,
     string? FirstName, string? LastName, string? Email, bool Enabled);

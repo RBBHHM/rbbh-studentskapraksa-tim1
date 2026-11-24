@@ -3,7 +3,6 @@ using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using RBBH.ConnectedParties.BL.Services;
-using RBBH.ConnectedParties.Exceptions;
 
 namespace UnitTests.Services;
 
@@ -15,7 +14,8 @@ public sealed class KeycloakIdentityLookupTests
         var handler = new IdentityResponses(); using var http = new HttpClient(handler);
         var result = await new KeycloakAdminService(Config(), http, NullLogger<KeycloakAdminService>.Instance)
             .FindByEmailAsync("person@example.test", default);
-        Assert.Equal("opaque-subject", result!.Subject);
+        Assert.Equal(KeycloakLookupStatus.Found, result.Status);
+        Assert.Equal("opaque-subject", result.Identity!.Subject);
         Assert.Equal(2, handler.Paths.Count);
         Assert.StartsWith("/auth/realms/fixture/protocol/openid-connect/token", handler.Paths[0]);
         Assert.Contains("client_id=service-reader", handler.TokenForm);
@@ -28,18 +28,18 @@ public sealed class KeycloakIdentityLookupTests
     public async Task MissingServiceAccountFailsSafelyWithoutInventingCredentialsOrCallingNetwork()
     {
         var handler = new IdentityResponses(); using var http = new HttpClient(handler);
-        var error = await Assert.ThrowsAsync<BusinessRuleException>(() => new KeycloakAdminService(Config(false), http,
-            NullLogger<KeycloakAdminService>.Instance).FindByEmailAsync("person@example.test", default));
-        Assert.Equal(503, error.Status); Assert.Equal("identity.provider_unavailable", error.Code); Assert.Empty(handler.Paths);
+        var result = await new KeycloakAdminService(Config(false), http,
+            NullLogger<KeycloakAdminService>.Instance).FindByEmailAsync("person@example.test", default);
+        Assert.Equal(KeycloakLookupStatus.Unavailable, result.Status); Assert.Null(result.Identity); Assert.Empty(handler.Paths);
     }
 
     [Fact]
     public async Task ProviderFailureDoesNotExposeRawBody()
     {
         var handler = new IdentityResponses { Status = HttpStatusCode.Forbidden }; using var http = new HttpClient(handler);
-        var error = await Assert.ThrowsAsync<BusinessRuleException>(() => new KeycloakAdminService(Config(), http,
-            NullLogger<KeycloakAdminService>.Instance).FindByEmailAsync("person@example.test", default));
-        Assert.Equal(503, error.Status); Assert.DoesNotContain("private-provider-detail", error.Message);
+        var result = await new KeycloakAdminService(Config(), http,
+            NullLogger<KeycloakAdminService>.Instance).FindByEmailAsync("person@example.test", default);
+        Assert.Equal(KeycloakLookupStatus.Unavailable, result.Status); Assert.Null(result.Identity);
         Assert.All(handler.Contents, content => Assert.True(content.Disposed));
     }
 

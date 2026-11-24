@@ -113,10 +113,15 @@ public class UsersController(IAppUserService appUserService)
     {
         UserMutationStatus.Success => result.Roles is { } roles ? Ok(new { message, roles }) : Ok(new { message }),
         UserMutationStatus.NotFound => NotFound(new ProblemDetails { Title = BackendMessages.Message("errors.users.not.found.title") }),
+        UserMutationStatus.DuplicateIdentity => Conflict(new { code = "users.duplicate",
+            detail = BackendMessages.Message("validation.users.identity.duplicate") }),
+        UserMutationStatus.InvalidProfile => BadRequest(new { code = "users.names_invalid",
+            detail = BackendMessages.Message("errors.users.invalid.profile") }),
         UserMutationStatus.InvalidRoles => BadRequest(new ProblemDetails
         {
             Title = BackendMessages.Message("errors.users.invalid.role.title"),
-            Detail = BackendMessages.Message("errors.users.invalid.role.detail")
+            Detail = BackendMessages.Message("errors.users.invalid.role.detail"),
+            Extensions = { ["code"] = "users.roles_invalid" }
         }),
         UserMutationStatus.FinalAdmin => Conflict(new ProblemDetails
         {

@@ -25,7 +25,7 @@
 </EditForm>
 @code {
     [Parameter, EditorRequired] public UserDraft Model { get; set; } = null!;
-    [Parameter] public EventCallback<UserDraft> Save { get; set; }
+    [Parameter, EditorRequired] public Func<UserDraft, Task<string?>> Save { get; set; } = null!;
     [Parameter] public EventCallback Cancel { get; set; }
     private EditContext _context = null!;
     private RbiServerValidation _validation = null!;
@@ -44,8 +44,14 @@
         var parsed = _context.Validate(); var errors = Model.Validate();
         _validation.DisplayErrors(errors.ToDictionary(item => item.Key, item => item.Value.Select(key => T[key]).ToArray()));
         if (!parsed || errors.Count > 0) { _focusErrors = true; return; }
-        try { await Save.InvokeAsync(Model); }
-        catch (RegistryApiException exception) { _validation.DisplayFormError(T[exception.Code is null && (int?)exception.StatusCode == 409 ? "users.safety-conflict" : exception.MessageKey]); _focusErrors = true; }
+        try
+        {
+            if (await Save(Model) is { } error)
+            {
+                _validation.DisplayFormError(T[error]);
+                _focusErrors = true;
+            }
+        }
         catch (OperationCanceledException) { }
     });
     public void Dispose() { _live.Dispose(); _validation.Dispose(); }

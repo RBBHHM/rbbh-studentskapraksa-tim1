@@ -2,7 +2,8 @@ namespace RBBH.ConnectedParties.BL.ServiceInterfaces;
 
 public enum UserMutationStatus
 {
-    Success, InvalidRoles, NotFound, FinalAdmin, SelfRoles, SelfDeactivate, SelfDelete, Busy
+    Success, InvalidRoles, NotFound, FinalAdmin, SelfRoles, SelfDeactivate, SelfDelete, Busy,
+    InvalidProfile, DuplicateIdentity
 }
 
 /// <summary>Application outcome; HTTP status codes and localized payloads belong to the controller.</summary>
