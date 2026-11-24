@@ -39,6 +39,7 @@ public abstract class UsersHttpFixture : IAsyncLifetime
 
     /// <summary>Default store is a unique InMemory database; SQL fixtures override these.</summary>
     protected virtual void ConfigureDatabase(DbContextOptionsBuilder options) => options.UseInMemoryDatabase(_inMemoryName);
+    protected virtual bool EnableUnconfiguredIdentityLookup => false;
     protected virtual Task PrepareDatabaseAsync(ConnectedPartiesDbContext db) => Task.CompletedTask;
     protected virtual Task CleanUpDatabaseAsync() => Task.CompletedTask;
 
@@ -51,7 +52,8 @@ public abstract class UsersHttpFixture : IAsyncLifetime
         });
         builder.WebHost.UseTestServer();
         builder.Logging.ClearProviders();
-        builder.Configuration["KeycloakSettings:Enabled"] = "false";
+        builder.Configuration["KeycloakSettings:Enabled"] = EnableUnconfiguredIdentityLookup ? "true" : "false";
+        if (EnableUnconfiguredIdentityLookup) builder.Configuration["KeycloakSettings:AdminClientSecret"] = "";
         builder.Services.AddExceptionHandlingExtension(builder.Environment);
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddControllers().AddApplicationPart(typeof(UsersController).Assembly);

@@ -51,6 +51,12 @@ public class UsersController(IAppUserService appUserService)
         if (result.IsSuccessful)
             return Created($"{Request.Path}/{result.Value.Id}", result.Value);
 
+        if (result.Code is { } code)
+            return Problem(
+                statusCode: code == "users.duplicate" || code == "identity.ambiguous"
+                    ? StatusCodes.Status409Conflict : StatusCodes.Status400BadRequest,
+                detail: result.ExceptionMessage,
+                extensions: new Dictionary<string, object?> { ["code"] = code });
         return HTTPExceptiontFromResult(result);
     }
 

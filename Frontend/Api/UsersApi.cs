@@ -42,7 +42,7 @@ public sealed class UsersApi(IRbiApiTransport transport) : IUsersApi
     {
         var result = await transport.SendAsync<ApplicationUser>(HttpMethod.Post, "api/users", request, token);
         token.ThrowIfCancellationRequested();
-        if (!result.IsSuccess) throw new RegistryApiException(result.Error?.StatusCode);
+        if (!result.IsSuccess) throw new RegistryApiException(result.Error?.StatusCode, result.Error?.Code);
         return result.Value;
     }
     public Task UpdateRolesAsync(Guid id, IReadOnlyList<Guid> roles, CancellationToken token = default) =>

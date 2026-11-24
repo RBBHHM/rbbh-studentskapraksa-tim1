@@ -13,13 +13,15 @@ namespace RBBH.ConnectedParties.Exceptions.Validations
     {
         public T? Value { get; }
         public string? ExceptionMessage { get; }
+        public string? Code { get; }
         public ResultException ExceptionType { get; private set; }
 
-        private Result(T? value, string? exceptionMessage, ResultException status)
+        private Result(T? value, string? exceptionMessage, ResultException status, string? code = null)
         {
             Value = value;
             ExceptionMessage = exceptionMessage;
             ExceptionType = status;
+            Code = code;
         }
 
         public static Result<T> Success(T value)
@@ -27,9 +29,9 @@ namespace RBBH.ConnectedParties.Exceptions.Validations
             return new Result<T>(value, null, ResultException.None);
         }
 
-        public static Result<T> ValidationError(string errorMessage, string? invalidProperty = default)
+        public static Result<T> ValidationError(string errorMessage, string? invalidProperty = default, string? code = null)
         {
-            return new Result<T>(default, errorMessage, ResultException.ValidationException);
+            return new Result<T>(default, errorMessage, ResultException.ValidationException, code);
         }
 
         public static Result<T> NotFoundError(string errorMessage, string? invalidProperty = default)
@@ -85,7 +87,7 @@ namespace RBBH.ConnectedParties.Exceptions.Validations
         /// <returns>Error result of different type</returns>
         public Result<O> CastToError<O>()
         {
-            return new Result<O>(default, ExceptionMessage, ExceptionType);
+            return new Result<O>(default, ExceptionMessage, ExceptionType, Code);
         }
 
         #endregion

@@ -52,3 +52,29 @@ public sealed class UserProfilesHttpTests : UsersHttpFixture
         Assert.Contains(ApplicationPermissions.LegalPersonsView, row.EffectivePermissions);
     }
 }
+
+public sealed class UserCreateWithoutIdentityLookupHttpTests : UsersHttpFixture
+{
+    protected override bool EnableUnconfiguredIdentityLookup => true;
+
+    [Fact]
+    public async Task DuplicateIsRejectedAndNewUserRemainsPendingWhenLookupIsUnavailable()
+    {
+        var request = new
+        {
+            Username = "new-user", FirstName = "Fixture", LastName = "User", Email,
+            RoleIds = new[] { await RoleId(ApplicationAccessRoles.LegalPersons) }
+        };
+        var duplicate = await _client.PostAsJsonAsync("/api/users", request);
+        Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
+        var problem = await duplicate.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        Assert.Equal("users.duplicate", problem.GetProperty("code").GetString());
+
+        var success = await _client.PostAsJsonAsync("/api/users", request with { Email = "new-user@example.test" });
+        Assert.Equal(HttpStatusCode.Created, success.StatusCode);
+        var user = (await success.Content.ReadFromJsonAsync<UserDTO>())!;
+        Assert.False(user.IdentityConfirmed);
+        Assert.Contains(ApplicationAccessRoles.LegalPersons, user.Roles);
+        Assert.DoesNotContain(ApplicationPermissions.LegalPersonsCreate, user.EffectivePermissions);
+    }
+}

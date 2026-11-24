@@ -1,3 +1,4 @@
+using RBBH.ConnectedParties.Exceptions;
 using RBBH.ConnectedParties.BL.ServiceInterfaces;
 using RBBH.ConnectedParties.DL.DTO.Users;
 using RBBH.ConnectedParties.DL.Persistence;
@@ -89,32 +90,51 @@ public partial class AppUserService(ConnectedPartiesDbContext dbContext, Keycloa
         createdBy = actor.DisplayName;
         var normalizedEmail = dto.Email.Trim().ToLowerInvariant();
         if (!System.Net.Mail.MailAddress.TryCreate(normalizedEmail, out var email) || email.Address != normalizedEmail || normalizedEmail.Length > 200)
-            return Result<UserDTO>.ValidationError(BackendMessages.Message("validation.users.email.invalid"));
-        var keycloakId = Guid.NewGuid().ToString();
+            return Result<UserDTO>.ValidationError(BackendMessages.Message("validation.users.email.invalid"), code: "users.email_invalid");
+        var requestedUsername = dto.Username.Trim().ToUpperInvariant();
+        var normalizedAddress = normalizedEmail.ToUpperInvariant();
+        var duplicateMessage = BackendMessages.Message("validation.users.identity.duplicate");
+        if (await _db.AppUsers.IgnoreQueryFilters().AnyAsync(user =>
+            user.Username.Trim().ToUpper() == requestedUsername || user.Email.Trim().ToUpper() == normalizedAddress, ct))
+            return Result<UserDTO>.ValidationError(duplicateMessage, code: "users.duplicate");
+
+        KeycloakIdentity? identity = null;
         if (_keycloakAdmin.IsEnabled)
         {
-            var identity = await _keycloakAdmin.FindByEmailAsync(normalizedEmail, ct);
-            if (identity is null) return Result<UserDTO>.ValidationError(BackendMessages.Message("validation.users.identity.missing"));
-            keycloakId = identity.Subject;
-            dto.Username = identity.Username ?? dto.Username;
-            dto.FirstName = identity.FirstName ?? dto.FirstName;
-            dto.LastName = identity.LastName ?? dto.LastName;
+            try
+            {
+                identity = await _keycloakAdmin.FindByEmailAsync(normalizedEmail, ct);
+                if (identity is null)
+                    return Result<UserDTO>.ValidationError(BackendMessages.Message("validation.users.identity.missing"), code: "users.identity_missing");
+            }
+            catch (BusinessRuleException error) when (error.Code == "identity.provider_unavailable")
+            {
+                // Keep the local profile pending. Explicit grants require a confirmed subject.
+            }
+            catch (BusinessRuleException error) when (error.Code == "identity.ambiguous")
+            {
+                return Result<UserDTO>.ValidationError(error.Message, code: error.Code);
+            }
         }
+        var keycloakId = identity?.Subject ?? Guid.NewGuid().ToString();
+        dto.Username = identity?.Username ?? dto.Username;
+        dto.FirstName = identity?.FirstName ?? dto.FirstName;
+        dto.LastName = identity?.LastName ?? dto.LastName;
         return await UsersMutationBoundary.ExecuteAsync(_db, async () =>
         {
-        var username = dto.Username.Trim(); var normalizedName = username.ToUpperInvariant(); var normalizedAddress = normalizedEmail.ToUpperInvariant();
+        var username = dto.Username.Trim(); var normalizedName = username.ToUpperInvariant();
         if (string.IsNullOrEmpty(username) || username.Length > 100 || string.IsNullOrWhiteSpace(dto.FirstName) || dto.FirstName.Length > 100 || string.IsNullOrWhiteSpace(dto.LastName) || dto.LastName.Length > 100)
-            return Result<UserDTO>.ValidationError(BackendMessages.Message("validation.users.names.invalid"));
-        if (await _db.AppUsers.AnyAsync(user => user.Username.Trim().ToUpper() == normalizedName || user.Email.Trim().ToUpper() == normalizedAddress || user.KeycloakId == keycloakId, ct))
-            return Result<UserDTO>.ValidationError(BackendMessages.Message("validation.users.identity.duplicate"));
+            return Result<UserDTO>.ValidationError(BackendMessages.Message("validation.users.names.invalid"), code: "users.names_invalid");
+        if (await _db.AppUsers.IgnoreQueryFilters().AnyAsync(user => user.Username.Trim().ToUpper() == normalizedName || user.Username.Trim().ToUpper() == requestedUsername || user.Email.Trim().ToUpper() == normalizedAddress || user.KeycloakId == keycloakId, ct))
+            return Result<UserDTO>.ValidationError(duplicateMessage, code: "users.duplicate");
         var localRoles = await _db.Roles.Where(role => requestedRoleIds.Contains(role.Id) && role.IsActive).ToListAsync(ct);
         if (localRoles.Count != requestedRoleIds.Length || localRoles.Any(role => role.Name == ApplicationAccessRoles.Guest))
-            return Result<UserDTO>.ValidationError(BackendMessages.Message("validation.users.roles.invalid"));
+            return Result<UserDTO>.ValidationError(BackendMessages.Message("validation.users.roles.invalid"), code: "users.roles_invalid");
         var roleNames = localRoles.Select(role => role.Name).ToList();
         var user = new AppUser
         {
             KeycloakId = keycloakId, // Unconfirmed placeholder when provider administration is disabled.
-            KeycloakSubjectConfirmed = _keycloakAdmin.IsEnabled && !string.IsNullOrEmpty(keycloakId),
+            KeycloakSubjectConfirmed = identity is not null,
             Username = dto.Username.Trim(),
             FirstName = dto.FirstName.Trim(),
             LastName = dto.LastName.Trim(),

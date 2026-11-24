@@ -501,3 +501,14 @@ h1[tabindex="-1"]:focus, h1:focus-visible { outline: none; }
 @media (min-width: 42rem) {
     .role-catalog-permission-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Text controls in dialogs use the surface fill to define their shape. */
+.app-form-dialog :is(.rbi-input, .rbi-textarea):not([type="search"]) {
+    border-color: transparent;
+    background: var(--surface-subtle);
+    box-shadow: none;
+}
+.app-form-dialog :is(.rbi-input, .rbi-textarea):not([type="search"]):focus {
+    background: var(--surface-muted);
+}
+.role-catalog-field .app-error { margin: 0; }

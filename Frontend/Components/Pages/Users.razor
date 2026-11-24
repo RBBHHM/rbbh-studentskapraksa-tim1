@@ -112,8 +112,14 @@ else
                 if (draft.ProfileChanged) await Api.UpdateProfileAsync(id, draft.Username.Trim(), draft.FirstName.Trim(), draft.LastName.Trim(), draft.Email.Trim(), _token);
                 if (draft.RolesChanged(current)) await Api.UpdateRolesAsync(id, draft.SelectedRoles, _token);
             }
-            else await Api.CreateAsync(draft.ToRequest(), _token);
-            _notice = draft.Id is null ? "toast.user-created" : "toast.user-role"; await LoadAsync(); _draft = null;
+            else
+            {
+                var created = await Api.CreateAsync(draft.ToRequest(), _token);
+                _notice = created.IdentityConfirmed || draft.SelectedRoles.Length == 0 ? "toast.user-created" : "toast.user-created-pending";
+            }
+            if (draft.Id is not null) _notice = "toast.user-role";
+            await LoadAsync();
+            _draft = null;
         }
         finally { _busy = false; }
     }

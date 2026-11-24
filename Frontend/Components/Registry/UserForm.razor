@@ -11,17 +11,16 @@
             <RbiField TValue="string" Id="user-lastname" Label="@T["person.last-name"]" Required For="@(() => Model.LastName)"><RbiInput Id="user-lastname" @bind-Value="Model.LastName" maxlength="100" /></RbiField>
             <RbiField TValue="string" Id="user-email" Label="@T["users.email"]" Required For="@(() => Model.Email)"><RbiInput Id="user-email" @bind-Value="Model.Email" Type="RbiInputType.Email" /></RbiField>
         </div>
-        <fieldset class="registry-user-fieldset"><legend class="app-required-legend">@T["users.accesses"]</legend><p>@T["users.multiple"]</p>
+        <fieldset class="registry-user-fieldset"><legend class="app-label">@T["users.accesses"]</legend><p>@T["users.multiple"]</p>
             <div class="registry-user-accesses">@foreach (var choice in Model.Roles)
             {
                 <RbiCheckbox @key="choice.Id" @bind-Value="choice.Selected">@T.Role(choice.Name)</RbiCheckbox>
             }</div>
             <ValidationMessage For="@(() => Model.Roles)" />
             @if (Model.SelectedRoles.Length == 0) { <p class="registry-help">@T["users.empty-roles"]</p> }
-            @if (Model.SelectedRoles.Length == 0) { <p>@T["users.empty-roles-detail"]</p> }
         </fieldset>
     <FormSummary @ref="_summary" Context="_context" />
-        <div class="registry-toolbar"><RbiButton OnClick="Cancel" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton><RbiButton Type="RbiButtonType.Submit" Disabled="_live.Incomplete">@T["common.save"]</RbiButton></div>
+        <div class="registry-toolbar"><RbiButton OnClick="Cancel" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton><RbiButton Type="RbiButtonType.Submit">@T["common.save"]</RbiButton></div>
     </fieldset>
 </EditForm>
 @code {
@@ -46,7 +45,7 @@
         _validation.DisplayErrors(errors.ToDictionary(item => item.Key, item => item.Value.Select(key => T[key]).ToArray()));
         if (!parsed || errors.Count > 0) { _focusErrors = true; return; }
         try { await Save.InvokeAsync(Model); }
-        catch (RegistryApiException exception) { _validation.DisplayFormError(T[(int?)exception.StatusCode == 409 ? "users.safety-conflict" : exception.MessageKey]); _focusErrors = true; }
+        catch (RegistryApiException exception) { _validation.DisplayFormError(T[exception.Code is null && (int?)exception.StatusCode == 409 ? "users.safety-conflict" : exception.MessageKey]); _focusErrors = true; }
         catch (OperationCanceledException) { }
     });
     public void Dispose() { _live.Dispose(); _validation.Dispose(); }

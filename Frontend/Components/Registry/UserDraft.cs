@@ -46,9 +46,17 @@ public sealed class UserDraft
     {
         var errors = new Dictionary<string, string[]>();
         foreach (var (field, value) in new[] { (nameof(Username), Username), (nameof(FirstName), FirstName), (nameof(LastName), LastName) })
-            if (string.IsNullOrWhiteSpace(value) || value.Trim().Length > 100) errors[field] = ["users.name-invalid"];
+            if (string.IsNullOrWhiteSpace(value))
+                errors[field] = [field switch
+                {
+                    nameof(Username) => "users.username-required",
+                    nameof(FirstName) => "users.first-name-required",
+                    _ => "users.last-name-required"
+                }];
+            else if (value.Trim().Length > 100) errors[field] = ["users.name-invalid"];
         // The corporate domain is only a suggestion; any valid address is accepted (people outside the domain exist).
-        if (Email.Trim().Length > 200 || !new EmailAddressAttribute().IsValid(Email.Trim()))
+        if (string.IsNullOrWhiteSpace(Email)) errors[nameof(Email)] = ["users.email-required"];
+        else if (Email.Trim().Length > 200 || !new EmailAddressAttribute().IsValid(Email.Trim()))
             errors[nameof(Email)] = ["users.email-invalid"];
         return errors;
     }

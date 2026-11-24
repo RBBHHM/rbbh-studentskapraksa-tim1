@@ -53,7 +53,7 @@ else
                 @foreach (var role in _page.Items)
                 {
                     <tr @key="role.Id">
-                        <td class="registry-strong">@role.Name</td>
+                        <td class="registry-strong">@(role.Name.Equals("gost", StringComparison.OrdinalIgnoreCase) ? T.Role(role.Name) : role.Name)</td>
                         <td>@(string.IsNullOrWhiteSpace(role.Description) ? "—" : role.Description)</td>
                         <td>@role.PermissionIds.Count</td>
                         <td><Indicator Kind="@(role.IsActive ? "active" : "inactive")" Label="@T[role.IsActive ? "codes.active" : "codes.inactive"]" /></td>
@@ -96,14 +96,18 @@ else
             <form class="role-catalog-form" @onsubmit="SaveAsync" @onsubmit:preventDefault novalidate>
                 <div class="role-catalog-fields">
                     <div class="role-catalog-field">
-                        <label for="rolecatalog-name">@T["rolecatalog.name"]</label>
+                        <label for="rolecatalog-name">@T["rolecatalog.name"] @if (draft.Id is null) { <span aria-hidden="true">*</span> }</label>
                         <input id="rolecatalog-name" class="rbi-input" maxlength="100" required readonly="@(draft.Id is not null)"
-                               @bind="draft.Name" @bind:event="oninput" @bind:after="ClearFormError" />
+                               aria-invalid="@(NameError is not null ? "true" : null)" aria-describedby="@(NameError is not null ? "rolecatalog-name-error" : null)"
+                               @bind="draft.Name" @bind:event="oninput" @bind:after="ClearFormError" @onblur="ShowValidation" />
+                        @if (NameError is { } nameError) { <p class="app-error" id="rolecatalog-name-error" role="status">@T[nameError]</p> }
                     </div>
                     <div class="role-catalog-field">
                         <label for="rolecatalog-description">@T["rolecatalog.description-field"]</label>
                         <textarea id="rolecatalog-description" class="rbi-textarea" rows="2" maxlength="500"
-                                  @bind="draft.Description" @bind:event="oninput"></textarea>
+                                  aria-invalid="@(DescriptionError is not null ? "true" : null)" aria-describedby="@(DescriptionError is not null ? "rolecatalog-description-error" : null)"
+                                  @bind="draft.Description" @bind:event="oninput" @onblur="ShowValidation"></textarea>
+                        @if (DescriptionError is { } descriptionError) { <p class="app-error" id="rolecatalog-description-error" role="status">@T[descriptionError]</p> }
                     </div>
                 </div>
                 @if (draft.Id is not null)
@@ -131,21 +135,13 @@ else
                         }
                     </div>
                 </fieldset>
-                @if (draft.Id is null && string.IsNullOrWhiteSpace(draft.Name))
-                {
-                    <p class="app-hint">@T["validation.required"]</p>
-                }
-                else if (!ValidDraft)
-                {
-                    <p class="app-error" role="status">@T["rolecatalog.invalid-name"]</p>
-                }
                 @if (_formError is not null)
                 {
                     <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_formError]" Announcement="RbiAlertAnnouncement.Assertive" />
                 }
                 <div class="registry-toolbar">
                     <RbiButton Variant="RbiButtonVariant.Secondary" Disabled="_busy" OnClick="() => CloseDialog(false)">@T["common.cancel"]</RbiButton>
-                    <RbiButton Type="RbiButtonType.Submit" Disabled="@(_busy || !ValidDraft)">@T["common.save"]</RbiButton>
+                    <RbiButton Type="RbiButtonType.Submit" Disabled="@_busy">@T["common.save"]</RbiButton>
                 </div>
             </form>
         </DialogBody>
@@ -175,11 +171,24 @@ else
     private IReadOnlyList<RolePermissionOption> _permissions = [];
     private RoleDraft? _draft;
     private int TotalPages => Math.Max(1, (int)Math.Ceiling(_page.Total / (double)Math.Max(1, _page.PageSize)));
-    private bool ValidDraft => _draft is { } draft &&
-        (draft.Id is not null || (System.Text.RegularExpressions.Regex.IsMatch(draft.Name.Trim(), "^[A-Za-z0-9_.-]{1,100}$") &&
-         !draft.Name.Trim().Equals("admin", StringComparison.OrdinalIgnoreCase) &&
-         !draft.Name.Trim().Equals("gost", StringComparison.OrdinalIgnoreCase))) &&
-        draft.Description.Length <= 500;
+    private bool _showValidation;
+    private string? NameError
+    {
+        get
+        {
+            if (!_showValidation || _draft is not { Id: null } draft) return null;
+            var name = draft.Name.Trim();
+            if (name.Length == 0) return "rolecatalog.name-required";
+            return !System.Text.RegularExpressions.Regex.IsMatch(name, "^[A-Za-z0-9_.-]{1,100}$")
+                || name.Equals("admin", StringComparison.OrdinalIgnoreCase)
+                || name.Equals("gost", StringComparison.OrdinalIgnoreCase)
+                ? "rolecatalog.invalid-name" : null;
+        }
+    }
+    private string? DescriptionError => _showValidation && _draft is { } draft && draft.Description.Length > 500
+        ? "rolecatalog.description-too-long" : null;
+
+    private void ShowValidation() => _showValidation = true;
 
     protected override Task OnInitializedAsync() => LoadAsync();
 
@@ -240,10 +249,11 @@ else
         }
     }
     private async Task ChangePageAsync(int page) { if (_busy || _refreshing || _searchRequest is not null || page < 1 || page > TotalPages) return; _pageNumber = page; await LoadAsync(); }
-    private void NewRole() { if (_canWrite && !_busy) { _formError = null; _draft = new(); } }
+    private void NewRole() { if (_canWrite && !_busy) { _showValidation = false; _formError = null; _draft = new(); } }
     private void EditRole(RoleDefinition role)
     {
         if (!_canWrite || role.IsProtected || _busy) return;
+        _showValidation = false;
         _formError = null;
         _draft = new()
         {
@@ -298,7 +308,9 @@ else
 
     private async Task SaveAsync()
     {
-        if (!_canWrite || !ValidDraft || _draft is not { } draft || _busy) return;
+        if (!_canWrite || _draft is not { } draft || _busy) return;
+        _showValidation = true;
+        if (NameError is not null || DescriptionError is not null) return;
         _busy = true;
         _formError = null;
         try

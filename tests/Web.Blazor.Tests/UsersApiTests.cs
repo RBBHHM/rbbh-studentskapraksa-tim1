@@ -144,6 +144,27 @@ public sealed class UsersApiTests
         var error = await Assert.ThrowsAsync<RegistryApiException>(() => provider.GetRequiredService<IUsersApi>().UpdateRolesAsync(Guid.NewGuid(), []));
         Assert.Equal(status, (int?)error.StatusCode); Assert.DoesNotContain("private-fixture-marker", error.ToString());
     }
+    [Fact]
+    public async Task DuplicateCreateUsesTheSpecificValidationMessage()
+    {
+        await using var provider = Client(_ => Task.FromResult(Json(HttpStatusCode.Conflict,
+            new { code = "users.duplicate", detail = "private-fixture-marker" })));
+        var error = await Assert.ThrowsAsync<RegistryApiException>(() => provider.GetRequiredService<IUsersApi>()
+            .CreateAsync(new("existing", "First", "Last", "existing@example.test", [])));
+        Assert.Equal("users.create-duplicate", error.MessageKey);
+        Assert.DoesNotContain("private-fixture-marker", error.ToString());
+    }
+
+    [Fact]
+    public void EmptyUserFieldsHaveDistinctRequiredMessages()
+    {
+        var errors = new UserDraft().Validate();
+        Assert.Equal("users.username-required", Assert.Single(errors[nameof(UserDraft.Username)]));
+        Assert.Equal("users.first-name-required", Assert.Single(errors[nameof(UserDraft.FirstName)]));
+        Assert.Equal("users.last-name-required", Assert.Single(errors[nameof(UserDraft.LastName)]));
+        Assert.Equal("users.email-required", Assert.Single(errors[nameof(UserDraft.Email)]));
+    }
+
     private static ServiceProvider Client(Func<HttpRequestMessage, Task<HttpResponseMessage>> respond)
     {
         var services = new ServiceCollection(); services.AddLogging();

@@ -9,10 +9,21 @@ public sealed class AppText
     private readonly IRbiLocalizer _localizer;
     private readonly RuntimeResources? _runtime;
     public AppText(IRbiLocalizer localizer, RuntimeResources? runtime = null) { _localizer = localizer; _runtime = runtime; }
-    public string this[string key] => _runtime is not null && _runtime.TryGet(key, out var text) ? text : _localizer[key];
+    public string this[string key]
+    {
+        get
+        {
+            var text = _runtime is not null && _runtime.TryGet(key, out var translated) ? translated : _localizer[key];
+            return key is "users.empty-roles" or "users.empty-roles-detail" or "guide.reports.point2"
+                or "guide.administration.point1" or "guide.administration.point2"
+                ? System.Text.RegularExpressions.Regex.Replace(text, @"\bGuest\b", "Gost", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+                : text;
+        }
+    }
     /// <summary>Display name of an application role: the localized "users.role.{name}" entry when one exists, otherwise the role name the backend supplied.</summary>
     public string Role(string role)
     {
+        if (role.Equals("guest", StringComparison.OrdinalIgnoreCase) || role.Equals("gost", StringComparison.OrdinalIgnoreCase)) return "Gost";
         var key = "users.role." + role.ToLowerInvariant();
         var text = this[key];
         return text == key ? role : text;
