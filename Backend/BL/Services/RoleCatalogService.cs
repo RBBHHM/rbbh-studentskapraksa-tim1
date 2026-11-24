@@ -57,7 +57,7 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
         if (await db.Roles.AnyAsync(row => row.Name.Trim().ToUpper() == normalized, ct))
             return null;
         await ValidatePermissions(input.PermissionIds, ct);
-        var row = new Role { Name = name, DisplayName = input.DisplayName.Trim(), Description = input.Description?.Trim(),
+        var row = new Role { Name = name, DisplayName = input.DisplayName?.Trim(), Description = input.Description?.Trim(),
             CreatedBy = AuthenticatedActor.Username(Actor) };
         foreach (var id in input.PermissionIds) row.RolePermissions.Add(new RolePermission { RoleId = row.Id, PermissionId = id });
         db.Roles.Add(row);
@@ -84,7 +84,8 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
         db.RolePermissions.RemoveRange(row.RolePermissions.Where(grant => !targets.Contains(grant.PermissionId)));
         foreach (var permissionId in targets.Except(row.RolePermissions.Select(grant => grant.PermissionId)))
             row.RolePermissions.Add(new RolePermission { RoleId = row.Id, PermissionId = permissionId });
-        row.DisplayName = input.DisplayName.Trim(); row.Description = input.Description?.Trim(); row.IsActive = input.IsActive;
+        if (input.DisplayName is not null) row.DisplayName = input.DisplayName.Trim();
+        row.Description = input.Description?.Trim(); row.IsActive = input.IsActive;
         var previous = VersionOf(row);
         var now = DateTime.UtcNow;
         row.ModifiedAt = now > previous ? now : previous.AddTicks(1);
@@ -93,8 +94,29 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
             new { row.Name, row.DisplayName, row.Description, row.IsActive, PermissionIds = input.PermissionIds }));
         await db.SaveChangesAsync(ct);
         // Removed tracked children need not remain in the returned grant set.
-        return new(row.Id, row.Name, row.DisplayName, row.Description, row.IsActive, VersionOf(row), input.PermissionIds.Order().ToArray(), false);
+        return new(row.Id, row.Name, row.DisplayName ?? row.Name, row.Description, row.IsActive, VersionOf(row), input.PermissionIds.Order().ToArray(), false);
     }, ct);
+
+    public Task<RoleDeletionResult> Delete(Guid id, DateTime expectedVersion, CancellationToken ct) => Locked(async () =>
+    {
+        await EnsureAdmin(ct);
+        var row = await db.Roles.Include(role => role.RolePermissions).SingleOrDefaultAsync(role => role.Id == id, ct);
+        if (row is null) return RoleDeletionResult.Missing;
+        if (Protected(row.Name)) return RoleDeletionResult.Protected;
+        if (expectedVersion != VersionOf(row)) return RoleDeletionResult.Stale;
+        if (await db.UserRoles.AnyAsync(assignment => assignment.RoleId == id, ct) ||
+            await db.Set<DL.Entities.Authorization.RequestedRole>().AnyAsync(request => request.RoleId == id, ct))
+            return RoleDeletionResult.InUse;
+
+        db.AuditLogs.Add(BusinessAudit.Create("Role", row.Id.ToString(), "ROLE_CATALOG_DELETE",
+            AuthenticatedActor.Username(Actor), accessor,
+            new { row.Name, row.DisplayName, row.Description, row.IsActive, PermissionIds = row.RolePermissions.Select(grant => grant.PermissionId).ToArray() }, null));
+        db.Roles.Remove(row);
+        await db.SaveChangesAsync(ct);
+        return RoleDeletionResult.Deleted;
+    }, ct);
+
+    public enum RoleDeletionResult { Deleted, Missing, Protected, Stale, InUse }
 
     private async Task EnsureAdmin(CancellationToken ct)
     {
@@ -107,7 +129,7 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
     }
     private static void Validate(string? display, string? description, Guid[]? ids)
     {
-        if (string.IsNullOrWhiteSpace(display) || display.Length > 100 || description?.Length > 500 || ids is null || ids.Length > 200 ||
+        if (display is not null && (string.IsNullOrWhiteSpace(display) || display.Length > 100) || description?.Length > 500 || ids is null || ids.Length > 200 ||
             ids.Any(id => id == Guid.Empty) || ids.Distinct().Count() != ids.Length) throw Invalid();
     }
     private async Task ValidatePermissions(Guid[] ids, CancellationToken ct)

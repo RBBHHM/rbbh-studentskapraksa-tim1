@@ -22,6 +22,7 @@ public class AuditLogController(ConnectedPartiesDbContext db) : ControllerBase
         ["REACTIVATE"]      = "Reaktivacija korisnika",
         ["ROLE_ASSIGN"]     = "Dodjela role",
         ["ROLE_REMOVE"]     = "Uklanjanje role",
+        ["ROLE_CATALOG_DELETE"] = "Brisanje role",
         ["ADMIN_TRANSFER"]  = "Prenos admin prava",
         ["CODELIST_ADD"]    = "Dodavanje šifarnika",
         ["CODELIST_UPDATE"] = "Izmjena šifarnika",
@@ -119,7 +120,7 @@ public class AuditLogController(ConnectedPartiesDbContext db) : ControllerBase
         {
             "INSERT" => "Create", "UPDATE" => "Update", "DELETE" => "Delete", "VERIFY" => "Verify",
             "CREATE" => "Create user", "DEACTIVATE" => "Deactivate user", "REACTIVATE" => "Reactivate user",
-            "ROLE_ASSIGN" => "Assign access", "ROLE_REMOVE" => "Remove access", "IMPORT" => "Import data",
+            "ROLE_ASSIGN" => "Assign access", "ROLE_REMOVE" => "Remove access", "ROLE_CATALOG_DELETE" => "Delete role", "IMPORT" => "Import data",
             "EXPORT" => "Export data", "GENERATE" => "Generate report", "PERIOD_LOCK" => "Lock period", "PERIOD_UNLOCK" => "Unlock period",
             "UNLOCK_REQUEST" => "Unlock request", "UNLOCK_REQUEST_REJECTED" => "Reject request",
             "UNLOCK_REQUEST_NEEDS_INFO" => "Request more information", _ => action

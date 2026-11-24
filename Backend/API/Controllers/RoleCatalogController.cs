@@ -35,6 +35,20 @@ public sealed class RoleCatalogController(RoleCatalogService catalog) : Controll
         return Created($"/api/role-catalog/{row.Id}", row);
     }
 
+    [HttpDelete("{id:guid}"), Authorize(Policy = ApplicationPolicies.AdminOnly)]
+    public async Task<IActionResult> Delete(Guid id, [FromQuery] DateTime? expectedVersion, CancellationToken ct)
+    {
+        if (expectedVersion is null) return BadRequest();
+        return (await catalog.Delete(id, expectedVersion.Value, ct)) switch
+        {
+            RoleCatalogService.RoleDeletionResult.Deleted => NoContent(),
+            RoleCatalogService.RoleDeletionResult.Missing => NotFound(),
+            RoleCatalogService.RoleDeletionResult.Protected => Conflict(new { code = "roles.protected" }),
+            RoleCatalogService.RoleDeletionResult.InUse => Conflict(new { code = "roles.in_use" }),
+            _ => Conflict(new { code = "request.concurrent_change" })
+        };
+    }
+
     [HttpPut("{id:guid}"), Authorize(Policy = ApplicationPolicies.AdminOnly)]
     public Task<RoleCatalogDTO> Update(Guid id, UpdateRoleCatalogDTO input, CancellationToken ct) => catalog.Update(id, input, ct);
 }

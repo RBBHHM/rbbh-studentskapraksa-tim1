@@ -30,6 +30,30 @@ public abstract class RoleCatalogFixture : RoleRequestFixture
 
 public sealed class RoleCatalogHttpTests : RoleCatalogFixture
 {
+    private static string DeleteUrl(RoleCatalogDTO role) => $"/api/role-catalog/{role.Id}?expectedVersion={role.Version:O}";
+
+    [Fact]
+    public async Task RoleWithoutDisplayNameCanBeDeletedWithItsPermissionsAndAudit()
+    {
+        Guid permission = default;
+        await InDatabase(async db => permission = (await db.Permissions.SingleAsync(row => row.Code == ApplicationPermissions.AdministrationView)).Id);
+        var response = await Client.PostAsJsonAsync("/api/role-catalog", new { name = "to-remove", description = "Temporary", permissionIds = new[] { permission } });
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var role = (await response.Content.ReadFromJsonAsync<RoleCatalogDTO>())!;
+        Assert.Equal(role.Name, role.DisplayName);
+        Assert.Equal(HttpStatusCode.Conflict, (await Client.DeleteAsync(DeleteUrl(role with { Version = role.Version.AddSeconds(-1) }))).StatusCode);
+        using var applicant = NewClient("custom-applicant");
+        Assert.Equal(HttpStatusCode.Forbidden, (await applicant.DeleteAsync(DeleteUrl(role))).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await Client.DeleteAsync(DeleteUrl(role))).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await Client.DeleteAsync(DeleteUrl(role))).StatusCode);
+        await InDatabase(async db =>
+        {
+            Assert.False(await db.Roles.AnyAsync(row => row.Id == role.Id));
+            Assert.False(await db.RolePermissions.AnyAsync(row => row.RoleId == role.Id));
+            Assert.True(await db.AuditLogs.AnyAsync(row => row.RecordId == role.Id.ToString() && row.Action == "ROLE_CATALOG_DELETE"));
+        });
+    }
+
     [Fact]
     public async Task CustomDatabaseRoleCanBeRequestedApprovedAndDisabledWithoutProviderRoleChanges()
     {
@@ -38,6 +62,9 @@ public sealed class RoleCatalogHttpTests : RoleCatalogFixture
         Assert.Contains(options.GetProperty("items").EnumerateArray(), item => item.GetProperty("id").GetGuid() == role.Id && item.GetProperty("displayName").GetString() == role.DisplayName);
         Assert.Equal(HttpStatusCode.Forbidden, (await applicant.GetAsync("/api/role-catalog")).StatusCode);
         var request = await Submit(applicant, roles: [role.Id]); var requestId = request.GetProperty("id").GetGuid();
+        var blocked = await Client.DeleteAsync(DeleteUrl(role));
+        Assert.Equal(HttpStatusCode.Conflict, blocked.StatusCode);
+        Assert.Equal("roles.in_use", (await blocked.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
         Assert.Equal(HttpStatusCode.OK, (await Client.PostAsJsonAsync($"/api/role-requests/{requestId}/approve", new { decisionId = Guid.NewGuid(), expectedVersion = 1 })).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await applicant.GetAsync("/api/role-catalog")).StatusCode);
         // Read permission is not permission to mutate catalog/grants, even if body overposts a provider role.

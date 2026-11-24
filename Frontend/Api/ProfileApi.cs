@@ -44,6 +44,7 @@ public sealed class RegistryApiException : Exception
     public string MessageKey => (StatusCode, Code) switch
     {
         (System.Net.HttpStatusCode.Forbidden, "verification.self_denied") => "common.verify-own",
+        (System.Net.HttpStatusCode.Conflict, "roles.in_use") => "rolecatalog.delete-in-use",
         (System.Net.HttpStatusCode.Conflict, "roles.duplicate_name") => "errors.roles.duplicate.name",
         (System.Net.HttpStatusCode.Conflict, "verification.provenance_required") => "errors.verification-provenance-required",
         _ => (int?)StatusCode switch

@@ -29,7 +29,7 @@ public static class AuditChange
     public static string Tone(string? action) => action?.ToUpperInvariant() switch
     {
         "CREATE" or "INSERT" or "ADD" or "REACTIVATE" => "success",
-        "DELETE" or "REMOVE" or "DEACTIVATE" or "REJECT" => "danger",
+        "DELETE" or "ROLE_CATALOG_DELETE" or "REMOVE" or "DEACTIVATE" or "REJECT" => "danger",
         "UPDATE" or "EDIT" or "MODIFY" or "VERIFY" => "warning",
         _ => "neutral"
     };
