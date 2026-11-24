@@ -94,7 +94,7 @@ Use `__` for nested environment keys. Secrets stay outside Git. The backend load
 | `FinanceMonthly__Enabled`, `__ConnectionString`, `__CustomerKeyColumn`, `__Currency`, `__BalanceColumn`, `__OffBalanceColumn`, `FinanceMonthly:MonthlyTables` | Approved monthly finance source for regulatory reports. Disabled means snapshots are labelled non-authoritative. |
 | `KeycloakSettings__AdminClientId`, `__AdminClientSecret` | Only where the Keycloak administration lookup is used. |
 | `Email__From`, `Email__SendEmailWithHtmlBodyUrl` | Approved sender and full HTML mail endpoint. Empty values select demo delivery in Development/Testing. |
-| `Application__PublicUrl` | Optional public web URL for links in notification emails. |
+| `Application__PublicUrl` | Frontend URL for email buttons and the logo. Use the user-accessible HTTPS address in UAT/Production. Development defaults to https://localhost:5002. |
 | `ReverseProxy__KnownProxies__N`, `__KnownNetworks__N`, `__ForwardLimit`, `AllowedHosts` | Production requires explicit trusted peers or bounded CIDRs, a positive hop limit and non-wildcard hosts. |
 | `Cors__AllowedOrigins__N` | Approved browser origins only. |
 | `IdentityBinding__AllowVerifiedEmailFirstLink` | Keep false until the production reconciliation is approved. |

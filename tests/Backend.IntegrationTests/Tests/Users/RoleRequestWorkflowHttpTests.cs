@@ -42,7 +42,7 @@ public abstract class RoleRequestFixture : AuthenticatedApiFixture
                 {
                     var key = $"notifications.role.request.{outcome}.{part}";
                     db.CodeLists.Add(new() { Kategorija = "LanguagePacks", Kod = Guid.NewGuid().ToString("N"), Naziv = key,
-                        Localization = new() { Category = "LanguagePacks", ResourceKey = key, LanguageCode = "BS", ResourceLabel = "Fixture notification " + outcome }, KreiraoKorisnik = "fixture" });
+                        Localization = new() { Category = "LanguagePacks", ResourceKey = key, LanguageCode = "BS", ResourceLabel = part == "detail" ? "Role: {roles}\nNapomena: {" + (outcome == "submitted" ? "note" : "decisionNote") + "}" : "Fixture notification " + outcome }, KreiraoKorisnik = "fixture" });
                 }
                 await db.SaveChangesAsync();
             }
@@ -127,7 +127,14 @@ public sealed class RoleRequestWorkflowHttpTests : RoleRequestFixture
     public async Task SelfDecisionAndStaleDecisionAreRejectedWithoutGrantOrNotice()
     {
         var row = await Submit(Client); var id = row.GetProperty("id").GetGuid();
-        Assert.Equal(HttpStatusCode.Forbidden, (await Client.PostAsJsonAsync($"/api/role-requests/{id}/approve", new { decisionId = Guid.NewGuid(), expectedVersion = 1 })).StatusCode);
+        var ownDecision = await Client.PostAsJsonAsync($"/api/role-requests/{id}/approve", new { decisionId = Guid.NewGuid(), expectedVersion = 1 });
+        Assert.Equal(HttpStatusCode.Forbidden, ownDecision.StatusCode);
+        Assert.Equal("role_request.self_decision_denied", (await ownDecision.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
+
+        var pending = await Client.PostAsJsonAsync("/api/role-requests", new
+        { clientRequestId = Guid.NewGuid(), purpose = "new", roleIds = new[] { await Role(ApplicationAccessRoles.LegalPersons) } });
+        Assert.Equal(HttpStatusCode.Conflict, pending.StatusCode);
+        Assert.Equal("role_request.pending_exists", (await pending.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
         using var admin = NewClient("reviewer");
         Assert.Equal(HttpStatusCode.Conflict, (await admin.PostAsJsonAsync($"/api/role-requests/{id}/approve", new { decisionId = Guid.NewGuid(), expectedVersion = 2 })).StatusCode);
         await InDatabase(async db => { Assert.Equal("pending", (await db.RoleRequests.SingleAsync()).Status); Assert.Equal(3, await db.Notifications.CountAsync()); });
@@ -159,6 +166,43 @@ public sealed class RoleRequestWorkflowHttpTests : RoleRequestFixture
         Assert.Equal(HttpStatusCode.OK, (await Client.PostAsJsonAsync($"/api/role-requests/{id}/reject", decision)).StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, (await Client.PostAsJsonAsync($"/api/role-requests/{id}/approve", decision)).StatusCode);
         await InDatabase(async db => { Assert.False(await db.AppUsers.AnyAsync(user => user.KeycloakId == "guest")); Assert.Equal(1, await db.AuditLogs.CountAsync(item => item.Action == "ROLE_REQUEST_REJECTED")); });
+    }
+
+    [Theory]
+    [InlineData("approve", "approved", "Odobreno")]
+    [InlineData("reject", "rejected", "Odbijeno")]
+    public async Task ReviewAndDecisionEmailsOpenTheExactRequest(string action, string status, string badge)
+    {
+        using var applicant = NewClient("mail-applicant");
+        var id = (await Submit(applicant)).GetProperty("id").GetGuid();
+        var reviewerPath = $"/api/role-requests?requestId={id:D}";
+        var review = await Client.GetFromJsonAsync<JsonElement>(reviewerPath);
+        Assert.Equal(id, Assert.Single(review.GetProperty("items").EnumerateArray()).GetProperty("id").GetGuid());
+        Assert.Equal(HttpStatusCode.Forbidden, (await applicant.GetAsync(reviewerPath)).StatusCode);
+
+        var note = "<b>Napomena administratora</b>";
+        Assert.Equal(HttpStatusCode.OK, (await Client.PostAsJsonAsync($"/api/role-requests/{id}/{action}",
+            new { decisionId = Guid.NewGuid(), expectedVersion = 1, note })).StatusCode);
+        var profilePath = $"/api/role-requests/mine?requestId={id:D}";
+        var own = await applicant.GetFromJsonAsync<JsonElement>(profilePath);
+        Assert.Equal(status, Assert.Single(own.GetProperty("items").EnumerateArray()).GetProperty("status").GetString());
+        Assert.Equal(0, (await Client.GetFromJsonAsync<JsonElement>(profilePath)).GetProperty("total").GetInt32());
+
+        var messages = new List<(string To, string Html)>();
+        _mail.Setup(mail => mail.SendApplicationNotificationAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, string, CancellationToken>((to, _, html, _) => messages.Add((to, html))).Returns(Task.CompletedTask);
+        await using var scope = App.Services.CreateAsyncScope();
+        Assert.Equal(4, await scope.ServiceProvider.GetRequiredService<NotificationDispatcher>().DeliverBatchAsync(default));
+        var reviewEmail = Assert.Single(messages, item => item.To == "creator@example.test").Html;
+        Assert.Contains($"https://app.example.test/app/admin/role-requests?requestId={id:D}", reviewEmail);
+        Assert.Contains("rbi-bank-mono-pos.png", reviewEmail);
+        Assert.Contains("Raiffeisen Bank BiH", reviewEmail);
+
+        var decisionEmail = Assert.Single(messages, item => item.To == "mail-applicant@example.test").Html;
+        Assert.Contains($"https://app.example.test/app/profile?requestId={id:D}", decisionEmail);
+        Assert.Contains(badge, decisionEmail);
+        Assert.Contains("&lt;b&gt;Napomena administratora&lt;/b&gt;", decisionEmail);
+        Assert.DoesNotContain(note, decisionEmail);
     }
 
     [Fact]

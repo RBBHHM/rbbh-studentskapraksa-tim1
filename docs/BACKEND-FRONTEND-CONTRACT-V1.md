@@ -106,7 +106,7 @@ Keycloak `sub` is opaque and case-sensitive. Apply `EnforceOpaqueSubjectComparis
 
 ### Operational contract
 
-`/metrics` requires the existing administrative read permission (401/403 otherwise); liveness/readiness remain public status-only probes. SQL readiness is 503 for pending migrations and never applies DDL. Release operations must migrate before traffic. Mail uses `Email:From` and `Email:SendEmailWithHtmlBodyUrl`. HTTPS is accepted, and the internal `.rbbh` HTTP route is supported. Blank mail settings select demo delivery in Development/Testing. `Application:PublicUrl` optionally adds links to emails. No frontend DTO change.
+`/metrics` requires the existing administrative read permission (401/403 otherwise); liveness/readiness remain public status-only probes. SQL readiness is 503 for pending migrations and never applies DDL. Release operations must migrate before traffic. Mail uses `Email:From` and `Email:SendEmailWithHtmlBodyUrl`. HTTPS is accepted, and the internal `.rbbh` HTTP route is supported. Blank mail settings select demo delivery in Development/Testing. `Application:PublicUrl` supplies the frontend origin for email links and the logo. Initial role-request messages link to the single request in the authenticated reviewer queue. Decision messages link to the request in the submitter’s profile.
 
 ### Audit actor convention
 

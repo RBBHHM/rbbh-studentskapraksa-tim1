@@ -18,13 +18,20 @@ else if (!_canManage) { <RbiAlert Title="@T["errors.forbidden"]" /> }
 else
 {
     @if (_notice is not null) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@T[_notice]" /></div> }
-    <div class="registry-controls notification-filter" role="group" aria-label="@T["roles.filter"]">
-        @foreach (var status in Enum.GetValues<StatusFilter>())
-        {
-            <RbiButton @key="status" Variant="@(_filter == status ? RbiButtonVariant.Primary : RbiButtonVariant.Secondary)" aria-pressed="@(_filter == status ? "true" : "false")" OnClick="() => FilterAsync(status)">@T["roles.status." + status.ToString().ToLowerInvariant()]</RbiButton>
-        }
-    </div>
-    @if (_page.Items.Count == 0) { <div class="registry-surface"><RegistryEmpty Body="@T["roles.empty"]" /></div> }
+    @if (RequestId is not null)
+    {
+        <a href="/app/admin/role-requests" class="rbi-button rbi-button--secondary rbi-button--medium role-request-back">@T["roles.back-to-requests"]</a>
+    }
+    else
+    {
+        <div class="registry-controls notification-filter" role="group" aria-label="@T["roles.filter"]">
+            @foreach (var status in Enum.GetValues<StatusFilter>())
+            {
+                <RbiButton @key="status" Variant="@(_filter == status ? RbiButtonVariant.Primary : RbiButtonVariant.Secondary)" aria-pressed="@(_filter == status ? "true" : "false")" OnClick="() => FilterAsync(status)">@T["roles.status." + status.ToString().ToLowerInvariant()]</RbiButton>
+            }
+        </div>
+    }
+    @if (_page.Items.Count == 0) { <div class="registry-surface"><RegistryEmpty Body="@T[RequestId.HasValue ? "roles.error-not-found" : "roles.empty"]" /></div> }
     else
     {
         <RbiTable AccessibleLabel="@T["roles.admin-title"]" Class="registry-table">
@@ -52,19 +59,22 @@ else
             </tbody>
         </RbiTable>
     }
-    <p class="page-total" role="status">@T.Format("legal.page-summary", _pageNumber, TotalPages, _page.Total)</p>
-    <RbiPagination CurrentPage="_pageNumber" CurrentPageChanged="ChangePageAsync" TotalPages="TotalPages" AccessibleLabel="@T["roles.pages"]" PreviousLabel="@T["common.back"]" PreviousAccessibleLabel="@T["legal.previous"]" NextLabel="@T["common.actions.continue"]" NextAccessibleLabel="@T["legal.next"]" PageAccessibleLabel="@(page => T.Format("legal.page", page))" />
+    @if (RequestId is null)
+    {
+        <p class="page-total" role="status">@T.Format("legal.page-summary", _pageNumber, TotalPages, _page.Total)</p>
+        <RbiPagination CurrentPage="_pageNumber" CurrentPageChanged="ChangePageAsync" TotalPages="TotalPages" AccessibleLabel="@T["roles.pages"]" PreviousLabel="@T["common.back"]" PreviousAccessibleLabel="@T["legal.previous"]" NextLabel="@T["common.actions.continue"]" NextAccessibleLabel="@T["legal.next"]" PageAccessibleLabel="@(page => T.Format("legal.page", page))" />
+    }
 }
 @if (_target is { } target)
 {
-    <RbiDialog Open Class="registry-period-dialog" Title="@T[_approve ? "roles.approve-title" : "roles.reject-title"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="value => { if (!value && !_busy) _target = null; }">
+    <RbiDialog Open Class="registry-period-dialog role-request-dialog" Title="@T[_approve ? "roles.approve-title" : "roles.reject-title"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="value => { if (!value && !_busy) _target = null; }">
         <DialogBody>
-            <form class="registry-period-form" @onsubmit="ConfirmAsync" @onsubmit:preventDefault novalidate>
-                <p class="registry-period-dialog__help">@T.Format(_approve ? "roles.approve-help" : "roles.reject-help", target.RequesterUsername ?? "", RoleNames(target.RoleNames))</p>
-                <label class="app-label" for="role-decision-note">@T["roles.decision-note"]</label>
-                <textarea id="role-decision-note" class="rbi-textarea" rows="3" maxlength="1000" @bind="_decisionNote" @bind:event="oninput"></textarea>
-                @if (_decisionError is not null) { <p class="app-error" role="alert">@T[_decisionError]</p> }
-                <div class="registry-toolbar">
+            <form class="role-request-form" @onsubmit="ConfirmAsync" @onsubmit:preventDefault novalidate>
+                <p class="role-request-intro">@T.Format(_approve ? "roles.approve-help" : "roles.reject-help", target.RequesterUsername ?? "", RoleNames(target.RoleNames))</p>
+                <label class="app-label" for="role-decision-note">@T["roles.decision-note-optional"]</label>
+                <textarea id="role-decision-note" class="rbi-textarea role-request-note" rows="3" disabled="@_busy" maxlength="1000" @bind="_decisionNote" @bind:event="oninput"></textarea>
+                @if (_decisionError is not null) { <RbiAlert Tone="RbiAlertTone.Danger" Announcement="RbiAlertAnnouncement.Assertive" Title="@T[_decisionError]" /> }
+                <div class="role-request-actions">
                     <RbiButton OnClick="() => _target = null" Variant="RbiButtonVariant.Secondary" Disabled="_busy">@T["common.cancel"]</RbiButton>
                     <RbiButton Type="RbiButtonType.Submit" Disabled="_busy">@T[_approve ? "roles.approve" : "roles.reject"]</RbiButton>
                 </div>
@@ -86,7 +96,13 @@ else
     private int _pageNumber = 1;
     private bool _disposed, _authenticated, _canManage, _loading = true, _refreshing, _busy, _approve;
     private int TotalPages => Math.Max(1, (int)Math.Ceiling(_page.Total / (double)Math.Max(1, _page.PageSize)));
-    protected override Task OnInitializedAsync() => LoadAsync();
+    [SupplyParameterFromQuery] public Guid? RequestId { get; set; }
+
+    protected override Task OnParametersSetAsync()
+    {
+        _pageNumber = 1;
+        return LoadAsync();
+    }
     private async Task LoadAsync()
     {
         if (_disposed || _refreshing) return; _refreshing = true; _error = null;
@@ -97,7 +113,7 @@ else
             var profile = await Profile.GetAsync(_token);
             _canManage = ApplicationAccess.IsAdministrator(profile) && profile.Permissions.Contains("ADMINISTRATION_MANAGE");
             if (!_canManage) return;
-            _page = await Api.ReviewAsync(_pageNumber, _filter == StatusFilter.All ? "" : _filter.ToString().ToLowerInvariant(), _token);
+            _page = await Api.ReviewAsync(_pageNumber, RequestId.HasValue || _filter == StatusFilter.All ? "" : _filter.ToString().ToLowerInvariant(), _token, RequestId);
         }
         catch (RegistryApiException exception) { _error = exception.MessageKey; }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
@@ -112,10 +128,15 @@ else
         if (_busy || _target is not { } target) return; _busy = true; _decisionError = null;
         try
         {
-            await Api.DecideAsync(target, _approve, string.IsNullOrWhiteSpace(_decisionNote) ? null : _decisionNote.Trim(), _token);
+            var result = await Api.DecideAsync(target, _approve, string.IsNullOrWhiteSpace(_decisionNote) ? null : _decisionNote.Trim(), _token);
+            if (result.ErrorKey is { } error)
+            {
+                _decisionError = error;
+                if (error is "roles.error-processed" or "roles.error-stale") await LoadAsync();
+                return;
+            }
             _notice = _approve ? "roles.approved-toast" : "roles.rejected-toast"; _target = null; await LoadAsync();
         }
-        catch (RegistryApiException exception) { _decisionError = exception.MessageKey; if ((int?)exception.StatusCode == 409) await LoadAsync(); }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         finally { _busy = false; }
     }

@@ -32,27 +32,33 @@ test("a signed-in user requests a role from the header, sees it pending on the p
   const note = dialog.getByLabel("Napomena (opcionalno)");
   await note.focus();
   await expect(note).toHaveCSS("border-top-width", "0px");
+  const focusedBackground = await note.evaluate(element => getComputedStyle(element).backgroundColor);
+  await note.blur();
+  await expect(note).toHaveCSS("background-color", focusedBackground);
+  await expect(dialog.locator(".role-request-choices")).toHaveCSS("display", "grid");
   await dialog.getByRole("checkbox").first().check();
   await page.getByRole("dialog").getByRole("button", { name: "Pošalji zahtjev", exact: true }).click();
-  await expect(page.getByText("Već imate zahtjev koji čeka odluku.", { exact: false })).toBeVisible();
+  await expect(dialog.getByRole("alert")).toContainText("Već imate zahtjev koji čeka odluku.");
 });
 
 if (admin) {
   test("administrator reviews the queue, approves with a note and the requester gets the role and a notice", async ({ page, request }) => {
-    await page.goto("/app/admin/role-requests"); await interactive(page);
+    const before = await (await request.get("/__fixtures/role-requests-state", { headers })).json();
+    const id = before.requests.find((item: { username: string }) => item.username === "requester").id;
+    await page.goto(`/app/admin/role-requests?requestId=${id}`); await interactive(page);
     const row = page.getByRole("row", { name: /requester/ });
     await expect(row).toBeVisible(); await expect(row).toContainText("Need FL for onboarding");
     expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
     await row.getByRole("button", { name: "Odobri", exact: true }).click();
     const dialog = page.getByRole("dialog");
-    await dialog.getByLabel("Napomena uz odluku (neobavezno)").fill("Odobreno");
+    await dialog.getByLabel("Napomena uz odluku (opcionalno)").fill("Odobreno");
     await dialog.getByRole("button", { name: "Odobri", exact: true }).click();
     await expect(page.getByText("Zahtjev je odobren.", { exact: true })).toBeVisible();
     const state = await (await request.get("/__fixtures/role-requests-state", { headers })).json();
     expect(state.requests.find((item: { username: string }) => item.username === "requester").status).toBe("approved");
     expect(state.granted).toEqual(["FL"]); expect(state.notices.length).toBeGreaterThan(0);
-    await page.getByRole("button", { name: "Odobreno", exact: true }).click();
-    await expect(page.getByRole("row", { name: /requester/ })).toContainText("Odobreno");
+    await expect(row).toContainText("Odobreno");
+    await expect(page.getByRole("link", { name: "Svi zahtjevi" })).toBeVisible();
   });
   test("administrator rejects a request and nothing is granted", async ({ page, request }) => {
     await page.goto("/app/admin/role-requests"); await interactive(page);

@@ -15,6 +15,11 @@ using RBBH.ConnectedParties.Helpers.Constants;
 
 namespace RBBH.ConnectedParties.BL.Services;
 
+public sealed record RoleRequestResult(RoleRequestDTO? Request, int Status, string? Code = null)
+{
+    public static RoleRequestResult Failure(int status, string code) => new(null, status, code);
+}
+
 public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContextAccessor accessor)
 {
     private ClaimsPrincipal Principal => accessor.HttpContext?.User ?? throw new MissingActorIdentityException();
@@ -32,7 +37,7 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
         return new { items = roles.Select(role => new { role.Id, role.Name, displayName = role.DisplayName ?? role.Name }).ToArray() };
     }
 
-    public Task<(RoleRequestDTO? Request, bool Created)> Submit(CreateRoleRequestDTO input, CancellationToken ct)
+    public async Task<RoleRequestResult> Submit(CreateRoleRequestDTO input, CancellationToken ct)
     {
         var subject = Subject;
         var verified = Principal.FindAll("email_verified").Any(claim => bool.TryParse(claim.Value, out var value) && value);
@@ -43,9 +48,9 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
             input.ClientRequestId == Guid.Empty || input.Purpose is not ("new" or "change") ||
             input.RoleIds.Length > 20 || input.RoleIds.Distinct().Count() != input.RoleIds.Length ||
             (input.Purpose == "new" && input.RoleIds.Length == 0) || input.Note?.Length > 1000)
-            throw new BusinessRuleException(400, "role_request.invalid");
+            return RoleRequestResult.Failure(400, "role_request.invalid");
 
-        return Locked<(RoleRequestDTO?, bool)>(async () =>
+        return await Locked(async () =>
         {
             // A confirmed subject uses its registered address. Only new identities rely on a verified token email.
             var confirmedEmail = await db.AppUsers.AsNoTracking()
@@ -55,40 +60,40 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
             var email = (confirmedEmail ?? (verified ? tokenEmail : null))?.Trim().ToLowerInvariant();
             if (email is not { Length: > 0 and <= 200 } ||
                 !MailAddress.TryCreate(email, out var address) || address.Address != email)
-                return (null, false);
+                return RoleRequestResult.Failure(403, "identity.verified_email_required");
 
-            await EnsureActiveApplicant(subject, email, ct);
+            if (await IsInactiveApplicant(subject, email, ct)) return RoleRequestResult.Failure(403, "identity.inactive");
             var prior = await Query().SingleOrDefaultAsync(row => row.RequesterSubject == subject && row.ClientRequestId == input.ClientRequestId, ct);
             if (prior is not null)
             {
                 if (prior.Purpose != input.Purpose || prior.Note != input.Note?.Trim() ||
                     !prior.RequestedRoles.Select(item => item.RoleId).Order().SequenceEqual(input.RoleIds.Order()))
-                    throw Conflict("role_request.idempotency_mismatch");
-                return (Map(prior, false), false);
+                    return Conflict("role_request.idempotency_mismatch");
+                return new(Map(prior, false), 200);
             }
             if (await db.RoleRequests.AnyAsync(row => row.RequesterSubject == subject && row.Status == "pending", ct))
-                throw Conflict("role_request.pending_exists");
+                return Conflict("role_request.pending_exists");
             var roles = await db.Roles.Where(role => input.RoleIds.Contains(role.Id) && role.IsActive && role.Name != ApplicationAccessRoles.Guest).ToListAsync(ct);
-            if (roles.Count != input.RoleIds.Length) throw InvalidRoles();
+            if (roles.Count != input.RoleIds.Length) return InvalidRoles();
             var admins = await ActiveAdmins().ToListAsync(ct);
-            if (admins.Count == 0) throw new BusinessRuleException(503, "role_request.approver_unavailable");
+            if (admins.Count == 0) return RoleRequestResult.Failure(503, "role_request.approver_unavailable");
             var row = new RoleRequest { ClientRequestId = input.ClientRequestId, RequesterSubject = subject,
                 Username = username, FirstName = first, LastName = last, Email = email, Purpose = input.Purpose, Note = input.Note?.Trim() };
             row.RequestedRoles = roles.Select(role => new RequestedRole { Role = role, RoleId = role.Id, RequestId = row.Id }).ToList();
             db.RoleRequests.Add(row);
             db.AuditLogs.Add(Audit(row, "ROLE_REQUEST", null, new { row.Purpose, Roles = roles.Select(role => role.Name) }));
             foreach (var admin in admins)
-                Notify(admin.KeycloakId, admin.Email, $"role-request:{row.Id}:submitted", "role_request.submitted", row, "/app/admin/role-requests");
+                Notify(admin.KeycloakId, admin.Email, $"role-request:{row.Id}:submitted", "role_request.submitted", row, $"/app/admin/role-requests?requestId={row.Id:D}");
             await db.SaveChangesAsync(ct);
-            return (Map(row, false), true);
+            return new(Map(row, false), 201);
         }, ct);
     }
 
-    public async Task<PagedResponse<RoleRequestDTO>> List(bool review, string? status, int page, int pageSize, CancellationToken ct)
+    public async Task<PagedResponse<RoleRequestDTO>> List(bool review, string? status, int page, int pageSize, CancellationToken ct, Guid? requestId = null)
     {
-        if (review) await EnsureAdmin(ct);
         var query = Query().AsNoTracking();
         if (!review) { var subject = Subject; query = query.Where(row => row.RequesterSubject == subject); }
+        if (requestId is { } id) query = query.Where(row => row.Id == id);
         if (!string.IsNullOrWhiteSpace(status)) query = query.Where(row => row.Status == status);
         page = Math.Max(1, page); pageSize = Math.Clamp(pageSize, 1, 200);
         var total = await query.CountAsync(ct);
@@ -97,39 +102,41 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
         return new(rows.Select(row => Map(row, review)).ToArray(), total, page, pageSize);
     }
 
-    public Task<RoleRequestDTO> Decide(Guid id, bool approve, RoleRequestDecisionDTO input, CancellationToken ct)
+    public async Task<RoleRequestResult> Decide(Guid id, bool approve, RoleRequestDecisionDTO input, CancellationToken ct)
     {
         if (input.DecisionId == Guid.Empty || input.ExpectedVersion < 1 || input.Note?.Length > 1000)
-            throw new BusinessRuleException(400, "role_request.invalid_decision");
-        return Locked(async () =>
+            return RoleRequestResult.Failure(400, "role_request.invalid_decision");
+        return await Locked(async () =>
         {
-            await EnsureAdmin(ct); // Recheck current database grants inside the user-mutation lock.
-            var row = await Query().SingleOrDefaultAsync(row => row.Id == id, ct)
-                ?? throw new BusinessRuleException(404, "request.not_found");
-            if (row.RequesterSubject == Subject) throw new BusinessRuleException(403, "role_request.self_decision_denied");
+            var subject = Subject;
+            if (!await IsAdmin(subject, ct)) return RoleRequestResult.Failure(403, "authorization.admin_required");
+            var row = await Query().SingleOrDefaultAsync(row => row.Id == id, ct);
+            if (row is null) return RoleRequestResult.Failure(404, "request.not_found");
+            if (row.RequesterSubject == subject) return RoleRequestResult.Failure(403, "role_request.self_decision_denied");
             var outcome = approve ? "approved" : "rejected";
             if (row.Status != "pending")
             {
-                if (row.DecisionId == input.DecisionId && row.Status == outcome && row.ProcessedBy == Subject && row.DecisionNote == input.Note?.Trim()) return Map(row, true);
-                throw Conflict("role_request.already_processed");
+                if (row.DecisionId == input.DecisionId && row.Status == outcome && row.ProcessedBy == Subject && row.DecisionNote == input.Note?.Trim()) return new(Map(row, true), 200);
+                return Conflict("role_request.already_processed");
             }
-            if (row.Version != input.ExpectedVersion) throw Conflict("request.concurrent_change");
+            if (row.Version != input.ExpectedVersion) return Conflict("request.concurrent_change");
             object? oldRoles = null;
             if (approve)
             {
-                await EnsureActiveApplicant(row.RequesterSubject, row.Email, ct);
-                if (row.RequestedRoles.Any(item => !item.Role.IsActive || item.Role.Name == ApplicationAccessRoles.Guest)) throw InvalidRoles();
+                if (await IsInactiveApplicant(row.RequesterSubject, row.Email, ct)) return RoleRequestResult.Failure(403, "identity.inactive");
+                if (row.RequestedRoles.Any(item => !item.Role.IsActive || item.Role.Name == ApplicationAccessRoles.Guest)) return InvalidRoles();
                 var user = await db.AppUsers.SingleOrDefaultAsync(user => user.KeycloakSubjectConfirmed && user.KeycloakId == row.RequesterSubject, ct);
+                var createUser = user is null;
                 if (user is null)
                 {
                     // Never take over a confirmed/legacy account by matching email or username.
                     var email = row.Email.ToUpperInvariant(); var name = row.Username.ToUpperInvariant();
                     if (await db.AppUsers.AnyAsync(user => user.KeycloakId == row.RequesterSubject || user.Email.Trim().ToUpper() == email || user.Username.Trim().ToUpper() == name, ct))
-                        throw Conflict("identity.reconciliation_required");
+                        return Conflict("identity.reconciliation_required");
                     user = new AppUser { KeycloakId = row.RequesterSubject, KeycloakSubjectConfirmed = true,
                         Username = row.Username, FirstName = row.FirstName,
                         LastName = row.LastName, Email = row.Email, CreatedBy = AuthenticatedActor.Username(Principal) };
-                    db.AppUsers.Add(user);
+
                 }
                 var existing = await db.UserRoles.Where(item => item.UserId == user.Id).Include(item => item.Role).ToListAsync(ct);
                 oldRoles = existing.Where(item => item.IsActive).Select(item => item.Role.Name).ToArray();
@@ -137,7 +144,8 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
                 if (row.Purpose == "new") targets.UnionWith(existing.Where(item => item.IsActive).Select(item => item.RoleId));
                 var removesAdmin = existing.Any(item => item.IsActive && item.Role.Name == ApplicationAccessRoles.Administrator && !targets.Contains(item.RoleId));
                 if (removesAdmin && await ActiveAdmins().Select(user => user.Id).Distinct().Take(2).CountAsync(ct) <= 1)
-                    throw Conflict("users.final_admin");
+                    return Conflict("users.final_admin");
+                if (createUser) db.AppUsers.Add(user);
                 var actor = AuthenticatedActor.Username(Principal);
                 var modifiedAt = DateTime.UtcNow;
                 foreach (var assignment in existing)
@@ -151,9 +159,11 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
             row.ProcessedAt = DateTime.UtcNow; row.ProcessedBy = Subject; row.Version++;
             db.AuditLogs.Add(Audit(row, approve ? "ROLE_REQUEST_APPROVED" : "ROLE_REQUEST_REJECTED", oldRoles,
                 new { row.Status, Roles = row.RequestedRoles.Select(item => item.Role.Name) }));
-            Notify(row.RequesterSubject, row.Email, $"role-request:{row.Id}:{outcome}", "role_request." + outcome, row, "/app/profile");
+            var recipientEmail = await db.AppUsers.Where(user => user.KeycloakSubjectConfirmed && user.KeycloakId == row.RequesterSubject)
+                .Select(user => user.Email).SingleOrDefaultAsync(ct) ?? row.Email;
+            Notify(row.RequesterSubject, recipientEmail, $"role-request:{row.Id}:{outcome}", "role_request." + outcome, row, $"/app/profile?requestId={row.Id:D}");
             await db.SaveChangesAsync(ct); // Request, grants, audit, inbox and outbox share one commit.
-            return Map(row, true);
+            return new(Map(row, true), 200);
         }, ct);
     }
 
@@ -161,22 +171,20 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
     private IQueryable<AppUser> ActiveAdmins() => db.AppUsers.Where(user => user.IsActive && user.KeycloakSubjectConfirmed &&
         db.UserRoles.Any(assignment => assignment.UserId == user.Id && assignment.IsActive && assignment.Role.IsActive && assignment.Role.Name == ApplicationAccessRoles.Administrator &&
             assignment.Role.RolePermissions.Any(grant => grant.Permission.IsActive && grant.Permission.Code == ApplicationPermissions.AdministrationManage)));
-    private async Task EnsureAdmin(CancellationToken ct)
-    {
-        var subject = Subject;
-        if (!await ActiveAdmins().AnyAsync(user => user.KeycloakId == subject, ct))
-            throw new BusinessRuleException(403, "authorization.admin_required");
-    }
-    private async Task EnsureActiveApplicant(string subject, string email, CancellationToken ct)
+    public Task<bool> CanReview(CancellationToken ct) => IsAdmin(Subject, ct);
+    private Task<bool> IsAdmin(string subject, CancellationToken ct) =>
+        ActiveAdmins().AnyAsync(user => user.KeycloakId == subject, ct);
+
+    private Task<bool> IsInactiveApplicant(string subject, string email, CancellationToken ct)
     {
         var normalized = email.ToUpperInvariant();
-        if (await db.AppUsers.AnyAsync(user => !user.IsActive && (user.KeycloakId == subject || user.Email.Trim().ToUpper() == normalized), ct))
-            throw new BusinessRuleException(403, "identity.inactive");
+        return db.AppUsers.AnyAsync(user => !user.IsActive && (user.KeycloakId == subject || user.Email.Trim().ToUpper() == normalized), ct);
     }
-    private Task<T> Locked<T>(Func<Task<T>> mutation, CancellationToken ct) => UsersMutationBoundary.ExecuteAsync(db, mutation,
-        () => throw Conflict("request.busy"), ct);
-    private static BusinessRuleException Conflict(string code) => new(409, code);
-    private static BusinessRuleException InvalidRoles() => new(400, "role_request.invalid_roles");
+
+    private Task<RoleRequestResult> Locked(Func<Task<RoleRequestResult>> mutation, CancellationToken ct) =>
+        UsersMutationBoundary.ExecuteAsync(db, mutation, () => Conflict("request.busy"), ct);
+    private static RoleRequestResult Conflict(string code) => RoleRequestResult.Failure(409, code);
+    private static RoleRequestResult InvalidRoles() => RoleRequestResult.Failure(400, "role_request.invalid_roles");
     private static RoleRequestDTO Map(RoleRequest row, bool review) => new(row.Id, row.Purpose, row.Status,
         row.RequestedRoles.Select(item => item.RoleId).Order().ToArray(), row.RequestedRoles.Select(item => item.Role.Name).Order().ToArray(),
         row.Note, row.CreatedAt, row.ProcessedAt, row.ProcessedBy, row.DecisionNote, row.Version,

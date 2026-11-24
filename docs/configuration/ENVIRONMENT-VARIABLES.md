@@ -21,7 +21,7 @@ for local identity credentials. See root README for seeded demo versus real app 
 | `KeycloakSettings__Audience` | Required API access-token audience in UAT/PROD and every environment except Development. Configured values are validated in Development too. Only unconfigured Development permits the documented local exception. |
 | `KeycloakSettings__AdminClientId`, `KeycloakSettings__AdminClientSecret` | Read-only exact identity lookup service account; AdminClientId is selected independently from the OIDC client (ClientId is the compatibility fallback). Never grant realm-role writes. |
 | `Email__From`, `Email__SendEmailWithHtmlBodyUrl` | Approved sender and full HTML mail endpoint. Empty values select demo delivery in Development/Testing. |
-| `Application__PublicUrl` | Optional public web URL for links in notification emails. |
+| `Application__PublicUrl` | Frontend URL for email buttons and the Raiffeisen logo. Use the user-accessible HTTPS address in UAT/Production. Development defaults to https://localhost:5002. |
 | `ReverseProxy__KnownProxies__0`, `ReverseProxy__KnownNetworks__0`, `ReverseProxy__ForwardLimit` | Actual trusted peers/CIDRs and positive hop limit. Production rejects missing trust or unrestricted networks. |
 | `AllowedHosts` | Explicit application hosts; Production rejects wildcard trust. Probe Host must match. |
 | `Cors__AllowedOrigins__0` | Approved browser origins only; no automatic broadening. |

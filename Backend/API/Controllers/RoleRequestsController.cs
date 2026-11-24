@@ -13,26 +13,33 @@ public sealed class RoleRequestsController(RoleRequestService service) : Control
     public Task<object> Options(CancellationToken ct) => service.Options(ct);
 
     [HttpPost]
-    public async Task<IActionResult> Submit(CreateRoleRequestDTO input, CancellationToken ct)
-    {
-        var (request, created) = await service.Submit(input, ct);
-        if (request is null)
-            return Problem(statusCode: StatusCodes.Status403Forbidden,
-                extensions: new Dictionary<string, object?> { ["code"] = "identity.verified_email_required" });
-        return created ? Created("/api/role-requests/mine", request) : Ok(request);
-    }
+    public async Task<IActionResult> Submit(CreateRoleRequestDTO input, CancellationToken ct) =>
+        MutationResponse(await service.Submit(input, ct));
 
     [HttpGet("mine")]
     public Task<PagedResponse<RoleRequestDTO>> Mine([FromQuery] string? status = null, [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20, CancellationToken ct = default) => service.List(false, status, page, pageSize, ct);
+        [FromQuery] int pageSize = 20, [FromQuery] Guid? requestId = null, CancellationToken ct = default) =>
+        service.List(false, status, page, pageSize, ct, requestId);
 
     [HttpGet, Authorize(Policy = ApplicationPolicies.AdminOnly)]
-    public Task<PagedResponse<RoleRequestDTO>> Review([FromQuery] string? status = null, [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20, CancellationToken ct = default) => service.List(true, status, page, pageSize, ct);
+    public async Task<IActionResult> Review([FromQuery] string? status = null, [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20, [FromQuery] Guid? requestId = null, CancellationToken ct = default) =>
+        await service.CanReview(ct) ? Ok(await service.List(true, status, page, pageSize, ct, requestId)) : Forbid();
 
     [HttpPost("{id:guid}/approve"), Authorize(Policy = ApplicationPolicies.AdminOnly)]
-    public Task<RoleRequestDTO> Approve(Guid id, RoleRequestDecisionDTO input, CancellationToken ct) => service.Decide(id, true, input, ct);
+    public async Task<IActionResult> Approve(Guid id, RoleRequestDecisionDTO input, CancellationToken ct) =>
+        MutationResponse(await service.Decide(id, true, input, ct));
 
     [HttpPost("{id:guid}/reject"), Authorize(Policy = ApplicationPolicies.AdminOnly)]
-    public Task<RoleRequestDTO> Reject(Guid id, RoleRequestDecisionDTO input, CancellationToken ct) => service.Decide(id, false, input, ct);
+    public async Task<IActionResult> Reject(Guid id, RoleRequestDecisionDTO input, CancellationToken ct) =>
+        MutationResponse(await service.Decide(id, false, input, ct));
+
+    private IActionResult MutationResponse(RoleRequestResult result)
+    {
+        if (result.Code is { } code)
+            return Problem(statusCode: result.Status, extensions: new Dictionary<string, object?> { ["code"] = code });
+        return result.Status == StatusCodes.Status201Created
+            ? Created("/api/role-requests/mine", result.Request)
+            : Ok(result.Request);
+    }
 }

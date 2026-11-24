@@ -41,10 +41,12 @@ else if (_user?.Identity?.IsAuthenticated == true)
         @if (_profile is not null)
         {
             <div class="profile-actions"><RoleRequestButton Purpose="change" Variant="RbiButtonVariant.Primary" Submitted="LoadRequestsAsync" /></div>
+            @if (RequestId.HasValue && _requests.Count == 0) { <RbiAlert Title="@T["roles.error-not-found"]" /> }
             @if (_requests.Count > 0)
             {
                 <section class="profile-requests" aria-labelledby="profile-requests-title">
                     <h2 id="profile-requests-title" class="profile-card__title">@T["roles.mine"]</h2>
+                    @if (RequestId.HasValue) { <a href="/app/profile">@T["roles.back-to-requests"]</a> }
                     <ul class="profile-requests__list">@foreach (var request in _requests) { <li @key="request.Id"><strong>@T["roles.purpose." + request.Purpose]</strong>: @RoleNames(request.RoleNames) <span class="profile-role">@T["roles.status." + request.Status]</span>@if (request.DecisionNote is { Length: > 0 }) { <span class="app-hint"> — @request.DecisionNote</span> }</li> }</ul>
                 </section>
             }
@@ -63,7 +65,8 @@ else if (_user?.Identity?.IsAuthenticated == true)
     private readonly CancellationTokenSource _lifetime = new();
     private readonly CancellationToken _token;
     public MyProfile() => _token = _lifetime.Token;
-    protected override Task OnInitializedAsync() => LoadAsync();
+    [SupplyParameterFromQuery] public Guid? RequestId { get; set; }
+    protected override Task OnParametersSetAsync() => LoadAsync();
     private async Task LoadAsync()
     {
         _loading = true; _error = false; _profile = null;
@@ -78,7 +81,7 @@ else if (_user?.Identity?.IsAuthenticated == true)
     }
     private async Task LoadRequestsAsync()
     {
-        try { _requests = (await RoleRequests.MineAsync(1, "", _token)).Items; }
+        try { _requests = (await RoleRequests.MineAsync(1, "", _token, RequestId)).Items; }
         catch (RegistryApiException) { _requests = []; }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
     }

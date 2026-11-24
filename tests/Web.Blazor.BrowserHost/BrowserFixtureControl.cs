@@ -137,7 +137,7 @@ internal static partial class BrowserHostProgram
                     {
                         await using var scope = backend.Services.CreateAsyncScope();
                         var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
-                        var requests = await db.RoleRequests.AsNoTracking().OrderBy(item => item.CreatedAt).Select(item => new { item.Username, item.Status, item.Purpose, roles = item.RequestedRoles.Select(r => r.Role.Name).ToArray() }).ToArrayAsync();
+                        var requests = await db.RoleRequests.AsNoTracking().OrderBy(item => item.CreatedAt).Select(item => new { item.Id, item.Username, item.Status, item.Purpose, roles = item.RequestedRoles.Select(r => r.Role.Name).ToArray() }).ToArrayAsync();
                         var requester = await db.AppUsers.AsNoTracking().Where(item => item.KeycloakId == "requester-subject").Select(item => item.Id).SingleOrDefaultAsync();
                         var granted = await db.UserRoles.AsNoTracking().Where(item => item.IsActive && item.UserId == requester).Select(item => item.Role.Name).ToArrayAsync();
                         var notices = await db.Notifications.AsNoTracking().Where(item => item.RecipientSubject == "requester-subject").Select(item => item.TitleKey).ToArrayAsync();

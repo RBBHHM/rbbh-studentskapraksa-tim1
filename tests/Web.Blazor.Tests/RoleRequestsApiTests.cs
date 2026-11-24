@@ -28,7 +28,7 @@ public sealed class RoleRequestsApiTests
         await using var provider = Client((request, text) => { body = text; path = request.RequestUri!.AbsolutePath; return Json(HttpStatusCode.Created, RequestJson); });
         var clientId = Guid.NewGuid(); var role = Guid.NewGuid();
         var created = await provider.GetRequiredService<IRoleRequestsApi>().SubmitAsync(clientId, "change", [role], "napomena");
-        Assert.Equal("/api/role-requests", path); Assert.Equal("pending", created.Status);
+        Assert.Equal("/api/role-requests", path); Assert.Equal("pending", created.Request!.Status);
         using var document = JsonDocument.Parse(body!);
         Assert.Equal(clientId, document.RootElement.GetProperty("clientRequestId").GetGuid()); Assert.Equal("change", document.RootElement.GetProperty("purpose").GetString());
         Assert.Equal(role, document.RootElement.GetProperty("roleIds")[0].GetGuid()); Assert.Equal("napomena", document.RootElement.GetProperty("note").GetString());
@@ -58,13 +58,21 @@ public sealed class RoleRequestsApiTests
         Assert.Equal(["/api/role-requests/mine?page=1&pageSize=20&status=", "/api/role-requests?page=2&pageSize=20&status=pending"], paths);
     }
     [Theory]
-    [InlineData(403, "errors.forbidden")]
-    [InlineData(409, "errors.conflict")]
-    public async Task ConflictsAndDenialsKeepOwnedCopy(int status, string key)
+    [InlineData(403, null, "errors.forbidden")]
+    [InlineData(409, null, "errors.conflict")]
+    [InlineData(409, "role_request.pending_exists", "roles.pending-exists")]
+    [InlineData(403, "role_request.self_decision_denied", "roles.error-self")]
+    public async Task ConflictsAndDenialsKeepOwnedCopy(int status, string? code, string key)
     {
-        await using var provider = Client((_, _) => Json((HttpStatusCode)status, "{\"detail\":\"private-marker\"}"));
-        var error = await Assert.ThrowsAsync<RegistryApiException>(() => provider.GetRequiredService<IRoleRequestsApi>().SubmitAsync(Guid.NewGuid(), "new", [Guid.NewGuid()], null));
-        Assert.Equal(key, error.MessageKey); Assert.DoesNotContain("private-marker", error.ToString());
+        await using var provider = Client((_, _) => Json((HttpStatusCode)status, JsonSerializer.Serialize(new { code, detail = "private-marker" })));
+        var api = provider.GetRequiredService<IRoleRequestsApi>();
+        var request = JsonSerializer.Deserialize<RoleRequest>(RequestJson, new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+        var submit = await api.SubmitAsync(Guid.NewGuid(), "new", [Guid.NewGuid()], null);
+        var decision = await api.DecideAsync(request, true, null);
+        Assert.Null(submit.Request);
+        Assert.Null(decision.Request);
+        Assert.Equal(key, submit.ErrorKey);
+        Assert.Equal(key, decision.ErrorKey);
     }
     private sealed class Handler(Func<HttpRequestMessage, string?, HttpResponseMessage> respond) : HttpMessageHandler
     {
