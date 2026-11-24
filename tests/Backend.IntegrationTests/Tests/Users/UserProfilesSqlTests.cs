@@ -109,6 +109,32 @@ public sealed class UserProfilesSqlTests : AuthenticatedApiFixture
     }
 
     [SqlServerFact]
+    public async Task UpgradeRepairsMissingIndexesAndRejectsUsernameAndEmailDuplicatesIndependently()
+    {
+        await InDatabase(async db =>
+        {
+            var migrator = db.GetService<IMigrator>();
+            await migrator.MigrateAsync("20261121080233_SplitCodeListLocalization");
+            await db.Database.ExecuteSqlRawAsync("""
+                DROP INDEX IX_AppUsers_Username ON dbo.AppUsers;
+                DROP INDEX IX_AppUsers_Email ON dbo.AppUsers;
+                """);
+            await migrator.MigrateAsync();
+
+            foreach (var (username, email) in new[] { ("CREATOR", "unique@example.test"), ("unique", "CREATOR@example.test") })
+            {
+                var exception = await Assert.ThrowsAsync<SqlException>(() => db.Database.ExecuteSqlInterpolatedAsync($"""
+                    INSERT dbo.AppUsers (Id, KeycloakId, KeycloakSubjectConfirmed, Username, FirstName, LastName, Email, IsActive, CreatedAt, CreatedBy)
+                    VALUES ({Guid.NewGuid()}, {Guid.NewGuid().ToString()}, {false}, {username}, {"Fixture"}, {"User"}, {email}, {true}, {DateTime.UtcNow}, {"fixture"})
+                    """));
+                Assert.Equal(2601, exception.Number);
+            }
+
+            Assert.Equal(3, await db.AppUsers.CountAsync());
+        });
+    }
+
+    [SqlServerFact]
     public async Task IdentityConstraintPreflightRejectsDuplicatesWithoutDeletingOrReassigningData()
     {
         var connection = new SqlConnectionStringBuilder(Environment.GetEnvironmentVariable(SqlServerFactAttribute.Variable))

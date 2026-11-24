@@ -21,7 +21,6 @@ public abstract class RoleRequestFixture : AuthenticatedApiFixture
         services.AddScoped<RoleRequestService>(); services.AddScoped<NotificationDispatcher>();
         services.AddSingleton<RuntimeLocalizationCache>(); services.AddOptions<RuntimeLocalizationOptions>();
         services.AddScoped<RuntimeLocalizationCatalog>();
-        services.Configure<EmailSettings>(options => options.AppBaseUrl = "https://app.example.test");
         _mail.Setup(mail => mail.SendApplicationNotificationAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         services.AddSingleton(_mail.Object);
     }
@@ -70,7 +69,16 @@ public sealed class RoleRequestWorkflowHttpTests : RoleRequestFixture
     [Fact]
     public async Task ChangeRequestCanRemoveExplicitRolesWithoutRemovingGuestBaseline()
     {
-        using var applicant = NewClient("admin2"); var row = await Submit(applicant, purpose: "change", roles: []);
+        using var applicant = NewClient("admin2");
+        applicant.DefaultRequestHeaders.Add("X-Email-Verified", "false");
+        var row = await Submit(applicant, purpose: "change", roles: []);
+        Assert.Equal("pending", row.GetProperty("status").GetString());
+        await InDatabase(async db =>
+        {
+            var user = await db.AppUsers.SingleAsync(user => user.KeycloakId == "admin2");
+            Assert.True(await db.UserRoles.AnyAsync(item => item.UserId == user.Id && item.IsActive));
+            Assert.Equal(user.Email, (await db.RoleRequests.SingleAsync()).Email);
+        });
         var id = row.GetProperty("id").GetGuid();
         Assert.Equal(HttpStatusCode.OK, (await Client.PostAsJsonAsync($"/api/role-requests/{id}/approve", new { decisionId = Guid.NewGuid(), expectedVersion = 1 })).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await applicant.GetAsync("/api/role-requests")).StatusCode);

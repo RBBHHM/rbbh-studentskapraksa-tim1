@@ -20,10 +20,8 @@ for local identity credentials. See root README for seeded demo versus real app 
 | `KeycloakSettings__PublicIssuer` | Optional approved public issuer when metadata addressing differs. |
 | `KeycloakSettings__Audience` | Required API access-token audience in UAT/PROD and every environment except Development. Configured values are validated in Development too. Only unconfigured Development permits the documented local exception. |
 | `KeycloakSettings__AdminClientId`, `KeycloakSettings__AdminClientSecret` | Read-only exact identity lookup service account; AdminClientId is selected independently from the OIDC client (ClientId is the compatibility fallback). Never grant realm-role writes. |
-| `Email__Provider` | `demo` is Development/Testing only. Real delivery requires approved HTTPS HTTP API or TLS SMTP configuration. |
-| `Email__AdminEmail`, `Email__From`, `Email__AppBaseUrl` | Required active administration recipient, sender and canonical app links. Outside local/test, AppBaseUrl must be HTTPS. HrEmail is retired compatibility configuration, not a startup prerequisite. |
-| `Email__SendEmailWithHtmlBodyUrl` | Approved HTTPS mail endpoint when that provider is selected. |
-| `Email__Smtp__Host`, `Email__Smtp__Port`, `Email__Smtp__EnableSsl`, `Email__Smtp__Username`, `Email__Smtp__Password`, `Email__Smtp__FromAddress`, `Email__Smtp__FromName` | SMTP provider configuration. |
+| `Email__From`, `Email__SendEmailWithHtmlBodyUrl` | Approved sender and full HTML mail endpoint. Empty values select demo delivery in Development/Testing. |
+| `Application__PublicUrl` | Optional public web URL for links in notification emails. |
 | `ReverseProxy__KnownProxies__0`, `ReverseProxy__KnownNetworks__0`, `ReverseProxy__ForwardLimit` | Actual trusted peers/CIDRs and positive hop limit. Production rejects missing trust or unrestricted networks. |
 | `AllowedHosts` | Explicit application hosts; Production rejects wildcard trust. Probe Host must match. |
 | `Cors__AllowedOrigins__0` | Approved browser origins only; no automatic broadening. |

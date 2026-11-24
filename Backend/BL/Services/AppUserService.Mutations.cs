@@ -19,7 +19,7 @@ public partial class AppUserService
         if (row is null) return new(UserMutationStatus.NotFound);
         var username = dto.Username.Trim(); var email = dto.Email.Trim().ToLowerInvariant();
         var normalizedName = username.ToUpperInvariant(); var normalizedEmail = email.ToUpperInvariant();
-        if (await _db.AppUsers.AnyAsync(user => user.Id != row.Id &&
+        if (await _db.AppUsers.IgnoreQueryFilters().AnyAsync(user => user.Id != row.Id &&
             (user.Username.Trim().ToUpper() == normalizedName || user.Email.Trim().ToUpper() == normalizedEmail), cancellationToken))
             return new(UserMutationStatus.DuplicateIdentity);
         var before = JsonSerializer.Serialize(new { row.Username, row.FirstName, row.LastName, row.Email });

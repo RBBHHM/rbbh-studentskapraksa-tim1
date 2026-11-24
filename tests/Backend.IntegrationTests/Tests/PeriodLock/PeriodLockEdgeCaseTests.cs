@@ -1,3 +1,7 @@
+using Microsoft.EntityFrameworkCore;
+using RBBH.ConnectedParties.DL.Persistence;
+using RBBH.ConnectedParties.DL.Entities.Users;
+using RBBH.ConnectedParties.Helpers.Constants;
 using FluentAssertions;
 using RBBH.ConnectedParties.API.Controllers;
 using RBBH.ConnectedParties.BL.ServiceInterfaces;
@@ -5,9 +9,6 @@ using RBBH.ConnectedParties.BL.Services;
 using RBBH.ConnectedParties.DL.Entities.PeriodLock;
 using IntegrationTests.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using Moq;
 
 namespace IntegrationTests.Tests.PeriodLock
 {
@@ -26,38 +27,29 @@ namespace IntegrationTests.Tests.PeriodLock
 
         public PeriodLockEdgeCaseTests(DatabaseFixture fixture) => _fixture = fixture;
 
-        private PeriodLockController NewAdminController()
+        private PeriodLockController NewAdminController() => NewController(AdminUser);
+        private PeriodLockController NewUserController() => NewController(RegularUser);
+
+        private PeriodLockController NewController(string username)
         {
             var ctx = _fixture.CreateContext();
-            var auditService = new AuditService(ctx);
-            var emailService = new Mock<IEmailService>();
-            var configuration = new Mock<IConfiguration>();
-            configuration.Setup(item => item["Email:AdminEmail"]).Returns("admin@example.test");
-            var appUserService = new Mock<IAppUserService>();
-            var logger = new Mock<ILogger<PeriodLockController>>();
-            return new PeriodLockController(
-                new PeriodLockRepository(ctx),
-                new UnlockRequestRepository(ctx),
-                new PeriodLockService(),
-                new PeriodWorkflow(ctx, configuration.Object)
-            ).WithHttpContext(AdminUser);
+            return new PeriodLockController(new PeriodLockRepository(ctx), new UnlockRequestRepository(ctx),
+                new PeriodLockService(), new PeriodWorkflow(ctx)).WithHttpContext(username);
         }
 
-        private PeriodLockController NewUserController()
+        private async Task ResetWithReviewer()
         {
-            var ctx = _fixture.CreateContext();
-            var auditService = new AuditService(ctx);
-            var emailService = new Mock<IEmailService>();
-            var configuration = new Mock<IConfiguration>();
-            configuration.Setup(item => item["Email:AdminEmail"]).Returns("admin@example.test");
-            var appUserService = new Mock<IAppUserService>();
-            var logger = new Mock<ILogger<PeriodLockController>>();
-            return new PeriodLockController(
-                new PeriodLockRepository(ctx),
-                new UnlockRequestRepository(ctx),
-                new PeriodLockService(),
-                new PeriodWorkflow(ctx, configuration.Object)
-            ).WithHttpContext(RegularUser);
+            await _fixture.ResetAsync();
+            await using var db = _fixture.CreateContext();
+            await DevelopmentDataSeeder.EnsureApplicationRolesAsync(db);
+            var reviewer = new AppUser { Username = AdminUser, Email = "admin@example.test", KeycloakId = AdminUser, KeycloakSubjectConfirmed = true };
+            db.AppUsers.Add(reviewer);
+            db.UserRoles.Add(new()
+            {
+                UserId = reviewer.Id,
+                RoleId = (await db.Roles.SingleAsync(role => role.Name == ApplicationAccessRoles.Administrator)).Id
+            });
+            await db.SaveChangesAsync();
         }
 
         // ─────────────────────────────────────────────────────────────
@@ -153,7 +145,7 @@ namespace IntegrationTests.Tests.PeriodLock
         public async Task RequestUnlock_WithValidReason_Returns200()
         {
             Skip.IfNot(_fixture.IsAvailable, _fixture.SkipReason);
-            await _fixture.ResetAsync();
+            await ResetWithReviewer();
 
             // Validan razlog — između 10 i 500 karaktera
             var result = await NewUserController().RequestUnlock(new RequestUnlockDto
@@ -173,7 +165,7 @@ namespace IntegrationTests.Tests.PeriodLock
         public async Task RequestUnlock_SameUserSendsMultipleRequests_BothAreAccepted()
         {
             Skip.IfNot(_fixture.IsAvailable, _fixture.SkipReason);
-            await _fixture.ResetAsync();
+            await ResetWithReviewer();
 
             var dto = new RequestUnlockDto
             {
@@ -192,7 +184,7 @@ namespace IntegrationTests.Tests.PeriodLock
         public async Task RequestUnlock_AfterTwoRequests_AdminSeesAtLeastTwoPendingEntries()
         {
             Skip.IfNot(_fixture.IsAvailable, _fixture.SkipReason);
-            await _fixture.ResetAsync();
+            await ResetWithReviewer();
 
             var dto = new RequestUnlockDto
             {

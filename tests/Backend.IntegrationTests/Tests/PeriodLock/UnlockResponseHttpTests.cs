@@ -40,7 +40,6 @@ public sealed class UnlockResponseHttpTests : IAsyncLifetime
             ApplicationName = typeof(PeriodLockController).Assembly.FullName
         });
         builder.WebHost.UseTestServer(); builder.Logging.ClearProviders();
-        builder.Configuration["Email:AdminEmail"] = "admin@example.test";
         builder.Services.AddControllers().AddApplicationPart(typeof(PeriodLockController).Assembly);
         var database = "unlock-response-storage-discovery-" + Guid.NewGuid();
         builder.Services.AddDbContext<ConnectedPartiesDbContext>(options => options.UseInMemoryDatabase(database));
@@ -58,9 +57,6 @@ public sealed class UnlockResponseHttpTests : IAsyncLifetime
         users.Setup(service => service.GetUsersAsync(1, 500, null, null)).ReturnsAsync(
             RBBH.ConnectedParties.Exceptions.Validations.Result<RBBH.ConnectedParties.DL.DTO.Users.GetUsersResponseDTO>.Success(new() { Users = [] }));
         builder.Services.AddSingleton(users.Object);
-        _mail.Setup(service => service.SendUserResponseAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>()))
-            .Returns(Task.CompletedTask);
-        _mail.Setup(service => service.SendNeedsInfoNotificationAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<Guid>())).Returns(Task.CompletedTask);
         builder.Services.AddSingleton(_mail.Object); // No SMTP transport exists.
         _app = builder.Build(); _app.UseAuthentication(); _app.UseAuthorization(); _app.MapControllers();
         await _app.StartAsync(); _client = _app.GetTestClient();
@@ -120,8 +116,8 @@ public sealed class UnlockResponseHttpTests : IAsyncLifetime
         Assert.Equal("UNLOCK_REQUEST", audit.Action); Assert.Equal(_originalId.ToString(), audit.RecordId);
         Assert.Equal("period-fixture", audit.Username); Assert.Contains("user_response", audit.NewValues);
         var delivery = Assert.Single(await db.NotificationDeliveries.Include(row => row.Notification).ToListAsync());
-        Assert.Null(delivery.DeliveredAt); Assert.Equal("admin@example.test", delivery.Notification.RecipientEmail);
-        Assert.Equal("", delivery.Notification.RecipientSubject); // Configured mailbox is not an invented inbox identity.
+        Assert.Null(delivery.DeliveredAt); Assert.Equal("period-fixture@example.test", delivery.Notification.RecipientEmail);
+        Assert.Equal("period-fixture-subject", delivery.Notification.RecipientSubject);
         using var parameters = System.Text.Json.JsonDocument.Parse(delivery.Notification.ParametersJson);
         Assert.Equal(message, parameters.RootElement.GetProperty("message").GetString());
         Assert.Equal("period-fixture", parameters.RootElement.GetProperty("requester").GetString());
@@ -175,14 +171,6 @@ public sealed class UnlockResponseHttpTests : IAsyncLifetime
     {
         _client.DefaultRequestHeaders.Add("X-Test-MissingEmail", "true");
         Assert.Equal(HttpStatusCode.Unauthorized, (await _client.PostAsJsonAsync($"/api/period-lock/unlock-requests/{_originalId}/respond", new { message = "Complete clarification" })).StatusCode);
-        await AssertNoMutationAsync();
-    }
-
-    [Fact]
-    public async Task MissingConfiguredRecipientFailsBeforePersistenceOrNotification()
-    {
-        _app.Configuration["Email:AdminEmail"] = null;
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, (await _client.PostAsJsonAsync($"/api/period-lock/unlock-requests/{_originalId}/respond", new { message = "Complete clarification" })).StatusCode);
         await AssertNoMutationAsync();
     }
 

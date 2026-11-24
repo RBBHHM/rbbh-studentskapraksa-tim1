@@ -23,14 +23,14 @@ public sealed class RoleRequestsApi(IRbiApiTransport transport) : IRoleRequestsA
     {
         var result = await transport.GetAsync<RequestableRoles>("api/role-requests/options", token);
         token.ThrowIfCancellationRequested();
-        if (!result.IsSuccess || result.Value.Items is null) throw new RegistryApiException(result.Error?.StatusCode);
+        if (!result.IsSuccess || result.Value.Items is null) throw new RegistryApiException(result.Error?.StatusCode, result.Error?.Code);
         return result.Value;
     }
     public async Task<RoleRequest> SubmitAsync(Guid clientRequestId, string purpose, IReadOnlyList<Guid> roleIds, string? note, CancellationToken token = default)
     {
         var result = await transport.SendAsync<RoleRequest>(HttpMethod.Post, "api/role-requests", new { clientRequestId, purpose, roleIds, note }, token);
         token.ThrowIfCancellationRequested();
-        if (!result.IsSuccess) throw new RegistryApiException(result.Error?.StatusCode);
+        if (!result.IsSuccess) throw new RegistryApiException(result.Error?.StatusCode, result.Error?.Code);
         return result.Value;
     }
     public Task<RoleRequestsPage> MineAsync(int page = 1, string status = "", CancellationToken token = default) => ListAsync("api/role-requests/mine", page, status, token);
@@ -40,7 +40,7 @@ public sealed class RoleRequestsApi(IRbiApiTransport transport) : IRoleRequestsA
         ArgumentOutOfRangeException.ThrowIfLessThan(page, 1);
         var result = await transport.GetAsync<RoleRequestsPage>($"{path}?page={page}&pageSize=20&status={Uri.EscapeDataString(status)}", token);
         token.ThrowIfCancellationRequested();
-        if (!result.IsSuccess || result.Value.Items is null) throw new RegistryApiException(result.Error?.StatusCode);
+        if (!result.IsSuccess || result.Value.Items is null) throw new RegistryApiException(result.Error?.StatusCode, result.Error?.Code);
         return result.Value;
     }
     /// <summary>The decision id is derived from the request and version, so a repeated click replays the same final decision rather than granting twice.</summary>
@@ -49,7 +49,7 @@ public sealed class RoleRequestsApi(IRbiApiTransport transport) : IRoleRequestsA
         var result = await transport.SendAsync<RoleRequest>(HttpMethod.Post, $"api/role-requests/{request.Id}/{(approve ? "approve" : "reject")}",
             new { decisionId = DecisionId(request, approve), expectedVersion = request.Version, note }, token);
         token.ThrowIfCancellationRequested();
-        if (!result.IsSuccess) throw new RegistryApiException(result.Error?.StatusCode);
+        if (!result.IsSuccess) throw new RegistryApiException(result.Error?.StatusCode, result.Error?.Code);
         return result.Value;
     }
     private static Guid DecisionId(RoleRequest request, bool approve) =>

@@ -217,7 +217,7 @@ internal static partial class BrowserHostProgram
                             database.FailPeriodAudit = database.PeriodUnavailable = false;
                             database.DuplicateBarrier?.TrySetResult(); database.DuplicateBarrier = null;
                             database.ReportGenerationAttempts = 0;
-                            database.MailStore = new(); backend.Configuration["Email:Provider"] = "demo";
+                            database.MailStore = new();
                             database.AuditRequests = 0; database.ForgeAdmin = false;
                             database.MutationAttempts = 0;
                             await SeedAsync(backend, user); break;

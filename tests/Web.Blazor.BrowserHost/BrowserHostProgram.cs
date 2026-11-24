@@ -61,7 +61,6 @@ internal static partial class BrowserHostProgram
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Testing", ApplicationName = typeof(RelatedPersonController).Assembly.FullName });
         builder.WebHost.UseTestServer();
-        builder.Configuration["Email:AdminEmail"] = "admin@fixture.test";
         builder.Logging.ClearProviders();
         builder.Services.AddControllers().AddApplicationPart(typeof(RelatedPersonController).Assembly);
         builder.Services.AddExceptionHandlingExtension(builder.Environment);
@@ -105,8 +104,8 @@ internal static partial class BrowserHostProgram
         builder.Configuration["KeycloakSettings:Enabled"] = "false";
         builder.Services.AddHttpClient<KeycloakAdminService>().ConfigurePrimaryHttpMessageHandler(() => new NoIdentityNetwork());
         builder.Services.AddScoped(_ => database.MailStore);
-        builder.Configuration["Email:Provider"] = "demo";
-        builder.Services.Configure<EmailSettings>(_ => { });
+        builder.Configuration["Email:From"] = "";
+        builder.Configuration["Email:SendEmailWithHtmlBodyUrl"] = "";
         var app = builder.Build();
         app.UseExceptionHandler();
         // Fault injection only: the backend now commits business state, audit and notices atomically, so the

@@ -71,18 +71,15 @@ namespace RBBH.ConnectedParties.IoC
             services.AddScoped<ICapitalService, CapitalService>();
             // ── Email ─────────────────────────────────────────────────────────
             services.AddOptions<EmailSettings>().Bind(configuration.GetSection("Email"))
-                .Validate(settings => settings.IsConfiguredFor(env),
-                    "Email transport, secure application URL, sender and administration recipient must be explicitly configured; demo delivery is local/test only.")
+                .Validate(settings => settings.IsConfiguredFor(env), "Configure Email:From and Email:SendEmailWithHtmlBodyUrl.")
                 .ValidateOnStart();
             services.AddSingleton<EmailLogStore>();
-
-            var emailProvider = configuration["Email:Provider"] ?? "demo";
-            if (emailProvider.Equals("httpapi", StringComparison.OrdinalIgnoreCase))
-                services.AddScoped<IEmailService, HttpApiEmailService>();
-            else if (emailProvider.Equals("smtp", StringComparison.OrdinalIgnoreCase))
-                services.AddScoped<IEmailService, SmtpEmailService>();
-            else
-                services.AddScoped<IEmailService, MockEmailService>();
+            services.AddScoped<MockEmailService>();
+            services.AddHttpClient<HttpApiEmailService>(client => client.Timeout = TimeSpan.FromSeconds(15))
+                .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+            services.AddScoped<IEmailService>(provider => provider.GetRequiredService<IOptions<EmailSettings>>().Value.IsEmpty
+                ? provider.GetRequiredService<MockEmailService>()
+                : provider.GetRequiredService<HttpApiEmailService>());
 
             #endregion
 

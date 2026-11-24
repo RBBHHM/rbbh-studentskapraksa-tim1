@@ -40,7 +40,7 @@ public abstract class AuthenticatedApiFixture : IAsyncLifetime
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         { EnvironmentName = "Testing", ApplicationName = typeof(VerificationController).Assembly.FullName });
         builder.WebHost.UseTestServer(); builder.Logging.ClearProviders();
-        builder.Configuration["Email:AdminEmail"] = "admin@example.test";
+        builder.Configuration["Application:PublicUrl"] = "https://app.example.test";
         builder.Services.AddControllers().AddApplicationPart(typeof(VerificationController).Assembly);
         builder.Services.AddExceptionHandlingExtension(builder.Environment);
         builder.Services.AddHttpContextAccessor();

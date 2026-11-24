@@ -16,6 +16,9 @@ public sealed class RoleRequestsController(RoleRequestService service) : Control
     public async Task<IActionResult> Submit(CreateRoleRequestDTO input, CancellationToken ct)
     {
         var (request, created) = await service.Submit(input, ct);
+        if (request is null)
+            return Problem(statusCode: StatusCodes.Status403Forbidden,
+                extensions: new Dictionary<string, object?> { ["code"] = "identity.verified_email_required" });
         return created ? Created("/api/role-requests/mine", request) : Ok(request);
     }
 

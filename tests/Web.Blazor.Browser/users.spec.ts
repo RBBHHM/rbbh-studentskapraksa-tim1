@@ -114,6 +114,7 @@ test("deactivate/reactivate and permanent delete require confirmation and preser
   await expect(page.getByRole("alertdialog")).toContainText("trajno uklonjeni");
   await page.getByRole("alertdialog").getByRole("button", { name: "Odustani", exact: true }).click(); await expect(other).toBeVisible();
   await other.getByRole("button", { name: "Obriši korisnika", exact: true }).click(); await page.getByRole("alertdialog").getByRole("button", { name: "Obriši", exact: true }).click(); await expect(other).toHaveCount(0);
+  await expect(page.getByRole("status").filter({ hasText: "Korisnik je obrisan." })).toBeVisible();
   const state = await (await request.get("/__fixtures/users-state", { headers })).json(); expect(state.audit.map((entry: { action: string }) => entry.action)).toEqual(["DEACTIVATE", "REACTIVATE", "DELETE"]);
 });
 test("unconfirmed Keycloak identity is explicitly flagged, not silently displayed as verified", async ({ page, request }) => {

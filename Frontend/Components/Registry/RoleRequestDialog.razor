@@ -13,16 +13,18 @@
             {
                 <form class="registry-period-form" @onsubmit="SubmitAsync" @onsubmit:preventDefault novalidate>
                     <p class="registry-period-dialog__help">@T[Purpose == "change" ? "roles.change-help" : "roles.request-help"]</p>
-                    <fieldset class="registry-user-fieldset">
-                        <legend class="app-required-legend">@T["roles.choose"]</legend>
+                    <fieldset class="registry-user-fieldset role-request-fields" disabled="@_busy">
+                        <legend class="@(Purpose == "new" ? "app-required-legend" : "app-label")">@T["roles.choose"]</legend>
                         <p>@T["users.multiple"]</p>
-                        @foreach (var choice in _choices)
-                        {
-                            <RbiCheckbox @key="choice.Id" @bind-Value="choice.Selected">@choice.Label</RbiCheckbox>
-                        }
+                        <div class="role-request-choices">
+                            @foreach (var choice in _choices)
+                            {
+                                <RbiCheckbox @key="choice.Id" @bind-Value="choice.Selected">@choice.Label</RbiCheckbox>
+                            }
+                        </div>
                     </fieldset>
                     <label class="app-label" for="role-request-note">@T["roles.note"]</label>
-                    <textarea id="role-request-note" class="rbi-textarea" rows="4" maxlength="1000" @bind="_note" @bind:event="oninput" placeholder="@T["roles.note-placeholder"]"></textarea>
+                    <textarea id="role-request-note" class="rbi-textarea role-request-note" rows="3" maxlength="1000" @bind="_note" @bind:event="oninput" placeholder="@T["roles.note-placeholder"]"></textarea>
                     @if (_error is not null) { <p class="app-error" role="alert">@T[_error]</p> }
                     @if (_pending) { <p role="status" class="app-hint">@T["roles.pending-exists"]</p> }
                     <div class="registry-toolbar">
@@ -50,7 +52,7 @@
     private bool CanSubmit => Purpose == "change" || _choices.Any(choice => choice.Selected);
     protected override async Task OnParametersSetAsync()
     {
-        if (Open && !_wasOpen) { _wasOpen = true; _clientRequestId = Guid.NewGuid(); _note = ""; _error = null; await LoadAsync(); }
+        if (Open && !_wasOpen) { _wasOpen = true; _clientRequestId = Guid.NewGuid(); _note = ""; _error = null; _pending = false; await LoadAsync(); }
         else if (!Open) _wasOpen = false;
     }
     private async Task LoadAsync()
@@ -68,7 +70,7 @@
             }
 
             var options = await optionsTask;
-            _choices = options.Items.Select(role => new Choice { Id = role.Id, Name = role.Name, Label = role.DisplayName is { Length: > 0 } ? role.DisplayName : T.Role(role.Name), Selected = Purpose == "change" && current.Contains(role.Name) }).ToList();
+            _choices = options.Items.Select(role => new Choice { Id = role.Id, Name = role.Name, Label = string.IsNullOrWhiteSpace(role.DisplayName) || role.DisplayName.Equals(role.Name, StringComparison.OrdinalIgnoreCase) ? T.Role(role.Name) : role.DisplayName, Selected = Purpose == "change" && current.Contains(role.Name) }).ToList();
         }
         catch (RegistryApiException) { _loadFailed = true; }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }

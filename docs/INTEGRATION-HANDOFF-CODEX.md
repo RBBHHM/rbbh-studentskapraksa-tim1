@@ -118,7 +118,7 @@ Published startup (owned loopback 5372, explicit Development/InMemory):
 Push-Location artifacts/backend-integration-handoff/publish
 $env:ASPNETCORE_ENVIRONMENT = 'Development'
 $env:DOTNET_ENVIRONMENT = 'Development'
-dotnet DATA_CORE.dll --environment Development --urls http://127.0.0.1:5372 --Database:ServerName= --Database:Name= --Database:ApplyMigrations=false --Email:Provider=demo --KeycloakSettings:Enabled=false
+dotnet DATA_CORE.dll --environment Development --urls http://127.0.0.1:5372 --Database:ServerName= --Database:Name= --Database:ApplyMigrations=false --Email:From= --Email:SendEmailWithHtmlBodyUrl= --KeycloakSettings:Enabled=false
 # In a second terminal:
 Invoke-WebRequest http://127.0.0.1:5372/health/live
 Invoke-WebRequest http://127.0.0.1:5372/health/ready

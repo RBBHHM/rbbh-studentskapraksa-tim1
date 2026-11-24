@@ -64,7 +64,7 @@ else
     <RbiPagination CurrentPage="_page" CurrentPageChanged="ChangePageAsync" TotalPages="TotalPages" AccessibleLabel="@T["users.pages"]" PreviousLabel="@T["common.back"]" PreviousAccessibleLabel="@T["legal.previous"]" NextLabel="@T["common.actions.continue"]" NextAccessibleLabel="@T["legal.next"]" PageAccessibleLabel="@(page => T.Format("legal.page", page))" />
     }
 }
-@if (_notice is not null) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@T[_notice]" /></div> }
+@if (_notice is not null) { <div @key="_noticeVersion" role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@T[_notice]" /></div> }
 @if (_draft is { } draft)
 {
     <RbiDialog Open Class="app-form-dialog app-form-dialog--md registry-users-dialog" Title="@T[draft.Id is null ? "users.create" : "users.roles-edit"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseEditor">
@@ -91,6 +91,7 @@ else
     private int _page = 1;
     private bool _disposed, _authenticated, _canRead, _canWrite, _busy, _loading = true, _refreshing, _loaded, _delete;
     private string? _notice;
+    private int _noticeVersion;
     private int TotalPages => Math.Max(1, (int)Math.Ceiling(_result.Total / 20d));
     private string RoleLabel(string role) => T.Role(role);
     private bool IsSelf(ApplicationUser user) => _profile?.ApplicationUserId is { } id ? user.Id == id
@@ -176,6 +177,7 @@ else
                 _notice = created.IdentityConfirmed || draft.SelectedRoles.Length == 0 ? "toast.user-created" : "toast.user-created-pending";
             }
             _draft = null;
+            _noticeVersion++;
             StateHasChanged();
             await LoadAsync();
             return null;
@@ -200,7 +202,11 @@ else
         try
         {
             if (_delete) await Api.DeleteAsync(target.Id, _token); else await Api.SetActiveAsync(target.Id, !target.IsActive, _token);
-            _notice = _delete ? "toast.user-deleted" : "toast.user-status"; await LoadAsync();
+            _notice = _delete ? "toast.user-deleted" : "toast.user-status";
+            _noticeVersion++;
+            _target = null;
+            StateHasChanged();
+            await LoadAsync();
         }
         catch (RegistryApiException exception) { _error = (int?)exception.StatusCode == 409 ? "users.safety-conflict" : exception.MessageKey; }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }

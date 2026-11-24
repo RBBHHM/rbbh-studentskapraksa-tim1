@@ -18,7 +18,7 @@ test("a signed-in user requests a role from the header, sees it pending on the p
   await expect(send).toBeDisabled();
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
   await dialog.getByRole("checkbox").first().check(); await expect(send).toBeEnabled();
-  await dialog.getByLabel("Napomena (neobavezno)").fill("Treba mi pristup za rad na projektu");
+  await dialog.getByLabel("Napomena (opcionalno)").fill("Treba mi pristup za rad na projektu");
   await send.click();
   await expect(page.getByText("Zahtjev je poslan administratorima.", { exact: true })).toBeVisible();
   await expect(dialog).toHaveCount(0);
@@ -28,7 +28,11 @@ test("a signed-in user requests a role from the header, sees it pending on the p
   await expect(page.getByRole("heading", { name: "Moji zahtjevi za role", exact: true })).toBeVisible();
   await expect(page.locator(".profile-requests__list li").first()).toContainText("Na čekanju");
   await page.getByRole("button", { name: "Promijeni rolu", exact: true }).click();
-  await page.getByRole("dialog").getByRole("checkbox").first().check();
+  await expect(dialog.getByText(/Trenutne role ostaju aktivne dok administrator ne odobri zahtjev/)).toBeVisible();
+  const note = dialog.getByLabel("Napomena (opcionalno)");
+  await note.focus();
+  await expect(note).toHaveCSS("border-top-width", "0px");
+  await dialog.getByRole("checkbox").first().check();
   await page.getByRole("dialog").getByRole("button", { name: "Pošalji zahtjev", exact: true }).click();
   await expect(page.getByText("Već imate zahtjev koji čeka odluku.", { exact: false })).toBeVisible();
 });

@@ -78,16 +78,22 @@ public sealed class UserCreateWithoutIdentityLookupHttpTests : UsersHttpFixture
             Username = "new-user", FirstName = "Fixture", LastName = "User", Email,
             RoleIds = new[] { await RoleId(ApplicationAccessRoles.LegalPersons) }
         };
-        var duplicate = await _client.PostAsJsonAsync("/api/users", request);
-        Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
-        var problem = await duplicate.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
-        Assert.Equal("users.duplicate", problem.GetProperty("code").GetString());
-
         var success = await _client.PostAsJsonAsync("/api/users", request with { Email = "new-user@example.test" });
         Assert.Equal(HttpStatusCode.Created, success.StatusCode);
         var user = (await success.Content.ReadFromJsonAsync<UserDTO>())!;
         Assert.False(user.IdentityConfirmed);
         Assert.Contains(ApplicationAccessRoles.LegalPersons, user.Roles);
         Assert.DoesNotContain(ApplicationPermissions.LegalPersonsCreate, user.EffectivePermissions);
+        foreach (var duplicateRequest in new[]
+        {
+            request with { Username = "another-user" },
+            request with { Username = " NEW-USER ", Email = "different@example.test" }
+        })
+        {
+            using var duplicate = await _client.PostAsJsonAsync("/api/users", duplicateRequest);
+            Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
+            var problem = await duplicate.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+            Assert.Equal("users.duplicate", problem.GetProperty("code").GetString());
+        }
     }
 }

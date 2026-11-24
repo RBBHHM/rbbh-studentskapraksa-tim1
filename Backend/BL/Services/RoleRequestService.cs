@@ -32,24 +32,31 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
         return new { items = roles.Select(role => new { role.Id, role.Name, displayName = role.DisplayName ?? role.Name }).ToArray() };
     }
 
-    public Task<(RoleRequestDTO Request, bool Created)> Submit(CreateRoleRequestDTO input, CancellationToken ct)
+    public Task<(RoleRequestDTO? Request, bool Created)> Submit(CreateRoleRequestDTO input, CancellationToken ct)
     {
         var subject = Subject;
-        var email = AuthenticatedActor.Email(Principal).ToLowerInvariant();
         var verified = Principal.FindAll("email_verified").Any(claim => bool.TryParse(claim.Value, out var value) && value);
         var username = Principal.FindFirst("preferred_username")?.Value ?? subject;
         var first = Principal.FindFirst("given_name")?.Value ?? "";
         var last = Principal.FindFirst("family_name")?.Value ?? "";
-        if (!verified || !MailAddress.TryCreate(email, out var address) || address.Address != email)
-            throw new BusinessRuleException(403, "identity.verified_email_required");
-        if (username.Length > 100 || first.Length > 100 || last.Length > 100 || email.Length > 200 ||
+        if (username.Length > 100 || first.Length > 100 || last.Length > 100 ||
             input.ClientRequestId == Guid.Empty || input.Purpose is not ("new" or "change") ||
             input.RoleIds.Length > 20 || input.RoleIds.Distinct().Count() != input.RoleIds.Length ||
             (input.Purpose == "new" && input.RoleIds.Length == 0) || input.Note?.Length > 1000)
             throw new BusinessRuleException(400, "role_request.invalid");
 
-        return Locked(async () =>
+        return Locked<(RoleRequestDTO?, bool)>(async () =>
         {
+            // A confirmed subject uses its registered address. Only new identities rely on a verified token email.
+            var confirmedEmail = await db.AppUsers.AsNoTracking()
+                .Where(user => user.KeycloakSubjectConfirmed && user.KeycloakId == subject)
+                .Select(user => user.Email).SingleOrDefaultAsync(ct);
+            var tokenEmail = Principal.FindFirst(ClaimTypes.Email)?.Value ?? Principal.FindFirst("email")?.Value;
+            var email = (confirmedEmail ?? (verified ? tokenEmail : null))?.Trim().ToLowerInvariant();
+            if (email is not { Length: > 0 and <= 200 } ||
+                !MailAddress.TryCreate(email, out var address) || address.Address != email)
+                return (null, false);
+
             await EnsureActiveApplicant(subject, email, ct);
             var prior = await Query().SingleOrDefaultAsync(row => row.RequesterSubject == subject && row.ClientRequestId == input.ClientRequestId, ct);
             if (prior is not null)

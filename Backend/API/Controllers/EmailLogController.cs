@@ -17,7 +17,7 @@ public class EmailLogController(
     public IActionResult Get([FromQuery] string? audience = null)
     {
         var english = Request.Headers.AcceptLanguage.ToString().StartsWith("en", StringComparison.OrdinalIgnoreCase);
-        var provider = configuration["Email:Provider"] ?? "demo";
+        var provider = (configuration.GetSection("Email").Get<EmailSettings>() ?? new()).IsEmpty ? "demo" : "httpapi";
 
         IReadOnlyList<RBBH.ConnectedParties.BL.Services.EmailLogEntry> emails = [];
         // Raw mail preview is an isolated Development facility, never a production inbox.

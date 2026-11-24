@@ -1,0 +1,47 @@
+.role-request-fields {
+    display: grid;
+    gap: .5rem;
+    min-inline-size: 0;
+    padding: 0;
+    border: 0;
+    margin: 0;
+}
+
+.role-request-choices {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+    gap: .5rem;
+}
+
+.role-request-choices ::deep .rbi-checkbox {
+    display: flex;
+    align-items: center;
+    min-height: 2.75rem;
+    padding: .5rem .75rem;
+    border-radius: .5rem;
+    background: var(--surface-subtle);
+    overflow-wrap: anywhere;
+}
+
+.role-request-choices ::deep .rbi-checkbox:has(input:checked) {
+    background: color-mix(in srgb, var(--control-selection-background) 16%, var(--surface-raised));
+}
+
+.role-request-note.rbi-textarea,
+.role-request-note.rbi-textarea:focus {
+    border: 0;
+    outline: none;
+    box-shadow: none;
+    border-radius: .5rem;
+    background: var(--surface-subtle);
+}
+
+.role-request-note.rbi-textarea:focus {
+    background: color-mix(in srgb, currentColor 10%, var(--surface-raised));
+}
+
+@media (forced-colors: active) {
+    .role-request-note.rbi-textarea:focus {
+        outline: 2px solid Highlight;
+    }
+}

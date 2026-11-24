@@ -2,7 +2,6 @@ using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using RBBH.ConnectedParties.BL.ServiceInterfaces;
 using RBBH.ConnectedParties.DL.Persistence;
 
@@ -10,7 +9,7 @@ namespace RBBH.ConnectedParties.BL.Services;
 
 /// <summary>Only sends committed notices; never replays business grants or decisions.</summary>
 public sealed class NotificationDispatcher(ConnectedPartiesDbContext db, IEmailService mail,
-    IOptions<EmailSettings> settings, ILogger<NotificationDispatcher> logger, RuntimeLocalizationCatalog localization)
+    IConfiguration configuration, ILogger<NotificationDispatcher> logger, RuntimeLocalizationCatalog localization)
 {
     private static readonly SemaphoreSlim LocalClaimGate = new(1, 1);
 
@@ -29,12 +28,6 @@ public sealed class NotificationDispatcher(ConnectedPartiesDbContext db, IEmailS
             string? failure = null;
             try
             {
-                var baseUrl = settings.Value.AppBaseUrl;
-                if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var uri) ||
-                    !(uri.Scheme == "https" || uri.Scheme == "http" && uri.IsLoopback) ||
-                    uri.UserInfo.Length > 0 || uri.Query.Length > 0 || uri.Fragment.Length > 0 ||
-                    !row.Notification.Route.StartsWith("/app/", StringComparison.Ordinal))
-                    throw new InvalidOperationException("Notification application URL is not configured safely.");
                 var titleKey = row.Notification.TitleKey.Replace('_', '.');
                 var bodyKey = row.Notification.BodyKey.Replace('_', '.');
                 var title = await localization.Text(titleKey, null, ct);
@@ -43,9 +36,10 @@ public sealed class NotificationDispatcher(ConnectedPartiesDbContext db, IEmailS
                 if (title == titleKey || text == bodyKey) throw new InvalidOperationException("Notification resources unavailable.");
                 title = Render(title, row.Notification.ParametersJson); text = Render(text, row.Notification.ParametersJson);
                 if (title.Length > 500 || title.Any(character => character is '\r' or '\n')) throw new InvalidOperationException("Invalid notification title.");
-                var link = baseUrl.TrimEnd('/') + row.Notification.Route;
                 var encodedText = WebUtility.HtmlEncode(text).Replace("\r\n", "\n").Replace("\n", "<br>");
-                var html = $"<p>{encodedText}</p><a href=\"{WebUtility.HtmlEncode(link)}\">{WebUtility.HtmlEncode(title)}</a>";
+                var html = $"<p>{encodedText}</p>";
+                if (ApplicationLink(row.Notification.Route) is { } link)
+                    html += $"<a href=\"{WebUtility.HtmlEncode(link)}\">{WebUtility.HtmlEncode(title)}</a>";
                 await mail.SendApplicationNotificationAsync(row.Notification.RecipientEmail, title, html, ct);
                 delivered++;
             }
@@ -70,6 +64,18 @@ public sealed class NotificationDispatcher(ConnectedPartiesDbContext db, IEmailS
             }
         }
         return delivered;
+    }
+
+    private string? ApplicationLink(string route)
+    {
+        var baseUrl = configuration["Application:PublicUrl"];
+        if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var uri) ||
+            !(uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp && uri.IsLoopback) ||
+            uri.UserInfo.Length > 0 || uri.Query.Length > 0 || uri.Fragment.Length > 0 ||
+            !route.StartsWith("/app/", StringComparison.Ordinal))
+            return null;
+
+        return uri.AbsoluteUri.TrimEnd('/') + route;
     }
 
     private static string Render(string template, string json)

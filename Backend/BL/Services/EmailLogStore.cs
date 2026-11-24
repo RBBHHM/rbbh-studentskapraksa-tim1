@@ -17,7 +17,6 @@ public sealed class EmailLogEntry
 
 /// <summary>
 /// Singleton in-memory store za demo mod. Čuva posljednja 50 "emailova".
-/// U SMTP modu ova klasa ostaje registrovana ali se ne koristi.
 /// </summary>
 public sealed class EmailLogStore
 {

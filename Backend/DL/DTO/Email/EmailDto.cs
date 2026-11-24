@@ -8,4 +8,5 @@ public class EmailDto
     public string? Cc { get; set; }
     public string Subject { get; set; } = null!;
     public string Text { get; set; } = null!;
+    public string? AttachmentPath { get; set; }
 }

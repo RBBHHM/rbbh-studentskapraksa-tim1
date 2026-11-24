@@ -61,7 +61,7 @@ Open http://127.0.0.1:5273/app.
 
 **B. Real application.** Copy `.env.example` to `Backend/.env`, review it, then:
 ```powershell
-$env:ASPNETCORE_ENVIRONMENT = "Development"; $env:Email__Provider = "demo"
+$env:ASPNETCORE_ENVIRONMENT = "Development"
 dotnet run --project Backend/RelatedPartiesRegister.csproj --no-launch-profile --urls http://localhost:5000
 ```
 Without SQL settings, Development uses an empty InMemory store. Startup never applies migrations or seeds a real database.
@@ -93,8 +93,8 @@ Use `__` for nested environment keys. Secrets stay outside Git. The backend load
 | `BankReference__Enabled`, `__ConnectionString`, `__CustomerTable`, `__CustomerTaxColumn`, `__CustomerMatbrojColumn`, `__CustomerNameColumn`, `__GccTable`, `__GccNumberColumn`, `__GccNameColumn` | Read-only bank source for customer and GCC lookup (`kod.dbo.komitent`, `glava.dbo.grupekom`). Disabled means lookups return 503; nothing is fabricated. |
 | `FinanceMonthly__Enabled`, `__ConnectionString`, `__CustomerKeyColumn`, `__Currency`, `__BalanceColumn`, `__OffBalanceColumn`, `FinanceMonthly:MonthlyTables` | Approved monthly finance source for regulatory reports. Disabled means snapshots are labelled non-authoritative. |
 | `KeycloakSettings__AdminClientId`, `__AdminClientSecret` | Only where the Keycloak administration lookup is used. |
-| `Email__Provider` | `demo` locally; `httpapi` (`Email__SendEmailWithHtmlBodyUrl`) or `smtp` (`Email__Smtp__*`) for real delivery. |
-| `Email__AdminEmail`, `Email__HrEmail`, `Email__From`, `Email__AppBaseUrl` | Approved recipients, sender and public link base. |
+| `Email__From`, `Email__SendEmailWithHtmlBodyUrl` | Approved sender and full HTML mail endpoint. Empty values select demo delivery in Development/Testing. |
+| `Application__PublicUrl` | Optional public web URL for links in notification emails. |
 | `ReverseProxy__KnownProxies__N`, `__KnownNetworks__N`, `__ForwardLimit`, `AllowedHosts` | Production requires explicit trusted peers or bounded CIDRs, a positive hop limit and non-wildcard hosts. |
 | `Cors__AllowedOrigins__N` | Approved browser origins only. |
 | `IdentityBinding__AllowVerifiedEmailFirstLink` | Keep false until the production reconciliation is approved. |

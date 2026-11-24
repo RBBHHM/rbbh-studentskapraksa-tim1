@@ -12,7 +12,7 @@ using RBBH.ConnectedParties.Helpers.Constants;
 namespace RBBH.ConnectedParties.BL.Services;
 
 /// <summary>One commit for period/request state, audit, recipient inbox and delivery outbox.</summary>
-public sealed class PeriodWorkflow(ConnectedPartiesDbContext db, IConfiguration configuration)
+public sealed class PeriodWorkflow(ConnectedPartiesDbContext db)
 {
     private sealed record Actor(string Subject, string Username, string Email, string? Ip);
     private static Actor Capture(ClaimsPrincipal principal, string? ip) => new(AuthenticatedActor.RequireSubject(principal),
@@ -22,33 +22,27 @@ public sealed class PeriodWorkflow(ConnectedPartiesDbContext db, IConfiguration 
     private static void Text(string? value, int minimum, int maximum, string code)
     { if (string.IsNullOrWhiteSpace(value) || value.Length > maximum || value.Trim().Length < minimum) throw new BusinessRuleException(400, code, new object?[] { minimum, maximum }); }
     private static bool Mailbox(string? email) => email is { Length: > 0 and <= 200 } && MailAddress.TryCreate(email, out var address) && address.Address == email;
-    private string AdminMailbox()
-    {
-        var email = configuration["Email:AdminEmail"]?.Trim();
-        return Mailbox(email) ? email! : throw new BusinessRuleException(503, "period.notification_setup");
-    }
     private void Audit(string id, string action, Actor actor, object? before, object after) => db.AuditLogs.Add(new()
     { TableName = "PeriodLock", RecordId = id, Action = action, Username = actor.Username,
         IpAddress = actor.Ip, Timestamp = DateTime.UtcNow, OldValues = before is null ? null : JsonSerializer.Serialize(before), NewValues = JsonSerializer.Serialize(after) });
     private void Notice(string? subject, string email, string eventKey, string kind, object parameters, string route = "/app/admin/period")
     {
-        // Empty recipient subject explicitly means delivery-only, never a fabricated/claimable identity.
-        // Every inbox read requires a nonblank validated subject, so configured distribution mailboxes cannot leak into an inbox.
         var notice = new ApplicationNotification { RecipientSubject = subject ?? "", RecipientEmail = email, EventKey = eventKey,
             TitleKey = "notifications.period." + kind + ".title", BodyKey = "notifications.period." + kind + ".body",
             ParametersJson = JsonSerializer.Serialize(parameters), Route = route };
         if (Mailbox(email)) notice.Delivery = new NotificationDelivery { NotificationId = notice.Id };
         db.Notifications.Add(notice);
     }
-    private async Task NotifyMailbox(string email, string eventKey, string kind, object parameters, CancellationToken ct)
+    private async Task NotifyReviewers(string eventKey, string kind, object parameters, CancellationToken ct)
     {
-        var normalized = email.ToUpperInvariant();
-        var subject = await db.AppUsers.Where(user => user.IsActive && user.KeycloakSubjectConfirmed && user.Email.Trim().ToUpper() == normalized &&
-            db.UserRoles.Any(role => role.UserId == user.Id && role.IsActive && role.Role.IsActive && role.Role.RolePermissions.Any(grant => grant.Permission.IsActive && grant.Permission.Code == ApplicationPermissions.CapitalView)) &&
-            db.UserRoles.Any(role => role.UserId == user.Id && role.IsActive && role.Role.IsActive && role.Role.RolePermissions.Any(grant => grant.Permission.IsActive &&
-                (grant.Permission.Code == ApplicationPermissions.CapitalCreate || grant.Permission.Code == ApplicationPermissions.CapitalEdit || grant.Permission.Code == ApplicationPermissions.CapitalDelete))))
-            .Select(user => user.KeycloakId).SingleOrDefaultAsync(ct);
-        Notice(subject, email, eventKey, kind, parameters);
+        var reviewers = await db.AppUsers.AsNoTracking()
+            .Where(user => user.IsActive && user.KeycloakSubjectConfirmed && user.KeycloakId != "" &&
+                db.UserRoles.Any(role => role.UserId == user.Id && role.IsActive && role.Role.IsActive && role.Role.RolePermissions.Any(grant => grant.Permission.IsActive &&
+                    (grant.Permission.Code == ApplicationPermissions.CapitalCreate || grant.Permission.Code == ApplicationPermissions.CapitalEdit || grant.Permission.Code == ApplicationPermissions.CapitalDelete))))
+            .Select(user => new { user.KeycloakId, user.Email }).ToListAsync(ct);
+        if (reviewers.Count == 0) throw new BusinessRuleException(503, "period.notification_setup");
+        foreach (var reviewer in reviewers)
+            Notice(reviewer.KeycloakId, reviewer.Email, eventKey, kind, parameters);
     }
     private async Task Owner(UnlockRequest request, string eventKey, string kind, object parameters, CancellationToken ct)
     {
@@ -92,12 +86,12 @@ public sealed class PeriodWorkflow(ConnectedPartiesDbContext db, IConfiguration 
     }
     public async Task Request(int year, int month, string reason, ClaimsPrincipal principal, string? ip, CancellationToken ct)
     {
-        Period(year, month); Text(reason, 10, 500, "period.invalid_reason"); var actor = Capture(principal, ip); var mailbox = AdminMailbox();
+        Period(year, month); Text(reason, 10, 500, "period.invalid_reason"); var actor = Capture(principal, ip);
         var request = new UnlockRequest { Year = year, Month = month, Reason = reason, RequestedBySubject = actor.Subject,
             RequestedBy = actor.Username, RequestedByEmail = actor.Email, Status = "PENDING", CreatedBy = actor.Username, CreatedAt = DateTime.UtcNow };
         db.UnlockRequests.Add(request);
         Audit($"{year}-{month:D2}", "UNLOCK_REQUEST", actor, null, new { request.Id, year, month, requestedBy = actor.Username, reason });
-        await NotifyMailbox(mailbox, $"period-request:{request.Id}:submitted", "requested", new { year, month, requester = actor.Username, message = reason }, ct);
+        await NotifyReviewers($"period-request:{request.Id}:submitted", "requested", new { year, month, requester = actor.Username, message = reason }, ct);
         await db.SaveChangesAsync(ct);
     }
     public async Task Process(Guid id, bool reject, string note, ClaimsPrincipal principal, string? ip, CancellationToken ct)
@@ -113,7 +107,7 @@ public sealed class PeriodWorkflow(ConnectedPartiesDbContext db, IConfiguration 
     }
     public async Task Respond(Guid id, string message, ClaimsPrincipal principal, string? ip, CancellationToken ct)
     {
-        Text(message, 10, 490, "period.invalid_response"); var actor = Capture(principal, ip); var mailbox = AdminMailbox();
+        Text(message, 10, 490, "period.invalid_response"); var actor = Capture(principal, ip);
         var original = await db.UnlockRequests.SingleOrDefaultAsync(row => row.Id == id && row.RequestedBySubject == actor.Subject, ct)
             ?? throw new BusinessRuleException(404, "period.request_not_found");
         if (original.Status != "NEEDS_INFO" || await db.UnlockRequests.AnyAsync(row => row.ParentRequestId == id, ct))
@@ -124,7 +118,7 @@ public sealed class PeriodWorkflow(ConnectedPartiesDbContext db, IConfiguration 
             Status = "PENDING", CreatedBy = actor.Username, CreatedAt = now };
         original.MarkModified(now); original.ModifiedBy = actor.Username; db.UnlockRequests.Add(response);
         Audit(id.ToString(), "UNLOCK_REQUEST", actor, null, new { type = "user_response", originalRequestId = id, responseId = response.Id, year = original.Year, month = original.Month });
-        await NotifyMailbox(mailbox, $"period-request:{response.Id}:response", "response", new { year = original.Year, month = original.Month, requester = actor.Username, message = message.Trim() }, ct);
+        await NotifyReviewers($"period-request:{response.Id}:response", "response", new { year = original.Year, month = original.Month, requester = actor.Username, message = message.Trim() }, ct);
         await db.SaveChangesAsync(ct);
     }
 }
