@@ -44,6 +44,7 @@ test("create preserves multiple application roles and persists the actual backen
   await expect(dialog.getByRole("checkbox", { name: "FL", exact: true })).toBeChecked();
   await access(dialog, "PL", true);
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole("status").filter({ hasText: "Korisnik je kreiran. Dodatne role čekaju potvrdu identiteta." })).toBeVisible();
   const row = page.getByRole("row").filter({ hasText: "new.user@raiffeisengroup.ba" });
   await expect(row).toContainText("FL, PL");
   await page.reload(); await interactive(page); await expect(row).toBeVisible();
@@ -52,7 +53,7 @@ test("create preserves multiple application roles and persists the actual backen
   expect(state.audit.map((entry: { action: string }) => entry.action)).toEqual(["CREATE"]);
   const duplicate = await createFields(page); await access(duplicate, "FL", true);
   await duplicate.getByRole("button", { name: "Sačuvaj", exact: true }).click();
-  await expect(duplicate.getByText("Backend je odbio podatke. Provjerite unesena polja.", { exact: true })).toBeVisible();
+  await expect(duplicate.getByText("Korisnik s ovim korisničkim imenom ili email adresom već postoji.", { exact: true })).toBeVisible();
   const afterDuplicate = await (await request.get("/__fixtures/users-state", { headers })).json();
   expect(afterDuplicate.users).toHaveLength(state.users.length); expect(afterDuplicate.audit).toHaveLength(1);
 });

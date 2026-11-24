@@ -20,11 +20,17 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
     private ClaimsPrincipal Principal => accessor.HttpContext?.User ?? throw new MissingActorIdentityException();
     private string Subject => AuthenticatedActor.RequireSubject(Principal);
 
-    public async Task<object> Options(CancellationToken ct) => new
+    public async Task<object> Options(CancellationToken ct)
     {
-        items = await db.Roles.AsNoTracking().Where(role => role.IsActive && role.Name != ApplicationAccessRoles.Guest)
-            .OrderBy(role => role.Name).Select(role => new { role.Id, role.Name, displayName = role.DisplayName ?? role.Name }).ToListAsync(ct)
-    };
+        // Existing databases can use different SQL Server collations for Name and DisplayName.
+        var roles = await db.Roles.AsNoTracking()
+            .Where(role => role.IsActive && role.Name != ApplicationAccessRoles.Guest)
+            .OrderBy(role => role.Name)
+            .Select(role => new { role.Id, role.Name, role.DisplayName })
+            .ToListAsync(ct);
+
+        return new { items = roles.Select(role => new { role.Id, role.Name, displayName = role.DisplayName ?? role.Name }).ToArray() };
+    }
 
     public Task<(RoleRequestDTO Request, bool Created)> Submit(CreateRoleRequestDTO input, CancellationToken ct)
     {

@@ -24,7 +24,6 @@ else if (_error is not null)
 else if (!_canRead) { <RbiAlert Title="@T["errors.forbidden"]" /> }
 else
 {
-    @if (_notice is not null) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@T[_notice]" /></div> }
     <div class="registry-controls users-list-filters">
         <div class="role-catalog-search">
             <RbiIcon Name="RbiIconName.Search" />
@@ -65,6 +64,7 @@ else
     <RbiPagination CurrentPage="_page" CurrentPageChanged="ChangePageAsync" TotalPages="TotalPages" AccessibleLabel="@T["users.pages"]" PreviousLabel="@T["common.back"]" PreviousAccessibleLabel="@T["legal.previous"]" NextLabel="@T["common.actions.continue"]" NextAccessibleLabel="@T["legal.next"]" PageAccessibleLabel="@(page => T.Format("legal.page", page))" />
     }
 }
+@if (_notice is not null) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@T[_notice]" /></div> }
 @if (_draft is { } draft)
 {
     <RbiDialog Open Class="app-form-dialog app-form-dialog--md registry-users-dialog" Title="@T[draft.Id is null ? "users.create" : "users.roles-edit"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseEditor">
@@ -154,8 +154,10 @@ else
         if (!_canWrite) return "errors.forbidden";
         if (_busy) return null;
         _busy = true;
+        _notice = null;
         try
         {
+            StateHasChanged();
             if (draft.Id is { } id)
             {
                 var current = _result.Users.SingleOrDefault(user => user.Id == id);
@@ -173,11 +175,16 @@ else
                 if (result.User is not { } created) return result.ErrorKey ?? "errors.unavailable";
                 _notice = created.IdentityConfirmed || draft.SelectedRoles.Length == 0 ? "toast.user-created" : "toast.user-created-pending";
             }
-            await LoadAsync();
             _draft = null;
+            StateHasChanged();
+            await LoadAsync();
             return null;
         }
-        finally { _busy = false; }
+        finally
+        {
+            _busy = false;
+            if (!_disposed) StateHasChanged();
+        }
     }
     private void Confirm(ApplicationUser user, bool permanent)
     {

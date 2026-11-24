@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -17,6 +18,32 @@ namespace IntegrationTests.Tests.Users;
 public sealed class RoleRequestWorkflowSqlTests : RoleRequestFixture
 {
     protected override bool UseSql => true;
+
+    [SqlServerFact]
+    public async Task OptionsUseDisplayNameOrRoleNameAcrossDifferentSqlCollations()
+    {
+        await InDatabase(async db =>
+        {
+            await db.Database.ExecuteSqlRawAsync("""
+                ALTER TABLE dbo.Roles ALTER COLUMN DisplayName nvarchar(100) COLLATE SQL_Latin1_General_CP1_CI_AS NULL;
+                """);
+            db.Roles.AddRange(
+                new Role { Name = "fixture-label", DisplayName = "Član tima", CreatedBy = "fixture" },
+                new Role { Name = "fixture-fallback", CreatedBy = "fixture" },
+                new Role { Name = "fixture-inactive", IsActive = false, CreatedBy = "fixture" });
+            await db.SaveChangesAsync();
+        });
+
+        using var applicant = NewClient("role-applicant");
+        var payload = await applicant.GetFromJsonAsync<JsonElement>("/api/role-requests/options");
+        var labels = payload.GetProperty("items").EnumerateArray()
+            .ToDictionary(role => role.GetProperty("name").GetString()!, role => role.GetProperty("displayName").GetString());
+
+        Assert.Equal("Član tima", labels["fixture-label"]);
+        Assert.Equal("fixture-fallback", labels["fixture-fallback"]);
+        Assert.DoesNotContain("fixture-inactive", labels.Keys);
+        Assert.DoesNotContain(ApplicationAccessRoles.Guest, labels.Keys);
+    }
 
     [SqlServerFact]
     public async Task DetailedRoleMailRendersCompleteUnicodeNotesAndRolesWithoutRawHtmlOrDuplicateGrants()
