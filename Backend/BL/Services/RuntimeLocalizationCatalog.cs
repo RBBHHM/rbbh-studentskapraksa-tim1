@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using RBBH.ConnectedParties.DL.Entities.Sifarnici;
 using RBBH.ConnectedParties.DL.Persistence;
 using RBBH.ConnectedParties.Exceptions;
+using RBBH.ConnectedParties.Helpers;
 
 namespace RBBH.ConnectedParties.BL.Services;
 
@@ -115,6 +116,7 @@ public sealed class RuntimeLocalizationCatalog(ConnectedPartiesDbContext db, IOp
             throw new BusinessRuleException(409, "codelist.system_required");
         var definition = await db.CodeListDefinitions.SingleOrDefaultAsync(item => item.Name == Settings.LanguagePacksCodebook && item.IsActive, ct)
             ?? throw new BusinessRuleException(503, "localization.setup_required");
+        var before = row is null ? null : Snapshot(row);
         var now = DateTime.UtcNow;
         definition.ModifiedBy = actor;
         definition.ModifiedAt = now;
@@ -129,8 +131,18 @@ public sealed class RuntimeLocalizationCatalog(ConnectedPartiesDbContext db, IOp
         row.Localization.ResourceHelper = input.Helper;
         row.Localization.ResourcePlaceholder = input.Placeholder;
         row.Aktivan = input.IsActive; row.IzmijenjenDatum = now; row.IzmijenioKorisnik = actor;
-        db.AuditLogs.Add(new() { TableName = "CodeList", RecordId = row.Kod, Action = "LOCALIZATION_UPDATE",
-            Username = actor, Timestamp = now, NewValues = System.Text.Json.JsonSerializer.Serialize(new { language, key, input.IsActive }) });
+        db.AuditLogs.Add(BusinessAudit.Create("CodeList", row.Kod, "LOCALIZATION_UPDATE",
+            actor, null, before, Snapshot(row)));
         await db.SaveChangesAsync(ct);
     }
+
+    private static object Snapshot(CodeList row) => new
+    {
+        Language = row.Localization!.LanguageCode,
+        Key = row.Localization.ResourceKey,
+        Label = row.Localization.ResourceLabel,
+        Helper = row.Localization.ResourceHelper,
+        Placeholder = row.Localization.ResourcePlaceholder,
+        IsActive = row.Aktivan
+    };
 }

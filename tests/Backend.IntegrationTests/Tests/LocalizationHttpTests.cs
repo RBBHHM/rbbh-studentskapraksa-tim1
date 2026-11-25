@@ -79,7 +79,16 @@ public sealed class LocalizationHttpTests : LocalizationFixture
         });
         Assert.Equal(HttpStatusCode.NoContent, (await Client.PutAsJsonAsync("/api/localization/resources/BS/legacykey", new { label = "After" })).StatusCode);
         Assert.Equal("After", (await Pack("BS")).GetProperty("items")[0].GetProperty("label").GetString());
-        await InDatabase(async db => Assert.Equal("LegacyKey", (await db.CodeLists.SingleAsync(row => row.Localization != null && row.Localization.ResourceKey != null)).Localization!.ResourceKey));
+        await InDatabase(async db =>
+        {
+            var row = await db.CodeLists.SingleAsync(row => row.Localization != null && row.Localization.ResourceKey != null);
+            Assert.Equal("LegacyKey", row.Localization!.ResourceKey);
+            var audit = await db.AuditLogs.SingleAsync();
+            using var before = JsonDocument.Parse(audit.OldValues!);
+            using var after = JsonDocument.Parse(audit.NewValues!);
+            Assert.Equal("Before", before.RootElement.GetProperty("Label").GetString());
+            Assert.Equal("After", after.RootElement.GetProperty("Label").GetString());
+        });
     }
     [Fact]
     public async Task ResourceWritesRequireDatabaseAdminWhileGuestCanReadAndAnonymousCannot()
