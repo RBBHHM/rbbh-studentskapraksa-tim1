@@ -23,10 +23,10 @@ else
     else
     {
         <RbiTable AccessibleLabel="@T["audit.title"]" Class="registry-table registry-audit-table">
-            <thead><tr><th scope="col">@T["audit.time"]</th><th scope="col">@T["audit.action"]</th><th scope="col">@T["audit.area"]</th><th scope="col">@T["audit.change"]</th><th scope="col">@T["audit.user"]</th><th scope="col">@T["audit.ip"]</th></tr></thead>
+            <thead><tr><th scope="col">@T["audit.time"]</th><th scope="col">@T["audit.action"]</th><th scope="col">@T["audit.area"]</th><th scope="col">@T["audit.change"]</th><th scope="col">@T["audit.user"]</th></tr></thead>
             <tbody>@foreach (var entry in Filtered)
             {
-                <tr @key="entry.Id"><td>@AppFormat.Timestamp(entry.Timestamp)</td><td><span class="audit-badge audit-badge--@AuditChange.Tone(entry.Action)">@entry.ActionDisplay</span></td><td>@entry.AreaDisplay</td><td><span class="audit-summary">@entry.ChangeSummary</span> <RbiButton Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Small" OnClick="() => _detail = entry" AccessibleLabel="@($"{T["audit.details"]}: {entry.ActionDisplay} {entry.AreaDisplay} {AppFormat.Timestamp(entry.Timestamp)}")">@T["audit.details"]</RbiButton></td><td>@entry.Username</td><td>@entry.IpAddress</td></tr>
+                <tr @key="entry.Id"><td>@AppFormat.Timestamp(entry.Timestamp)</td><td><span class="audit-badge audit-badge--@AuditChange.Tone(entry.Action)">@entry.ActionDisplay</span></td><td>@entry.AreaDisplay</td><td><span class="audit-summary">@entry.ChangeSummary</span> <RbiButton Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Small" OnClick="() => _detail = entry" AccessibleLabel="@($"{T["audit.details"]}: {entry.ActionDisplay} {entry.AreaDisplay} {AppFormat.Timestamp(entry.Timestamp)}")">@T["audit.details"]</RbiButton></td><td>@entry.Username</td></tr>
             }</tbody>
         </RbiTable>
     }
@@ -55,7 +55,10 @@ else
             }
             else if (!string.IsNullOrWhiteSpace(detail.OldValues) || !string.IsNullOrWhiteSpace(detail.NewValues))
             {
-                <pre class="audit-raw">@detail.OldValues@detail.NewValues</pre>
+                <h3>@T["audit.old"]</h3>
+                <pre class="audit-raw">@AuditChange.FormatSnapshot(detail.OldValues)</pre>
+                <h3>@T["audit.new"]</h3>
+                <pre class="audit-raw">@AuditChange.FormatSnapshot(detail.NewValues)</pre>
             }
         </DialogBody>
     </RbiDialog>

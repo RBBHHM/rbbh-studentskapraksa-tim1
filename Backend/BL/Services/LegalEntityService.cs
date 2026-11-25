@@ -223,13 +223,15 @@ public partial class LegalEntityService : ILegalEntityService
             .Where(origin => origin.LegalEntityId == id).Select(origin => origin.Subject)
             .SingleOrDefaultAsync(_actor?.HttpContext?.RequestAborted ?? default);
         Helpers.RegistryVerification.Authorize(subject, _actor);
+        var before = new { status = entity.Status.ToString(), verifiedBy = entity.VerifiedBy, verifiedAt = entity.VerifiedAt };
         entity.Status = "Verified";
         entity.VerifiedBy = verifiedBy;
         entity.VerifiedAt = DateTime.UtcNow;
         entity.ModifiedBy = verifiedBy;
         entity.MarkModified(DateTime.UtcNow);
 
-        _context.AuditLogs.Add(Helpers.RegistryVerification.Audit("LegalEntity", entity.Id, verifiedBy, _actor));
+        _context.AuditLogs.Add(Helpers.RegistryVerification.Audit("LegalEntity", entity.Id, verifiedBy, _actor,
+            before, new { status = entity.Status.ToString(), verifiedBy = entity.VerifiedBy, verifiedAt = entity.VerifiedAt }));
         var result = await WithConnectionDescription(entity);
         await _context.SaveChangesAsync();
 

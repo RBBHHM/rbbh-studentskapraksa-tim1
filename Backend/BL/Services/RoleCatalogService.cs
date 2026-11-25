@@ -43,7 +43,7 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
     public async Task<object> Permissions(CancellationToken ct) => new
     {
         items = await db.Permissions.AsNoTracking().Where(row => row.IsActive).OrderBy(row => row.Module).ThenBy(row => row.Code)
-            .Select(row => new { row.Id, row.Code, row.Module, row.Description }).ToListAsync(ct)
+            .Select(row => new { row.Id, row.Code, row.Module, Description = row.Code }).ToListAsync(ct)
     };
 
     public Task<RoleCatalogDTO?> Create(CreateRoleCatalogDTO input, CancellationToken ct) => Locked<RoleCatalogDTO?>(async () =>

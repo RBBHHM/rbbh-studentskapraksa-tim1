@@ -63,7 +63,7 @@ public sealed class NotificationDispatcher(ConnectedPartiesDbContext db, IEmailS
                 var link = origin is not null && route.StartsWith("/app/", StringComparison.Ordinal) ? origin + route : null;
                 var html = roleStatus is not null
                     ? RoleRequestMail.Build(roleStatus, title, encodedText, link,
-                        origin, localization.DefaultLanguage)
+                        origin, localization.DefaultLanguage, MailLogoUrl())
                     : $"<p>{encodedText}</p>" + (link is null ? "" : $"<a href=\"{WebUtility.HtmlEncode(link)}\">{WebUtility.HtmlEncode(title)}</a>");
                 await mail.SendApplicationNotificationAsync(row.Notification.RecipientEmail, title, html, ct);
                 delivered++;
@@ -89,6 +89,14 @@ public sealed class NotificationDispatcher(ConnectedPartiesDbContext db, IEmailS
             }
         }
         return delivered;
+    }
+
+    private string? MailLogoUrl()
+    {
+        return Uri.TryCreate(configuration["Application:MailLogoUrl"], UriKind.Absolute, out var uri)
+            && uri.Scheme == Uri.UriSchemeHttps && uri.UserInfo.Length == 0 && uri.Fragment.Length == 0
+            ? uri.AbsoluteUri
+            : null;
     }
 
     private string? ApplicationOrigin()

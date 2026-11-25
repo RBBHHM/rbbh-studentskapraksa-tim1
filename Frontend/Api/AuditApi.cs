@@ -11,7 +11,7 @@ public sealed record AuditRecord(Guid Id, string TableName, string RecordId, str
         if (string.IsNullOrWhiteSpace(search)) return true;
         var term = search.Trim();
         string?[] values = [Id.ToString(), TableName, RecordId, Action, ActionDisplay, AreaDisplay,
-            ChangeSummary, OldValues, NewValues, Username, IpAddress, Timestamp.ToString("O")];
+            ChangeSummary, OldValues, NewValues, Username, Timestamp.ToString("O")];
         return values.Any(value => value?.Contains(term, StringComparison.OrdinalIgnoreCase) == true);
     }
 }

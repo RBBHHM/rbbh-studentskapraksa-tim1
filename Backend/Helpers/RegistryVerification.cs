@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Security.Claims;
 using RBBH.ConnectedParties.DL.Entities.Audit;
 using RBBH.ConnectedParties.Exceptions;
@@ -22,11 +23,16 @@ internal static class RegistryVerification
             throw new BusinessRuleException(403, "verification.self_denied");
     }
 
-    internal static AuditLog Audit(string table, Guid id, string displayActor, IHttpContextAccessor? accessor) => new()
+    private static readonly JsonSerializerOptions AuditFormat = new() { WriteIndented = true };
+
+    internal static AuditLog Audit(string table, Guid id, string displayActor, IHttpContextAccessor? accessor,
+        object before, object after) => new()
     {
         TableName = table, RecordId = id.ToString(), Action = "VERIFY",
         Username = accessor?.HttpContext?.User.FindFirst("preferred_username")?.Value ?? displayActor,
         IpAddress = accessor?.HttpContext?.Connection.RemoteIpAddress?.ToString(),
-        NewValues = "{\"status\":\"Verified\"}", Timestamp = DateTime.UtcNow
+        OldValues = JsonSerializer.Serialize(before, AuditFormat),
+        NewValues = JsonSerializer.Serialize(after, AuditFormat),
+        Timestamp = DateTime.UtcNow
     };
 }

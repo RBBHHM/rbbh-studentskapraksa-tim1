@@ -34,6 +34,22 @@ public static class AuditChange
         _ => "neutral"
     };
 
+    private static readonly JsonSerializerOptions SnapshotFormat = new() { WriteIndented = true };
+
+    public static string FormatSnapshot(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "—";
+        try
+        {
+            using var document = JsonDocument.Parse(value);
+            return JsonSerializer.Serialize(document.RootElement, SnapshotFormat);
+        }
+        catch (JsonException)
+        {
+            return value;
+        }
+    }
+
     private static Dictionary<string, string?>? Flatten(string? json)
     {
         var result = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);

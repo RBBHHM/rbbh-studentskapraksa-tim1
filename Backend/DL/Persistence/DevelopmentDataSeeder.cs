@@ -235,8 +235,7 @@ public static class DevelopmentDataSeeder
                 permission = new Permission
                 {
                     Code = code,
-                    Module = code[..code.LastIndexOf('_')],
-                    Description = code.Replace('_', ' ')
+                    Module = code[..code.LastIndexOf('_')]
                 };
                 db.Permissions.Add(permission);
                 permissions.Add(permission);

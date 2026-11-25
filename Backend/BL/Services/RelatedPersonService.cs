@@ -365,13 +365,15 @@ public class RelatedPersonService(
             return Result<RelatedPersonResponseDTO>.ValidationError(BackendMessages.Message("validation.person.verified"));
 
         Helpers.RegistryVerification.Authorize(entity.CreatorSubject, actor);
+        var before = new { status = entity.Status.ToString(), verifiedBy = entity.VerifiedBy, verifiedAt = entity.VerifiedAt };
         entity.Status = RelatedPersonStatus.Verified;
         entity.VerifiedBy = korisnik;
         entity.VerifiedAt = DateTime.UtcNow;
         entity.ModifiedBy = korisnik;
         entity.MarkModified(DateTime.UtcNow);
 
-        _dbContext.AuditLogs.Add(Helpers.RegistryVerification.Audit("RelatedPerson", entity.Id, korisnik, actor));
+        _dbContext.AuditLogs.Add(Helpers.RegistryVerification.Audit("RelatedPerson", entity.Id, korisnik, actor,
+            before, new { status = entity.Status.ToString(), verifiedBy = entity.VerifiedBy, verifiedAt = entity.VerifiedAt }));
         await _dbContext.SaveChangesAsync();
 
         return Result<RelatedPersonResponseDTO>.Success(entity.Adapt<RelatedPersonResponseDTO>());

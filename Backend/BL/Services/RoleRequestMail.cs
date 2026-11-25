@@ -4,7 +4,7 @@ namespace RBBH.ConnectedParties.BL.Services;
 
 internal static class RoleRequestMail
 {
-    public static string Build(string status, string title, string encodedDetails, string? link, string? origin, string language)
+    public static string Build(string status, string title, string encodedDetails, string? link, string? origin, string language, string? logoUrl = null)
     {
         var (badge, action, product, footer) = language switch
         {
@@ -26,8 +26,9 @@ internal static class RoleRequestMail
                 src:url('{{assets}}/fonts/Amalia-Bold.woff2') format('woff2'); }
             </style>
             """;
-        var brand = assets is null ? "" :
-            $"""<img src="{assets}/logos/rbi-bank-mono-pos.png" width="145" alt="" style="display:block;width:145px;height:auto;margin:0 auto 10px;border:0">""";
+        var logo = logoUrl is null ? (assets is null ? null : assets + "/logos/rbi-bank-mono-pos.png") : WebUtility.HtmlEncode(logoUrl);
+        var brand = logo is null ? "" :
+            $"""<img src="{logo}" width="145" alt="" style="display:block;width:145px;height:auto;margin:0 auto 10px;border:0">""";
         var button = link is null ? "" : $"""
             <table role="presentation" align="center" cellpadding="0" cellspacing="0" style="margin:30px auto 0">
               <tr><td bgcolor="#fee600" style="border-radius:10px;mso-padding-alt:14px 28px">
