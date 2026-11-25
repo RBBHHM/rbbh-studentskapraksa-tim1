@@ -187,7 +187,7 @@
     "audit.area": "Geschäftsbereich",
     "audit.change": "Änderungsdetails",
     "audit.user": "Benutzer",
-    "audit.ip": "IP-Adresse",
+
     "audit.pages": "Seiten des Änderungsprotokolls",
     "audit.page-summary": "Einträge insgesamt: {2}",
     "notifications.title": "Benachrichtigungen",

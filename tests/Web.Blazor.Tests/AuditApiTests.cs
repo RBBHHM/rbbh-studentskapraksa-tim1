@@ -28,8 +28,8 @@ public sealed class AuditApiTests
     [Fact]
     public void ScalarSearchIncludesHiddenResponseMetadataAndTrimsInput()
     {
-        var entry = new AuditRecord(Guid.NewGuid(), "RelatedPerson", "record", "INSERT", "Create", "Individuals", "note", "old-value", "new-value", "auditor", "127.0.0.1", DateTime.UtcNow);
-        Assert.True(entry.Matches("  OLD-VALUE  ")); Assert.True(entry.Matches("127.0.0.1")); Assert.False(entry.Matches("unmatched"));
+        var entry = new AuditRecord(1, "RelatedPerson", "record", "INSERT", "Create", "Individuals", "note", "old-value", "new-value", "auditor", DateTime.UtcNow);
+        Assert.True(entry.Matches("  OLD-VALUE  ")); Assert.True(entry.Matches("1")); Assert.False(entry.Matches("unmatched"));
     }
     [Fact]
     public async Task UnauthorizedAuditCannotBecomeAnEmptySuccessfulList()

@@ -121,9 +121,9 @@ public static class DevelopmentDataSeeder
             new Capital { RegulatoryCapital = 5000000, CoreCapital = 4000000, SupplementaryCapital = 500000, CapitalDate = now.Date, CreatedBy = "seed" });
 
         db.AuditLogs.AddRange(
-            new AuditLog { TableName = "RelatedPerson", RecordId = resident.Id.ToString(), Action = "VERIFY", NewValues = "{\"status\":\"Verified\",\"verifiedBy\":\"demo.verifier\"}", Username = verifier.Username, IpAddress = "127.0.0.1", Timestamp = now.AddHours(-2) },
-            new AuditLog { TableName = "LegalEntity", RecordId = legalForeign.Id.ToString(), Action = "INSERT", NewValues = "{\"name\":\"International Partner GmbH\",\"status\":\"Draft\"}", Username = admin.Username, IpAddress = "127.0.0.1", Timestamp = now.AddDays(-1) },
-            new AuditLog { TableName = "PeriodLock", RecordId = $"{now.Year}-{now.Month}", Action = "PERIOD_UNLOCK", NewValues = "{\"isLocked\":false}", Username = admin.Username, IpAddress = "127.0.0.1", Timestamp = now.AddDays(-2) });
+            new AuditLog { TableName = "RelatedPerson", RecordId = resident.Id.ToString(), Action = "VERIFY", NewValues = "{\"status\":\"Verified\",\"verifiedBy\":\"demo.verifier\"}", Username = verifier.Username, Timestamp = now.AddHours(-2) },
+            new AuditLog { TableName = "LegalEntity", RecordId = legalForeign.Id.ToString(), Action = "INSERT", NewValues = "{\"name\":\"International Partner GmbH\",\"status\":\"Draft\"}", Username = admin.Username, Timestamp = now.AddDays(-1) },
+            new AuditLog { TableName = "PeriodLock", RecordId = $"{now.Year}-{now.Month}", Action = "PERIOD_UNLOCK", NewValues = "{\"isLocked\":false}", Username = admin.Username, Timestamp = now.AddDays(-2) });
 
         await db.SaveChangesAsync(ct);
         await EnsureApplicationRolesAsync(db, ct);

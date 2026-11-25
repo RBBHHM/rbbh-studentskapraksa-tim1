@@ -187,7 +187,7 @@
     "audit.area": "Business area",
     "audit.change": "Change details",
     "audit.user": "User",
-    "audit.ip": "IP address",
+
     "audit.pages": "Audit trail pages",
     "audit.page-summary": "Total records: {2}",
     "notifications.title": "Notifications",

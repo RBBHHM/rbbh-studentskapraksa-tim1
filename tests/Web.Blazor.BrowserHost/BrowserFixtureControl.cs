@@ -360,7 +360,7 @@ internal static partial class BrowserHostProgram
                                     Action = "INSERT",
                                     UserId = "fixture-user",
                                     Username = "fixture-auditor",
-                                    IpAddress = "192.0.2.15",
+
                                     NewValues = System.Text.Json.JsonSerializer.Serialize(new { note = "<img src=x onerror=\"window.__auditExecuted=true\">audit-body-needle" })
                                 });
                             break;

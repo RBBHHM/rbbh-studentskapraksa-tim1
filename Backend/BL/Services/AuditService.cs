@@ -16,7 +16,7 @@ public class AuditService(ConnectedPartiesDbContext db) : IAuditService
             OldValues = entry.OldValues,
             NewValues = entry.NewValues,
             Username  = entry.Username,
-            IpAddress = entry.IpAddress,
+
             Timestamp = DateTime.UtcNow
         });
         await db.SaveChangesAsync();

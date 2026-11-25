@@ -15,7 +15,7 @@ internal static class BusinessAudit
         {
             TableName = table, RecordId = id, Action = action,
             Username = actor, Timestamp = DateTime.UtcNow,
-            IpAddress = accessor?.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+
             OldValues = oldValues is null ? null : JsonSerializer.Serialize(oldValues),
             NewValues = newValues is null ? null : JsonSerializer.Serialize(newValues)
         };

@@ -264,11 +264,13 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
         CreatedAt = row.CreatedAt, CreatedBy = row.CreatedBy };
     private async Task<int[]> PersistNew(IReadOnlyList<Limit> templates, string username, string action, CancellationToken ct)
     {
-        var auditId = Guid.NewGuid();
+        long? auditId = null;
         return await _dbContext.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
             // If commit acknowledgement was lost, retry returns its existing IDs instead of writing duplicates.
-            var previous = await _dbContext.AuditLogs.AsNoTracking().SingleOrDefaultAsync(row => row.Id == auditId, ct);
+            var previous = auditId is { } committedId
+                ? await _dbContext.AuditLogs.AsNoTracking().SingleOrDefaultAsync(row => row.Id == committedId, ct)
+                : null;
             if (previous is not null)
             {
                 using var saved = JsonDocument.Parse(previous.NewValues!);
@@ -297,8 +299,9 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
                 var ids = rows.Select(row => row.Id).ToArray();
                 audit = Helpers.BusinessAudit.Create("Limit", action == "INSERT" ? ids[0].ToString(CultureInfo.InvariantCulture) : "-", action, username, actor,
                     newValues: new { ids, values = rows.Select(Snapshot).ToArray() });
-                audit.Id = auditId; _dbContext.AuditLogs.Add(audit);
+                _dbContext.AuditLogs.Add(audit);
                 await _dbContext.SaveChangesAsync(ct);
+                auditId = audit.Id;
                 if (transaction is not null) await transaction.CommitAsync(ct);
                 return ids;
             }

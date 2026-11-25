@@ -125,7 +125,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
         }
         definition.ModifiedBy = korisnik;
         _dbContext.CodeLists.Add(entitet);
-        AddAudit(entitet.Kategorija, entitet.Kod, entitet.IzmijenjenDatum is null ? "CODELIST_ADD" : "CODELIST_UPDATE", korisnik);
+        AddAudit(entitet.Kategorija, entitet.Kod, "CODELIST_ADD", korisnik, null, Snapshot(entitet));
         await _dbContext.SaveChangesAsync();
 
         return Result<CodeListResponseDTO>.Success(entitet.Adapt<CodeListResponseDTO>());
@@ -159,13 +159,14 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
             return Result<CodeListResponseDTO>.ValidationError(BackendMessages.Message("validation.codelist.value.in.use"));
 
         // Ažuriramo dopuštena polja (Kategorija i Kod se ne mijenjaju)
+        var before = Snapshot(entitet);
         entitet.Naziv             = dto.Naziv.Trim();
         entitet.Opis              = dto.Opis?.Trim();
         entitet.Aktivan           = dto.Aktivan;
         entitet.IzmijenjenDatum   = DateTime.UtcNow;
         entitet.IzmijenioKorisnik = korisnik;
 
-        AddAudit(entitet.Kategorija, entitet.Kod, entitet.IzmijenjenDatum is null ? "CODELIST_ADD" : "CODELIST_UPDATE", korisnik);
+        AddAudit(entitet.Kategorija, entitet.Kod, "CODELIST_UPDATE", korisnik, before, Snapshot(entitet));
         await _dbContext.SaveChangesAsync();
 
         return Result<CodeListResponseDTO>.Success(entitet.Adapt<CodeListResponseDTO>());
@@ -199,11 +200,12 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
                 BackendMessages.Message("validation.codelist.value.delete.in.use", entitet.Naziv, entitet.Kod));
 
         // Soft-delete: ne brišemo fizički, samo deaktiviramo
+        var before = Snapshot(entitet);
         entitet.Aktivan           = false;
         entitet.IzmijenjenDatum   = DateTime.UtcNow;
         entitet.IzmijenioKorisnik = korisnik;
 
-        AddAudit(entitet.Kategorija, entitet.Kod, "CODELIST_DELETE", korisnik);
+        AddAudit(entitet.Kategorija, entitet.Kod, "CODELIST_DELETE", korisnik, before, Snapshot(entitet));
         await _dbContext.SaveChangesAsync();
 
         return Result<bool>.Success(true);
@@ -232,6 +234,12 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
             return Result<bool>.ValidationError(
                 BackendMessages.Message("validation.codelist.definition.delete.in.use", normalizedCategory));
 
+        object CategoryState() => new
+        {
+            Definition = definition is null ? null : new { definition.Name, definition.Description, definition.IsActive },
+            Values = values.OrderBy(value => value.Kod).Select(Snapshot).ToArray()
+        };
+        var before = CategoryState();
         var changedAt = DateTime.UtcNow;
         foreach (var value in values)
         {
@@ -243,7 +251,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
         if (definition is not null)
             { definition.IsActive = false; definition.ModifiedBy = korisnik; }
 
-        AddAudit(normalizedCategory, null, "CODELIST_DELETE", korisnik);
+        AddAudit(normalizedCategory, null, "CODELIST_DELETE", korisnik, before, CategoryState());
         await _dbContext.SaveChangesAsync();
         return Result<bool>.Success(true);
     }
@@ -294,12 +302,14 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
         };
     }
 
-    private void AddAudit(string category, string? code, string action, string actor) => _dbContext.AuditLogs.Add(new()
+    private static object Snapshot(CodeList value) => new
     {
-        TableName = "CodeList", RecordId = category, Action = action, Username = actor,
-        IpAddress = accessor?.HttpContext?.Connection.RemoteIpAddress?.ToString(),
-        Timestamp = DateTime.UtcNow, NewValues = System.Text.Json.JsonSerializer.Serialize(new { category, code })
-    });
+        value.Kategorija, value.Kod, value.Naziv, value.Opis, value.Aktivan
+    };
+
+    private void AddAudit(string category, string? code, string action, string actor, object? before, object after) =>
+        _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("CodeList", code is null ? category : $"{category}:{code}",
+            action, actor, accessor, before, after));
 
     private static Result<CodeListResponseDTO>? ValidateCreateDTO(CreateCodeListDTO dto)
     {

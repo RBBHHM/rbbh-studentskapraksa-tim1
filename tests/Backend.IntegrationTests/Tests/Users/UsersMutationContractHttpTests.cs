@@ -22,7 +22,7 @@ public sealed class UsersMutationContractHttpTests : UsersHttpFixture
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.DeactivateAsync(
-            other.ToString(), new ActorIdentity(Subject, Email, _localId), null, cancellation.Token));
+            other.ToString(), new ActorIdentity(Subject, Email, _localId), cancellation.Token));
         var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
         Assert.True((await db.AppUsers.SingleAsync(user => user.Id == other)).IsActive);
         Assert.Empty(await db.AuditLogs.ToListAsync());
@@ -104,8 +104,10 @@ public sealed class UsersMutationContractHttpTests : UsersHttpFixture
         Assert.Equal("ROLE_REMOVE", audit.Action);
 
         Assert.Equal("admin-fixture", audit.Username);
-        Assert.Null(audit.OldValues);
-        Assert.Equal("{\"Roles\":[]}", audit.NewValues);
+        using var before = JsonDocument.Parse(audit.OldValues!);
+        using var after = JsonDocument.Parse(audit.NewValues!);
+        Assert.Equal(ApplicationAccessRoles.PhysicalPersons, Assert.Single(before.RootElement.GetProperty("Roles").EnumerateArray()).GetString());
+        Assert.Empty(after.RootElement.GetProperty("Roles").EnumerateArray());
     }
 
     [Fact]
@@ -123,7 +125,9 @@ public sealed class UsersMutationContractHttpTests : UsersHttpFixture
         var audit = Assert.Single(await db.AuditLogs.AsNoTracking().ToListAsync());
         Assert.Equal(id.ToString(), audit.RecordId);
         Assert.Equal("REACTIVATE", audit.Action);
-        Assert.Equal("{\"IsActive\":false}", audit.OldValues);
-        Assert.Equal("{\"IsActive\":true}", audit.NewValues);
+        using var before = JsonDocument.Parse(audit.OldValues!);
+        using var after = JsonDocument.Parse(audit.NewValues!);
+        Assert.False(before.RootElement.GetProperty("IsActive").GetBoolean());
+        Assert.True(after.RootElement.GetProperty("IsActive").GetBoolean());
     }
 }

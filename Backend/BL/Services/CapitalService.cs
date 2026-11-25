@@ -30,8 +30,13 @@ public sealed class CapitalService(ConnectedPartiesDbContext db, IHttpContextAcc
         var row = new CapitalRevision { RegulatoryCapital = dto.RegulatoryCapital!.Value, CoreCapital = dto.CoreCapital!.Value,
             SupplementaryCapital = dto.SupplementaryCapital!.Value, EffectiveDate = dto.CapitalDate.Value.Date,
             RecordedBy = korisnik, ActorSubject = actor?.HttpContext is { } context ? Helpers.AuthenticatedActor.RequireSubject(context.User) : null };
+        var previous = await CapitalHistory.AsOf(db, row.EffectiveDate, RequestCancellation);
+        var before = previous is null ? null : new
+        {
+            previous.Id, EffectiveDate = previous.CapitalDate, previous.RegulatoryCapital, previous.CoreCapital, previous.SupplementaryCapital
+        };
         db.CapitalRevisions.Add(row);
-        db.AuditLogs.Add(Helpers.BusinessAudit.Create("Capital", row.Id.ToString(), "UPSERT", korisnik, actor, newValues: new
+        db.AuditLogs.Add(Helpers.BusinessAudit.Create("Capital", row.Id.ToString(), "UPSERT", korisnik, actor, oldValues: before, newValues: new
         { row.Id, row.EffectiveDate, row.RegulatoryCapital, row.CoreCapital, row.SupplementaryCapital }));
         await db.SaveChangesAsync(RequestCancellation);
         return Result<CapitalDTO>.Success(new() { Id = row.Id, CapitalDate = row.EffectiveDate, RegulatoryCapital = row.RegulatoryCapital,

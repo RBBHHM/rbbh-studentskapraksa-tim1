@@ -4,23 +4,23 @@ public class AuditEntry
 {
     /// <summary>Common metadata when both audit identifiers are the actor email.</summary>
     public static AuditEntry ForActor(string table, string recordId, string action,
-        string actorEmail, string? ipAddress, string? oldValues = null, string? newValues = null) => new()
+        string actorEmail, string? oldValues = null, string? newValues = null) => new()
         {
             TableName = table,
             RecordId = recordId,
             Action = action,
             UserId = actorEmail,
             Username = actorEmail,
-            IpAddress = ipAddress,
+
             OldValues = oldValues,
             NewValues = newValues
         };
 
     public static AuditEntry ForActor(string table, string recordId, string action,
-        Helpers.ActorIdentity actor, string? ipAddress, string? oldValues = null, string? newValues = null) => new()
+        Helpers.ActorIdentity actor, string? oldValues = null, string? newValues = null) => new()
         {
             TableName = table, RecordId = recordId, Action = action, UserId = actor.Subject ?? actor.Email,
-            Username = actor.DisplayName, IpAddress = ipAddress, OldValues = oldValues, NewValues = newValues
+            Username = actor.DisplayName, OldValues = oldValues, NewValues = newValues
         };
 
     public string TableName { get; set; } = string.Empty;
@@ -30,7 +30,6 @@ public class AuditEntry
     public string? NewValues { get; set; }
     public string UserId { get; set; } = string.Empty;
     public string Username { get; set; } = string.Empty;
-    public string? IpAddress { get; set; }
 }
 
 public interface IAuditService

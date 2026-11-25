@@ -51,7 +51,7 @@ public sealed class ProductionHostingHttpTests
     [InlineData("10.20.30.40", "attacker.example.test", "https", "203.0.113.9", "public.example.test")]
     [InlineData("::ffff:192.0.2.15", "public.example.test", "http", "192.0.2.15", "public.example.test")]
     [InlineData("::1", "public.example.test", "http", null, "public.example.test")]
-    public async Task OnlyApprovedProxyAndPublicHostCanRewriteSchemeAndAuditAddress(
+    public async Task OnlyApprovedProxyAndPublicHostCanRewriteSchemeAndConnectionAddress(
         string remote, string forwardedHost, string scheme, string? address, string host)
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Production" });
@@ -73,7 +73,7 @@ public sealed class ProductionHostingHttpTests
         {
             db.AuditLogs.Add(new() { TableName = "Role", Action = "UPDATE", RecordId = "test", Username = "tester" });
             await db.SaveChangesAsync();
-            return new { scheme = context.Request.Scheme, host = context.Request.Host.Host };
+            return new { scheme = context.Request.Scheme, host = context.Request.Host.Host, address = context.Connection.RemoteIpAddress is { } peer && !IPAddress.IsLoopback(peer) ? (peer.IsIPv4MappedToIPv6 ? peer.MapToIPv4() : peer).ToString() : null };
         });
         await app.StartAsync();
         using var client = app.GetTestClient();
@@ -87,7 +87,8 @@ public sealed class ProductionHostingHttpTests
         Assert.Equal(scheme, json.GetProperty("scheme").GetString());
         await using var scope = app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
-        Assert.Equal(address, (await db.AuditLogs.SingleAsync()).IpAddress);
+        Assert.Single(await db.AuditLogs.ToListAsync());
+        Assert.Equal(address, json.GetProperty("address").GetString());
         Assert.Equal(host, json.GetProperty("host").GetString());
     }
 }

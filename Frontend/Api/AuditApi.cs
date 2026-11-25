@@ -2,9 +2,9 @@ using RBI.ApiCore;
 
 namespace RBBH.RelatedPartiesRegister.Web.Api;
 
-public sealed record AuditRecord(Guid Id, string TableName, string RecordId, string Action, string ActionDisplay,
+public sealed record AuditRecord(long Id, string TableName, string RecordId, string Action, string ActionDisplay,
     string AreaDisplay, string ChangeSummary, string? OldValues, string? NewValues,
-    string Username, string? IpAddress, DateTime Timestamp)
+    string Username, DateTime Timestamp)
 {
     public bool Matches(string? search)
     {

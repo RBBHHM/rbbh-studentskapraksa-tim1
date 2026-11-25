@@ -30,7 +30,7 @@ internal static class RegistryVerification
     {
         TableName = table, RecordId = id.ToString(), Action = "VERIFY",
         Username = accessor?.HttpContext?.User.FindFirst("preferred_username")?.Value ?? displayActor,
-        IpAddress = accessor?.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+
         OldValues = JsonSerializer.Serialize(before, AuditFormat),
         NewValues = JsonSerializer.Serialize(after, AuditFormat),
         Timestamp = DateTime.UtcNow

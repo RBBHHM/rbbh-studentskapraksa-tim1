@@ -71,7 +71,7 @@ public class PeriodLockController(
     public Task<IActionResult> LockPeriod([FromBody] PeriodTargetDto? dto = null)
     {
         var now = DateTime.UtcNow; var year = dto?.Year ?? now.Year; var month = dto?.Month ?? now.Month;
-        return Command(() => workflow.SetLock(year, month, true, User, HttpContext.Connection.RemoteIpAddress?.ToString(), HttpContext.RequestAborted),
+        return Command(() => workflow.SetLock(year, month, true, User, HttpContext.RequestAborted),
             BackendMessages.Message("messages.period.locked", periodLockService.GetMonthDisplayName(year, month)));
     }
 
@@ -79,7 +79,7 @@ public class PeriodLockController(
     public Task<IActionResult> UnlockPeriod([FromBody] PeriodTargetDto? dto = null)
     {
         var now = DateTime.UtcNow; var year = dto?.Year ?? now.Year; var month = dto?.Month ?? now.Month;
-        return Command(() => workflow.SetLock(year, month, false, User, HttpContext.Connection.RemoteIpAddress?.ToString(), HttpContext.RequestAborted),
+        return Command(() => workflow.SetLock(year, month, false, User, HttpContext.RequestAborted),
             BackendMessages.Message("messages.period.unlocked", periodLockService.GetMonthDisplayName(year, month)));
     }
 
@@ -90,7 +90,7 @@ public class PeriodLockController(
             return Task.FromResult<IActionResult>(BadRequest(Err(BackendMessages.Message("errors.period.reason.required"), "reason")));
         var now = DateTime.UtcNow;
         return Command(() => workflow.Request(dto.Year ?? now.Year, dto.Month ?? now.Month, dto.Reason, User,
-            HttpContext.Connection.RemoteIpAddress?.ToString(), HttpContext.RequestAborted), BackendMessages.Message("messages.period.request.sent"));
+            HttpContext.RequestAborted), BackendMessages.Message("messages.period.request.sent"));
     }
 
     /// <summary>Returns unlock requests. status="" returns ALL, status="PENDING" filters.</summary>
@@ -139,7 +139,7 @@ public class PeriodLockController(
     {
         if (dto is null || string.IsNullOrWhiteSpace(dto.Note) || dto.Note.Length > 1000 || dto.Note.Trim().Length < 10)
             return Task.FromResult<IActionResult>(BadRequest(Err(BackendMessages.Message("errors.period.rejection.note.required"), "note")));
-        return Command(() => workflow.Process(id, true, dto.Note, User, HttpContext.Connection.RemoteIpAddress?.ToString(), HttpContext.RequestAborted), BackendMessages.Message("messages.period.request.rejected"));
+        return Command(() => workflow.Process(id, true, dto.Note, User, HttpContext.RequestAborted), BackendMessages.Message("messages.period.request.rejected"));
     }
 
     [HttpPost("unlock-requests/{id:guid}/request-info"), Authorize(Policy = ApplicationPolicies.CapitalWrite)]
@@ -147,7 +147,7 @@ public class PeriodLockController(
     {
         if (dto is null || string.IsNullOrWhiteSpace(dto.Note) || dto.Note.Length > 1000 || dto.Note.Trim().Length < 10)
             return Task.FromResult<IActionResult>(BadRequest(Err(BackendMessages.Message("errors.period.request.note.required"), "note")));
-        return Command(() => workflow.Process(id, false, dto.Note, User, HttpContext.Connection.RemoteIpAddress?.ToString(), HttpContext.RequestAborted), BackendMessages.Message("messages.period.information.requested"));
+        return Command(() => workflow.Process(id, false, dto.Note, User, HttpContext.RequestAborted), BackendMessages.Message("messages.period.information.requested"));
     }
 
     [HttpPost("unlock-requests/{id:guid}/respond"), Authorize(Policy = ApplicationPolicies.CapitalWrite)]
@@ -155,7 +155,7 @@ public class PeriodLockController(
     {
         if (dto is null || string.IsNullOrWhiteSpace(dto.Message) || dto.Message.Length > 490 || dto.Message.Trim().Length < 10)
             return Task.FromResult<IActionResult>(BadRequest(Err(BackendMessages.Message("errors.period.response.length"), "message")));
-        return Command(() => workflow.Respond(id, dto.Message, User, HttpContext.Connection.RemoteIpAddress?.ToString(), HttpContext.RequestAborted), BackendMessages.Message("messages.period.response.sent"));
+        return Command(() => workflow.Respond(id, dto.Message, User, HttpContext.RequestAborted), BackendMessages.Message("messages.period.response.sent"));
     }
 
     private async Task<IActionResult> Command(Func<Task> command, string message)

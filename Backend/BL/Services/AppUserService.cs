@@ -77,7 +77,7 @@ public partial class AppUserService(ConnectedPartiesDbContext dbContext, Keycloa
         });
     }
 
-    public async Task<Result<UserDTO>> CreateUserAsync(CreateUserDTO dto, string createdBy, string? ipAddress = null)
+    public async Task<Result<UserDTO>> CreateUserAsync(CreateUserDTO dto, string createdBy)
     {
         var requestedRoleIds = dto.RoleIds
             .Concat(Guid.TryParse(dto.RoleId, out var legacyRoleId) ? [legacyRoleId] : [])
@@ -164,7 +164,7 @@ public partial class AppUserService(ConnectedPartiesDbContext dbContext, Keycloa
             { user.Username, user.Email, user.IsActive, Roles = roleNames }),
             UserId = actor.Subject ?? createdBy,
             Username = createdBy,
-            IpAddress = ipAddress
+
         });
 
         return Result<UserDTO>.Success(new UserDTO

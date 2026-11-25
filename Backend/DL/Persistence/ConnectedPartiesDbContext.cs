@@ -1,4 +1,4 @@
-using System.Net;
+using System.Text.Json;
 using RBBH.ConnectedParties.DL.Entities.Role;
 using RBBH.ConnectedParties.DL.Entities.Sifarnici;
 using RBBH.ConnectedParties.DL.Entities.Users;
@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace RBBH.ConnectedParties.DL.Persistence;
 
 public partial class ConnectedPartiesDbContext(
-    DbContextOptions<ConnectedPartiesDbContext> options, IHttpContextAccessor? httpContextAccessor = null) : DbContext(options)
+    DbContextOptions<ConnectedPartiesDbContext> options) : DbContext(options)
 {
 
     public virtual DbSet<RBBH.ConnectedParties.DL.Entities.Role.Role> Roles { get; set; }
@@ -201,21 +201,28 @@ public partial class ConnectedPartiesDbContext(
         }
     }
 
-    private void NormalizeNewAuditAddresses()
+    private static readonly JsonSerializerOptions ReadableAuditJson = new() { WriteIndented = true };
+
+    private void FormatNewAuditSnapshots()
     {
-        var requestAddress = httpContextAccessor?.HttpContext?.Connection.RemoteIpAddress;
         foreach (var entry in ChangeTracker.Entries<AuditLog>().Where(entry => entry.State == EntityState.Added))
         {
-            var address = IPAddress.TryParse(entry.Entity.IpAddress, out var suppliedAddress)
-                ? suppliedAddress
-                : requestAddress;
-            if (address?.IsIPv4MappedToIPv6 == true)
-                address = address.MapToIPv4();
+            entry.Entity.OldValues = FormatAuditSnapshot(entry.Entity.OldValues);
+            entry.Entity.NewValues = FormatAuditSnapshot(entry.Entity.NewValues);
+        }
+    }
 
-            entry.Entity.IpAddress = address is null || IPAddress.IsLoopback(address)
-                || address.Equals(IPAddress.Any) || address.Equals(IPAddress.IPv6Any)
-                ? null
-                : address.ToString();
+    private static string? FormatAuditSnapshot(string? snapshot)
+    {
+        if (string.IsNullOrWhiteSpace(snapshot)) return snapshot;
+        try
+        {
+            using var document = JsonDocument.Parse(snapshot);
+            return JsonSerializer.Serialize(document.RootElement, ReadableAuditJson);
+        }
+        catch (JsonException)
+        {
+            return snapshot;
         }
     }
 
@@ -223,7 +230,7 @@ public partial class ConnectedPartiesDbContext(
     {
         ProtectCreatorIdentity();
         ProtectCapitalRevisions();
-        NormalizeNewAuditAddresses();
+        FormatNewAuditSnapshots();
         TouchCodebookVersions();
         return base.SaveChanges(acceptAllChangesOnSuccess);
     }
@@ -233,7 +240,7 @@ public partial class ConnectedPartiesDbContext(
         cancellationToken.ThrowIfCancellationRequested();
         ProtectCreatorIdentity();
         ProtectCapitalRevisions();
-        NormalizeNewAuditAddresses();
+        FormatNewAuditSnapshots();
         var categories = ChangedCodebookCategories();
         if (categories.Length > 0 || ChangeTracker.Entries<CodeListDefinition>().Any(entry => entry.State is EntityState.Added or EntityState.Modified))
         {

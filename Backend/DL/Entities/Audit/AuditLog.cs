@@ -9,7 +9,7 @@ namespace RBBH.ConnectedParties.DL.Entities.Audit;
 public class AuditLog
 {
     [Key]
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public long Id { get; set; }
 
     [Required][StringLength(100)]
     public string TableName { get; set; } = string.Empty;
@@ -27,9 +27,6 @@ public class AuditLog
 
     [Required][StringLength(100)]
     public string Username { get; set; } = string.Empty;
-
-    [StringLength(50)]
-    public string? IpAddress { get; set; }
 
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 }

@@ -14,9 +14,9 @@ namespace RBBH.ConnectedParties.BL.Services;
 /// <summary>One commit for period/request state, audit, recipient inbox and delivery outbox.</summary>
 public sealed class PeriodWorkflow(ConnectedPartiesDbContext db)
 {
-    private sealed record Actor(string Subject, string Username, string Email, string? Ip);
-    private static Actor Capture(ClaimsPrincipal principal, string? ip) => new(AuthenticatedActor.RequireSubject(principal),
-        AuthenticatedActor.Username(principal), AuthenticatedActor.Email(principal), ip);
+    private sealed record Actor(string Subject, string Username, string Email);
+    private static Actor Capture(ClaimsPrincipal principal) => new(AuthenticatedActor.RequireSubject(principal),
+        AuthenticatedActor.Username(principal), AuthenticatedActor.Email(principal));
     private static void Period(int year, int month)
     { if (year is < 2020 or > 9999 || month is < 1 or > 12) throw new BusinessRuleException(400, "period.invalid"); }
     private static void Text(string? value, int minimum, int maximum, string code)
@@ -24,7 +24,7 @@ public sealed class PeriodWorkflow(ConnectedPartiesDbContext db)
     private static bool Mailbox(string? email) => email is { Length: > 0 and <= 200 } && MailAddress.TryCreate(email, out var address) && address.Address == email;
     private void Audit(string id, string action, Actor actor, object? before, object after) => db.AuditLogs.Add(new()
     { TableName = "PeriodLock", RecordId = id, Action = action, Username = actor.Username,
-        IpAddress = actor.Ip, Timestamp = DateTime.UtcNow, OldValues = before is null ? null : JsonSerializer.Serialize(before), NewValues = JsonSerializer.Serialize(after) });
+        Timestamp = DateTime.UtcNow, OldValues = before is null ? null : JsonSerializer.Serialize(before), NewValues = JsonSerializer.Serialize(after) });
     private void Notice(string? subject, string email, string eventKey, string kind, object parameters, string route = "/app/admin/period")
     {
         var notice = new ApplicationNotification { RecipientSubject = subject ?? "", RecipientEmail = email, EventKey = eventKey,
@@ -51,9 +51,9 @@ public sealed class PeriodWorkflow(ConnectedPartiesDbContext db)
             email = await db.AppUsers.Where(user => user.KeycloakId == request.RequestedBySubject && user.KeycloakSubjectConfirmed).Select(user => user.Email).SingleOrDefaultAsync(ct) ?? email;
         Notice(request.RequestedBySubject, email, eventKey, kind, parameters);
     }
-    public Task SetLock(int year, int month, bool locked, ClaimsPrincipal principal, string? ip, CancellationToken ct) =>
-        SetLock(year, month, locked, Capture(principal, ip), false, ct);
-    public Task SetSystemLock(int year, int month, CancellationToken ct) => SetLock(year, month, true, new("system", "system", "", null), true, ct);
+    public Task SetLock(int year, int month, bool locked, ClaimsPrincipal principal, CancellationToken ct) =>
+        SetLock(year, month, locked, Capture(principal), false, ct);
+    public Task SetSystemLock(int year, int month, CancellationToken ct) => SetLock(year, month, true, new("system", "system", ""), true, ct);
     private async Task SetLock(int year, int month, bool locked, Actor actor, bool system, CancellationToken ct)
     {
         Period(year, month); var now = DateTime.UtcNow;
@@ -84,9 +84,9 @@ public sealed class PeriodWorkflow(ConnectedPartiesDbContext db)
         // No 200-user API clamp: every known active/confirmed recipient is staged in this commit.
         await db.SaveChangesAsync(ct);
     }
-    public async Task Request(int year, int month, string reason, ClaimsPrincipal principal, string? ip, CancellationToken ct)
+    public async Task Request(int year, int month, string reason, ClaimsPrincipal principal, CancellationToken ct)
     {
-        Period(year, month); Text(reason, 10, 500, "period.invalid_reason"); var actor = Capture(principal, ip);
+        Period(year, month); Text(reason, 10, 500, "period.invalid_reason"); var actor = Capture(principal);
         var request = new UnlockRequest { Year = year, Month = month, Reason = reason, RequestedBySubject = actor.Subject,
             RequestedBy = actor.Username, RequestedByEmail = actor.Email, Status = "PENDING", CreatedBy = actor.Username, CreatedAt = DateTime.UtcNow };
         db.UnlockRequests.Add(request);
@@ -94,20 +94,21 @@ public sealed class PeriodWorkflow(ConnectedPartiesDbContext db)
         await NotifyReviewers($"period-request:{request.Id}:submitted", "requested", new { year, month, requester = actor.Username, message = reason }, ct);
         await db.SaveChangesAsync(ct);
     }
-    public async Task Process(Guid id, bool reject, string note, ClaimsPrincipal principal, string? ip, CancellationToken ct)
+    public async Task Process(Guid id, bool reject, string note, ClaimsPrincipal principal, CancellationToken ct)
     {
-        Text(note, 10, 1000, "period.invalid_note"); var actor = Capture(principal, ip);
+        Text(note, 10, 1000, "period.invalid_note"); var actor = Capture(principal);
         var request = await db.UnlockRequests.SingleOrDefaultAsync(row => row.Id == id && row.Status == "PENDING", ct)
             ?? throw new BusinessRuleException(404, "period.request_not_pending");
+        var before = new { request.Status, request.AdminNote, request.ProcessedBy, request.ProcessedAt };
         request.Status = reject ? "REJECTED" : "NEEDS_INFO"; request.AdminNote = note.Trim(); request.ProcessedBy = actor.Username;
         var now = DateTime.UtcNow; request.ProcessedAt = now; request.MarkModified(now); request.ModifiedBy = actor.Username;
-        Audit(id.ToString(), reject ? "UNLOCK_REQUEST_REJECTED" : "UNLOCK_REQUEST_NEEDS_INFO", actor, new { status = "PENDING" }, new { request.Status, note, id });
+        Audit(id.ToString(), reject ? "UNLOCK_REQUEST_REJECTED" : "UNLOCK_REQUEST_NEEDS_INFO", actor, before, new { request.Status, request.AdminNote, request.ProcessedBy, request.ProcessedAt });
         await Owner(request, $"period-request:{id}:{request.Status}", reject ? "rejected" : "needsinfo", new { year = request.Year, month = request.Month, message = note, actor = actor.Username }, ct);
         await db.SaveChangesAsync(ct);
     }
-    public async Task Respond(Guid id, string message, ClaimsPrincipal principal, string? ip, CancellationToken ct)
+    public async Task Respond(Guid id, string message, ClaimsPrincipal principal, CancellationToken ct)
     {
-        Text(message, 10, 490, "period.invalid_response"); var actor = Capture(principal, ip);
+        Text(message, 10, 490, "period.invalid_response"); var actor = Capture(principal);
         var original = await db.UnlockRequests.SingleOrDefaultAsync(row => row.Id == id && row.RequestedBySubject == actor.Subject, ct)
             ?? throw new BusinessRuleException(404, "period.request_not_found");
         if (original.Status != "NEEDS_INFO" || await db.UnlockRequests.AnyAsync(row => row.ParentRequestId == id, ct))

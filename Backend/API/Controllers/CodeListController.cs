@@ -51,8 +51,8 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
         var korisnik = GetKorisnik();
         var definition = new CodeListDefinition { Name = name, Description = dto.Description?.Trim(), CreatedBy = korisnik };
         db.CodeListDefinitions.Add(definition);
-        db.AuditLogs.Add(new() { TableName = "CodeList", RecordId = definition.Id.ToString(), Action = "CODELIST_ADD",
-            Username = korisnik, IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(), Timestamp = DateTime.UtcNow });
+        db.AuditLogs.Add(Helpers.BusinessAudit.Create("CodeList", definition.Id.ToString(), "CODELIST_ADD", korisnik, null,
+            newValues: new { definition.Name, definition.Description, definition.IsActive }));
         await db.SaveChangesAsync(HttpContext.RequestAborted);
 
 
@@ -74,9 +74,10 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
         var definition = await db.CodeListDefinitions.SingleOrDefaultAsync(row => row.Name == name, ct);
         if (definition is null) return NotFound();
         if (definition.Version != input.ExpectedVersion) return Conflict(new ProblemDetails { Status = 409, Title = BackendMessages.Message("errors.codelist.concurrent.change") });
+        var before = new { definition.Description };
         var actor = GetKorisnik(); definition.Description = input.Description?.Trim(); definition.ModifiedBy = actor;
-        db.AuditLogs.Add(new() { TableName = "CodeList", RecordId = definition.Id.ToString(), Action = "CODELIST_UPDATE",
-            Username = actor, IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(), Timestamp = DateTime.UtcNow });
+        db.AuditLogs.Add(Helpers.BusinessAudit.Create("CodeList", definition.Id.ToString(), "CODELIST_UPDATE", actor, null,
+            before, new { definition.Description }));
         await db.SaveChangesAsync(ct);
         return Ok(new { definition.Id, definition.Name, definition.Description, definition.Version, definition.ModifiedAt, definition.ModifiedBy });
     }
@@ -395,7 +396,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
         }
         definition.ModifiedBy = korisnik;
         db.AuditLogs.Add(new() { TableName = "CodeList", RecordId = definition.Name, Action = "IMPORT",
-            Username = korisnik, IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(), Timestamp = DateTime.UtcNow,
+            Username = korisnik, Timestamp = DateTime.UtcNow,
             NewValues = System.Text.Json.JsonSerializer.Serialize(new { imported = preview.Imported, failed = preview.Errors.Count }) });
         await db.SaveChangesAsync(HttpContext.RequestAborted);
 

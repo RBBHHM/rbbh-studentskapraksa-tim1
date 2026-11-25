@@ -2,6 +2,11 @@ using System.Net;
 using System.Text.Json;
 using IntegrationTests.Infrastructure;
 using IntegrationTests.Tests.Users;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
+using RBBH.ConnectedParties.DL.Persistence;
 using RBBH.ConnectedParties.DL.Entities.Audit;
 
 namespace IntegrationTests.Tests.Operations;
@@ -54,6 +59,39 @@ public sealed class AuditQuerySqlTests : AuthenticatedApiFixture
             Assert.Equal(2, db.AuditLogs.Count(row => row.TableName == Area));
             return Task.CompletedTask;
         });
+    }
+
+    [SqlServerFact]
+    public async Task UpgradePreservesAuditHistoryAndUsesNumericKeysWithoutIpAddresses()
+    {
+        var connection = new SqlConnectionStringBuilder(Environment.GetEnvironmentVariable(SqlServerFactAttribute.Variable))
+        { InitialCatalog = "RBBH_AUDIT_KEYS_" + Guid.NewGuid().ToString("N") };
+        await using var db = new ConnectedPartiesDbContext(
+            new DbContextOptionsBuilder<ConnectedPartiesDbContext>().UseSqlServer(connection.ConnectionString).Options);
+        try
+        {
+            await db.GetService<IMigrator>().MigrateAsync("20261124140633_MoveLegalEntityVerificationOrigin");
+            await db.Database.ExecuteSqlRawAsync("""
+                INSERT INTO dbo.AuditLogs (Id, TableName, RecordId, Action, Username, Timestamp, IpAddress, OldValues)
+                VALUES (NEWID(), N'AuditQueryFixture', N'legacy', N'UPDATE', N'creator', SYSUTCDATETIME(), N'192.0.2.15', N'{"old":true}');
+                """);
+
+            await db.Database.MigrateAsync();
+            var historical = await db.AuditLogs.SingleAsync(row => row.RecordId == "legacy");
+            Assert.True(historical.Id > 0);
+            Assert.Equal("{\"old\":true}", historical.OldValues);
+
+            var next = new AuditLog { TableName = Area, RecordId = "fresh", Action = "INSERT", Username = "creator" };
+            db.AuditLogs.Add(next);
+            await db.SaveChangesAsync();
+            Assert.True(next.Id > historical.Id);
+            Assert.Equal(0, await db.Database.SqlQueryRaw<int>("""
+                SELECT COUNT(*) AS [Value] FROM sys.columns
+                WHERE (object_id = OBJECT_ID(N'dbo.AuditLogs') AND name = N'IpAddress')
+                   OR (object_id = OBJECT_ID(N'dbo.Permissions') AND name = N'Label')
+                """).SingleAsync());
+        }
+        finally { await db.Database.EnsureDeletedAsync(); }
     }
 
     private Task Seed() => InDatabase(async db =>

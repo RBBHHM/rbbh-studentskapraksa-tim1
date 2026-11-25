@@ -123,7 +123,7 @@ public class ReportController : ControllerBase
             NewValues = System.Text.Json.JsonSerializer.Serialize(new { type = "client", identifier }),
             UserId = RBBH.ConnectedParties.Helpers.AuthenticatedActor.RequireSubject(User),
             Username = currentUser,
-            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+
         });
 
         return File(bytes,
@@ -152,7 +152,7 @@ public class ReportController : ControllerBase
             NewValues = System.Text.Json.JsonSerializer.Serialize(new { type = "all-clients" }),
             UserId = RBBH.ConnectedParties.Helpers.AuthenticatedActor.RequireSubject(User),
             Username = currentUser,
-            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+
         });
 
         return File(bytes,
@@ -175,7 +175,7 @@ public class ReportController : ControllerBase
             NewValues = System.Text.Json.JsonSerializer.Serialize(new { type = "generated" }),
             UserId = RBBH.ConnectedParties.Helpers.AuthenticatedActor.RequireSubject(User),
             Username = currentUser,
-            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+
         });
 
         return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"izvjestaj_{reportId:N}.xlsx");

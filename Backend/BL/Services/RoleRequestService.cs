@@ -120,7 +120,8 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
                 return Conflict("role_request.already_processed");
             }
             if (row.Version != input.ExpectedVersion) return Conflict("request.concurrent_change");
-            object? oldRoles = null;
+            string[]? oldRoles = null;
+            string[]? resultingRoles = null;
             if (approve)
             {
                 if (await IsInactiveApplicant(row.RequesterSubject, row.Email, ct)) return RoleRequestResult.Failure(403, "identity.inactive");
@@ -142,6 +143,9 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
                 oldRoles = existing.Where(item => item.IsActive).Select(item => item.Role.Name).ToArray();
                 var targets = row.RequestedRoles.Select(item => item.RoleId).ToHashSet();
                 if (row.Purpose == "new") targets.UnionWith(existing.Where(item => item.IsActive).Select(item => item.RoleId));
+                resultingRoles = row.RequestedRoles.Select(item => item.Role.Name)
+                    .Concat(existing.Where(item => targets.Contains(item.RoleId)).Select(item => item.Role.Name))
+                    .Distinct(StringComparer.Ordinal).Order().ToArray();
                 var removesAdmin = existing.Any(item => item.IsActive && item.Role.Name == ApplicationAccessRoles.Administrator && !targets.Contains(item.RoleId));
                 if (removesAdmin && await ActiveAdmins().Select(user => user.Id).Distinct().Take(2).CountAsync(ct) <= 1)
                     return Conflict("users.final_admin");
@@ -155,10 +159,11 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
                 user.ModifiedAt = modifiedAt;
                 user.ModifiedBy = actor;
             }
+            var before = new { row.Status, row.DecisionNote, EffectiveRoles = oldRoles };
             row.Status = outcome; row.DecisionId = input.DecisionId; row.DecisionNote = input.Note?.Trim();
             row.ProcessedAt = DateTime.UtcNow; row.ProcessedBy = Subject; row.Version++;
-            db.AuditLogs.Add(Audit(row, approve ? "ROLE_REQUEST_APPROVED" : "ROLE_REQUEST_REJECTED", oldRoles,
-                new { row.Status, Roles = row.RequestedRoles.Select(item => item.Role.Name) }));
+            db.AuditLogs.Add(Audit(row, approve ? "ROLE_REQUEST_APPROVED" : "ROLE_REQUEST_REJECTED", before,
+                new { row.Status, row.DecisionNote, EffectiveRoles = resultingRoles }));
             var recipientEmail = await db.AppUsers.Where(user => user.KeycloakSubjectConfirmed && user.KeycloakId == row.RequesterSubject)
                 .Select(user => user.Email).SingleOrDefaultAsync(ct) ?? row.Email;
             Notify(row.RequesterSubject, recipientEmail, $"role-request:{row.Id}:{outcome}", "role_request." + outcome, row, $"/app/profile?requestId={row.Id:D}");
@@ -193,7 +198,7 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
     {
         TableName = "RoleRequest", RecordId = row.Id.ToString(), Action = action,
         Username = Principal.FindFirst("preferred_username")?.Value ?? Subject,
-        IpAddress = accessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+
         OldValues = before is null ? null : JsonSerializer.Serialize(before), NewValues = JsonSerializer.Serialize(after)
     };
     private void Notify(string recipient, string email, string eventKey, string messageKey, RoleRequest row, string route)

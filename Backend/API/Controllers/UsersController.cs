@@ -46,7 +46,7 @@ public class UsersController(IAppUserService appUserService)
     {
         var createdBy = RBBH.ConnectedParties.Helpers.AuthenticatedActor.Email(User);
 
-        var result = await _appUserService.CreateUserAsync(dto, createdBy, HttpContext.Connection.RemoteIpAddress?.ToString());
+        var result = await _appUserService.CreateUserAsync(dto, createdBy);
 
         if (result.IsSuccessful)
             return Created($"{Request.Path}/{result.Value.Id}", result.Value);
@@ -64,7 +64,7 @@ public class UsersController(IAppUserService appUserService)
     [Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
     public async Task<ActionResult<object>> UpdateProfile(string userId, UpdateUserProfileDTO dto) =>
         MutationResponse(await _appUserService.UpdateProfileAsync(userId, dto,
-            RBBH.ConnectedParties.Helpers.AuthenticatedActor.Capture(User), RemoteIp, HttpContext.RequestAborted),
+            RBBH.ConnectedParties.Helpers.AuthenticatedActor.Capture(User), HttpContext.RequestAborted),
             BackendMessages.Message("messages.users.profile.updated"));
 
     /// <summary>Atomically replaces the user's functional application accesses.</summary>
@@ -76,7 +76,7 @@ public class UsersController(IAppUserService appUserService)
     public async Task<ActionResult<object>> AssignOrUpdateUserRole(
         [FromRoute] string userId, [FromBody] AssignRoleRequestDTO request) =>
         MutationResponse(await _appUserService.ReplaceRolesAsync(userId, request.EffectiveRoleIds,
-            RBBH.ConnectedParties.Helpers.AuthenticatedActor.Capture(User), RemoteIp, HttpContext.RequestAborted),
+            RBBH.ConnectedParties.Helpers.AuthenticatedActor.Capture(User), HttpContext.RequestAborted),
             BackendMessages.Message("messages.users.roles.updated"));
 
     /// <summary>Soft-deactivates the application privilege mapping.</summary>
@@ -87,7 +87,7 @@ public class UsersController(IAppUserService appUserService)
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<object>> DeactivateUser([FromRoute] string userId) =>
         MutationResponse(await _appUserService.DeactivateAsync(userId,
-            RBBH.ConnectedParties.Helpers.AuthenticatedActor.Capture(User), RemoteIp, HttpContext.RequestAborted),
+            RBBH.ConnectedParties.Helpers.AuthenticatedActor.Capture(User), HttpContext.RequestAborted),
             BackendMessages.Message("messages.users.deactivated"));
 
     /// <summary>Reactivates a previously deactivated user.</summary>
@@ -96,7 +96,7 @@ public class UsersController(IAppUserService appUserService)
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     public async Task<ActionResult<object>> ReactivateUser([FromRoute] string userId) =>
         MutationResponse(await _appUserService.ReactivateAsync(userId,
-            RBBH.ConnectedParties.Helpers.AuthenticatedActor.Capture(User), RemoteIp, HttpContext.RequestAborted),
+            RBBH.ConnectedParties.Helpers.AuthenticatedActor.Capture(User), HttpContext.RequestAborted),
             BackendMessages.Message("messages.users.reactivated"));
 
     /// <summary>Permanently removes a user after explicit confirmation in the UI.</summary>
@@ -104,10 +104,9 @@ public class UsersController(IAppUserService appUserService)
     [Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
     public async Task<ActionResult<object>> DeleteUser([FromRoute] string userId) =>
         MutationResponse(await _appUserService.DeleteAsync(userId,
-            RBBH.ConnectedParties.Helpers.AuthenticatedActor.Capture(User), RemoteIp, HttpContext.RequestAborted),
+            RBBH.ConnectedParties.Helpers.AuthenticatedActor.Capture(User), HttpContext.RequestAborted),
             BackendMessages.Message("messages.users.deleted"));
 
-    private string? RemoteIp => HttpContext.Connection.RemoteIpAddress?.ToString();
 
     private ActionResult<object> MutationResponse(UserMutationResult result, string message) => result.Status switch
     {

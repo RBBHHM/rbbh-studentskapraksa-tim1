@@ -106,7 +106,6 @@ public class AuditLogController(ConnectedPartiesDbContext db) : ControllerBase
                 oldValues     = l.OldValues,
                 newValues     = l.NewValues,
                 username      = l.Username,
-                ipAddress     = l.IpAddress,
                 timestamp     = l.Timestamp
             }).ToList();
 
