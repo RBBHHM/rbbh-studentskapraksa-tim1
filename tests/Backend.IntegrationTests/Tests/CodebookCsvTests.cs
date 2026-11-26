@@ -115,15 +115,67 @@ public sealed class CodebookCsvSqlTests : CodebookCsvFixture
     protected override bool UseSql => true;
 
     [SqlServerFact]
+    public async Task UpgradeAcceptsAlreadyCanonicalLimitCodebook()
+    {
+        await UpgradeDatabase(async db =>
+        {
+            await db.Database.ExecuteSqlRawAsync("""
+                INSERT dbo.CODELIST_DEFINITIONS (NAME, IS_ACTIVE, IS_SYSTEM_REQUIRED, VERSION, CREATED_BY, CREATED_AT)
+                VALUES ('VRSTE_LIMITA', 1, 0, 7, 'operator', SYSUTCDATETIME());
+                """);
+            var id = await db.CodeListDefinitions.Where(item => item.Name == "VRSTE_LIMITA").Select(item => item.Id).SingleAsync();
+
+            await db.Database.MigrateAsync();
+
+            Assert.Equal("VRSTE_LIMITA", (await db.CodeListDefinitions.FindAsync(id))!.Name);
+            Assert.True(await db.CodeLists.AnyAsync(item => item.Kategorija == "VRSTE_LIMITA" && item.Kod == "MM"));
+        });
+    }
+
+    [SqlServerFact]
+    public async Task UpgradePreservesRealCollisionsAndIncludesLegacyLimitCodes()
+    {
+        await UpgradeDatabase(async db =>
+        {
+            await db.Database.ExecuteSqlRawAsync("""
+                INSERT dbo.CODELIST_DEFINITIONS (NAME, IS_ACTIVE, IS_SYSTEM_REQUIRED, VERSION, CREATED_BY, CREATED_AT)
+                VALUES ('VRSTE_LIMITA', 1, 0, 7, 'operator', SYSUTCDATETIME()),
+                       ('VrstaLimita', 1, 0, 7, 'operator', SYSUTCDATETIME()),
+                       ('VRSTE_LIMITA_2', 1, 0, 7, 'operator', SYSUTCDATETIME()),
+                       ('CUSTOM_CODE_BOOK', 1, 0, 7, 'operator', SYSUTCDATETIME()),
+                       ('CustomCodeBook', 1, 0, 7, 'operator', SYSUTCDATETIME());
+
+                INSERT dbo.CODELIST_VALUES (DEFINITION_ID, CATEGORY, VALUE_KEY, NAME, IS_SYSTEM_REQUIRED, ID1, CREATED_BY, CREATED_AT)
+                SELECT definition.ID, definition.NAME, seed.Code, seed.Label, 0, 1, 'operator', SYSUTCDATETIME()
+                FROM (VALUES ('VRSTE_LIMITA', 'MM', N'Canonical label'), ('VrstaLimita', 'MM', N'Legacy label'),
+                             ('VrstaLimita', 'LEGACY_CODE', N'Custom limit'), ('CustomCodeBook', 'OTHER_CODE', N'Other value'))
+                     AS seed(Book, Code, Label)
+                JOIN dbo.CODELIST_DEFINITIONS AS definition ON definition.NAME = seed.Book COLLATE Latin1_General_100_CI_AS;
+                """);
+            var originals = await db.CodeLists.AsNoTracking().Where(row => row.Kod == "MM" || row.Kod == "LEGACY_CODE" || row.Kod == "OTHER_CODE")
+                .ToDictionaryAsync(row => row.Naziv, row => row.ID);
+            var originalIds = originals.Values.ToArray();
+            var canonicalId = await db.CodeListDefinitions.Where(row => row.Name == "VRSTE_LIMITA").Select(row => row.Id).SingleAsync();
+
+            await db.Database.MigrateAsync();
+
+            var rows = await db.CodeLists.AsNoTracking().Where(row => originalIds.Contains(row.ID)).ToDictionaryAsync(row => row.Naziv);
+            Assert.Equal(originals.Count, rows.Count);
+            Assert.Equal("VRSTE_LIMITA", rows["Canonical label"].Kategorija);
+            Assert.Equal("VRSTE_LIMITA_3", rows["Legacy label"].Kategorija);
+            Assert.True(await db.CodeListDefinitions.AnyAsync(row => row.Name == "VRSTE_LIMITA_2"));
+            Assert.Equal("VRSTE_LIMITA", rows["Custom limit"].Kategorija);
+            Assert.Equal(canonicalId, rows["Custom limit"].DefinitionId);
+            Assert.Equal("CUSTOM_CODE_BOOK_2", rows["Other value"].Kategorija);
+            Assert.True(await db.CodeListDefinitions.AnyAsync(row => row.Name == "CUSTOM_CODE_BOOK"));
+        });
+    }
+
+    [SqlServerFact]
     public async Task UpgradeRenamesPopulatedCodebooksWithoutReplacingDefinitionsOrExistingValues()
     {
-        var connection = new SqlConnectionStringBuilder(Environment.GetEnvironmentVariable(SqlServerFactAttribute.Variable))
-        { InitialCatalog = "RPR_CODEBOOK_UPGRADE_" + Guid.NewGuid().ToString("N") };
-        await using var db = new ConnectedPartiesDbContext(new DbContextOptionsBuilder<ConnectedPartiesDbContext>()
-            .UseSqlServer(connection.ConnectionString).Options);
-        try
+        await UpgradeDatabase(async db =>
         {
-            await db.GetService<IMigrator>().MigrateAsync("20261126135008_ConsolidateCodebookLanguagePacks");
             await db.Database.ExecuteSqlRawAsync("""
                 INSERT dbo.CODELIST_DEFINITIONS (NAME, IS_ACTIVE, IS_SYSTEM_REQUIRED, VERSION, CREATED_BY, CREATED_AT)
                 VALUES ('VrstaLimita', 1, 0, 7, 'operator', SYSUTCDATETIME()),
@@ -141,6 +193,19 @@ public sealed class CodebookCsvSqlTests : CodebookCsvFixture
             Assert.Equal("Operator label", row.Naziv);
             Assert.False(row.Aktivan);
             Assert.Equal(id, row.DefinitionId);
+        });
+    }
+
+    private static async Task UpgradeDatabase(Func<ConnectedPartiesDbContext, Task> test)
+    {
+        var connection = new SqlConnectionStringBuilder(Environment.GetEnvironmentVariable(SqlServerFactAttribute.Variable))
+        { InitialCatalog = "RPR_CODEBOOK_UPGRADE_" + Guid.NewGuid().ToString("N") };
+        await using var db = new ConnectedPartiesDbContext(new DbContextOptionsBuilder<ConnectedPartiesDbContext>()
+            .UseSqlServer(connection.ConnectionString).Options);
+        try
+        {
+            await db.GetService<IMigrator>().MigrateAsync("20261126135008_ConsolidateCodebookLanguagePacks");
+            await test(db);
         }
         finally { await db.Database.EnsureDeletedAsync(); }
     }

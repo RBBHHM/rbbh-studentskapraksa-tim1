@@ -11,55 +11,88 @@ public sealed class CanonicalCodebooksAndCsvResources : Migration
     protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.Sql("""
-            DECLARE @names TABLE (OldName varchar(100) COLLATE Latin1_General_100_CI_AS, NewName varchar(100) COLLATE Latin1_General_100_CI_AS);
-            INSERT @names VALUES ('VrstaLimita', 'VRSTE_LIMITA'), ('OsnovPovezanosti', 'OSNOV_POVEZANOSTI'),
+            DECLARE @aliases TABLE (
+                OldName varchar(100) COLLATE Latin1_General_100_CI_AS PRIMARY KEY,
+                NewName varchar(100) COLLATE Latin1_General_100_CI_AS NOT NULL);
+            INSERT @aliases VALUES ('VrstaLimita', 'VRSTE_LIMITA'), ('OsnovPovezanosti', 'OSNOV_POVEZANOSTI'),
                 ('OsnovPosebnogOdnosa', 'OSNOV_POSEBNOG_ODNOSA'), ('Srodstvo', 'SRODSTVO'),
                 ('TipLica', 'TIP_LICA'), ('TipRola', 'TIP_ROLA'), ('TipDokumenta', 'TIP_DOKUMENTA'), ('Status', 'STATUS');
 
-            DECLARE @custom TABLE (OldName varchar(100) COLLATE Latin1_General_100_CI_AS, NewName varchar(200));
-            INSERT @custom
-            SELECT source.Name, '' FROM
+            DECLARE @names TABLE (
+                OldName varchar(100) COLLATE Latin1_General_100_CI_AS PRIMARY KEY,
+                CanonicalName varchar(200) COLLATE Latin1_General_100_CI_AS NOT NULL,
+                FinalName varchar(100) COLLATE Latin1_General_100_CI_AS NULL);
+            INSERT @names (OldName, CanonicalName)
+            SELECT source.Name, COALESCE(alias.NewName, '') FROM
             (
                 SELECT NAME AS Name FROM dbo.CODELIST_DEFINITIONS
                 UNION
-                SELECT CATEGORY FROM dbo.CODELIST_VALUES
+                SELECT value.CATEGORY FROM dbo.CODELIST_VALUES AS value
+                WHERE NOT EXISTS (SELECT 1 FROM dbo.CODELIST_DEFINITIONS WHERE NAME = value.CATEGORY)
             ) AS source
-            WHERE NOT EXISTS (SELECT 1 FROM @names WHERE OldName = source.Name);
+            LEFT JOIN @aliases AS alias ON alias.OldName = source.Name;
 
             DECLARE @position int = 1;
             WHILE @position <= 100
             BEGIN
                 UPDATE names
-                SET NewName = NewName +
+                SET CanonicalName = CanonicalName +
                     CASE WHEN token.[Character] COLLATE Latin1_General_100_BIN2 LIKE '[a-zA-Z0-9]'
                     THEN
-                        CASE WHEN RIGHT(NewName, 1) <> '_' AND token.[Character] COLLATE Latin1_General_100_BIN2 LIKE '[A-Z]'
+                        CASE WHEN RIGHT(CanonicalName, 1) <> '_' AND token.[Character] COLLATE Latin1_General_100_BIN2 LIKE '[A-Z]'
                           AND (token.[Previous] COLLATE Latin1_General_100_BIN2 LIKE '[a-z0-9]'
                             OR (token.[Previous] COLLATE Latin1_General_100_BIN2 LIKE '[A-Z]' AND token.[Following] COLLATE Latin1_General_100_BIN2 LIKE '[a-z]'))
                           THEN '_' ELSE '' END + UPPER(token.[Character] COLLATE Latin1_General_100_CI_AS)
-                    WHEN NewName <> '' AND RIGHT(NewName, 1) <> '_' THEN '_'
+                    WHEN CanonicalName <> '' AND RIGHT(CanonicalName, 1) <> '_' THEN '_'
                     ELSE '' END
-                FROM @custom AS names
+                FROM @names AS names
                 CROSS APPLY (SELECT SUBSTRING(names.OldName, @position, 1) AS [Character],
                                     SUBSTRING(names.OldName, @position - 1, 1) AS [Previous],
                                     SUBSTRING(names.OldName, @position + 1, 1) AS [Following]) AS token
-                WHERE @position <= LEN(names.OldName);
+                WHERE @position <= LEN(names.OldName)
+                    AND NOT EXISTS (SELECT 1 FROM @aliases WHERE OldName = names.OldName);
                 SET @position += 1;
             END;
-            UPDATE @custom SET NewName = LEFT(NewName, LEN(NewName) - 1) WHERE RIGHT(NewName, 1) = '_';
-            IF EXISTS (SELECT 1 FROM @custom WHERE LEN(NewName) NOT BETWEEN 1 AND 100)
+            UPDATE @names SET CanonicalName = LEFT(CanonicalName, LEN(CanonicalName) - 1) WHERE RIGHT(CanonicalName, 1) = '_';
+            IF EXISTS (SELECT 1 FROM @names WHERE LEN(CanonicalName) NOT BETWEEN 1 AND 100)
                 THROW 51011, 'A codebook name cannot be normalized to the supported length.', 1;
-            INSERT @names SELECT OldName, NewName FROM @custom;
 
-            IF EXISTS (SELECT 1 FROM @names GROUP BY NewName HAVING COUNT(*) > 1)
-                THROW 51011, 'Codebook names collide after normalization. Reconcile the definitions before migration.', 1;
+            -- Prefer a definition already using the canonical name. Keep other codebooks
+            -- and their values under unique names instead of merging unrelated definitions.
+            ;WITH ranked AS
+            (
+                SELECT names.OldName, ROW_NUMBER() OVER (PARTITION BY names.CanonicalName ORDER BY
+                    CASE WHEN names.OldName = names.CanonicalName THEN 0
+                         WHEN alias.OldName IS NOT NULL THEN 1 ELSE 2 END, names.OldName) AS Priority
+                FROM @names AS names LEFT JOIN @aliases AS alias ON alias.OldName = names.OldName
+            )
+            UPDATE names SET FinalName = names.CanonicalName
+            FROM @names AS names JOIN ranked ON ranked.OldName = names.OldName
+            WHERE ranked.Priority = 1;
 
-            UPDATE definition SET NAME = names.NewName, VERSION = VERSION + 1
+            DECLARE @oldName varchar(100), @canonical varchar(100), @finalName varchar(100), @suffix varchar(12), @next int;
+            WHILE EXISTS (SELECT 1 FROM @names WHERE FinalName IS NULL)
+            BEGIN
+                SELECT TOP (1) @oldName = OldName, @canonical = CanonicalName
+                FROM @names WHERE FinalName IS NULL ORDER BY CanonicalName, OldName;
+                SET @next = 1;
+                WHILE 1 = 1
+                BEGIN
+                    SET @next += 1;
+                    SET @suffix = CONCAT('_', @next);
+                    SET @finalName = LEFT(@canonical, 100 - LEN(@suffix)) + @suffix;
+                    IF NOT EXISTS (SELECT 1 FROM @names WHERE @finalName IN (OldName, FinalName))
+                        BREAK;
+                END;
+                UPDATE @names SET FinalName = @finalName WHERE OldName = @oldName;
+            END;
+
+            UPDATE definition SET NAME = names.FinalName, VERSION = VERSION + 1
             FROM dbo.CODELIST_DEFINITIONS AS definition JOIN @names AS names ON names.OldName = definition.NAME
-            WHERE definition.NAME COLLATE Latin1_General_100_BIN2 <> names.NewName COLLATE Latin1_General_100_BIN2;
-            UPDATE value SET CATEGORY = names.NewName
+            WHERE definition.NAME COLLATE Latin1_General_100_BIN2 <> names.FinalName COLLATE Latin1_General_100_BIN2;
+            UPDATE value SET CATEGORY = names.FinalName
             FROM dbo.CODELIST_VALUES AS value JOIN @names AS names ON names.OldName = value.CATEGORY
-            WHERE value.CATEGORY COLLATE Latin1_General_100_BIN2 <> names.NewName COLLATE Latin1_General_100_BIN2;
+            WHERE value.CATEGORY COLLATE Latin1_General_100_BIN2 <> names.FinalName COLLATE Latin1_General_100_BIN2;
 
             IF NOT EXISTS (SELECT 1 FROM dbo.CODELIST_DEFINITIONS WHERE NAME = 'VRSTE_LIMITA')
                 INSERT dbo.CODELIST_DEFINITIONS (NAME, IS_ACTIVE, IS_SYSTEM_REQUIRED, VERSION, CREATED_BY, CREATED_AT)
@@ -67,6 +100,14 @@ public sealed class CanonicalCodebooksAndCsvResources : Migration
 
             DECLARE @limitTypes bigint = (SELECT ID FROM dbo.CODELIST_DEFINITIONS WHERE NAME = 'VRSTE_LIMITA');
             UPDATE dbo.CODELIST_VALUES SET DEFINITION_ID = @limitTypes WHERE CATEGORY = 'VRSTE_LIMITA' AND DEFINITION_ID IS NULL;
+            -- Keep existing canonical values on duplicate keys, and preserve the legacy rows
+            -- with conflicting keys in their renamed codebook.
+            UPDATE legacy SET CATEGORY = 'VRSTE_LIMITA', DEFINITION_ID = @limitTypes
+            FROM dbo.CODELIST_VALUES AS legacy
+            JOIN @names AS names ON names.FinalName = legacy.CATEGORY
+            WHERE names.OldName = 'VrstaLimita' AND names.FinalName <> 'VRSTE_LIMITA'
+                AND NOT EXISTS (SELECT 1 FROM dbo.CODELIST_VALUES AS canonical
+                    WHERE canonical.CATEGORY = 'VRSTE_LIMITA' AND canonical.VALUE_KEY = legacy.VALUE_KEY);
             INSERT dbo.CODELIST_VALUES (DEFINITION_ID, CATEGORY, VALUE_KEY, NAME, IS_SYSTEM_REQUIRED, ID1, CREATED_BY, CREATED_AT)
             SELECT @limitTypes, 'VRSTE_LIMITA', types.Code, types.Label, 0, 1, 'migration', SYSUTCDATETIME()
             FROM (VALUES ('MM', N'MM'), ('SATAFXS', N'SATA FX spot'), ('SATAFXD', N'SATA FX derivati'),
