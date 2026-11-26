@@ -29,7 +29,7 @@ public sealed class UnlockResponseHttpTests : IAsyncLifetime
 {
     private WebApplication _app = null!;
     private HttpClient _client = null!;
-    private readonly Guid _originalId = Guid.NewGuid();
+    private readonly long _originalId = Random.Shared.NextInt64(1L << 32, 1L << 50);
     private readonly Mock<IEmailService> _mail = new(MockBehavior.Strict);
 
     public async Task InitializeAsync()

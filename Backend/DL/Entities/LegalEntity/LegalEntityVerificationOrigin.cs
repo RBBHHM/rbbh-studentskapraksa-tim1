@@ -6,7 +6,7 @@ namespace RBBH.ConnectedParties.DL.Entities.LegalEntity;
 public sealed class LegalEntityVerificationOrigin
 {
     [Key]
-    public Guid LegalEntityId { get; init; }
+    public long LegalEntityId { get; init; }
 
     [Required, StringLength(64)]
     public string Fingerprint { get; init; } = string.Empty;

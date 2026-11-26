@@ -101,7 +101,7 @@ public sealed class PeriodLockCoverageHttpTests : IAsyncLifetime
     public async Task VerificationIsBlockedWhileLocked(string route)
     {
         await SetGlobalLockAsync(true);
-        var response = await _client.PostAsync(route + Guid.NewGuid(), null);
+        var response = await _client.PostAsync(route + Random.Shared.NextInt64(1L << 32, 1L << 50), null);
         Assert.Equal(HttpStatusCode.Locked, response.StatusCode);
         Assert.Contains("\"errors\"", await response.Content.ReadAsStringAsync());
     }

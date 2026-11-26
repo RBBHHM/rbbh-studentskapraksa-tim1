@@ -86,7 +86,7 @@ public class UpdateLegalEntityDTO
 public class LegalEntityDTO
 {
     public string? GccName { get; set; }
-    public Guid Id { get; set; }
+    public long Id { get; set; }
     [System.Text.Json.Serialization.JsonRequired]
     public bool IsResident { get; set; }
     public string? TaxNumber { get; set; }
@@ -125,7 +125,7 @@ public class LegalEntityListDTO
 /// </summary>
 public class LegalEntityLookupDTO
 {
-    public Guid Id { get; set; }
+    public long Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? MaticniBroj { get; set; }
     public string? TaxNumber { get; set; }
@@ -136,7 +136,7 @@ public class LegalEntityLookupDTO
 /// </summary>
 public class LegalEntityLimitFormDataDTO
 {
-    public Guid Id { get; set; }
+    public long Id { get; set; }
     [System.Text.Json.Serialization.JsonRequired]
     public bool IsResident { get; set; }
     public string? FbaId { get; set; }

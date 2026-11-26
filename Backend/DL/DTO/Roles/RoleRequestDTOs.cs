@@ -6,7 +6,7 @@ public sealed class CreateRoleRequestDTO
 {
     public Guid ClientRequestId { get; set; }
     [Required, RegularExpression("^(new|change)$")] public string Purpose { get; set; } = "new";
-    [MaxLength(20)] public Guid[] RoleIds { get; set; } = [];
+    [MaxLength(20)] public long[] RoleIds { get; set; } = [];
     [MaxLength(1000)] public string? Note { get; set; }
 }
 
@@ -17,7 +17,7 @@ public sealed class RoleRequestDecisionDTO
     [MaxLength(1000)] public string? Note { get; set; }
 }
 
-public sealed record RoleRequestDTO(Guid Id, string Purpose, string Status, Guid[] RoleIds, string[] RoleNames,
+public sealed record RoleRequestDTO(long Id, string Purpose, string Status, long[] RoleIds, string[] RoleNames,
     string? Note, DateTime CreatedAt, DateTime? ProcessedAt, string? ProcessedBy, string? DecisionNote,
     int Version, string? RequesterUsername = null, string? RequesterEmail = null);
 

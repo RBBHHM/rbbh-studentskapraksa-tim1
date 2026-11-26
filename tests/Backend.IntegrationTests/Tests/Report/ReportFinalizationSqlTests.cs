@@ -21,7 +21,7 @@ public sealed class ReportFinalizationSqlTests : ReportFinalizationFixture
             await db.SaveChangesAsync();
         });
         Assert.Equal(HttpStatusCode.Created, (await Client.PostAsync("/api/reports/daily", null)).StatusCode);
-        string saved = ""; Guid reportId = Guid.Empty;
+        string saved = ""; long reportId = 0L;
         await InDatabase(async db =>
         {
             var report = await db.Reports.SingleAsync(); saved = report.DataSnapshot!; reportId = report.Id;

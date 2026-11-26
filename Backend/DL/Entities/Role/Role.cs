@@ -6,7 +6,7 @@ namespace RBBH.ConnectedParties.DL.Entities.Role;
 public class Role
 {
     [Key]
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public long Id { get; set; }
 
     [Required]
     [StringLength(100)]

@@ -39,7 +39,7 @@ public static class AuthenticationEndpoints
             fullName = context.User.FindFirst("name")?.Value ?? context.User.Identity?.Name,
             username = context.User.FindFirst("preferred_username")?.Value,
             email = context.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? context.User.FindFirst("email")?.Value,
-            applicationUserId = context.User.FindFirst(AuthenticatedActor.ApplicationUserIdClaim)?.Value,
+            applicationUserId = AuthenticatedActor.ApplicationUserId(context.User),
             roles = context.User.FindAll(System.Security.Claims.ClaimTypes.Role).Select(claim => claim.Value).Distinct(),
             permissions = context.User.FindAll("permission").Select(claim => claim.Value).Distinct()
         })).RequireAuthorization();

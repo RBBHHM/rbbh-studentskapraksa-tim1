@@ -23,7 +23,7 @@ public sealed class BusinessErrorResourcesSqlTests : RoleCatalogFixture
     public async Task ScopedHttpErrorsUseRuntimeLanguageOverridesWithoutDeployment()
     {
         Client.DefaultRequestHeaders.Add("Accept-Language", "de-DE");
-        var missing = Guid.NewGuid();
+        var missing = Random.Shared.NextInt64(1L << 32, 1L << 50);
         var response = await Client.GetAsync($"/api/role-catalog/{missing}");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();

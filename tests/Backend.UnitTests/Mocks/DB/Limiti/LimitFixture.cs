@@ -11,8 +11,8 @@ namespace UnitTests.Mocks.DB.Limiti
         public readonly ConnectedPartiesDbContext _dbContext;
         public readonly int ValidLimitId;
         public readonly int ValidLimitId2;
-        public readonly Guid ValidLegalEntityId;
-        public readonly Guid ValidLegalEntityId2;
+        public readonly long ValidLegalEntityId;
+        public readonly long ValidLegalEntityId2;
         public const string ValidTipLimita = "MM";
         public const string ValidTipLimita2 = "SATAFXS";
         public const string InactiveTipLimita = "NEAKTIVAN";

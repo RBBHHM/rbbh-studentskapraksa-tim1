@@ -35,7 +35,7 @@ public sealed class StructuredBusinessErrorTests
     {
         await using var provider = Client("{\"code\":\"verification.self_denied\",\"detail\":\"untrusted private values\"}");
         var failure = await Assert.ThrowsAsync<RegistryApiException>(() =>
-            provider.GetRequiredService<ILegalEntitiesApi>().VerifyAsync(Guid.NewGuid()));
+            provider.GetRequiredService<ILegalEntitiesApi>().VerifyAsync(Random.Shared.NextInt64(1L << 32, 1L << 50)));
         Assert.Equal(HttpStatusCode.Forbidden, failure.StatusCode);
         Assert.Equal("verification.self_denied", failure.Code);
         Assert.Equal("common.verify-own", failure.MessageKey);
@@ -50,7 +50,7 @@ public sealed class StructuredBusinessErrorTests
     {
         await using var provider = Client(System.Text.Json.JsonSerializer.Serialize(new { code, detail = "never show this" }));
         var failure = await Assert.ThrowsAsync<RegistryApiException>(() =>
-            provider.GetRequiredService<ILegalEntitiesApi>().VerifyAsync(Guid.NewGuid()));
+            provider.GetRequiredService<ILegalEntitiesApi>().VerifyAsync(Random.Shared.NextInt64(1L << 32, 1L << 50)));
         Assert.Null(failure.Code);
         Assert.Equal("errors.forbidden", failure.MessageKey);
         Assert.DoesNotContain("never show", failure.ToString());
@@ -75,7 +75,7 @@ public sealed class StructuredBusinessErrorTests
                 new(RbiApiErrorKind.Conflict, HttpStatusCode.Conflict, "Conflict", "Sensitive internal detail")
                 { Code = "verification.provenance_required" }));
         var failure = await Assert.ThrowsAsync<RegistryApiException>(() =>
-            new RelatedPersonsApi(transport.Object).VerifyAsync(Guid.NewGuid()));
+            new RelatedPersonsApi(transport.Object).VerifyAsync(Random.Shared.NextInt64(1L << 32, 1L << 50)));
         Assert.Equal("errors.verification-provenance-required", failure.MessageKey);
         Assert.DoesNotContain("Sensitive", failure.Message);
     }

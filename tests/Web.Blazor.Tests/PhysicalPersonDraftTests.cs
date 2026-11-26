@@ -79,14 +79,14 @@ public sealed class PhysicalPersonDraftTests
         Assert.False(draft.IsIdentifiedStaff); Assert.True(draft.ConnectedWithBank);
         Assert.False(draft.SpecialRelationshipWithBank); Assert.True(draft.DeclarationNoFamilyMembers);
         Assert.Contains(nameof(draft.RelatedToPersonId), draft.Validate().Keys);
-        draft.RelatedToPersonId = Guid.NewGuid(); Assert.Empty(draft.Validate());
+        draft.RelatedToPersonId = Random.Shared.NextInt64(1L << 32, 1L << 50); Assert.Empty(draft.Validate());
         Assert.Equal(draft.RelatedToPersonId, draft.ToRequest().RelatedToPersonId);
     }
 
     [Fact]
     public void LeavingFamilyClearsParentAndRequiresNewExplicitBooleanChoices()
     {
-        var draft = Valid(); draft.RelatedToPersonId = Guid.NewGuid();
+        var draft = Valid(); draft.RelatedToPersonId = Random.Shared.NextInt64(1L << 32, 1L << 50);
         draft.SpecialRelationBasis = "UPRAVA"; draft.SpecialBasisChanged();
         Assert.Null(draft.RelatedToPersonId); Assert.Null(draft.ConnectedWithBank);
         Assert.Contains(nameof(draft.ConnectedWithBank), draft.Validate().Keys);

@@ -24,7 +24,7 @@ public sealed class PeriodOwnershipHttpTests : AuthenticatedApiFixture
         services.AddSingleton<EmailLogStore>();
     }
 
-    private async Task<Guid> SeedRequest(string owner, string status = "NEEDS_INFO")
+    private async Task<long> SeedRequest(string owner, string status = "NEEDS_INFO")
     {
         var row = new UnlockRequest { RequestedBySubject = owner, RequestedBy = owner,
             RequestedByEmail = owner + "@example.test", Reason = "Private request reason", Status = status,

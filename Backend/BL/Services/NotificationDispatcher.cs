@@ -52,7 +52,7 @@ public sealed class NotificationDispatcher(ConnectedPartiesDbContext db, IEmailS
                     var noteKey = roleStatus == "submitted" ? "note" : "decisionNote";
                     if (values.TryGetProperty(noteKey, out var note) && note.ValueKind == JsonValueKind.String && string.IsNullOrWhiteSpace(note.GetString()))
                         text = string.Join('\n', text.Split('\n').Where(line => !line.Contains("{" + noteKey + "}", StringComparison.Ordinal)));
-                    if (values.TryGetProperty("requestId", out var idValue) && idValue.ValueKind == JsonValueKind.String && idValue.TryGetGuid(out var requestId))
+                    if (values.TryGetProperty("requestId", out var idValue) && idValue.ValueKind == JsonValueKind.Number && idValue.TryGetInt64(out var requestId) && requestId > 0)
                         route = (roleStatus == "submitted" ? "/app/admin/role-requests" : "/app/profile") + $"?requestId={requestId:D}";
                 }
                 title = Render(title, values);

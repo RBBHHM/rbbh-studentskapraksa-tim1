@@ -72,9 +72,11 @@ public sealed class RoleCatalogSqlTests : RoleCatalogFixture
                 else
                 {
                     await db.Database.MigrateAsync();
-                    var role = await db.Roles.SingleAsync(); Assert.Equal(roleId, role.Id); Assert.Equal("existing-role", role.Name);
+                    var role = await db.Roles.SingleAsync(); Assert.True(role.Id > 0); Assert.Equal("existing-role", role.Name);
                     Assert.Null(role.DisplayName); Assert.Null(role.Description); Assert.Null(role.ModifiedAt);
-                    Assert.Equal(permissionId, (await db.RolePermissions.SingleAsync()).PermissionId);
+                    var grant = await db.RolePermissions.SingleAsync();
+                    Assert.Equal(role.Id, grant.RoleId);
+                    Assert.Equal((await db.Permissions.SingleAsync()).Id, grant.PermissionId);
                     Assert.Equal("original", role.CreatedBy);
                 }
             }

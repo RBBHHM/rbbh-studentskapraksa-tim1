@@ -80,8 +80,8 @@ public partial class AppUserService(ConnectedPartiesDbContext dbContext, Keycloa
     public async Task<Result<UserDTO>> CreateUserAsync(CreateUserDTO dto, string createdBy)
     {
         var requestedRoleIds = dto.RoleIds
-            .Concat(Guid.TryParse(dto.RoleId, out var legacyRoleId) ? [legacyRoleId] : [])
-            .Where(id => id != Guid.Empty)
+            .Concat(long.TryParse(dto.RoleId, out var legacyRoleId) ? [legacyRoleId] : [])
+            .Where(id => id != 0)
             .Distinct()
             .ToArray();
         var ct = accessor?.HttpContext?.RequestAborted ?? CancellationToken.None;
@@ -143,7 +143,6 @@ public partial class AppUserService(ConnectedPartiesDbContext dbContext, Keycloa
         {
             _db.UserRoles.Add(new DL.Entities.Role.UserRole
             {
-                Id = Guid.NewGuid(),
                 UserId = user.Id,
                 RoleId = role.Id,
                 IsActive = true,

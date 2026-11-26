@@ -19,19 +19,19 @@ public sealed class RoleRequestsApiTests
         return services.BuildServiceProvider();
     }
     private static HttpResponseMessage Json(HttpStatusCode status, string body) => new(status) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
-    private const string RequestJson = "{\"id\":\"22222222-2222-2222-2222-222222222222\",\"purpose\":\"new\",\"status\":\"pending\",\"roleIds\":[\"33333333-3333-3333-3333-333333333333\"],\"roleNames\":[\"FL\"],\"note\":null,\"createdAt\":\"2026-11-03T10:00:00Z\",\"processedAt\":null,\"processedBy\":null,\"decisionNote\":null,\"version\":3,\"requesterUsername\":\"requester\",\"requesterEmail\":\"requester@example.test\"}";
+    private const string RequestJson = "{\"id\":2,\"purpose\":\"new\",\"status\":\"pending\",\"roleIds\":[3],\"roleNames\":[\"FL\"],\"note\":null,\"createdAt\":\"2026-11-03T10:00:00Z\",\"processedAt\":null,\"processedBy\":null,\"decisionNote\":null,\"version\":3,\"requesterUsername\":\"requester\",\"requesterEmail\":\"requester@example.test\"}";
 
     [Fact]
     public async Task SubmitSendsPurposeRoleIdsAndTheClientRequestIdForReplaySafety()
     {
         string? body = null; string? path = null;
         await using var provider = Client((request, text) => { body = text; path = request.RequestUri!.AbsolutePath; return Json(HttpStatusCode.Created, RequestJson); });
-        var clientId = Guid.NewGuid(); var role = Guid.NewGuid();
+        var clientId = Guid.NewGuid(); var role = Random.Shared.NextInt64(1L << 32, 1L << 50);
         var created = await provider.GetRequiredService<IRoleRequestsApi>().SubmitAsync(clientId, "change", [role], "napomena");
         Assert.Equal("/api/role-requests", path); Assert.Equal("pending", created.Request!.Status);
         using var document = JsonDocument.Parse(body!);
         Assert.Equal(clientId, document.RootElement.GetProperty("clientRequestId").GetGuid()); Assert.Equal("change", document.RootElement.GetProperty("purpose").GetString());
-        Assert.Equal(role, document.RootElement.GetProperty("roleIds")[0].GetGuid()); Assert.Equal("napomena", document.RootElement.GetProperty("note").GetString());
+        Assert.Equal(role, document.RootElement.GetProperty("roleIds")[0].GetInt64()); Assert.Equal("napomena", document.RootElement.GetProperty("note").GetString());
     }
     [Theory]
     [InlineData(true, "approve")]
@@ -67,7 +67,7 @@ public sealed class RoleRequestsApiTests
         await using var provider = Client((_, _) => Json((HttpStatusCode)status, JsonSerializer.Serialize(new { code, detail = "private-marker" })));
         var api = provider.GetRequiredService<IRoleRequestsApi>();
         var request = JsonSerializer.Deserialize<RoleRequest>(RequestJson, new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
-        var submit = await api.SubmitAsync(Guid.NewGuid(), "new", [Guid.NewGuid()], null);
+        var submit = await api.SubmitAsync(Guid.NewGuid(), "new", [Random.Shared.NextInt64(1L << 32, 1L << 50)], null);
         var decision = await api.DecideAsync(request, true, null);
         Assert.Null(submit.Request);
         Assert.Null(decision.Request);

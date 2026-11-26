@@ -44,7 +44,7 @@ public sealed class LegalEntityDraftTests
     [Fact]
     public void UpdatePreservesDistinctUneditableMatbrojWithoutExposingStatusMutation()
     {
-        var entity = new LegalEntity(Guid.NewGuid(), false, null, "12345", "123456", "Company", "SERVER-ONLY",
+        var entity = new LegalEntity(Random.Shared.NextInt64(1L << 32, 1L << 50), false, null, "12345", "123456", "Company", "SERVER-ONLY",
             "ZOB-2-V-5", "Relationship", false, new(2026, 1, 1), null, "Verified", "author", DateTime.UtcNow, null, null, "verifier", DateTime.UtcNow);
         var draft = LegalEntityDraft.From(entity); draft.Name = "Renamed"; draft.MaticniBroj = "98765";
         var request = draft.ToRequest(); Assert.Equal("SERVER-ONLY", request.Matbroj); Assert.Equal("98765", request.MaticniBroj);

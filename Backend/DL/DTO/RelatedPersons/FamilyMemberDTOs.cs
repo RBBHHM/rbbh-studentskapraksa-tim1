@@ -36,7 +36,7 @@ public class CreateFamilyMemberDTO
     /// član posredno povezan sa matičnim licem.
     /// null = direktna veza prema matičnom licu.
     /// </summary>
-    public Guid? ParentFamilyMemberId { get; set; }
+    public long? ParentFamilyMemberId { get; set; }
 }
 
 // ─── UPDATE ───────────────────────────────────────────────────────────────────
@@ -66,7 +66,7 @@ public class UpdateFamilyMemberDTO
     [StringLength(50)]
     public string? FBAId { get; set; }
 
-    public Guid? ParentFamilyMemberId { get; set; }
+    public long? ParentFamilyMemberId { get; set; }
 }
 
 // ─── RESPONSE ─────────────────────────────────────────────────────────────────
@@ -76,9 +76,9 @@ public class UpdateFamilyMemberDTO
 /// </summary>
 public class FamilyMemberResponseDTO
 {
-    public Guid Id { get; set; }
+    public long Id { get; set; }
 
-    public Guid RelatedPersonId { get; set; }
+    public long RelatedPersonId { get; set; }
 
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
@@ -95,7 +95,7 @@ public class FamilyMemberResponseDTO
     /// Postavljeno = dijete/potomak nekog drugog člana porodice.
     /// Frontend gradi stablo grupišući po ovom polju.
     /// </summary>
-    public Guid? ParentFamilyMemberId { get; set; }
+    public long? ParentFamilyMemberId { get; set; }
 
     // ── Audit ──────────────────────────────────────────────────────────────────
     public DateTime CreatedAt { get; set; }

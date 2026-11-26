@@ -38,7 +38,7 @@ namespace UnitTests.Services.ReportServiceTests
             CreatedBy = "seed"
         };
 
-        private static ClientLimit NewClientLimit(Guid legalEntityId, decimal currentExposure, bool breached = false) => new()
+        private static ClientLimit NewClientLimit(long legalEntityId, decimal currentExposure, bool breached = false) => new()
         {
             LegalEntityId = legalEntityId,
             RegulatoryCapital = 5000m,

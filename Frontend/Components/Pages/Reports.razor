@@ -135,7 +135,7 @@ else { <div role="status">@T["state.loading"]</div> }
         finally { _busy = false; }
     }
     private Task ExportAllAsync() => DownloadFileAsync(token => Api.ExportAllAsync(token));
-    private Task DownloadSnapshotAsync(Guid id) => DownloadFileAsync(token => Api.DownloadAsync(id, token));
+    private Task DownloadSnapshotAsync(long id) => DownloadFileAsync(token => Api.DownloadAsync(id, token));
     private Task ExportClientAsync() => ValidIdentifier ? DownloadFileAsync(token => Api.ExportClientAsync(_identifier!, token)) : Task.CompletedTask;
     private async Task DownloadFileAsync(Func<CancellationToken, Task<RbiApiFile>> request)
     {

@@ -10,7 +10,7 @@ namespace RBBH.ConnectedParties.DL.Entities.Report;
 public class Report
 {
     [Key]
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public long Id { get; set; }
 
     /// <summary>Tip izvještaja: DAILY ili MONTHLY.</summary>
     [Required]

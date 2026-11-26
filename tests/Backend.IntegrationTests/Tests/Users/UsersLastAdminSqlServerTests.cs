@@ -65,7 +65,7 @@ public sealed class UsersLastAdminSqlServerTests : UsersHttpFixture
         await command.ExecuteNonQueryAsync();
     }
 
-    private async Task<(HttpResponseMessage First, HttpResponseMessage Second, Guid OtherId)> RaceAsync(string firstAction, string secondAction)
+    private async Task<(HttpResponseMessage First, HttpResponseMessage Second, long OtherId)> RaceAsync(string firstAction, string secondAction)
     {
         var otherId = await AddUser(ApplicationAccessRoles.Administrator, "other@example.test");
         using var second = _app.GetTestClient();

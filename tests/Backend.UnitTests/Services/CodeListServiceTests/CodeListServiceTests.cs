@@ -41,7 +41,7 @@ namespace UnitTests.Services.CodeListServiceTests
             using var db = InMemoryContextFactory.Create();
             var value = NewEntity("VL", "Original");
             db.CodeLists.Add(value);
-            if (referenced) db.Limiti.Add(new Limit { TipLimita = "VL", LegalEntityId = Guid.NewGuid(), CreatedBy = "fixture" });
+            if (referenced) db.Limiti.Add(new Limit { TipLimita = "VL", LegalEntityId = Random.Shared.NextInt64(1L << 32, 1L << 50), CreatedBy = "fixture" });
             await db.SaveChangesAsync();
             var result = await new CodeListService(db).Update(value.ID,
                 new UpdateCodeListDTO { Naziv = "Changed", Aktivan = false }, "fixture");

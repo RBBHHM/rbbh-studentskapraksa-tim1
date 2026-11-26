@@ -39,8 +39,8 @@
                 </RbiField>
                 @if (Model.IsFamily)
                 {
-                    <RbiField TValue="Guid?" Label="@T["person.related-to"]" Required For="@(() => Model.RelatedToPersonId)">
-                        <RbiSelect TValue="Guid?" @bind-Value="Model.RelatedToPersonId"><option value="">@T["common.select"]</option>
+                    <RbiField TValue="long?" Label="@T["person.related-to"]" Required For="@(() => Model.RelatedToPersonId)">
+                        <RbiSelect TValue="long?" @bind-Value="Model.RelatedToPersonId"><option value="">@T["common.select"]</option>
                             @foreach (var person in People.Where(person => person.Id != Id)) { <option value="@person.Id">@person.FirstName @person.LastName</option> }
                         </RbiSelect>
                     </RbiField>
@@ -79,7 +79,7 @@
 @code {
     [Parameter] public bool MutationBlocked { get; set; }
     [Parameter, EditorRequired] public PhysicalPersonDraft Model { get; set; } = null!;
-    [Parameter] public Guid? Id { get; set; }
+    [Parameter] public long? Id { get; set; }
     [Parameter] public IReadOnlyList<RelatedPerson> People { get; set; } = [];
     [Parameter] public IReadOnlyList<ReferenceOption> Bases { get; set; } = [];
     [Parameter] public IReadOnlyList<ReferenceOption> SpecialBases { get; set; } = [];

@@ -24,7 +24,7 @@ public sealed class PhysicalPersonDraft
     public bool? SpecialRelationshipWithBank { get; set; }
     public bool? SpecialContract { get; set; }
     public bool? MalusClawback { get; set; }
-    public Guid? RelatedToPersonId { get; set; }
+    public long? RelatedToPersonId { get; set; }
     public bool IsFamily => string.Equals(SpecialRelationBasis, "UZA_PORODICA", StringComparison.OrdinalIgnoreCase)
         || string.Equals(SpecialRelationBasis, "Član uže porodice povezanog lica", StringComparison.OrdinalIgnoreCase);
 

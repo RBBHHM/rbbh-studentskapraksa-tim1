@@ -33,7 +33,7 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
         return new { items = rows.Select(Map).ToArray(), total, page, pageSize };
     }
 
-    public async Task<RoleCatalogDTO> Get(Guid id, CancellationToken ct)
+    public async Task<RoleCatalogDTO> Get(long id, CancellationToken ct)
     {
         var row = await db.Roles.AsNoTracking().Include(row => row.RolePermissions).SingleOrDefaultAsync(row => row.Id == id, ct)
             ?? throw new BusinessRuleException(404, "roles.not_found");
@@ -66,7 +66,7 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
         await db.SaveChangesAsync(ct); return Map(row);
     }, ct);
 
-    public Task<RoleCatalogDTO> Update(Guid id, UpdateRoleCatalogDTO input, CancellationToken ct) => Locked<RoleCatalogDTO>(async () =>
+    public Task<RoleCatalogDTO> Update(long id, UpdateRoleCatalogDTO input, CancellationToken ct) => Locked<RoleCatalogDTO>(async () =>
     {
         await EnsureAdmin(ct);
         Validate(input.DisplayName, input.Description, input.PermissionIds);
@@ -97,7 +97,7 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
         return new(row.Id, row.Name, row.DisplayName ?? row.Name, row.Description, row.IsActive, VersionOf(row), input.PermissionIds.Order().ToArray(), false);
     }, ct);
 
-    public Task<RoleDeletionResult> Delete(Guid id, DateTime expectedVersion, CancellationToken ct) => Locked(async () =>
+    public Task<RoleDeletionResult> Delete(long id, DateTime expectedVersion, CancellationToken ct) => Locked(async () =>
     {
         await EnsureAdmin(ct);
         var row = await db.Roles.Include(role => role.RolePermissions).SingleOrDefaultAsync(role => role.Id == id, ct);
@@ -127,12 +127,12 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
                     grant.Permission.IsActive && grant.Permission.Code == ApplicationPermissions.AdministrationManage)), ct))
             throw new BusinessRuleException(403, "authorization.admin_required");
     }
-    private static void Validate(string? display, string? description, Guid[]? ids)
+    private static void Validate(string? display, string? description, long[]? ids)
     {
         if (display is not null && (string.IsNullOrWhiteSpace(display) || display.Length > 100) || description?.Length > 500 || ids is null || ids.Length > 200 ||
-            ids.Any(id => id == Guid.Empty) || ids.Distinct().Count() != ids.Length) throw Invalid();
+            ids.Any(id => id == 0) || ids.Distinct().Count() != ids.Length) throw Invalid();
     }
-    private async Task ValidatePermissions(Guid[] ids, CancellationToken ct)
+    private async Task ValidatePermissions(long[] ids, CancellationToken ct)
     {
         if (await db.Permissions.CountAsync(row => ids.Contains(row.Id) && row.IsActive, ct) != ids.Length)
             throw new BusinessRuleException(400, "roles.invalid_permissions");

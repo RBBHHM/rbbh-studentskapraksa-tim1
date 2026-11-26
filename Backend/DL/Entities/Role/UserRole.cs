@@ -6,13 +6,13 @@ namespace RBBH.ConnectedParties.DL.Entities.Role;
 public class UserRole
 {
     [Key]
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public long Id { get; set; }
 
     [Required]
-    public Guid RoleId { get; set; }
+    public long RoleId { get; set; }
 
     [Required]
-    public Guid UserId { get; set; }
+    public long UserId { get; set; }
 
     public bool IsActive { get; set; } = true;
 

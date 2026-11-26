@@ -27,8 +27,8 @@ public sealed class NotificationsController(ConnectedPartiesDbContext db) : Cont
             parameters = JsonSerializer.Deserialize<JsonElement>(row.ParametersJson), row.Route, row.CreatedAt, row.ReadAt }), total, page, pageSize, unreadCount };
     }
 
-    [HttpPost("{id:guid}/read")]
-    public async Task<IActionResult> MarkRead(Guid id, CancellationToken ct)
+    [HttpPost("{id:long}/read")]
+    public async Task<IActionResult> MarkRead(long id, CancellationToken ct)
     {
         var subject = AuthenticatedActor.RequireSubject(User);
         var row = await db.Notifications.SingleOrDefaultAsync(row => row.Id == id && row.RecipientSubject == subject, ct);

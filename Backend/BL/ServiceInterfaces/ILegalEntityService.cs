@@ -16,26 +16,26 @@ public interface ILegalEntityService
     Task<List<LegalEntityDTO>> GetAllForExportAsync();
 
     /// <summary>Vraća detalje jednog pravnog lica po ID-u.</summary>
-    Task<LegalEntityDTO?> GetByIdAsync(Guid id);
+    Task<LegalEntityDTO?> GetByIdAsync(long id);
 
     /// <summary>Kreira novo pravno lice. Vraća kreirani entitet.</summary>
     Task<LegalEntityDTO> CreateAsync(CreateLegalEntityDTO dto, string createdBy);
 
     /// <summary>Ažurira postojeće pravno lice. Vraća ažurirani entitet.</summary>
-    Task<LegalEntityDTO> UpdateAsync(Guid id, UpdateLegalEntityDTO dto, string modifiedBy);
+    Task<LegalEntityDTO> UpdateAsync(long id, UpdateLegalEntityDTO dto, string modifiedBy);
 
     /// <summary>Soft delete — postavlja IsActive = false.</summary>
-    Task DeleteAsync(Guid id, string deletedBy);
+    Task DeleteAsync(long id, string deletedBy);
 
     /// <summary>Verifikuje pravno lice — mijenja status iz Draft u Verified.</summary>
-    Task<LegalEntityDTO> VerifyAsync(Guid id, string verifiedBy);
+    Task<LegalEntityDTO> VerifyAsync(long id, string verifiedBy);
 
     /// <summary>Pretražuje pravna lica za potrebe forme Limita po nazivu i matičnom broju.</summary>
     Task<List<LegalEntityLookupDTO>> SearchForLimitsAsync(string? search);
     Task<BL.Services.ReferencePage<LegalEntityLookupDTO>> SearchForLimitsPageAsync(string? search, int page, int pageSize, CancellationToken ct);
 
     /// <summary>Vraća podatke pravnog lica potrebne za automatsko popunjavanje forme Limita.</summary>
-    Task<LegalEntityLimitFormDataDTO?> GetLimitFormDataAsync(Guid legalEntityId);
+    Task<LegalEntityLimitFormDataDTO?> GetLimitFormDataAsync(long legalEntityId);
 
     /// <summary>Uvozi pravna lica iz Excel fajla (.xlsx).</summary>
     Task<ImportResultDTO> ImportFromExcelAsync(Stream stream, string createdBy);

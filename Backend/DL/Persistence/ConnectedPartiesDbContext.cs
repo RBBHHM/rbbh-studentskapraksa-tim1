@@ -25,8 +25,32 @@ public partial class ConnectedPartiesDbContext(
     public DbSet<DL.Entities.Notifications.ApplicationNotification> Notifications => Set<DL.Entities.Notifications.ApplicationNotification>();
     public DbSet<DL.Entities.Notifications.NotificationDelivery> NotificationDeliveries => Set<DL.Entities.Notifications.NotificationDelivery>();
 
+    private static void UseNumericSequence<TEntity>(ModelBuilder modelBuilder, string table) where TEntity : class
+    {
+        var sequence = table + "IdSequence";
+        modelBuilder.HasSequence<long>(sequence).IncrementsBy(1);
+        modelBuilder.Entity<TEntity>().Property<long>("Id").UseHiLo(sequence);
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // These domains need permanent IDs before SaveChanges to build linked rows and audit entries.
+        if (Database.IsSqlServer())
+        {
+            UseNumericSequence<AppUser>(modelBuilder, "AppUsers");
+            UseNumericSequence<Role>(modelBuilder, "Roles");
+            UseNumericSequence<Permission>(modelBuilder, "Permissions");
+            UseNumericSequence<UserRole>(modelBuilder, "UserRoles");
+            UseNumericSequence<DL.Entities.Authorization.RoleRequest>(modelBuilder, "RoleRequests");
+            UseNumericSequence<DL.Entities.Notifications.ApplicationNotification>(modelBuilder, "Notifications");
+            UseNumericSequence<DL.Entities.PeriodLock.UnlockRequest>(modelBuilder, "UnlockRequests");
+            UseNumericSequence<DL.Entities.LegalEntity.LegalEntity>(modelBuilder, "LegalEntities");
+            UseNumericSequence<DL.Entities.RelatedPersons.RelatedPerson>(modelBuilder, "RelatedPersons");
+            UseNumericSequence<DL.Entities.RelatedPersons.FamilyMember>(modelBuilder, "FamilyMembers");
+            UseNumericSequence<DL.Entities.Report.ClientLimit>(modelBuilder, "ClientLimits");
+            UseNumericSequence<DL.Entities.Report.Report>(modelBuilder, "Reports");
+        }
+
         // Provider subjects are opaque, case-sensitive identifiers. Apply the same
         // indexed SQL comparison to identity resolution and every owner-scoped query.
         const string subjectCollation = "Latin1_General_100_BIN2";

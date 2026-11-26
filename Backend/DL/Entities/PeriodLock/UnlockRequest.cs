@@ -10,7 +10,7 @@ namespace RBBH.ConnectedParties.DL.Entities.PeriodLock;
 public class UnlockRequest
 {
     [Key]
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public long Id { get; set; }
 
     [Required]
     [StringLength(100)]
@@ -22,7 +22,7 @@ public class UnlockRequest
 
     [StringLength(100)]
     public string? RequestedBySubject { get; internal set; }
-    public Guid? ParentRequestId { get; set; }
+    public long? ParentRequestId { get; set; }
 
     public int Year { get; set; }
     public int Month { get; set; }

@@ -2,7 +2,7 @@ namespace RBBH.ConnectedParties.DL.DTO.Limiti;
 
 public class CreateLimitDTO
 {
-    public Guid LegalEntityId { get; set; }
+    public long LegalEntityId { get; set; }
     public string TipLimita { get; set; } = string.Empty;
 
     public decimal? OdobreniLimit { get; set; }
@@ -13,7 +13,7 @@ public class CreateLimitDTO
 
 public class UpdateLimitDTO
 {
-    public Guid LegalEntityId { get; set; }
+    public long LegalEntityId { get; set; }
     public string TipLimita { get; set; } = string.Empty;
 
     public decimal? OdobreniLimit { get; set; }
@@ -25,7 +25,7 @@ public class UpdateLimitDTO
 public class LimitResponseDTO
 {
     public int Id { get; set; }
-    public Guid LegalEntityId { get; set; }
+    public long LegalEntityId { get; set; }
     public string Naziv { get; set; } = string.Empty;
     public bool IsResident { get; set; }
     public string? FbaId { get; set; }

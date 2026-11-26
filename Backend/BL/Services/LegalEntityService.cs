@@ -82,7 +82,7 @@ public partial class LegalEntityService : ILegalEntityService
     }
 
     /// <inheritdoc />
-    public async Task<LegalEntityDTO?> GetByIdAsync(Guid id)
+    public async Task<LegalEntityDTO?> GetByIdAsync(long id)
     {
         var cancellation = _actor?.HttpContext?.RequestAborted ?? default;
         var item = await _context.LegalEntities.AsNoTracking()
@@ -137,7 +137,7 @@ public partial class LegalEntityService : ILegalEntityService
     }
 
     /// <inheritdoc />
-    public async Task<LegalEntityDTO> UpdateAsync(Guid id, UpdateLegalEntityDTO dto, string modifiedBy)
+    public async Task<LegalEntityDTO> UpdateAsync(long id, UpdateLegalEntityDTO dto, string modifiedBy)
     {
         var entity = await _context.LegalEntities
             .AsTracking()
@@ -186,7 +186,7 @@ public partial class LegalEntityService : ILegalEntityService
     }
 
     /// <inheritdoc />
-    public async Task DeleteAsync(Guid id, string deletedBy)
+    public async Task DeleteAsync(long id, string deletedBy)
     {
         var entity = await _context.LegalEntities
             .AsTracking()
@@ -207,7 +207,7 @@ public partial class LegalEntityService : ILegalEntityService
     }
 
     /// <inheritdoc />
-    public async Task<LegalEntityDTO> VerifyAsync(Guid id, string verifiedBy)
+    public async Task<LegalEntityDTO> VerifyAsync(long id, string verifiedBy)
     {
         var entity = await _context.LegalEntities
             .AsTracking()
@@ -260,7 +260,7 @@ public partial class LegalEntityService : ILegalEntityService
     }
 
     /// <inheritdoc />
-    public async Task<LegalEntityLimitFormDataDTO?> GetLimitFormDataAsync(Guid legalEntityId)
+    public async Task<LegalEntityLimitFormDataDTO?> GetLimitFormDataAsync(long legalEntityId)
     {
         var result = await _context.LegalEntities.AsNoTracking()
             .Where(entity => entity.Id == legalEntityId && entity.IsActive)
@@ -387,7 +387,7 @@ public partial class LegalEntityService : ILegalEntityService
             throw new ValidationException("dateFrom", BackendMessages.Message("validation.registry.start.required"));
     }
 
-    private async Task ValidateUniqueIdentifierAsync(bool isResident, string? taxNumber, string? fbaId, Guid? excludedId = null)
+    private async Task ValidateUniqueIdentifierAsync(bool isResident, string? taxNumber, string? fbaId, long? excludedId = null)
     {
         if (isResident && !string.IsNullOrWhiteSpace(taxNumber))
         {

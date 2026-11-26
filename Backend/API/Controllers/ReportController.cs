@@ -160,9 +160,9 @@ public class ReportController : ControllerBase
             fileName);
     }
 
-    [HttpGet("export/generated/{reportId:guid}")]
+    [HttpGet("export/generated/{reportId:long}")]
     [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
-    public async Task<IActionResult> ExportGenerated(Guid reportId)
+    public async Task<IActionResult> ExportGenerated(long reportId)
     {
         var bytes = await _reportService.ExportGeneratedReportAsync(reportId);
 

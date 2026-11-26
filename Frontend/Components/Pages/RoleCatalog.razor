@@ -150,12 +150,12 @@ else
 @code {
     private sealed class RoleDraft
     {
-        public Guid? Id { get; init; }
+        public long? Id { get; init; }
         public string Name { get; set; } = "";
         public string Description { get; set; } = "";
         public bool IsActive { get; set; } = true;
         public DateTime Version { get; init; }
-        public HashSet<Guid> PermissionIds { get; init; } = [];
+        public HashSet<long> PermissionIds { get; init; } = [];
     }
 
     private readonly CancellationTokenSource _lifetime = new();
@@ -265,7 +265,7 @@ else
             PermissionIds = role.PermissionIds.ToHashSet()
         };
     }
-    private void SelectPermission(Guid id, bool selected)
+    private void SelectPermission(long id, bool selected)
     {
         if (_draft is null) return;
         if (selected) _draft.PermissionIds.Add(id);

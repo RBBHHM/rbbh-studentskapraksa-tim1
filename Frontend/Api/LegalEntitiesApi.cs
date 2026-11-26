@@ -2,7 +2,7 @@ using RBI.ApiCore;
 
 namespace RBBH.RelatedPartiesRegister.Web.Api;
 
-public sealed record LegalEntity(Guid Id, bool IsResident, string? TaxNumber, string? MaticniBroj,
+public sealed record LegalEntity(long Id, bool IsResident, string? TaxNumber, string? MaticniBroj,
     string? FbaId, string Name, string? Matbroj, string BasisOfConnection, string? ConnectionDescription,
     bool? ConnectedWithBank, DateTime? DateFrom, DateTime? DateTo, string Status,
     string CreatedBy, DateTime CreatedAt, string? ModifiedBy, DateTime? ModifiedAt,
@@ -33,10 +33,10 @@ public sealed record BankCustomerPage(IReadOnlyList<BankCustomerOption> Items, i
 public interface ILegalEntitiesApi
 {
     Task<LegalEntityPage> ListAsync(int page = 1, CancellationToken token = default);
-    Task<LegalEntity> GetAsync(Guid id, CancellationToken token = default);
-    Task<LegalEntity> SaveAsync(Guid? id, LegalEntityRequest request, CancellationToken token = default);
-    Task VerifyAsync(Guid id, CancellationToken token = default);
-    Task DeleteAsync(Guid id, CancellationToken token = default);
+    Task<LegalEntity> GetAsync(long id, CancellationToken token = default);
+    Task<LegalEntity> SaveAsync(long? id, LegalEntityRequest request, CancellationToken token = default);
+    Task VerifyAsync(long id, CancellationToken token = default);
+    Task DeleteAsync(long id, CancellationToken token = default);
     Task<RbiApiFile> ExportAsync(CancellationToken token = default);
     Task<ImportResult> ImportAsync(Stream file, string name, CancellationToken token = default);
     /// <summary>Paged bank GCC list; 503 means the bank source is not configured or reachable (no placeholder rows are ever returned).</summary>
@@ -51,14 +51,14 @@ public sealed class LegalEntitiesApi(IRbiApiFileTransport transport) : ILegalEnt
         ArgumentOutOfRangeException.ThrowIfLessThan(page, 1);
         return Value(await transport.GetAsync<LegalEntityPage>($"api/legal-entities?page={page}&pageSize=20", token), token);
     }
-    public async Task<LegalEntity> GetAsync(Guid id, CancellationToken token = default) =>
+    public async Task<LegalEntity> GetAsync(long id, CancellationToken token = default) =>
         Value(await transport.GetAsync<LegalEntity>($"api/legal-entities/{id:D}", token), token);
-    public async Task<LegalEntity> SaveAsync(Guid? id, LegalEntityRequest request, CancellationToken token = default) =>
+    public async Task<LegalEntity> SaveAsync(long? id, LegalEntityRequest request, CancellationToken token = default) =>
         Value(await transport.SendAsync<LegalEntity>(id.HasValue ? HttpMethod.Put : HttpMethod.Post,
             "api/legal-entities" + (id is { } key ? $"/{key:D}" : ""), request, token), token);
-    public async Task VerifyAsync(Guid id, CancellationToken token = default) =>
+    public async Task VerifyAsync(long id, CancellationToken token = default) =>
         Value(await transport.SendAsync<LegalEntity>(HttpMethod.Post, $"api/verification/legal-person/{id:D}", cancellationToken: token), token);
-    public async Task DeleteAsync(Guid id, CancellationToken token = default)
+    public async Task DeleteAsync(long id, CancellationToken token = default)
     {
         var result = await transport.SendAsync(HttpMethod.Delete, $"api/legal-entities/{id:D}", cancellationToken: token);
         token.ThrowIfCancellationRequested();
@@ -95,10 +95,10 @@ internal sealed class UnconfiguredLegalEntitiesApi : ILegalEntitiesApi
 {
     private static Task<T> Unavailable<T>() => Task.FromException<T>(new RegistryApiException());
     public Task<LegalEntityPage> ListAsync(int page = 1, CancellationToken token = default) => Unavailable<LegalEntityPage>();
-    public Task<LegalEntity> GetAsync(Guid id, CancellationToken token = default) => Unavailable<LegalEntity>();
-    public Task<LegalEntity> SaveAsync(Guid? id, LegalEntityRequest request, CancellationToken token = default) => Unavailable<LegalEntity>();
-    public Task VerifyAsync(Guid id, CancellationToken token = default) => Unavailable<object>();
-    public Task DeleteAsync(Guid id, CancellationToken token = default) => Unavailable<object>();
+    public Task<LegalEntity> GetAsync(long id, CancellationToken token = default) => Unavailable<LegalEntity>();
+    public Task<LegalEntity> SaveAsync(long? id, LegalEntityRequest request, CancellationToken token = default) => Unavailable<LegalEntity>();
+    public Task VerifyAsync(long id, CancellationToken token = default) => Unavailable<object>();
+    public Task DeleteAsync(long id, CancellationToken token = default) => Unavailable<object>();
     public Task<RbiApiFile> ExportAsync(CancellationToken token = default) => Unavailable<RbiApiFile>();
     public Task<ImportResult> ImportAsync(Stream file, string name, CancellationToken token = default) { file.Dispose(); return Unavailable<ImportResult>(); }
     public Task<GccPage> GccAsync(string search = "", CancellationToken token = default) => Unavailable<GccPage>();

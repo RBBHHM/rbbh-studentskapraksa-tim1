@@ -75,7 +75,7 @@ else
             </div>
         </div>
         <label for="family-person" class="registry-family__label">@T["family.person"]</label>
-        <div class="registry-family__select"><RbiSelect TValue="Guid?" Id="family-person" @bind-Value="_treePerson" @bind-Value:after="LoadTreeAsync" Placeholder="@T["family.placeholder"]">
+        <div class="registry-family__select"><RbiSelect TValue="long?" Id="family-person" @bind-Value="_treePerson" @bind-Value:after="LoadTreeAsync" Placeholder="@T["family.placeholder"]">
             @foreach (var person in _people) { <option value="@person.Id">@person.FirstName @person.LastName — @T[person.RelatedToPersonId.HasValue ? "person.family" : person.IsIdentifiedStaff ? "person.employee" : "person.related"]</option> }
         </RbiSelect></div>
         <div class="registry-family__panel">
@@ -131,7 +131,7 @@ else
     private IReadOnlyList<PersonTreeNode> _tree = [];
     private IReadOnlyList<ReferenceOption> _bases = [], _special = [];
     private PhysicalPersonDraft? _draft;
-    private Guid? _editingId, _treePerson;
+    private long? _editingId, _treePerson;
     private RelatedPerson? _action;
     private IBrowserFile? _importFile;
     private Guid _fileKey = Guid.NewGuid();

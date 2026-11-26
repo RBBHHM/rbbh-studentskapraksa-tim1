@@ -4,7 +4,7 @@ namespace RBBH.ConnectedParties.DL.Entities.Notifications;
 
 public sealed class ApplicationNotification
 {
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public long Id { get; set; }
     [MaxLength(100)] public string RecipientSubject { get; set; } = "";
     [MaxLength(200)] public string RecipientEmail { get; set; } = "";
     [MaxLength(200)] public string EventKey { get; set; } = "";
@@ -20,7 +20,7 @@ public sealed class ApplicationNotification
 public sealed class NotificationDelivery
 {
     public long Id { get; set; }
-    public Guid NotificationId { get; set; }
+    public long NotificationId { get; set; }
     public ApplicationNotification Notification { get; set; } = null!;
     public int Attempts { get; set; }
     public DateTime NextAttemptAt { get; set; } = DateTime.UtcNow;

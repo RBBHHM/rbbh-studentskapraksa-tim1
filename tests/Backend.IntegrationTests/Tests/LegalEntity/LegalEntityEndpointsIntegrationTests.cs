@@ -187,7 +187,7 @@ namespace IntegrationTests.Tests.LegalEntity
             await ResetLegalEntitiesAsync();
 
             // Act
-            var result = await NewController().GetById(Guid.NewGuid());
+            var result = await NewController().GetById(Random.Shared.NextInt64(1L << 32, 1L << 50));
 
             // Assert
             result.Should().BeOfType<NotFoundObjectResult>();

@@ -166,7 +166,7 @@ public static class RelatedPersonValidator
     }
 
     private static string? ValidateBusinessFields(string? relationBasis,
-        string? specialRelationBasis, bool isIdentifiedStaff, Guid? relatedToPersonId,
+        string? specialRelationBasis, bool isIdentifiedStaff, long? relatedToPersonId,
         DateTime? dateFrom, DateTime? dateTo)
     {
         if (relationBasis?.Length > 500 || specialRelationBasis?.Length > 500)

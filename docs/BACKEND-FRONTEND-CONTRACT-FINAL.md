@@ -70,7 +70,7 @@ Sources: [model errors](../Backend/IoC/Extensions/Controllers/ControllersExtensi
 
 ### Authentication, profile and session
 
-GET `/authentication/login?returnUrl=/app` challenges Keycloak OIDC (code+PKCE), with redirect flow, not JSON200; unsafe external return URLs fall back to `/app`. GET `/api/auth/profile` returns `{userId:string|null,fullName:string|null,username:string|null,email:string|null,applicationUserId:string|null,roles:string[],permissions:string[]}`. userId is the opaque provider subject; applicationUserId is the optional application GUID. There is no isAdministrator property: use effective permission and current application roles, not incoming Keycloak role strings.
+GET `/authentication/login?returnUrl=/app` challenges Keycloak OIDC (code+PKCE), with redirect flow, not JSON200; unsafe external return URLs fall back to `/app`. GET `/api/auth/profile` returns `{userId:string|null,fullName:string|null,username:string|null,email:string|null,applicationUserId:int64|null,roles:string[],permissions:string[]}`. userId is the opaque provider subject; applicationUserId is the optional numeric application ID. There is no isAdministrator property: use effective permission and current application roles, not incoming Keycloak role strings.
 
 The backend cookie has an absolute8h cap and no sliding renewal. Saved OIDC access-token expiry can require earlier login; the backend does not promise8h of refresh regardless of realm policy. An expired bearer can include `Token-Expired: true`. Outside Development, enabled auth, approved issuer/client/secret and nonempty `KeycloakSettings__Audience` are mandatory; configured Audience is always validated. Do not reuse OIDC client audience blindly as API audience. Real realm mapping/redirect/logout/refresh remain external.
 
@@ -80,7 +80,7 @@ Sources: [auth endpoints](../Backend/IoC/Extensions/Authentication/Authenticatio
 
 ### Users, role catalog and role requests
 
-Users list envelope is `{users,total,page,pageSize}`, not items; filter search and role; max pageSize200, lastName/firstName/id order. UserDTO.id is the application GUID, not provider sub (the legacy C# KeycloakId() method is not a JSON property). `identityConfirmed` distinguishes stored role choices from effective access. Create/edit profiles allow valid emails outside the bank domain; username/first/last max 100, email max 200, normalized duplicate protection. PUT user profile is administrative editing of `{username,firstName,lastName,email}`, not a new self-profile endpoint. No client-supplied Keycloak subject binding.
+Users list envelope is `{users,total,page,pageSize}`, not items; filter search and role; max pageSize200, lastName/firstName/id order. UserDTO.id is the numeric application ID, not provider sub (the legacy C# KeycloakId() method is not a JSON property). `identityConfirmed` distinguishes stored role choices from effective access. Create/edit profiles allow valid emails outside the bank domain; username/first/last max 100, email max 200, normalized duplicate protection. PUT user profile is administrative editing of `{username,firstName,lastName,email}`, not a new self-profile endpoint. No client-supplied Keycloak subject binding.
 
 Roles replace through POST `/{userId}/roles` or compatibility PUT `/{userId}/role`, body `{roleIds:[guid]}` (legacy singular roleId accepted); empty roles remove explicit roles subject to final-Admin protection. DELETE `/{userId}` deactivates; POST reactivate restores; DELETE permanent removes. No self-role replacement/deactivation/deletion; no loss of last active confirmed Admin. Successful mutations return `{message}` or `{message,roles}`; no repeated-success/idempotency promise for these endpoints. Allowed state/audit changes are transactional under SQL application-lock serialization. Other ordinary profiles preserve existing rules.
 
@@ -130,7 +130,7 @@ Legal v2 export/import19 ordered columns; legacy10 accepted. Physical v2 25; leg
 
 Registry/limit import response `{"imported":2,"failed":1,"errors":["Safe row feedback"],"details":[{"row":4,"field":"name","code":"validation...","message":"Safe row feedback"}]}`. `errors` remains string[], not Claude's proposed object[]. Structured diagnostics are additive **details**. Valid rows commit together with audit; row validation failures can coexist with HTTP200; storage/audit failure commits none. Preview is not supported on these three routes. Upload<=10MiB,5000data rows, ZIP<=2000entries/32MiBentry/64MiBexpanded; reject formulas/macros/external links. Legal/physical export>5000 rejected, not silently truncated.
 
-Limits body `{legalEntityId:guid,tipLimita:string,odobreniLimit:decimal|null,maksimalnaOcekivanaUtilizacija:decimal|null,rokOcekivaneUtilizacije:datetime|null,komentar:string|null}`. Party must exist/active; tipLimita active VrstaLimita code; nullable nonnegative amounts<=9999999999999999.99 with<=2decimal places (no rounding), tipLimita<=100 and komentar<=1000. IDs are int32. Get array optionallegalEntityId/matbroj/asOf; page optionallegalEntityId/search/asOf, max 100 and stable sort. Export shares filters. Capital values are nullable as-of observations, not 0. Import fingerprint prevents duplicate batch records; generated-ID audit and commit-ack recovery are tested. Ordinary POST is not a general idempotent upsert.
+Limits body `{legalEntityId:int64,tipLimita:string,odobreniLimit:decimal|null,maksimalnaOcekivanaUtilizacija:decimal|null,rokOcekivaneUtilizacije:datetime|null,komentar:string|null}`. Party must exist/active; tipLimita active VrstaLimita code; nullable nonnegative amounts<=9999999999999999.99 with<=2decimal places (no rounding), tipLimita<=100 and komentar<=1000. Limit IDs are int32 and legal-entity IDs are int64. Get array optionallegalEntityId/matbroj/asOf; page optionallegalEntityId/search/asOf, max 100 and stable sort. Export shares filters. Capital values are nullable as-of observations, not 0. Import fingerprint prevents duplicate batch records; generated-ID audit and commit-ack recovery are tested. Ordinary POST is not a general idempotent upsert.
 
 Codebook workbook is intentionally one label column (Vrijednost/value/naziv/name headers), not a full database backup or full localization-pack roundtrip. `dryRun=true` default returns `{totalRows,toImport:string[],duplicates:string[],errors:string[],imported:0}`. false commits valid new labels atomically/audited; duplicate codes skipped with errors. Never interpret200 as all values imported. Header/data formulas rejected before cell value evaluation. Errors currently can include legacy BS duplicate-row text even for another requested language; preserve compatibility and report localized UI fallback rather than assume all legacy scalar text is a resource key.
 
@@ -324,10 +324,10 @@ Source: [LimitController.cs](../Backend/API/Controllers/LimitController.cs).
 
 | Method / route | Query / body | Success | Authority |
 | --- | --- | --- | --- |
-| GET `/api/limiti` | legalEntityId:string(uuid) optional<br>matbroj:string optional<br>asOf:string(date-time) optional | 200 LimitResponseDTO[] | limits.read |
+| GET `/api/limiti` | legalEntityId:integer(int64) optional<br>matbroj:string optional<br>asOf:string(date-time) optional | 200 LimitResponseDTO[] | limits.read |
 | POST `/api/limiti` | body CreateLimitDTO | 201 LimitResponseDTO | limits.create |
-| GET `/api/limiti/page` | legalEntityId:string(uuid) optional<br>search:string optional<br>page:integer(int32)=1<br>pageSize:integer(int32)=20<br>asOf:string(date-time) optional | 200 LimitResponseDTOReferencePage | limits.read |
-| GET `/api/limiti/export` | legalEntityId:string(uuid) optional<br>matbroj:string optional<br>asOf:string(date-time) optional | 200 binary XLSX | limits.read |
+| GET `/api/limiti/page` | legalEntityId:integer(int64) optional<br>search:string optional<br>page:integer(int32)=1<br>pageSize:integer(int32)=20<br>asOf:string(date-time) optional | 200 LimitResponseDTOReferencePage | limits.read |
+| GET `/api/limiti/export` | legalEntityId:integer(int64) optional<br>matbroj:string optional<br>asOf:string(date-time) optional | 200 binary XLSX | limits.read |
 | GET `/api/limiti/{id}` | none | 200 LimitResponseDTO | limits.read |
 | PUT `/api/limiti/{id}` | body UpdateLimitDTO | 200 LimitResponseDTO | limits.edit |
 | DELETE `/api/limiti/{id}` | none | 200 {message} | limits.delete |
@@ -398,7 +398,7 @@ Source: [RelatedPersonController.cs](../Backend/API/Controllers/RelatedPersonCon
 | PUT `/api/related-persons/{id}` | body UpdateRelatedPersonDTO | 200 RelatedPersonResponseDTO | physical-persons.read + physical-persons.edit |
 | DELETE `/api/related-persons/{id}` | none | 200 {message} | physical-persons.read + physical-persons.delete |
 | GET `/api/related-persons/{id}/relationship-tree` | none | 200 RelatedPersonTreeNodeDTO[] | physical-persons.read |
-| GET `/api/related-persons/check-duplicate` | jmbg:string optional<br>passportNumber:string optional<br>fbaId:string optional<br>excludeId:string(uuid) optional | 200 DuplicateIdentityResponseDTO | physical-persons.read |
+| GET `/api/related-persons/check-duplicate` | jmbg:string optional<br>passportNumber:string optional<br>fbaId:string optional<br>excludeId:integer(int64) optional | 200 DuplicateIdentityResponseDTO | physical-persons.read |
 | GET `/api/related-persons/page` | search:string optional<br>page:integer(int32)=1<br>pageSize:integer(int32)=20 | 200 RelatedPersonSummaryDTOReferencePage | physical-persons.read |
 | GET `/api/related-persons/export` | none | 200 binary XLSX | physical-persons.read |
 | GET `/api/related-persons/all-family-members` | none | 200 FamilyMemberResponseDTO[] | physical-persons.read |
@@ -499,9 +499,9 @@ Source: [PeriodLockController.cs](../Backend/API/Controllers/PeriodLockControlle
 Source: [AssignRoleRequestDTO.cs](../Backend/DL/DTO/Roles/AssignRoleRequestDTO.cs).
 | JSON field | Wire type | Model constraints |
 | --- | --- | --- |
-| `roleIds` | string(uuid)[] or null | not explicitly required by schema |
-| `roleId` | string(uuid) | not explicitly required by schema |
-| `effectiveRoleIds` | string(uuid)[] or null | not explicitly required by schema; readOnly=True |
+| `roleIds` | integer(int64)[] or null | not explicitly required by schema |
+| `roleId` | integer(int64) | not explicitly required by schema |
+| `effectiveRoleIds` | integer(int64)[] or null | not explicitly required by schema; readOnly=True |
 
 ### BankCustomer
 
@@ -545,7 +545,7 @@ Source: [BankReferenceSource.cs](../Backend/BL/Services/BankReferenceSource.cs).
 Source: [ReportDTOs.cs](../Backend/DL/DTO/Report/ReportDTOs.cs).
 | JSON field | Wire type | Model constraints |
 | --- | --- | --- |
-| `id` | string(uuid) | not explicitly required by schema |
+| `id` | integer(int64) | not explicitly required by schema |
 | `regulatoryCapital` | number(double) | not explicitly required by schema |
 | `coreCapital` | number(double) | not explicitly required by schema |
 | `supplementaryCapital` | number(double) | not explicitly required by schema |
@@ -556,7 +556,7 @@ Source: [ReportDTOs.cs](../Backend/DL/DTO/Report/ReportDTOs.cs).
 Source: [ReportDTOs.cs](../Backend/DL/DTO/Report/ReportDTOs.cs).
 | JSON field | Wire type | Model constraints |
 | --- | --- | --- |
-| `id` | string(uuid) | not explicitly required by schema |
+| `id` | integer(int64) | not explicitly required by schema |
 | `revision` | integer(int64) | not explicitly required by schema |
 | `effectiveDate` | string(date-time) | not explicitly required by schema |
 | `regulatoryCapital` | number(double) | not explicitly required by schema |
@@ -631,7 +631,7 @@ Source: [FamilyMemberDTOs.cs](../Backend/DL/DTO/RelatedPersons/FamilyMemberDTOs.
 | `jmbg` | string or null | not explicitly required by schema; minLength=0; maxLength=13 |
 | `passportNumber` | string or null | not explicitly required by schema; minLength=0; maxLength=50 |
 | `fbaId` | string or null | not explicitly required by schema; minLength=0; maxLength=50 |
-| `parentFamilyMemberId` | string(uuid) or null | not explicitly required by schema |
+| `parentFamilyMemberId` | integer(int64) or null | not explicitly required by schema |
 
 ### CreateLegalEntityDTO
 
@@ -657,7 +657,7 @@ Source: [LegalEntityDTOs.cs](../Backend/DL/DTO/LegalEntity/LegalEntityDTOs.cs).
 Source: [LimitDTOs.cs](../Backend/DL/DTO/Limiti/LimitDTOs.cs).
 | JSON field | Wire type | Model constraints |
 | --- | --- | --- |
-| `legalEntityId` | string(uuid) | not explicitly required by schema |
+| `legalEntityId` | integer(int64) | not explicitly required by schema |
 | `tipLimita` | string or null | not explicitly required by schema |
 | `odobreniLimit` | number(double) or null | not explicitly required by schema |
 | `maksimalnaOcekivanaUtilizacija` | number(double) or null | not explicitly required by schema |
@@ -685,7 +685,7 @@ Source: [RelatedPersonDTOs.cs](../Backend/DL/DTO/RelatedPersons/RelatedPersonDTO
 | `specialRelationshipWithBank` | boolean | not explicitly required by schema |
 | `specialContract` | boolean | not explicitly required by schema |
 | `malusClawback` | boolean | not explicitly required by schema |
-| `relatedToPersonId` | string(uuid) or null | not explicitly required by schema |
+| `relatedToPersonId` | integer(int64) or null | not explicitly required by schema |
 
 ### CreateRoleCatalogDTO
 
@@ -695,7 +695,7 @@ Source: [RoleCatalogDTOs.cs](../Backend/DL/DTO/Roles/RoleCatalogDTOs.cs).
 | `name` | string or null | not explicitly required by schema |
 | `displayName` | string or null | not explicitly required by schema |
 | `description` | string or null | not explicitly required by schema |
-| `permissionIds` | string(uuid)[] or null | not explicitly required by schema |
+| `permissionIds` | integer(int64)[] or null | not explicitly required by schema |
 
 ### CreateRoleRequestDTO
 
@@ -704,7 +704,7 @@ Source: [RoleRequestDTOs.cs](../Backend/DL/DTO/Roles/RoleRequestDTOs.cs).
 | --- | --- | --- |
 | `clientRequestId` | string(uuid) | not explicitly required by schema |
 | `purpose` | string | required/non-null; minLength=1; pattern=^(new\|change)$ |
-| `roleIds` | string(uuid)[] or null | not explicitly required by schema; maxItems=20 |
+| `roleIds` | integer(int64)[] or null | not explicitly required by schema; maxItems=20 |
 | `note` | string or null | not explicitly required by schema; maxLength=1000 |
 
 ### CreateUserDTO
@@ -716,7 +716,7 @@ Source: [GetUsersResponseDTO.cs](../Backend/DL/DTO/Users/GetUsersResponseDTO.cs)
 | `firstName` | string | required/non-null; minLength=0; maxLength=100 |
 | `lastName` | string | required/non-null; minLength=0; maxLength=100 |
 | `email` | string(email) | required/non-null; minLength=0; maxLength=200 |
-| `roleIds` | string(uuid)[] or null | not explicitly required by schema |
+| `roleIds` | integer(int64)[] or null | not explicitly required by schema |
 | `roleId` | string or null | not explicitly required by schema |
 | `isActive` | boolean | not explicitly required by schema |
 
@@ -734,8 +734,8 @@ Source: [RelatedPersonDTOs.cs](../Backend/DL/DTO/RelatedPersons/RelatedPersonDTO
 Source: [FamilyMemberDTOs.cs](../Backend/DL/DTO/RelatedPersons/FamilyMemberDTOs.cs).
 | JSON field | Wire type | Model constraints |
 | --- | --- | --- |
-| `id` | string(uuid) | not explicitly required by schema |
-| `relatedPersonId` | string(uuid) | not explicitly required by schema |
+| `id` | integer(int64) | not explicitly required by schema |
+| `relatedPersonId` | integer(int64) | not explicitly required by schema |
 | `firstName` | string or null | not explicitly required by schema |
 | `lastName` | string or null | not explicitly required by schema |
 | `residency` | ResidencyType | not explicitly required by schema |
@@ -743,7 +743,7 @@ Source: [FamilyMemberDTOs.cs](../Backend/DL/DTO/RelatedPersons/FamilyMemberDTOs.
 | `jmbg` | string or null | not explicitly required by schema |
 | `passportNumber` | string or null | not explicitly required by schema |
 | `fbaId` | string or null | not explicitly required by schema |
-| `parentFamilyMemberId` | string(uuid) or null | not explicitly required by schema |
+| `parentFamilyMemberId` | integer(int64) or null | not explicitly required by schema |
 | `createdAt` | string(date-time) | not explicitly required by schema |
 | `createdBy` | string or null | not explicitly required by schema |
 | `modifiedAt` | string(date-time) or null | not explicitly required by schema |
@@ -804,7 +804,7 @@ Source: [LegalEntityDTOs.cs](../Backend/DL/DTO/LegalEntity/LegalEntityDTOs.cs).
 | JSON field | Wire type | Model constraints |
 | --- | --- | --- |
 | `gccName` | string or null | not explicitly required by schema |
-| `id` | string(uuid) | not explicitly required by schema |
+| `id` | integer(int64) | not explicitly required by schema |
 | `isResident` | boolean | required/non-null |
 | `taxNumber` | string or null | not explicitly required by schema |
 | `maticniBroj` | string or null | not explicitly required by schema |
@@ -831,7 +831,7 @@ Source: [LegalEntityDTOs.cs](../Backend/DL/DTO/LegalEntity/LegalEntityDTOs.cs).
 Source: [LegalEntityDTOs.cs](../Backend/DL/DTO/LegalEntity/LegalEntityDTOs.cs).
 | JSON field | Wire type | Model constraints |
 | --- | --- | --- |
-| `id` | string(uuid) | not explicitly required by schema |
+| `id` | integer(int64) | not explicitly required by schema |
 | `isResident` | boolean | required/non-null |
 | `fbaId` | string or null | not explicitly required by schema |
 | `taxNumber` | string or null | not explicitly required by schema |
@@ -856,7 +856,7 @@ Source: [LegalEntityDTOs.cs](../Backend/DL/DTO/LegalEntity/LegalEntityDTOs.cs).
 Source: [LegalEntityDTOs.cs](../Backend/DL/DTO/LegalEntity/LegalEntityDTOs.cs).
 | JSON field | Wire type | Model constraints |
 | --- | --- | --- |
-| `id` | string(uuid) | not explicitly required by schema |
+| `id` | integer(int64) | not explicitly required by schema |
 | `name` | string or null | not explicitly required by schema |
 | `maticniBroj` | string or null | not explicitly required by schema |
 | `taxNumber` | string or null | not explicitly required by schema |
@@ -867,7 +867,7 @@ Source: [LimitDTOs.cs](../Backend/DL/DTO/Limiti/LimitDTOs.cs).
 | JSON field | Wire type | Model constraints |
 | --- | --- | --- |
 | `id` | integer(int32) | not explicitly required by schema |
-| `legalEntityId` | string(uuid) | not explicitly required by schema |
+| `legalEntityId` | integer(int64) | not explicitly required by schema |
 | `naziv` | string or null | not explicitly required by schema |
 | `isResident` | boolean | not explicitly required by schema |
 | `fbaId` | string or null | not explicitly required by schema |
@@ -949,7 +949,7 @@ Source: [RuntimeLocalizationCatalog.cs](../Backend/BL/Services/RuntimeLocalizati
 Source: [RelatedPersonDTOs.cs](../Backend/DL/DTO/RelatedPersons/RelatedPersonDTOs.cs).
 | JSON field | Wire type | Model constraints |
 | --- | --- | --- |
-| `id` | string(uuid) | not explicitly required by schema |
+| `id` | integer(int64) | not explicitly required by schema |
 | `firstName` | string or null | not explicitly required by schema |
 | `lastName` | string or null | not explicitly required by schema |
 | `residency` | ResidencyType | not explicitly required by schema |
@@ -967,7 +967,7 @@ Source: [RelatedPersonDTOs.cs](../Backend/DL/DTO/RelatedPersons/RelatedPersonDTO
 | `specialRelationshipWithBank` | boolean | not explicitly required by schema |
 | `specialContract` | boolean | not explicitly required by schema |
 | `malusClawback` | boolean | not explicitly required by schema |
-| `relatedToPersonId` | string(uuid) or null | not explicitly required by schema |
+| `relatedToPersonId` | integer(int64) or null | not explicitly required by schema |
 | `relatedToPersonName` | string or null | not explicitly required by schema |
 | `relatedToPersonJmbg` | string or null | not explicitly required by schema |
 | `relatedToPersonPassport` | string or null | not explicitly required by schema |
@@ -993,7 +993,7 @@ Numeric values: `[1, 2, 3, 4, 5, 6]`. Names are defined in RelatedPersonEnums.cs
 Source: [RelatedPersonDTOs.cs](../Backend/DL/DTO/RelatedPersons/RelatedPersonDTOs.cs).
 | JSON field | Wire type | Model constraints |
 | --- | --- | --- |
-| `id` | string(uuid) | not explicitly required by schema |
+| `id` | integer(int64) | not explicitly required by schema |
 | `firstName` | string or null | not explicitly required by schema |
 | `lastName` | string or null | not explicitly required by schema |
 | `jmbg` | string or null | not explicitly required by schema |
@@ -1002,7 +1002,7 @@ Source: [RelatedPersonDTOs.cs](../Backend/DL/DTO/RelatedPersons/RelatedPersonDTO
 | `residency` | ResidencyType | not explicitly required by schema |
 | `familyMemberCount` | integer(int32) | not explicitly required by schema |
 | `isIdentifiedStaff` | boolean | not explicitly required by schema |
-| `relatedToPersonId` | string(uuid) or null | not explicitly required by schema |
+| `relatedToPersonId` | integer(int64) or null | not explicitly required by schema |
 | `personType` | string or null | not explicitly required by schema; readOnly=True |
 | `personTypeLabel` | string or null | not explicitly required by schema; readOnly=True |
 | `createdAt` | string(date-time) | not explicitly required by schema |
@@ -1022,7 +1022,7 @@ Source: [BankReferenceSource.cs](../Backend/BL/Services/BankReferenceSource.cs).
 Source: [RelatedPersonDTOs.cs](../Backend/DL/DTO/RelatedPersons/RelatedPersonDTOs.cs).
 | JSON field | Wire type | Model constraints |
 | --- | --- | --- |
-| `id` | string(uuid) | not explicitly required by schema |
+| `id` | integer(int64) | not explicitly required by schema |
 | `firstName` | string or null | not explicitly required by schema |
 | `lastName` | string or null | not explicitly required by schema |
 | `personType` | string or null | not explicitly required by schema |
@@ -1036,7 +1036,7 @@ Source: [ReportDTOs.cs](../Backend/DL/DTO/Report/ReportDTOs.cs).
 | --- | --- | --- |
 | `dataSource` | string or null | not explicitly required by schema |
 | `isAuthoritative` | boolean | not explicitly required by schema; readOnly=True |
-| `id` | string(uuid) | not explicitly required by schema |
+| `id` | integer(int64) | not explicitly required by schema |
 | `reportType` | string or null | not explicitly required by schema |
 | `reportDate` | string(date-time) | not explicitly required by schema |
 | `totalClients` | integer(int32) | not explicitly required by schema |
@@ -1080,13 +1080,13 @@ Source: [PeriodLockController.cs](../Backend/API/Controllers/PeriodLockControlle
 Source: [RoleCatalogDTOs.cs](../Backend/DL/DTO/Roles/RoleCatalogDTOs.cs).
 | JSON field | Wire type | Model constraints |
 | --- | --- | --- |
-| `id` | string(uuid) | not explicitly required by schema |
+| `id` | integer(int64) | not explicitly required by schema |
 | `name` | string or null | not explicitly required by schema |
 | `displayName` | string or null | not explicitly required by schema |
 | `description` | string or null | not explicitly required by schema |
 | `isActive` | boolean | not explicitly required by schema |
 | `version` | integer(int32) | not explicitly required by schema |
-| `permissionIds` | string(uuid)[] or null | not explicitly required by schema |
+| `permissionIds` | integer(int64)[] or null | not explicitly required by schema |
 | `isProtected` | boolean | not explicitly required by schema |
 
 ### RoleDTO
@@ -1094,7 +1094,7 @@ Source: [RoleCatalogDTOs.cs](../Backend/DL/DTO/Roles/RoleCatalogDTOs.cs).
 Source: [GetRolesResponseDTO.cs](../Backend/DL/DTO/Roles/GetRolesResponseDTO.cs).
 | JSON field | Wire type | Model constraints |
 | --- | --- | --- |
-| `id` | string(uuid) | not explicitly required by schema |
+| `id` | integer(int64) | not explicitly required by schema |
 | `name` | string or null | not explicitly required by schema |
 | `userCount` | integer(int32) | not explicitly required by schema |
 
@@ -1103,10 +1103,10 @@ Source: [GetRolesResponseDTO.cs](../Backend/DL/DTO/Roles/GetRolesResponseDTO.cs)
 Source: [RoleRequestDTOs.cs](../Backend/DL/DTO/Roles/RoleRequestDTOs.cs).
 | JSON field | Wire type | Model constraints |
 | --- | --- | --- |
-| `id` | string(uuid) | not explicitly required by schema |
+| `id` | integer(int64) | not explicitly required by schema |
 | `purpose` | string or null | not explicitly required by schema |
 | `status` | string or null | not explicitly required by schema |
-| `roleIds` | string(uuid)[] or null | not explicitly required by schema |
+| `roleIds` | integer(int64)[] or null | not explicitly required by schema |
 | `roleNames` | string[] or null | not explicitly required by schema |
 | `note` | string or null | not explicitly required by schema |
 | `createdAt` | string(date-time) | not explicitly required by schema |
@@ -1201,7 +1201,7 @@ Source: [FamilyMemberDTOs.cs](../Backend/DL/DTO/RelatedPersons/FamilyMemberDTOs.
 | `jmbg` | string or null | not explicitly required by schema; minLength=0; maxLength=13 |
 | `passportNumber` | string or null | not explicitly required by schema; minLength=0; maxLength=50 |
 | `fbaId` | string or null | not explicitly required by schema; minLength=0; maxLength=50 |
-| `parentFamilyMemberId` | string(uuid) or null | not explicitly required by schema |
+| `parentFamilyMemberId` | integer(int64) or null | not explicitly required by schema |
 
 ### UpdateLegalEntityDTO
 
@@ -1228,7 +1228,7 @@ Source: [LegalEntityDTOs.cs](../Backend/DL/DTO/LegalEntity/LegalEntityDTOs.cs).
 Source: [LimitDTOs.cs](../Backend/DL/DTO/Limiti/LimitDTOs.cs).
 | JSON field | Wire type | Model constraints |
 | --- | --- | --- |
-| `legalEntityId` | string(uuid) | not explicitly required by schema |
+| `legalEntityId` | integer(int64) | not explicitly required by schema |
 | `tipLimita` | string or null | not explicitly required by schema |
 | `odobreniLimit` | number(double) or null | not explicitly required by schema |
 | `maksimalnaOcekivanaUtilizacija` | number(double) or null | not explicitly required by schema |
@@ -1256,7 +1256,7 @@ Source: [RelatedPersonDTOs.cs](../Backend/DL/DTO/RelatedPersons/RelatedPersonDTO
 | `specialRelationshipWithBank` | boolean | not explicitly required by schema |
 | `specialContract` | boolean | not explicitly required by schema |
 | `malusClawback` | boolean | not explicitly required by schema |
-| `relatedToPersonId` | string(uuid) or null | not explicitly required by schema |
+| `relatedToPersonId` | integer(int64) or null | not explicitly required by schema |
 
 ### UpdateRoleCatalogDTO
 
@@ -1267,7 +1267,7 @@ Source: [RoleCatalogDTOs.cs](../Backend/DL/DTO/Roles/RoleCatalogDTOs.cs).
 | `description` | string or null | not explicitly required by schema |
 | `isActive` | boolean | not explicitly required by schema |
 | `expectedVersion` | integer(int32) | not explicitly required by schema |
-| `permissionIds` | string(uuid)[] or null | not explicitly required by schema |
+| `permissionIds` | integer(int64)[] or null | not explicitly required by schema |
 
 ### UpdateUserProfileDTO
 
@@ -1284,7 +1284,7 @@ Source: [GetUsersResponseDTO.cs](../Backend/DL/DTO/Users/GetUsersResponseDTO.cs)
 Source: [GetUsersResponseDTO.cs](../Backend/DL/DTO/Users/GetUsersResponseDTO.cs).
 | JSON field | Wire type | Model constraints |
 | --- | --- | --- |
-| `id` | string(uuid) | not explicitly required by schema |
+| `id` | integer(int64) | not explicitly required by schema |
 | `username` | string or null | not explicitly required by schema |
 | `firstName` | string or null | not explicitly required by schema |
 | `lastName` | string or null | not explicitly required by schema |

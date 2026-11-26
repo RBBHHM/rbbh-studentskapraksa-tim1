@@ -11,10 +11,10 @@ namespace RBBH.ConnectedParties.DL.Entities.Report;
 public class ClientLimit
 {
     [Key]
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public long Id { get; set; }
 
     /// <summary>Strani ključ prema LegalEntity.</summary>
-    public Guid LegalEntityId { get; set; }
+    public long LegalEntityId { get; set; }
 
     /// <summary>Navigacijska veza prema pravnom licu.</summary>
     public RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntity LegalEntity { get; set; } = null!;

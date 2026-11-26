@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using ClosedXML.Excel;
@@ -144,7 +144,7 @@ internal static partial class BrowserHostProgram
             fullName = "Browser Fixture",
             username = user.Email,
             email = user.Email,
-            applicationUserId = principal.FindFirst("rbbh.app_user_id")?.Value,
+            applicationUserId = RBBH.ConnectedParties.Helpers.AuthenticatedActor.ApplicationUserId(principal),
             roles = principal.FindAll(ClaimTypes.Role).Select(claim => claim.Value).ToArray(),
             permissions = principal.FindAll("permission").Select(claim => claim.Value).ToArray()
         })).RequireAuthorization();
@@ -343,7 +343,7 @@ internal static partial class BrowserHostProgram
     private sealed record FixtureUser(string Email, string Role);
     private sealed class FixtureDatabase
     {
-        public string Name { get; set; } = "browser-" + Guid.NewGuid();
+        public string Name { get; set; } = "browser-" + Random.Shared.NextInt64(1L << 32, 1L << 50);
         public bool Unavailable { get; set; }
         public bool CodebooksUnavailable { get; set; }
         public string LastCulture { get; set; } = "";
@@ -378,8 +378,8 @@ internal static partial class BrowserHostProgram
             return Task.FromResult(AuthenticateResult.Success(new(new ClaimsPrincipal(new ClaimsIdentity(claims, "BrowserFixture")), "BrowserFixture")));
         }
     }
-    private sealed record UsersMutationFixture(Guid Id, string Action, Guid[]? RoleIds);
-    private sealed record PeriodResponseFixture(Guid Id, string Message);
+    private sealed record UsersMutationFixture(long Id, string Action, long[]? RoleIds);
+    private sealed record PeriodResponseFixture(long Id, string Message);
     private sealed class NoIdentityNetwork : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>

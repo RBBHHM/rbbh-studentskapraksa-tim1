@@ -270,7 +270,7 @@ namespace IntegrationTests.Tests.RelatedPersons
             await _fixture.ResetAsync();
 
             var controller = NewController();
-            var result = await controller.GetById(Guid.NewGuid());
+            var result = await controller.GetById(Random.Shared.NextInt64(1L << 32, 1L << 50));
 
             result.Result.Should().BeAssignableTo<ObjectResult>()
                 .Which.StatusCode.Should().Be(404,
@@ -309,7 +309,7 @@ namespace IntegrationTests.Tests.RelatedPersons
             await _fixture.ResetAsync();
 
             var controller = NewController();
-            var result = await controller.Delete(Guid.NewGuid());
+            var result = await controller.Delete(Random.Shared.NextInt64(1L << 32, 1L << 50));
 
             result.Should().BeAssignableTo<ObjectResult>()
                 .Which.StatusCode.Should().Be(404,
@@ -398,7 +398,7 @@ namespace IntegrationTests.Tests.RelatedPersons
             await _fixture.ResetAsync();
 
             var controller = NewController();
-            var result = await controller.AddFamilyMember(Guid.NewGuid(), FamilyMemberDto(ValidJMBG1));
+            var result = await controller.AddFamilyMember(Random.Shared.NextInt64(1L << 32, 1L << 50), FamilyMemberDto(ValidJMBG1));
 
             result.Result.Should().BeAssignableTo<ObjectResult>()
                 .Which.StatusCode.Should().Be(404,
@@ -454,7 +454,7 @@ namespace IntegrationTests.Tests.RelatedPersons
             var created = ((CreatedResult)(await controller.Create(dto)).Result!).Value
                 as RelatedPersonResponseDTO;
 
-            var result = await controller.DeleteFamilyMember(created!.Id, Guid.NewGuid());
+            var result = await controller.DeleteFamilyMember(created!.Id, Random.Shared.NextInt64(1L << 32, 1L << 50));
 
             result.Should().BeAssignableTo<ObjectResult>()
                 .Which.StatusCode.Should().Be(404,
@@ -496,7 +496,7 @@ namespace IntegrationTests.Tests.RelatedPersons
             await _fixture.ResetAsync();
 
             var controller = NewController();
-            var result = await controller.GetFamilyTree(Guid.NewGuid());
+            var result = await controller.GetFamilyTree(Random.Shared.NextInt64(1L << 32, 1L << 50));
 
             result.Result.Should().BeAssignableTo<ObjectResult>()
                 .Which.StatusCode.Should().Be(404,

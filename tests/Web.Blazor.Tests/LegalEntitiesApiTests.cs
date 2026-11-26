@@ -32,7 +32,7 @@ public sealed class LegalEntitiesApiTests
     [Fact]
     public async Task UpdateRetainsHiddenMatbrojAndDoesNotOverrideVerificationStatus()
     {
-        var id = Guid.NewGuid();
+        var id = Random.Shared.NextInt64(1L << 32, 1L << 50);
         await using var provider = Client(async request =>
         {
             Assert.Equal(HttpMethod.Put, request.Method); Assert.Equal($"/api/legal-entities/{id:D}", request.RequestUri!.AbsolutePath);
@@ -62,7 +62,7 @@ public sealed class LegalEntitiesApiTests
     public async Task FailureNeverExposesBackendExceptionDetail(int status, string key)
     {
         await using var provider = Client(_ => Task.FromResult(new HttpResponseMessage((HttpStatusCode)status) { Content = new StringContent("{\"detail\":\"SQL private-marker\"}", Encoding.UTF8, "application/problem+json") }));
-        var error = await Assert.ThrowsAsync<RegistryApiException>(() => provider.GetRequiredService<ILegalEntitiesApi>().DeleteAsync(Guid.NewGuid()));
+        var error = await Assert.ThrowsAsync<RegistryApiException>(() => provider.GetRequiredService<ILegalEntitiesApi>().DeleteAsync(Random.Shared.NextInt64(1L << 32, 1L << 50)));
         Assert.Equal(key, error.MessageKey); Assert.DoesNotContain("private-marker", error.ToString());
     }
     private static HttpResponseMessage Json(string body) => new(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") };

@@ -36,10 +36,10 @@ public class UnlockRequestRepository(ConnectedPartiesDbContext db) : IUnlockRequ
         return (items, total);
     }
 
-    public async Task<UnlockRequest?> GetByIdAsync(Guid id) =>
+    public async Task<UnlockRequest?> GetByIdAsync(long id) =>
         await db.UnlockRequests.FirstOrDefaultAsync(r => r.Id == id);
 
-    public async Task RespondAsync(Guid id, string ownerSubject, UnlockRequest response, AuditEntry audit, CancellationToken cancellationToken)
+    public async Task RespondAsync(long id, string ownerSubject, UnlockRequest response, AuditEntry audit, CancellationToken cancellationToken)
     {
         var original = await db.UnlockRequests.SingleOrDefaultAsync(row => row.Id == id && row.RequestedBySubject == ownerSubject, cancellationToken)
             ?? throw new Exceptions.BusinessRuleException(404, "request.not_found");
@@ -59,7 +59,7 @@ public class UnlockRequestRepository(ConnectedPartiesDbContext db) : IUnlockRequ
         await db.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<bool> RejectAsync(Guid id, string adminNote, string processedBy)
+    public async Task<bool> RejectAsync(long id, string adminNote, string processedBy)
     {
         var now = DateTime.UtcNow;
         var request = await db.UnlockRequests.FirstOrDefaultAsync(r => r.Id == id && r.Status == "PENDING");
@@ -74,7 +74,7 @@ public class UnlockRequestRepository(ConnectedPartiesDbContext db) : IUnlockRequ
         return await db.SaveChangesAsync() > 0;
     }
 
-    public async Task<bool> RequestMoreInfoAsync(Guid id, string adminNote, string processedBy)
+    public async Task<bool> RequestMoreInfoAsync(long id, string adminNote, string processedBy)
     {
         var now = DateTime.UtcNow;
         var request = await db.UnlockRequests.FirstOrDefaultAsync(r => r.Id == id && r.Status == "PENDING");

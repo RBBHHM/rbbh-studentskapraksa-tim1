@@ -12,7 +12,7 @@ namespace RBBH.ConnectedParties.DL.Entities.LegalEntity;
 public class LegalEntity
 {
     [Key]
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public long Id { get; set; }
 
     // ── Tip lica ─────────────────────────────────────────────────────────────
 

@@ -8,7 +8,7 @@ public sealed class AuthenticatedActorTests
     [Fact]
     public void SnapshotPreservesRawSubjectPrecedenceAndTrustedLocalId()
     {
-        var id = Guid.NewGuid();
+        var id = Random.Shared.NextInt64(1L << 32, 1L << 50);
         var principal = new ClaimsPrincipal(new ClaimsIdentity([
             new("sub", " raw-subject "), new(ClaimTypes.NameIdentifier, "mapped-subject"),
             new(ClaimTypes.Email, " actor@example.test "), new(AuthenticatedActor.ApplicationUserIdClaim, id.ToString())], "Fixture"));

@@ -13,8 +13,8 @@ public sealed class RoleCatalogController(RoleCatalogService catalog) : Controll
     public Task<object> List([FromQuery] int page = 1, [FromQuery] int pageSize = 20,
         [FromQuery] string? search = null, CancellationToken ct = default) => catalog.List(page, pageSize, search, ct);
 
-    [HttpGet("{id:guid}")]
-    public Task<RoleCatalogDTO> Get(Guid id, CancellationToken ct) => catalog.Get(id, ct);
+    [HttpGet("{id:long}")]
+    public Task<RoleCatalogDTO> Get(long id, CancellationToken ct) => catalog.Get(id, ct);
 
     [HttpGet("permissions")]
     public Task<object> Permissions(CancellationToken ct) => catalog.Permissions(ct);
@@ -35,8 +35,8 @@ public sealed class RoleCatalogController(RoleCatalogService catalog) : Controll
         return Created($"/api/role-catalog/{row.Id}", row);
     }
 
-    [HttpDelete("{id:guid}"), Authorize(Policy = ApplicationPolicies.AdminOnly)]
-    public async Task<IActionResult> Delete(Guid id, [FromQuery] DateTime? expectedVersion, CancellationToken ct)
+    [HttpDelete("{id:long}"), Authorize(Policy = ApplicationPolicies.AdminOnly)]
+    public async Task<IActionResult> Delete(long id, [FromQuery] DateTime? expectedVersion, CancellationToken ct)
     {
         if (expectedVersion is null) return BadRequest();
         return (await catalog.Delete(id, expectedVersion.Value, ct)) switch
@@ -49,6 +49,6 @@ public sealed class RoleCatalogController(RoleCatalogService catalog) : Controll
         };
     }
 
-    [HttpPut("{id:guid}"), Authorize(Policy = ApplicationPolicies.AdminOnly)]
-    public Task<RoleCatalogDTO> Update(Guid id, UpdateRoleCatalogDTO input, CancellationToken ct) => catalog.Update(id, input, ct);
+    [HttpPut("{id:long}"), Authorize(Policy = ApplicationPolicies.AdminOnly)]
+    public Task<RoleCatalogDTO> Update(long id, UpdateRoleCatalogDTO input, CancellationToken ct) => catalog.Update(id, input, ct);
 }

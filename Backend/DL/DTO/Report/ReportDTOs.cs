@@ -7,7 +7,7 @@ public class ReportDTO
 {
     public string DataSource { get; set; } = "legacy.unspecified";
     public bool IsAuthoritative => DataSource == "finance.monthlyhistory";
-    public Guid Id { get; set; }
+    public long Id { get; set; }
     public string ReportType { get; set; } = string.Empty;
     public DateTime ReportDate { get; set; }
     public int TotalClients { get; set; }

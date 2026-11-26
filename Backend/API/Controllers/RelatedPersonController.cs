@@ -52,17 +52,17 @@ public class RelatedPersonController(
     }
 
     /// <summary>Vraća jedno povezano fizičko lice po ID-u (puni prikaz).</summary>
-    [HttpGet("{id:guid}")]
+    [HttpGet("{id:long}")]
     [ProducesResponseType(typeof(RelatedPersonResponseDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<RelatedPersonResponseDTO>> GetById([FromRoute] Guid id)
+    public async Task<ActionResult<RelatedPersonResponseDTO>> GetById([FromRoute] long id)
     {
         var result = await _relatedPersonService.GetById(id);
         return HandleResult(result);
     }
 
-    [HttpGet("{id:guid}/relationship-tree")]
-    public async Task<ActionResult<List<RelatedPersonTreeNodeDTO>>> GetRelationshipTree([FromRoute] Guid id)
+    [HttpGet("{id:long}/relationship-tree")]
+    public async Task<ActionResult<List<RelatedPersonTreeNodeDTO>>> GetRelationshipTree([FromRoute] long id)
     {
         var result = await _relatedPersonService.GetRelationshipTree(id);
         return HandleResult(result);
@@ -73,7 +73,7 @@ public class RelatedPersonController(
         [FromQuery] string? jmbg,
         [FromQuery] string? passportNumber,
         [FromQuery] string? fbaId,
-        [FromQuery] Guid? excludeId = null)
+        [FromQuery] long? excludeId = null)
         => Ok(await _relatedPersonService.CheckDuplicateIdentity(jmbg, passportNumber, fbaId, excludeId));
 
     [HttpGet("page")]
@@ -116,12 +116,12 @@ public class RelatedPersonController(
     }
 
     /// <summary>Ažurira postojeće povezano fizičko lice.</summary>
-    [HttpPut("{id:guid}")]
+    [HttpPut("{id:long}")]
     [Authorize(Policy = ApplicationPolicies.PhysicalPersonsEdit)]
     [ProducesResponseType(typeof(RelatedPersonResponseDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<RelatedPersonResponseDTO>> Update([FromRoute] Guid id, [FromBody] UpdateRelatedPersonDTO dto)
+    public async Task<ActionResult<RelatedPersonResponseDTO>> Update([FromRoute] long id, [FromBody] UpdateRelatedPersonDTO dto)
     {
         var korisnik = GetKorisnik();
         var result = await _relatedPersonService.Update(id, dto, korisnik);
@@ -134,11 +134,11 @@ public class RelatedPersonController(
     }
 
     /// <summary>Soft-delete povezanog fizičkog lica (i svih njegovih aktivnih članova porodice).</summary>
-    [HttpDelete("{id:guid}")]
+    [HttpDelete("{id:long}")]
     [Authorize(Policy = ApplicationPolicies.PhysicalPersonsDelete)]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult> Delete([FromRoute] Guid id)
+    public async Task<ActionResult> Delete([FromRoute] long id)
     {
         var korisnik = GetKorisnik();
         var result = await _relatedPersonService.Delete(id, korisnik);
@@ -163,10 +163,10 @@ public class RelatedPersonController(
     }
 
     /// <summary>Vraća ravnu listu članova porodice za dato matično lice.</summary>
-    [HttpGet("{id:guid}/family-members")]
+    [HttpGet("{id:long}/family-members")]
     [ProducesResponseType(typeof(List<FamilyMemberResponseDTO>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<List<FamilyMemberResponseDTO>>> GetFamilyMembers([FromRoute] Guid id)
+    public async Task<ActionResult<List<FamilyMemberResponseDTO>>> GetFamilyMembers([FromRoute] long id)
     {
         var result = await _relatedPersonService.GetFamilyMembers(id);
         return HandleResult(result);
@@ -176,10 +176,10 @@ public class RelatedPersonController(
     /// Vraća porodično stablo za dato matično lice — članovi porodice organizovani
     /// hijerarhijski (korijenski čvorovi sa rekurzivno popunjenim Children).
     /// </summary>
-    [HttpGet("{id:guid}/family-tree")]
+    [HttpGet("{id:long}/family-tree")]
     [ProducesResponseType(typeof(List<FamilyMemberResponseDTO>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<List<FamilyMemberResponseDTO>>> GetFamilyTree([FromRoute] Guid id)
+    public async Task<ActionResult<List<FamilyMemberResponseDTO>>> GetFamilyTree([FromRoute] long id)
     {
         var result = await _relatedPersonService.GetFamilyTree(id);
         return HandleResult(result);
@@ -191,12 +191,12 @@ public class RelatedPersonController(
     /// Dodaje novog člana porodice matičnom licu.
     /// Vraća HTTP 400 ako matično lice ima postavljenu izjavu o nepostojanju članova porodice.
     /// </summary>
-    [HttpPost("{id:guid}/family-members")]
+    [HttpPost("{id:long}/family-members")]
     [Authorize(Policy = ApplicationPolicies.PhysicalPersonsCreate)]
     [ProducesResponseType(typeof(FamilyMemberResponseDTO), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<FamilyMemberResponseDTO>> AddFamilyMember([FromRoute] Guid id, [FromBody] CreateFamilyMemberDTO dto)
+    public async Task<ActionResult<FamilyMemberResponseDTO>> AddFamilyMember([FromRoute] long id, [FromBody] CreateFamilyMemberDTO dto)
     {
         var korisnik = GetKorisnik();
         var result = await _relatedPersonService.AddFamilyMember(id, dto, korisnik);
@@ -210,14 +210,14 @@ public class RelatedPersonController(
     }
 
     /// <summary>Ažurira podatke postojećeg člana porodice.</summary>
-    [HttpPut("{id:guid}/family-members/{familyMemberId:guid}")]
+    [HttpPut("{id:long}/family-members/{familyMemberId:long}")]
     [Authorize(Policy = ApplicationPolicies.PhysicalPersonsEdit)]
     [ProducesResponseType(typeof(FamilyMemberResponseDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<FamilyMemberResponseDTO>> UpdateFamilyMember(
-        [FromRoute] Guid id,
-        [FromRoute] Guid familyMemberId,
+        [FromRoute] long id,
+        [FromRoute] long familyMemberId,
         [FromBody] UpdateFamilyMemberDTO dto)
     {
         var korisnik = GetKorisnik();
@@ -231,12 +231,12 @@ public class RelatedPersonController(
     }
 
     /// <summary>Soft-delete člana porodice.</summary>
-    [HttpDelete("{id:guid}/family-members/{familyMemberId:guid}")]
+    [HttpDelete("{id:long}/family-members/{familyMemberId:long}")]
     [Authorize(Policy = ApplicationPolicies.PhysicalPersonsDelete)]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult> DeleteFamilyMember([FromRoute] Guid id, [FromRoute] Guid familyMemberId)
+    public async Task<ActionResult> DeleteFamilyMember([FromRoute] long id, [FromRoute] long familyMemberId)
     {
         var korisnik = GetKorisnik();
         var result = await _relatedPersonService.DeleteFamilyMember(id, familyMemberId, korisnik);

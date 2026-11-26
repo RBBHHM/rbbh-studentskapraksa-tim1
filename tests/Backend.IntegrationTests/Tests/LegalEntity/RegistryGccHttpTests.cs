@@ -28,7 +28,7 @@ public sealed class RegistryGccHttpTests : AuthenticatedApiFixture
     public async Task GccNameIsServerResolvedAndOmittedFieldsPreserveStoredValues()
     {
         var response = await Client.PostAsJsonAsync("/api/legal-entities", Legal("123")); Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<JsonElement>(); var id = body.GetProperty("id").GetGuid();
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(); var id = body.GetProperty("id").GetInt64();
         Assert.Equal("Authoritative fixture group", body.GetProperty("gccName").GetString()); Assert.True(body.GetProperty("isLargeExposure").GetBoolean());
         var update = await Client.PutAsJsonAsync($"/api/legal-entities/{id}", Legal(null, null)); Assert.Equal(HttpStatusCode.OK, update.StatusCode);
         body = await update.Content.ReadFromJsonAsync<JsonElement>(); Assert.Equal("123", body.GetProperty("gccNumber").GetString()); Assert.True(body.GetProperty("isLargeExposure").GetBoolean());

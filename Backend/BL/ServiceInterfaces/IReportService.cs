@@ -32,5 +32,5 @@ public interface IReportService
     /// Vraća byte[] sadržaj Excel fajla.
     /// </summary>
     Task<byte[]> ExportAllClientsWithLimitsAsync();
-    Task<byte[]> ExportGeneratedReportAsync(Guid reportId);
+    Task<byte[]> ExportGeneratedReportAsync(long reportId);
 }

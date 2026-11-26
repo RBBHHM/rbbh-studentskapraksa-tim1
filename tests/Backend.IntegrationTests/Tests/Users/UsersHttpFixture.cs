@@ -29,7 +29,7 @@ public abstract class UsersHttpFixture : IAsyncLifetime
 {
     protected const string Subject = "e2726e31-cf86-474f-a59f-05f80ab19c36";
     protected const string Email = "admin-fixture@example.test";
-    protected readonly Guid _localId = Guid.NewGuid();
+    protected readonly long _localId = Random.Shared.NextInt64(1L << 32, 1L << 50);
     protected WebApplication _app = null!;
     protected HttpClient _client = null!;
     protected readonly TaskCompletionSource _bothAuthenticated = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -104,7 +104,7 @@ public abstract class UsersHttpFixture : IAsyncLifetime
         await db.SaveChangesAsync();
     }
 
-    protected async Task<Guid> ListedOwnIdAsync()
+    protected async Task<long> ListedOwnIdAsync()
     {
         var response = await _client.GetAsync("/api/users");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -115,13 +115,13 @@ public abstract class UsersHttpFixture : IAsyncLifetime
         return own.Id;
     }
 
-    protected async Task<Guid> RoleId(string role)
+    protected async Task<long> RoleId(string role)
     {
         await using var scope = _app.Services.CreateAsyncScope();
         return (await scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>().Roles.SingleAsync(item => item.Name == role)).Id;
     }
 
-    protected async Task<Guid> AddUser(string role, string email)
+    protected async Task<long> AddUser(string role, string email)
     {
         await using var scope = _app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
@@ -146,7 +146,7 @@ public abstract class UsersHttpFixture : IAsyncLifetime
         await db.SaveChangesAsync();
     }
 
-    protected async Task<HttpResponseMessage> Mutate(HttpClient client, Guid id, string action) => action switch
+    protected async Task<HttpResponseMessage> Mutate(HttpClient client, long id, string action) => action switch
     {
         "deactivate" => await client.DeleteAsync($"/api/users/{id}"),
         "delete" => await client.DeleteAsync($"/api/users/{id}/permanent"),

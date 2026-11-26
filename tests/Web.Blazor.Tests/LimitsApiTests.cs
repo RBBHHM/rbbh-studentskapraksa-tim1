@@ -21,7 +21,7 @@ public sealed class LimitsApiTests
     [Fact]
     public async Task FilteredReadAndExportUseSameBackendEntityFilter()
     {
-        var id = Guid.NewGuid(); var calls = 0;
+        var id = Random.Shared.NextInt64(1L << 32, 1L << 50); var calls = 0;
         await using var provider = Client(request =>
         {
             Assert.Equal($"?legalEntityId={id:D}", request.RequestUri!.Query); calls++;
@@ -39,7 +39,7 @@ public sealed class LimitsApiTests
     [Fact]
     public async Task LookupEscapesQueryAndFormDataComesFromBackend()
     {
-        var id = Guid.NewGuid();
+        var id = Random.Shared.NextInt64(1L << 32, 1L << 50);
         await using var provider = Client(request =>
         {
             if (request.RequestUri!.AbsolutePath.EndsWith("/search"))
@@ -63,7 +63,7 @@ public sealed class LimitsApiTests
             Assert.False(body.RootElement.TryGetProperty("regulatorniKapital", out _));
             return Json("{\"id\":12,\"naziv\":\"Company\",\"tipLimita\":\"REG\"}");
         });
-        Assert.Equal(12, (await provider.GetRequiredService<ILimitsApi>().SaveAsync(12, new(Guid.NewGuid(), "REG", 0, null, null, "Comment"))).Id);
+        Assert.Equal(12, (await provider.GetRequiredService<ILimitsApi>().SaveAsync(12, new(Random.Shared.NextInt64(1L << 32, 1L << 50), "REG", 0, null, null, "Comment"))).Id);
     }
     [Theory]
     [InlineData(400, "errors.validation")]

@@ -9,7 +9,7 @@ namespace UnitTests.Services.RoleServiceTests
 {
     public class GetAllRolesTests
     {
-        private static Role NewRole(Guid id, string name, bool isActive) => new()
+        private static Role NewRole(long id, string name, bool isActive) => new()
         {
             Id = id,
             Name = name,
@@ -18,11 +18,11 @@ namespace UnitTests.Services.RoleServiceTests
             CreatedBy = "system"
         };
 
-        private static UserRole NewUserRole(Guid roleId, bool isActive) => new()
+        private static UserRole NewUserRole(long roleId, bool isActive) => new()
         {
-            Id = Guid.NewGuid(),
+            Id = Random.Shared.NextInt64(1L << 32, 1L << 50),
             RoleId = roleId,
-            UserId = Guid.NewGuid(),
+            UserId = Random.Shared.NextInt64(1L << 32, 1L << 50),
             IsActive = isActive,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = "system"
@@ -32,8 +32,8 @@ namespace UnitTests.Services.RoleServiceTests
         public async Task GetAllRoles_WithActiveRoles_ReturnsOnlyActiveRoles()
         {
             // Arrange
-            var activeId = Guid.NewGuid();
-            var inactiveId = Guid.NewGuid();
+            var activeId = Random.Shared.NextInt64(1L << 32, 1L << 50);
+            var inactiveId = Random.Shared.NextInt64(1L << 32, 1L << 50);
             using var ctx = InMemoryContextFactory.Create();
             ctx.Roles.Add(NewRole(activeId, ApplicationAccessRoles.PhysicalPersons, isActive: true));
             ctx.Roles.Add(NewRole(inactiveId, "StaraRola", isActive: false));
@@ -54,7 +54,7 @@ namespace UnitTests.Services.RoleServiceTests
         public async Task GetAllRoles_CountsOnlyActiveUserRoles()
         {
             // Arrange
-            var roleId = Guid.NewGuid();
+            var roleId = Random.Shared.NextInt64(1L << 32, 1L << 50);
             using var ctx = InMemoryContextFactory.Create();
             ctx.Roles.Add(NewRole(roleId, ApplicationAccessRoles.Limits, isActive: true));
             ctx.UserRoles.Add(NewUserRole(roleId, isActive: true));

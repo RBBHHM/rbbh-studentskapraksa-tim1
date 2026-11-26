@@ -141,8 +141,8 @@ public sealed class UsersSafetyHttpTests : UsersHttpFixture
     [Fact]
     public async Task InvalidRolesAndMissingTargetsStillReturnExistingSafeResultsWithoutAudit()
     {
-        Assert.Equal(HttpStatusCode.BadRequest, (await _client.PutAsJsonAsync($"/api/users/{_localId}/role", new { roleIds = new[] { Guid.NewGuid() } })).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await Mutate(_client, Guid.NewGuid(), "delete")).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await _client.PutAsJsonAsync($"/api/users/{_localId}/role", new { roleIds = new[] { Random.Shared.NextInt64(1L << 32, 1L << 50) } })).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await Mutate(_client, Random.Shared.NextInt64(1L << 32, 1L << 50), "delete")).StatusCode);
         await using var scope = _app.Services.CreateAsyncScope();
         Assert.Empty(await scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>().AuditLogs.ToListAsync());
     }
@@ -252,7 +252,7 @@ public sealed class UsersSafetyHttpTests : UsersHttpFixture
         var legal = await RoleId(ApplicationAccessRoles.LegalPersons);
         var roleIds = change switch
         {
-            "clear" => Array.Empty<Guid>(),
+            "clear" => Array.Empty<long>(),
             "add" => new[] { admin, legal },
             "replace-without-admin" => new[] { legal },
             _ => new[] { admin }
@@ -275,7 +275,7 @@ public sealed class UsersSafetyHttpTests : UsersHttpFixture
     {
         // Same account addressed by its Keycloak id instead of the local id.
         await AddUser(ApplicationAccessRoles.Administrator, "other@example.test");
-        var response = await _client.PutAsJsonAsync($"/api/users/{Subject}/role", new { roleIds = Array.Empty<Guid>() });
+        var response = await _client.PutAsJsonAsync($"/api/users/{Subject}/role", new { roleIds = Array.Empty<long>() });
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 

@@ -140,7 +140,7 @@ public class ReportService : IReportService
         return BuildLimitsExcel(rows);
     }
 
-    public async Task<byte[]> ExportGeneratedReportAsync(Guid reportId)
+    public async Task<byte[]> ExportGeneratedReportAsync(long reportId)
     {
         var report = await _context.Reports.AsNoTracking().FirstOrDefaultAsync(item => item.Id == reportId && item.IsActive)
             ?? throw new ValidationException("reportId", BackendMessages.Message("validation.report.missing"));
@@ -200,7 +200,7 @@ public class ReportService : IReportService
         }
     }
 
-    private async Task<List<LimitExportRow>> GetLimitExportRowsAsync(Guid? legalEntityId)
+    private async Task<List<LimitExportRow>> GetLimitExportRowsAsync(long? legalEntityId)
     {
         var baseQuery =
             from limit in _context.Limiti.AsNoTracking()

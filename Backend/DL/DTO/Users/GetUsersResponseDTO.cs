@@ -12,7 +12,7 @@ public class GetUsersResponseDTO
 
 public class UserDTO
 {
-    public Guid Id { get; set; }
+    public long Id { get; set; }
 
     /// <summary>Returns the Keycloak UUID string (same as Id for Keycloak users).</summary>
     public string KeycloakId() => Id.ToString();
@@ -45,7 +45,7 @@ public class CreateUserDTO
     [StringLength(200)]
     public string Email { get; set; } = string.Empty;
 
-    public List<Guid> RoleIds { get; set; } = [];
+    public List<long> RoleIds { get; set; } = [];
 
     /// <summary>Kompatibilnost sa starijim klijentom.</summary>
     public string? RoleId { get; set; }

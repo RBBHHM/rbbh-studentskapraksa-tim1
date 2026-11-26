@@ -4,7 +4,7 @@ using RBI.ApiCore;
 namespace RBBH.RelatedPartiesRegister.Web.Api;
 
 public sealed record PeriodState(int Year, int Month, string MonthDisplay, bool IsLocked, string? LockedBy, DateTime? LockedAt);
-public sealed record UnlockRequestRecord(Guid Id, string RequestedBy, int Year, int Month, string MonthDisplay,
+public sealed record UnlockRequestRecord(long Id, string RequestedBy, int Year, int Month, string MonthDisplay,
     string Reason, string Status, string? AdminNote, string? ProcessedBy, DateTime? ProcessedAt, DateTime CreatedAt);
 public sealed record UnlockRequestsPage(IReadOnlyList<UnlockRequestRecord> Requests, int Total, int Page, int PageSize);
 public interface IPeriodApi
@@ -14,8 +14,8 @@ public interface IPeriodApi
     Task<UnlockRequestsPage> RequestsAsync(string status = "", int page = 1, bool review = false, CancellationToken token = default);
     Task SetLockedAsync(bool locked, int? year = null, int? month = null, CancellationToken token = default);
     Task RequestUnlockAsync(int year, int month, string reason, CancellationToken token = default);
-    Task ProcessAsync(Guid id, bool reject, string note, CancellationToken token = default);
-    Task RespondAsync(Guid id, string message, CancellationToken token = default);
+    Task ProcessAsync(long id, bool reject, string note, CancellationToken token = default);
+    Task RespondAsync(long id, string message, CancellationToken token = default);
 }
 public sealed class PeriodApi(IRbiApiTransport transport) : IPeriodApi
 {
@@ -38,9 +38,9 @@ public sealed class PeriodApi(IRbiApiTransport transport) : IPeriodApi
         SendAsync(locked ? "lock" : "unlock", new { year, month }, token);
     public Task RequestUnlockAsync(int year, int month, string reason, CancellationToken token = default) =>
         SendAsync("request-unlock", new { year, month, reason }, token);
-    public Task ProcessAsync(Guid id, bool reject, string note, CancellationToken token = default) =>
+    public Task ProcessAsync(long id, bool reject, string note, CancellationToken token = default) =>
         SendAsync($"unlock-requests/{id}/{(reject ? "reject" : "request-info")}", new { note }, token);
-    public Task RespondAsync(Guid id, string message, CancellationToken token = default) =>
+    public Task RespondAsync(long id, string message, CancellationToken token = default) =>
         SendAsync($"unlock-requests/{id}/respond", new { message }, token);
     private async Task SendAsync(string path, object body, CancellationToken token)
     {
@@ -55,6 +55,6 @@ internal sealed class UnconfiguredPeriodApi : IPeriodApi
     public Task<UnlockRequestsPage> RequestsAsync(string status = "", int page = 1, bool review = false, CancellationToken token = default) => Task.FromException<UnlockRequestsPage>(new RegistryApiException());
     public Task SetLockedAsync(bool locked, int? year = null, int? month = null, CancellationToken token = default) => Task.FromException(new RegistryApiException());
     public Task RequestUnlockAsync(int year, int month, string reason, CancellationToken token = default) => Task.FromException(new RegistryApiException());
-    public Task ProcessAsync(Guid id, bool reject, string note, CancellationToken token = default) => Task.FromException(new RegistryApiException());
-    public Task RespondAsync(Guid id, string message, CancellationToken token = default) => Task.FromException(new RegistryApiException());
+    public Task ProcessAsync(long id, bool reject, string note, CancellationToken token = default) => Task.FromException(new RegistryApiException());
+    public Task RespondAsync(long id, string message, CancellationToken token = default) => Task.FromException(new RegistryApiException());
 }

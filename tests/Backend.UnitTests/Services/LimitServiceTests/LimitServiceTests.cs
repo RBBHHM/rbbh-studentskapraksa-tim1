@@ -108,7 +108,7 @@ namespace UnitTests.Services.LimitServiceTests
         {
             var dto = new CreateLimitDTO
             {
-                LegalEntityId = Guid.Empty,
+                LegalEntityId = 0L,
                 TipLimita = LimitFixture.ValidTipLimita
             };
 
@@ -123,7 +123,7 @@ namespace UnitTests.Services.LimitServiceTests
         {
             var dto = new CreateLimitDTO
             {
-                LegalEntityId = Guid.NewGuid(),
+                LegalEntityId = Random.Shared.NextInt64(1L << 32, 1L << 50),
                 TipLimita = LimitFixture.ValidTipLimita
             };
 
@@ -261,7 +261,7 @@ namespace UnitTests.Services.LimitServiceTests
         {
             var dto = new UpdateLimitDTO
             {
-                LegalEntityId = Guid.NewGuid(),
+                LegalEntityId = Random.Shared.NextInt64(1L << 32, 1L << 50),
                 TipLimita = LimitFixture.ValidTipLimita
             };
 

@@ -23,14 +23,14 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
     // ─── READ ───────────────────────────────────────────────────────────────
 
     /// <inheritdoc/>
-    public Task<Result<List<LimitResponseDTO>>> GetAll(Guid? legalEntityId = null, string? matbroj = null) =>
+    public Task<Result<List<LimitResponseDTO>>> GetAll(long? legalEntityId = null, string? matbroj = null) =>
         GetAsOf(legalEntityId, matbroj, DateTime.UtcNow.Date, actor?.HttpContext?.RequestAborted ?? default);
 
-    public Task<Result<List<LimitResponseDTO>>> GetAsOf(Guid? legalEntityId, string? matbroj, DateTime asOf, CancellationToken ct) =>
+    public Task<Result<List<LimitResponseDTO>>> GetAsOf(long? legalEntityId, string? matbroj, DateTime asOf, CancellationToken ct) =>
         Read(legalEntityId, matbroj, asOf, ct, null);
-    public Task<Result<List<LimitResponseDTO>>> ExportData(Guid? legalEntityId, string? matbroj, DateTime? asOf, CancellationToken ct) =>
+    public Task<Result<List<LimitResponseDTO>>> ExportData(long? legalEntityId, string? matbroj, DateTime? asOf, CancellationToken ct) =>
         Read(legalEntityId, matbroj, asOf ?? DateTime.UtcNow.Date, ct, 5000);
-    private async Task<Result<List<LimitResponseDTO>>> Read(Guid? legalEntityId, string? matbroj, DateTime asOf, CancellationToken ct, int? maximum)
+    private async Task<Result<List<LimitResponseDTO>>> Read(long? legalEntityId, string? matbroj, DateTime asOf, CancellationToken ct, int? maximum)
     {
         var query = BaseQuery();
 
@@ -52,7 +52,7 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
         return Result<List<LimitResponseDTO>>.Success(items);
     }
 
-    public async Task<ReferencePage<LimitResponseDTO>> Page(Guid? legalEntityId, string? search, int page, int pageSize, CancellationToken ct, DateTime? asOf = null)
+    public async Task<ReferencePage<LimitResponseDTO>> Page(long? legalEntityId, string? search, int page, int pageSize, CancellationToken ct, DateTime? asOf = null)
     {
         if (search?.Length > 200) throw new RBBH.ConnectedParties.Exceptions.BusinessRuleException(400, "registry.invalid_search");
         page = Math.Clamp(page, 1, 1_000_000); pageSize = Math.Clamp(pageSize, 1, 100);
@@ -255,7 +255,7 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
             return BackendMessages.Message("validation.limits.amount.precision");
         return null;
     }
-    private sealed record RowKey(Guid Party, string Type, string? Approved, string? Utilization, long? Due, string? Comment);
+    private sealed record RowKey(long Party, string Type, string? Approved, string? Utilization, long? Due, string? Comment);
     private static RowKey Key(Limit row) => new(row.LegalEntityId, row.TipLimita.Trim().ToUpperInvariant(),
         row.OdobreniLimit?.ToString("G29", CultureInfo.InvariantCulture), row.MaksimalnaOcekivanaUtilizacija?.ToString("G29", CultureInfo.InvariantCulture),
         row.RokOcekivaneUtilizacije?.Ticks, string.IsNullOrWhiteSpace(row.Komentar) ? null : row.Komentar.Trim());
@@ -364,12 +364,12 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
     /// kao aktivna vrijednost šifarnika VrstaLimita, iznosi ne mogu biti negativni.
     /// </summary>
     private async Task<Result<LimitResponseDTO>?> ValidateDto(
-        Guid legalEntityId,
+        long legalEntityId,
         string tipLimita,
         decimal? odobreniLimit,
         decimal? maksimalnaOcekivanaUtilizacija, string? komentar)
     {
-        if (legalEntityId == Guid.Empty)
+        if (legalEntityId == 0)
             return Result<LimitResponseDTO>.ValidationError(BackendMessages.Message("validation.limits.legal.required"));
 
         var legalEntityExists = await _dbContext.LegalEntities.AsNoTracking()

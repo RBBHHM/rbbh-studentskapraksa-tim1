@@ -41,7 +41,7 @@ public class ImmediateFamilyRulesTests
     {
         var dto = ValidDto();
         dto.SpecialRelationBasis = "UZA_PORODICA";
-        dto.RelatedToPersonId = Guid.NewGuid();
+        dto.RelatedToPersonId = Random.Shared.NextInt64(1L << 32, 1L << 50);
         dto.IsIdentifiedStaff = true;
         dto.ConnectedWithBank = false;
         dto.SpecialRelationshipWithBank = true;
@@ -64,7 +64,7 @@ public class ImmediateFamilyRulesTests
     public void Policy_DrugiOsnov_UklanjaZaostaluPorodicnuVezu()
     {
         var dto = ValidDto();
-        dto.RelatedToPersonId = Guid.NewGuid();
+        dto.RelatedToPersonId = Random.Shared.NextInt64(1L << 32, 1L << 50);
 
         ImmediateFamilyPolicy.Apply(dto);
 

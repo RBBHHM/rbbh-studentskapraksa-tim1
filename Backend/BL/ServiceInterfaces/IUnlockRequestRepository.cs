@@ -11,9 +11,9 @@ public interface IUnlockRequestRepository
         string? status, int page, int pageSize, string? ownerSubject = null);
 
     /// <summary>Vraća jedan zahtjev po ID-u, ili null ako ne postoji.</summary>
-    Task<UnlockRequest?> GetByIdAsync(Guid id);
+    Task<UnlockRequest?> GetByIdAsync(long id);
 
-    Task RespondAsync(Guid id, string ownerSubject, UnlockRequest response, AuditEntry audit, CancellationToken cancellationToken);
+    Task RespondAsync(long id, string ownerSubject, UnlockRequest response, AuditEntry audit, CancellationToken cancellationToken);
 
     /// <summary>
     /// Postavlja sve PENDING zahtjeve za dati period na APPROVED.
@@ -22,8 +22,8 @@ public interface IUnlockRequestRepository
     Task ApproveAllPendingAsync(int year, int month, string approvedBy);
 
     /// <summary>Odbija PENDING zahtjev s obaveznim razlogom.</summary>
-    Task<bool> RejectAsync(Guid id, string adminNote, string processedBy);
+    Task<bool> RejectAsync(long id, string adminNote, string processedBy);
 
     /// <summary>Označava zahtjev kao NEEDS_INFO i čuva poruku admina.</summary>
-    Task<bool> RequestMoreInfoAsync(Guid id, string adminNote, string processedBy);
+    Task<bool> RequestMoreInfoAsync(long id, string adminNote, string processedBy);
 }

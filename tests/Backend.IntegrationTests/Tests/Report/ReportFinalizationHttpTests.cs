@@ -59,7 +59,7 @@ public sealed class ReportFinalizationHttpTests : ReportFinalizationFixture
             .ReturnsAsync(new[] { new FinanceExposure("001", 125, 75) });
         var response = await Client.PostAsync("/api/reports/monthly/2026/9", null); Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var dto = await response.Content.ReadFromJsonAsync<JsonElement>(); Assert.Equal(200, dto.GetProperty("totalExposure").GetDecimal()); Assert.True(dto.GetProperty("isAuthoritative").GetBoolean());
-        var id = dto.GetProperty("id").GetGuid();
+        var id = dto.GetProperty("id").GetInt64();
         await InDatabase(async db =>
         {
             var report = await db.Reports.SingleAsync(); using var snapshot = JsonDocument.Parse(report.DataSnapshot!);

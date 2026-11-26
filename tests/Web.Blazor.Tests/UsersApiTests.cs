@@ -11,7 +11,7 @@ namespace Web.Blazor.Tests;
 
 public sealed class UsersApiTests
 {
-    private static readonly Guid RoleId = Guid.Parse("b756eb6d-ff88-46ee-ab96-c22f12f8c188");
+    private static readonly long RoleId = Random.Shared.NextInt64(1L << 32, 1L << 50);
     private static UserDraft Draft() => new()
     {
         Username = " fixture ",
@@ -52,7 +52,7 @@ public sealed class UsersApiTests
     [Fact]
     public void RoleEditAllowsEmptySelectionAndRetainsActualCatalogIdsNotRealmRoles()
     {
-        var user = new ApplicationUser(Guid.NewGuid(), "u", "First", "Last", "u@example.test", ["FL"], [], true);
+        var user = new ApplicationUser(Random.Shared.NextInt64(1L << 32, 1L << 50), "u", "First", "Last", "u@example.test", ["FL"], [], true);
         var draft = UserDraft.From(user, new([new(RoleId, "FL", 1)]));
         Assert.Equal(new[] { RoleId }, draft.SelectedRoles);
         draft.Roles[0].Selected = false; Assert.Empty(draft.Validate()); Assert.Empty(draft.SelectedRoles);
@@ -94,9 +94,9 @@ public sealed class UsersApiTests
         {
             Assert.Equal(HttpMethod.Post, message.Method); Assert.Equal("/api/users", message.RequestUri!.AbsolutePath);
             using var body = JsonDocument.Parse(await message.Content!.ReadAsStringAsync());
-            Assert.Equal(RoleId, body.RootElement.GetProperty("roleIds")[0].GetGuid());
+            Assert.Equal(RoleId, body.RootElement.GetProperty("roleIds")[0].GetInt64());
             Assert.False(body.RootElement.TryGetProperty("password", out _)); Assert.False(body.RootElement.TryGetProperty("realmRoles", out _));
-            return Json(HttpStatusCode.Created, new ApplicationUser(Guid.NewGuid(), "fixture", "First", "Last", request.Email, ["FL"], ["FL_VIEW"], true));
+            return Json(HttpStatusCode.Created, new ApplicationUser(Random.Shared.NextInt64(1L << 32, 1L << 50), "fixture", "First", "Last", request.Email, ["FL"], ["FL_VIEW"], true));
         });
         Assert.Equal("FL", Assert.Single((await provider.GetRequiredService<IUsersApi>().CreateAsync(request)).User!.Roles));
     }
@@ -107,7 +107,7 @@ public sealed class UsersApiTests
     [InlineData("delete", "DELETE", "/permanent")]
     public async Task MutationsRetainExistingMethodAndIdentifierContract(string operation, string method, string suffix)
     {
-        var id = Guid.NewGuid();
+        var id = Random.Shared.NextInt64(1L << 32, 1L << 50);
         await using var provider = Client(async request =>
         {
             Assert.Equal(method, request.Method.Method); Assert.Equal($"/api/users/{id}{suffix}", request.RequestUri!.AbsolutePath);
@@ -126,7 +126,7 @@ public sealed class UsersApiTests
     [Fact]
     public async Task ProfileUpdateSendsOnlyTheFourEditableFieldsToTheUserRoute()
     {
-        var id = Guid.NewGuid();
+        var id = Random.Shared.NextInt64(1L << 32, 1L << 50);
         await using var provider = Client(async request =>
         {
             Assert.Equal(HttpMethod.Put, request.Method); Assert.Equal($"/api/users/{id}", request.RequestUri!.AbsolutePath);
@@ -139,7 +139,7 @@ public sealed class UsersApiTests
     [Fact]
     public void EditDetectsProfileAndRoleChangesAndValidatesTheProfileFields()
     {
-        var user = new ApplicationUser(Guid.NewGuid(), "u", "First", "Last", "u@example.test", ["FL"], [], true, true);
+        var user = new ApplicationUser(Random.Shared.NextInt64(1L << 32, 1L << 50), "u", "First", "Last", "u@example.test", ["FL"], [], true, true);
         var draft = UserDraft.From(user, new([new(RoleId, "FL", 1)]));
         Assert.False(draft.ProfileChanged); Assert.False(draft.RolesChanged(user));
         draft.Email = "other@elsewhere.test"; Assert.True(draft.ProfileChanged); Assert.Empty(draft.Validate());
@@ -153,7 +153,7 @@ public sealed class UsersApiTests
     public async Task RejectedMutationReturnsLocalizedErrorWithoutThrowing(int status, string key)
     {
         await using var provider = Client(_ => Task.FromResult(Json((HttpStatusCode)status, new { detail = "private-fixture-marker" })));
-        var error = await provider.GetRequiredService<IUsersApi>().UpdateRolesAsync(Guid.NewGuid(), []);
+        var error = await provider.GetRequiredService<IUsersApi>().UpdateRolesAsync(Random.Shared.NextInt64(1L << 32, 1L << 50), []);
         Assert.Equal(key, error);
     }
     [Fact]

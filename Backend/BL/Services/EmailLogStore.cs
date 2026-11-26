@@ -12,7 +12,7 @@ public sealed class EmailLogEntry
     /// <summary>"admin" — notifikacija za admina | "user" — notifikacija za korisnika</summary>
     public string Audience  { get; init; } = "admin";
     /// <summary>ID zahtjeva na koji se odnosi email (postavljeno samo za NeedsInfo emailove).</summary>
-    public Guid?  RequestId { get; init; }
+    public long?  RequestId { get; init; }
 }
 
 /// <summary>

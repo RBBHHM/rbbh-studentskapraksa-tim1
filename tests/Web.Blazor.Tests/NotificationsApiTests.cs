@@ -28,7 +28,7 @@ public sealed class NotificationsApiTests
         await using var provider = Client(request =>
         {
             query = request.RequestUri!.PathAndQuery;
-            return Json(HttpStatusCode.OK, "{\"items\":[{\"id\":\"11111111-1111-1111-1111-111111111111\",\"titleKey\":\"notifications.role.approved.title\",\"bodyKey\":\"notifications.role.approved.body\",\"parameters\":{\"roles\":\"FL\"},\"route\":\"/app/profile\",\"createdAt\":\"2026-11-03T10:00:00Z\",\"readAt\":null}],\"total\":1,\"page\":2,\"pageSize\":20,\"unreadCount\":1}");
+            return Json(HttpStatusCode.OK, "{\"items\":[{\"id\":1,\"titleKey\":\"notifications.role.approved.title\",\"bodyKey\":\"notifications.role.approved.body\",\"parameters\":{\"roles\":\"FL\"},\"route\":\"/app/profile\",\"createdAt\":\"2026-11-03T10:00:00Z\",\"readAt\":null}],\"total\":1,\"page\":2,\"pageSize\":20,\"unreadCount\":1}");
         });
         var page = await provider.GetRequiredService<INotificationsApi>().InboxAsync(2, 20, true);
         Assert.Equal("/api/notifications?page=2&pageSize=20&unreadOnly=true", query);
@@ -40,7 +40,7 @@ public sealed class NotificationsApiTests
     {
         HttpMethod? method = null; string? path = null;
         await using var provider = Client(request => { method = request.Method; path = request.RequestUri!.AbsolutePath; return new HttpResponseMessage(HttpStatusCode.NoContent); });
-        var id = Guid.NewGuid(); await provider.GetRequiredService<INotificationsApi>().MarkReadAsync(id);
+        var id = Random.Shared.NextInt64(1L << 32, 1L << 50); await provider.GetRequiredService<INotificationsApi>().MarkReadAsync(id);
         Assert.Equal(HttpMethod.Post, method); Assert.Equal($"/api/notifications/{id}/read", path);
     }
     [Theory]

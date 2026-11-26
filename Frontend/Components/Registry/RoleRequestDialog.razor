@@ -45,7 +45,7 @@
     [Parameter] public bool Open { get; set; }
     [Parameter] public EventCallback<bool> OpenChanged { get; set; }
     [Parameter] public EventCallback Submitted { get; set; }
-    private sealed class Choice { public Guid Id { get; init; } public string Label { get; init; } = ""; public bool Selected { get; set; } }
+    private sealed class Choice { public long Id { get; init; } public string Label { get; init; } = ""; public bool Selected { get; set; } }
     private readonly CancellationTokenSource _lifetime = new();
     private List<Choice> _choices = [];
     private string _note = "";

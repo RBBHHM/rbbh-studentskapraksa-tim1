@@ -22,6 +22,30 @@ namespace RBBH.ConnectedParties.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.HasSequence("AppUsersIdSequence");
+
+            modelBuilder.HasSequence("ClientLimitsIdSequence");
+
+            modelBuilder.HasSequence("FamilyMembersIdSequence");
+
+            modelBuilder.HasSequence("LegalEntitiesIdSequence");
+
+            modelBuilder.HasSequence("NotificationsIdSequence");
+
+            modelBuilder.HasSequence("PermissionsIdSequence");
+
+            modelBuilder.HasSequence("RelatedPersonsIdSequence");
+
+            modelBuilder.HasSequence("ReportsIdSequence");
+
+            modelBuilder.HasSequence("RoleRequestsIdSequence");
+
+            modelBuilder.HasSequence("RolesIdSequence");
+
+            modelBuilder.HasSequence("UnlockRequestsIdSequence");
+
+            modelBuilder.HasSequence("UserRolesIdSequence");
+
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Audit.AuditLog", b =>
                 {
                     b.Property<long>("Id")
@@ -78,11 +102,11 @@ namespace RBBH.ConnectedParties.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
-                    b.Property<Guid>("RequestId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<long>("RequestId")
+                        .HasColumnType("bigint");
 
-                    b.Property<Guid>("RoleId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<long>("RoleId")
+                        .HasColumnType("bigint");
 
                     b.HasKey("Id");
 
@@ -96,9 +120,11 @@ namespace RBBH.ConnectedParties.Migrations
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Authorization.RoleRequest", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<long>("Id"), "RoleRequestsIdSequence");
 
                     b.Property<Guid>("ClientRequestId")
                         .HasColumnType("uniqueidentifier");
@@ -180,9 +206,11 @@ namespace RBBH.ConnectedParties.Migrations
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntity", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<long>("Id"), "LegalEntitiesIdSequence");
 
                     b.Property<string>("BasisOfConnection")
                         .IsRequired()
@@ -285,8 +313,8 @@ namespace RBBH.ConnectedParties.Migrations
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntityVerificationOrigin", b =>
                 {
-                    b.Property<Guid>("LegalEntityId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<long>("LegalEntityId")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("Fingerprint")
                         .IsRequired()
@@ -319,8 +347,8 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasColumnType("nvarchar(1000)")
                         .HasColumnName("Comment");
 
-                    b.Property<Guid>("LegalEntityId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<long>("LegalEntityId")
+                        .HasColumnType("bigint");
 
                     b.Property<decimal?>("MaksimalnaOcekivanaUtilizacija")
                         .HasColumnType("decimal(18,2)")
@@ -358,9 +386,11 @@ namespace RBBH.ConnectedParties.Migrations
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Notifications.ApplicationNotification", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<long>("Id"), "NotificationsIdSequence");
 
                     b.Property<string>("BodyKey")
                         .IsRequired()
@@ -441,8 +471,8 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<DateTime>("NextAttemptAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("NotificationId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<long>("NotificationId")
+                        .HasColumnType("bigint");
 
                     b.HasKey("Id");
 
@@ -514,9 +544,11 @@ namespace RBBH.ConnectedParties.Migrations
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.PeriodLock.UnlockRequest", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<long>("Id"), "UnlockRequestsIdSequence");
 
                     b.Property<string>("AdminNote")
                         .HasMaxLength(1000)
@@ -544,8 +576,8 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<int>("Month")
                         .HasColumnType("int");
 
-                    b.Property<Guid?>("ParentRequestId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<long?>("ParentRequestId")
+                        .HasColumnType("bigint");
 
                     b.Property<DateTime?>("ProcessedAt")
                         .HasColumnType("datetime2");
@@ -599,9 +631,11 @@ namespace RBBH.ConnectedParties.Migrations
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.RelatedPersons.FamilyMember", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<long>("Id"), "FamilyMembersIdSequence");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -639,15 +673,15 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<Guid?>("ParentFamilyMemberId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<long?>("ParentFamilyMemberId")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("PassportNumber")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<Guid>("RelatedPersonId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<long>("RelatedPersonId")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("Residency")
                         .IsRequired()
@@ -667,9 +701,11 @@ namespace RBBH.ConnectedParties.Migrations
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.RelatedPersons.RelatedPerson", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<long>("Id"), "RelatedPersonsIdSequence");
 
                     b.Property<bool>("ConnectedWithBank")
                         .HasColumnType("bit");
@@ -732,8 +768,8 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasColumnType("nvarchar(50)")
                         .UseCollation("Latin1_General_100_CI_AS");
 
-                    b.Property<Guid?>("RelatedToPersonId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<long?>("RelatedToPersonId")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("RelationBasis")
                         .HasMaxLength(500)
@@ -888,9 +924,11 @@ namespace RBBH.ConnectedParties.Migrations
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Report.ClientLimit", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<long>("Id"), "ClientLimitsIdSequence");
 
                     b.Property<DateTime>("CapitalDate")
                         .HasColumnType("date");
@@ -926,8 +964,8 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<bool>("IsLimitBreached")
                         .HasColumnType("bit");
 
-                    b.Property<Guid>("LegalEntityId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<long>("LegalEntityId")
+                        .HasColumnType("bigint");
 
                     b.Property<DateTime?>("ModifiedAt")
                         .HasColumnType("datetime2");
@@ -956,9 +994,11 @@ namespace RBBH.ConnectedParties.Migrations
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Report.Report", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<long>("Id"), "ReportsIdSequence");
 
                     b.Property<int>("ClientsWithBreachedLimit")
                         .HasColumnType("int");
@@ -1009,9 +1049,11 @@ namespace RBBH.ConnectedParties.Migrations
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Role.Permission", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<long>("Id"), "PermissionsIdSequence");
 
                     b.Property<string>("Code")
                         .IsRequired()
@@ -1036,9 +1078,11 @@ namespace RBBH.ConnectedParties.Migrations
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Role.Role", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<long>("Id"), "RolesIdSequence");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -1090,11 +1134,11 @@ namespace RBBH.ConnectedParties.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
-                    b.Property<Guid>("PermissionId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<long>("PermissionId")
+                        .HasColumnType("bigint");
 
-                    b.Property<Guid>("RoleId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<long>("RoleId")
+                        .HasColumnType("bigint");
 
                     b.HasKey("Id");
 
@@ -1108,9 +1152,11 @@ namespace RBBH.ConnectedParties.Migrations
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Role.UserRole", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<long>("Id"), "UserRolesIdSequence");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -1129,11 +1175,11 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<Guid>("RoleId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<long>("RoleId")
+                        .HasColumnType("bigint");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
 
                     b.HasKey("Id");
 
@@ -1280,9 +1326,11 @@ namespace RBBH.ConnectedParties.Migrations
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Users.AppUser", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<long>("Id"), "AppUsersIdSequence");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");

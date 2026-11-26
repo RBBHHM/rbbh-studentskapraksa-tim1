@@ -69,12 +69,12 @@ public class LegalEntityController : ControllerBase
     /// Vraća detalje jednog pravnog lica po ID-u.
     /// </summary>
     /// <param name="id">ID pravnog lica.</param>
-    [HttpGet("{id:guid}")]
+    [HttpGet("{id:long}")]
     [Authorize(Policy = ApplicationPolicies.LegalPersonsRead)]
     [ProducesResponseType(typeof(LegalEntityDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetById(Guid id)
+    public async Task<IActionResult> GetById(long id)
     {
         var entity = await _legalEntityService.GetByIdAsync(id);
 
@@ -106,12 +106,12 @@ public class LegalEntityController : ControllerBase
     /// Vraća podatke pravnog lica potrebne za automatsko popunjavanje forme Limita.
     /// </summary>
     /// <param name="id">ID pravnog lica.</param>
-    [HttpGet("{id:guid}/limit-form-data")]
+    [HttpGet("{id:long}/limit-form-data")]
     [Authorize(Policy = ApplicationPolicies.LimitsRead)]
     [ProducesResponseType(typeof(LegalEntityLimitFormDataDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetLimitFormData(Guid id)
+    public async Task<IActionResult> GetLimitFormData(long id)
     {
         var result = await _legalEntityService.GetLimitFormDataAsync(id);
 
@@ -148,13 +148,13 @@ public class LegalEntityController : ControllerBase
     /// </summary>
     /// <param name="id">ID pravnog lica.</param>
     /// <param name="dto">Novi podaci.</param>
-    [HttpPut("{id:guid}")]
+    [HttpPut("{id:long}")]
     [Authorize(Policy = ApplicationPolicies.LegalPersonsEdit)]
     [ProducesResponseType(typeof(LegalEntityDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateLegalEntityDTO dto)
+    public async Task<IActionResult> Update(long id, [FromBody] UpdateLegalEntityDTO dto)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
@@ -168,12 +168,12 @@ public class LegalEntityController : ControllerBase
     /// Deaktivira pravno lice (soft delete — IsActive = false).
     /// </summary>
     /// <param name="id">ID pravnog lica.</param>
-    [HttpDelete("{id:guid}")]
+    [HttpDelete("{id:long}")]
     [Authorize(Policy = ApplicationPolicies.LegalPersonsDelete)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> Delete(Guid id)
+    public async Task<IActionResult> Delete(long id)
     {
         await _legalEntityService.DeleteAsync(id, CurrentUser());
 

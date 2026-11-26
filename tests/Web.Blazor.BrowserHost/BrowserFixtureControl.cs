@@ -111,7 +111,7 @@ internal static partial class BrowserHostProgram
                             ("limits", "/api/limiti", new { }),
                             ("users", "/api/users", new { }),
                             ("codes", "/api/code-lists", new { }),
-                            ("period", $"/api/period-lock/unlock-requests/{Guid.Empty}/respond", new { message = "123456789" }),
+                            ("period", $"/api/period-lock/unlock-requests/{0L}/respond", new { message = "123456789" }),
                             ("generate", "/api/reports/monthly/1/0", new { })
                         })
                         {

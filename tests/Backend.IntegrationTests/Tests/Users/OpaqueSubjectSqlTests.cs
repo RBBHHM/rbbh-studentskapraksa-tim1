@@ -38,7 +38,7 @@ public sealed class OpaqueSubjectSqlTests : RoleRequestFixture
         using var variant = NewClient("CREATOR");
         var list = await variant.GetFromJsonAsync<JsonElement>("/api/period-lock/unlock-requests");
         Assert.Equal(0, list.GetProperty("total").GetInt32());
-        Guid id = Guid.Empty;
+        long id = 0;
         await InDatabase(async db => id = (await db.UnlockRequests.SingleAsync()).Id);
         Assert.Equal(HttpStatusCode.NotFound, (await variant.PostAsJsonAsync($"/api/period-lock/unlock-requests/{id}/respond", new { message = "Response from another subject" })).StatusCode);
         await InDatabase(async db => { Assert.Single(db.UnlockRequests); Assert.Empty(db.AuditLogs); });
@@ -55,20 +55,61 @@ public sealed class OpaqueSubjectSqlTests : RoleRequestFixture
         {
             await db.GetService<Microsoft.EntityFrameworkCore.Migrations.IMigrator>()
                 .MigrateAsync("20261103075242_AddPeriodConcurrencyAndNotificationResources");
-            var user = new RBBH.ConnectedParties.DL.Entities.Users.AppUser { KeycloakId = "Original-Subject", KeycloakSubjectConfirmed = true,
-                Username = "original", Email = "original@example.test" };
-            var request = new RBBH.ConnectedParties.DL.Entities.Authorization.RoleRequest { RequesterSubject = user.KeycloakId, ClientRequestId = Guid.NewGuid(), Email = user.Email };
-            var notice = new ApplicationNotification { RecipientSubject = user.KeycloakId, EventKey = "retained" };
-            var period = new RBBH.ConnectedParties.DL.Entities.PeriodLock.UnlockRequest { RequestedBySubject = user.KeycloakId,
-                RequestedBy = user.Username, RequestedByEmail = user.Email, Reason = "Historical request reason", Year = 2026, Month = 10 };
-            db.AddRange(user, request, notice, period); await db.SaveChangesAsync(); db.ChangeTracker.Clear();
+            const string subject = "Original-Subject";
+            const string email = "original@example.test";
+            var oldRequestId = Guid.NewGuid();
+            var oldNoticeId = Guid.NewGuid();
+            var parameters = JsonSerializer.Serialize(new { requestId = oldRequestId });
+            var route = $"/app/profile?requestId={oldRequestId}";
+            var eventKey = $"role-request:{oldRequestId}:approved";
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT dbo.AppUsers (Id, KeycloakId, KeycloakSubjectConfirmed, Username, FirstName, LastName, Email, IsActive, CreatedAt, CreatedBy)
+                VALUES (NEWID(), {subject}, 1, N'original', N'Original', N'Fixture', {email}, 1, SYSUTCDATETIME(), N'fixture');
+                INSERT dbo.RoleRequests (Id, ClientRequestId, RequesterSubject, Username, FirstName, LastName, Email, Purpose, Status, CreatedAt, Version)
+                VALUES ({oldRequestId}, NEWID(), {subject}, N'original', N'Original', N'Fixture', {email}, N'change', N'approved', SYSUTCDATETIME(), 2);
+                INSERT dbo.Notifications (Id, RecipientSubject, RecipientEmail, EventKey, TitleKey, BodyKey, ParametersJson, Route, CreatedAt)
+                VALUES ({oldNoticeId}, {subject}, {email}, {eventKey}, N'title', N'body', {parameters}, {route}, SYSUTCDATETIME());
+                INSERT dbo.NotificationDeliveries (Id, NotificationId, Attempts, NextAttemptAt) VALUES (NEWID(), {oldNoticeId}, 0, SYSUTCDATETIME());
+                INSERT dbo.UnlockRequests (Id, Year, Month, Reason, RequestedBySubject, RequestedBy, RequestedByEmail, Status, CreatedAt, CreatedBy, IsActive)
+                VALUES (NEWID(), 2026, 10, N'Historical request reason', {subject}, N'original', {email}, N'PENDING', SYSUTCDATETIME(), N'fixture', 1);
+                """);
+
             await db.Database.MigrateAsync();
-            Assert.Equal(user.Id, (await db.AppUsers.SingleAsync()).Id);
-            Assert.Equal(user.KeycloakId, (await db.AppUsers.SingleAsync()).KeycloakId);
-            Assert.Equal(user.KeycloakId, (await db.RoleRequests.SingleAsync()).RequesterSubject);
-            Assert.Equal(user.KeycloakId, (await db.Notifications.SingleAsync()).RecipientSubject);
-            Assert.Equal(user.KeycloakId, (await db.UnlockRequests.SingleAsync()).RequestedBySubject);
-            var variant = user.KeycloakId.ToUpperInvariant();
+            Assert.Equal(subject, (await db.AppUsers.SingleAsync()).KeycloakId);
+            var migratedRequest = await db.RoleRequests.SingleAsync();
+            Assert.True(migratedRequest.Id > 0);
+            Assert.Equal(subject, migratedRequest.RequesterSubject);
+            var notice = await db.Notifications.Include(row => row.Delivery).SingleAsync();
+            Assert.Equal(subject, notice.RecipientSubject);
+            Assert.Equal(notice.Id, notice.Delivery!.NotificationId);
+            Assert.Equal($"/app/profile?requestId={migratedRequest.Id}", notice.Route);
+            using var payload = JsonDocument.Parse(notice.ParametersJson);
+            Assert.Equal(migratedRequest.Id, payload.RootElement.GetProperty("requestId").GetInt64());
+            Assert.Equal(subject, (await db.UnlockRequests.SingleAsync()).RequestedBySubject);
+
+            var nextRequest = new RBBH.ConnectedParties.DL.Entities.Authorization.RoleRequest
+            {
+                ClientRequestId = Guid.NewGuid(), RequesterSubject = subject, Email = email, Status = "pending"
+            };
+            db.RoleRequests.Add(nextRequest);
+            await db.SaveChangesAsync();
+            Assert.True(nextRequest.Id > migratedRequest.Id);
+            Assert.Equal(0, await db.Database.SqlQueryRaw<int>("""
+                SELECT COUNT(*) AS [Value]
+                FROM sys.columns AS col
+                INNER JOIN sys.tables AS tbl ON tbl.object_id = col.object_id
+                WHERE tbl.schema_id = SCHEMA_ID(N'dbo')
+                  AND col.system_type_id = TYPE_ID(N'uniqueidentifier')
+                  AND (EXISTS (
+                    SELECT 1 FROM sys.indexes AS idx
+                    INNER JOIN sys.index_columns AS keycol ON keycol.object_id = idx.object_id AND keycol.index_id = idx.index_id
+                    WHERE idx.is_primary_key = 1 AND keycol.object_id = col.object_id AND keycol.column_id = col.column_id
+                  ) OR EXISTS (
+                    SELECT 1 FROM sys.foreign_key_columns AS fk
+                    WHERE fk.parent_object_id = col.object_id AND fk.parent_column_id = col.column_id
+                  ))
+                """).SingleAsync());
+            var variant = subject.ToUpperInvariant();
             Assert.False(await db.AppUsers.AnyAsync(row => row.KeycloakId == variant));
             Assert.False(await db.RoleRequests.AnyAsync(row => row.RequesterSubject == variant));
             Assert.False(await db.Notifications.AnyAsync(row => row.RecipientSubject == variant));
@@ -97,7 +138,7 @@ public sealed class OpaqueSubjectSqlTests : RoleRequestFixture
     {
         using var owner = NewClient("opaque-owner");
         var request = await Submit(owner);
-        Guid noticeId = Guid.NewGuid();
+        const long noticeId = 100;
         await InDatabase(async db =>
         {
             db.Notifications.Add(new ApplicationNotification { Id = noticeId, RecipientSubject = "opaque-owner", EventKey = "case-proof", TitleKey = "title", BodyKey = "body", ParametersJson = "{}" });
@@ -110,7 +151,7 @@ public sealed class OpaqueSubjectSqlTests : RoleRequestFixture
         Assert.Equal(0, inbox.GetProperty("total").GetInt32());
         Assert.Equal(HttpStatusCode.NotFound, (await variant.PostAsync($"/api/notifications/{noticeId}/read", null)).StatusCode);
         var original = await owner.GetFromJsonAsync<JsonElement>("/api/role-requests/mine");
-        Assert.Equal(request.GetProperty("id").GetGuid(), original.GetProperty("items")[0].GetProperty("id").GetGuid());
+        Assert.Equal(request.GetProperty("id").GetInt64(), original.GetProperty("items")[0].GetProperty("id").GetInt64());
         await InDatabase(async db => Assert.Null((await db.Notifications.SingleAsync(row => row.Id == noticeId)).ReadAt));
     }
 }

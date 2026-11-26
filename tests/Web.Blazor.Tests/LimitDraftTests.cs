@@ -7,7 +7,7 @@ public sealed class LimitDraftTests
     [Fact]
     public void OptionalAmountsAndDateRemainNullAndZeroIsNotDropped()
     {
-        var model = new LimitDraft { LegalEntityId = Guid.NewGuid(), TipLimita = "REG", OdobreniLimit = 0 };
+        var model = new LimitDraft { LegalEntityId = Random.Shared.NextInt64(1L << 32, 1L << 50), TipLimita = "REG", OdobreniLimit = 0 };
         Assert.Empty(model.Validate()); var request = model.ToRequest();
         Assert.Equal(0m, request.OdobreniLimit); Assert.Null(request.MaksimalnaOcekivanaUtilizacija); Assert.Null(request.RokOcekivaneUtilizacije);
     }
@@ -22,7 +22,7 @@ public sealed class LimitDraftTests
     [InlineData(false)]
     public void NegativeAmountsAreFieldSpecific(bool approved)
     {
-        var model = new LimitDraft { LegalEntityId = Guid.NewGuid(), TipLimita = "REG", OdobreniLimit = approved ? -1 : 1, MaksimalnaOcekivanaUtilizacija = approved ? 1 : -1 };
+        var model = new LimitDraft { LegalEntityId = Random.Shared.NextInt64(1L << 32, 1L << 50), TipLimita = "REG", OdobreniLimit = approved ? -1 : 1, MaksimalnaOcekivanaUtilizacija = approved ? 1 : -1 };
         Assert.Contains(approved ? "OdobreniLimit" : "MaksimalnaOcekivanaUtilizacija", model.Validate().Keys);
     }
 }

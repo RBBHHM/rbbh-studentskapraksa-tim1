@@ -56,7 +56,7 @@ namespace UnitTests.Services.ReportServiceTests
             IsActive = active
         };
 
-        private static Limit NewLimit(Guid legalEntityId, string tip = "MM",
+        private static Limit NewLimit(long legalEntityId, string tip = "MM",
             decimal? odobreniLimit = 1000m, decimal? maksUtil = 200m, string? komentar = null) => new()
         {
             LegalEntityId = legalEntityId,
@@ -68,7 +68,7 @@ namespace UnitTests.Services.ReportServiceTests
             CreatedAt = DateTime.UtcNow
         };
 
-        private static ClientLimit NewClientLimit(Guid legalEntityId, decimal regulatoryCapital = 5000m, decimal coreCapital = 4000m) => new()
+        private static ClientLimit NewClientLimit(long legalEntityId, decimal regulatoryCapital = 5000m, decimal coreCapital = 4000m) => new()
         {
             LegalEntityId = legalEntityId,
             RegulatoryCapital = regulatoryCapital,

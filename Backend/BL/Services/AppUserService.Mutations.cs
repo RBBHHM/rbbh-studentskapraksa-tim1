@@ -31,7 +31,7 @@ public partial class AppUserService
         return new(UserMutationStatus.Success);
     }, cancellationToken);
 
-    public Task<UserMutationResult> ReplaceRolesAsync(string userId, IReadOnlyCollection<Guid> roleIds,
+    public Task<UserMutationResult> ReplaceRolesAsync(string userId, IReadOnlyCollection<long> roleIds,
         ActorIdentity actor, CancellationToken cancellationToken) =>
         WithMutationBoundary(async () =>
         {
@@ -42,7 +42,7 @@ public partial class AppUserService
                 return new(UserMutationStatus.InvalidRoles);
 
             AppUser? localUser = null;
-            if (Guid.TryParse(userId, out var localUserId))
+            if (long.TryParse(userId, out var localUserId))
                 localUser = await _db.AppUsers.FindAsync([localUserId], cancellationToken);
             localUser ??= await _db.AppUsers.FirstOrDefaultAsync(user => user.KeycloakId == userId, cancellationToken);
             if (localUser is null) return new(UserMutationStatus.NotFound);
@@ -91,9 +91,11 @@ public partial class AppUserService
 
     public Task<UserMutationResult> ReactivateAsync(string userId, ActorIdentity actor, CancellationToken cancellationToken) => WithMutationBoundary(async () =>
     {
-        AppUser? localUser = Guid.TryParse(userId, out var localId)
+        AppUser? localUser = long.TryParse(userId, out var localId)
             ? await _db.AppUsers.IgnoreQueryFilters().FirstOrDefaultAsync(user => user.Id == localId, cancellationToken)
-            : await _db.AppUsers.IgnoreQueryFilters().FirstOrDefaultAsync(user => user.KeycloakId == userId, cancellationToken);
+            : Guid.TryParse(userId, out _)
+                ? null // A legacy application GUID is not an alias for an opaque provider subject here.
+                : await _db.AppUsers.IgnoreQueryFilters().FirstOrDefaultAsync(user => user.KeycloakId == userId, cancellationToken);
         if (localUser is null) return new(UserMutationStatus.NotFound);
         if (localUser.IsActive) return new(UserMutationStatus.Success);
         localUser.IsActive = true; localUser.ModifiedAt = DateTime.UtcNow; localUser.ModifiedBy = actor.DisplayName;
@@ -124,7 +126,7 @@ public partial class AppUserService
 
     private async Task<AppUser?> ResolveUser(string id, CancellationToken cancellationToken)
     {
-        var local = Guid.TryParse(id, out var localId) ? await _db.AppUsers.FindAsync([localId], cancellationToken) : null;
+        var local = long.TryParse(id, out var localId) ? await _db.AppUsers.FindAsync([localId], cancellationToken) : null;
         return local ?? await _db.AppUsers.SingleOrDefaultAsync(user => user.KeycloakId == id, cancellationToken);
     }
 
@@ -148,7 +150,7 @@ public partial class AppUserService
         return activeAdmins.Contains(target.Id) && activeAdmins.Count == 1;
     }
 
-    private async Task ReplaceLocalRoles(Guid userId, IReadOnlyCollection<Guid> roleIds, string actorEmail, CancellationToken cancellationToken)
+    private async Task ReplaceLocalRoles(long userId, IReadOnlyCollection<long> roleIds, string actorEmail, CancellationToken cancellationToken)
     {
         var existing = await _db.UserRoles.Where(item => item.UserId == userId).ToListAsync(cancellationToken);
         var modifiedAt = DateTime.UtcNow;

@@ -14,7 +14,7 @@ public class Limit
 
     /// <summary>Pravno lice na koje se limit odnosi.</summary>
     [Required]
-    public Guid LegalEntityId { get; set; }
+    public long LegalEntityId { get; set; }
 
     /// <summary>Navigacijska veza prema pravnom licu.</summary>
     public LegalEntity.LegalEntity LegalEntity { get; set; } = null!;

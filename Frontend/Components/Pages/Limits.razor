@@ -96,7 +96,7 @@ else
     private IReadOnlyList<ReferenceOption> _types = [];
     private LimitDraft? _draft;
     private int? _editingId;
-    private Guid? _filter;
+    private long? _filter;
     private LimitRecord? _action;
     private string? _search, _error, _notice, _actionError;
     private string? _periodError;
@@ -127,7 +127,7 @@ else
         catch (RegistryApiException exception) { _error = exception.MessageKey; }
         finally { _loading = false; _refreshing = false; }
     }
-    private async Task FilterAsync(Guid? entity) { if (_busy || _refreshing || _openingEditor) return; _filter = entity; await LoadAsync(); }
+    private async Task FilterAsync(long? entity) { if (_busy || _refreshing || _openingEditor) return; _filter = entity; await LoadAsync(); }
     private async Task Edit(LimitRecord? record)
     {
         if (_periodLocked || _busy || _openingEditor || _refreshing || _disposed || !_authenticated || (record is null ? !_canCreate : !_canEdit)) return;

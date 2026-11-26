@@ -21,11 +21,11 @@ namespace RBBH.ConnectedParties.DL.Entities.RelatedPersons;
 public class FamilyMember
 {
     [Key]
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public long Id { get; set; }
 
     /// <summary>Matično (povezano) fizičko lice za koje se vodi porodica.</summary>
     [Required]
-    public Guid RelatedPersonId { get; set; }
+    public long RelatedPersonId { get; set; }
 
     public virtual RelatedPerson? RelatedPerson { get; set; }
 
@@ -65,7 +65,7 @@ public class FamilyMember
     /// Null znači da je član direktno povezan sa matičnim licem (<see cref="RelatedPerson"/>).
     /// Omogućava hijerarhijski prikaz porodičnog stabla bez promjene šeme.
     /// </summary>
-    public Guid? ParentFamilyMemberId { get; set; }
+    public long? ParentFamilyMemberId { get; set; }
 
     public virtual FamilyMember? ParentFamilyMember { get; set; }
 

@@ -23,14 +23,14 @@ public class RegistryVerificationHttpTests : AuthenticatedApiFixture
         isIdentifiedStaff = true, dateFrom = "2026-01-01", dateTo = "2027-12-31", creatorSubject = "forged-creator"
     };
 
-    protected async Task<Guid> CreateRecord(bool legal)
+    protected async Task<long> CreateRecord(bool legal)
     {
         var response = await Client.PostAsJsonAsync(legal ? "/api/legal-entities" : "/api/related-persons", legal ? Legal() : Physical());
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        return (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+        return (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetInt64();
     }
 
-    protected static string VerifyRoute(bool legal, Guid id) => $"/api/verification/{(legal ? "legal" : "physical")}-person/{id}";
+    protected static string VerifyRoute(bool legal, long id) => $"/api/verification/{(legal ? "legal" : "physical")}-person/{id}";
 
     [Theory]
     [InlineData(true)]
@@ -75,7 +75,7 @@ public class RegistryVerificationHttpTests : AuthenticatedApiFixture
     [InlineData(false)]
     public async Task HistoricalRecordRequiresProvenanceInsteadOfGuessingFromEmail(bool legal)
     {
-        Guid id = Guid.Empty;
+        long id = 0L;
         await InDatabase(async db =>
         {
             if (legal) { var row = new RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntity { Name = "History", CreatedBy = "someone@example.test" }; db.LegalEntities.Add(row); id = row.Id; }

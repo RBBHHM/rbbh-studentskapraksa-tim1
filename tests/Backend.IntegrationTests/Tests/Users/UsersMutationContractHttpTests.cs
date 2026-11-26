@@ -56,7 +56,7 @@ public sealed class UsersMutationContractHttpTests : UsersHttpFixture
     [Fact]
     public async Task InvalidRolePrecedesMissingTarget()
     {
-        var response = await _client.PutAsJsonAsync($"/api/users/{Guid.NewGuid()}/role", new { roleIds = new[] { Guid.NewGuid() } });
+        var response = await _client.PutAsJsonAsync($"/api/users/{Random.Shared.NextInt64(1L << 32, 1L << 50)}/role", new { roleIds = new[] { Random.Shared.NextInt64(1L << 32, 1L << 50) } });
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("Neispravna rola", body.GetProperty("title").GetString());
@@ -77,7 +77,7 @@ public sealed class UsersMutationContractHttpTests : UsersHttpFixture
     [Fact]
     public async Task FinalAdminConflictPrecedesSelfRoleRejection()
     {
-        var response = await _client.PostAsJsonAsync($"/api/users/{_localId}/roles", new { roleIds = Array.Empty<Guid>() });
+        var response = await _client.PostAsJsonAsync($"/api/users/{_localId}/roles", new { roleIds = Array.Empty<long>() });
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("Promjena nije dozvoljena", body.GetProperty("title").GetString());
@@ -91,7 +91,7 @@ public sealed class UsersMutationContractHttpTests : UsersHttpFixture
         await using var scope = _app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
         var subject = (await db.AppUsers.SingleAsync(user => user.Id == id)).KeycloakId;
-        var response = await _client.PutAsJsonAsync($"/api/users/{subject}/role", new { roleIds = Array.Empty<Guid>() });
+        var response = await _client.PutAsJsonAsync($"/api/users/{subject}/role", new { roleIds = Array.Empty<long>() });
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("Role korisnika su uspješno ažurirane.", body.GetProperty("message").GetString());

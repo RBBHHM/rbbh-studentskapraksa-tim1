@@ -4,7 +4,7 @@ namespace RBBH.ConnectedParties.DL.Entities.Authorization;
 
 public sealed class RoleRequest
 {
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public long Id { get; set; }
     public Guid ClientRequestId { get; set; }
     [MaxLength(100)] public string RequesterSubject { get; set; } = "";
     [MaxLength(100)] public string Username { get; set; } = "";
@@ -26,8 +26,8 @@ public sealed class RoleRequest
 public sealed class RequestedRole
 {
     public long Id { get; set; }
-    public Guid RequestId { get; set; }
+    public long RequestId { get; set; }
     public RoleRequest Request { get; set; } = null!;
-    public Guid RoleId { get; set; }
+    public long RoleId { get; set; }
     public Role.Role Role { get; set; } = null!;
 }

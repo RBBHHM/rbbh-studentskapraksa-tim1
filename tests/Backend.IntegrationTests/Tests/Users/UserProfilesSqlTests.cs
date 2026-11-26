@@ -24,7 +24,7 @@ public sealed class UserProfilesSqlTests : AuthenticatedApiFixture
     public async Task AllUserAdministrationWritesAuditStableSubjectAndUsernameDespiteChangedEmail()
     {
         Client.DefaultRequestHeaders.Add("X-Email", "changed-claim@external.example");
-        var role = Guid.Empty;
+        var role = 0L;
         await InDatabase(async db => role = (await db.Roles.SingleAsync(row => row.Name == RBBH.ConnectedParties.Helpers.Constants.ApplicationAccessRoles.LegalPersons)).Id);
         var created = await Client.PostAsJsonAsync("/api/users", new
         { username = "audit-target", firstName = "Fixture", lastName = "User", email = "audit-target@example.test", roleIds = new[] { role } });
@@ -56,8 +56,8 @@ public sealed class UserProfilesSqlTests : AuthenticatedApiFixture
     public async Task ConcurrentNormalizedRegistrationCreatesExactlyOnePendingIdentityAndAudit()
     {
         using var second = NewClient("reviewer");
-        var first = new { username = "new-user", firstName = "Fixture", lastName = "User", email = "person@external.example", roleIds = Array.Empty<Guid>() };
-        var duplicate = new { username = " NEW-USER ", firstName = "Fixture", lastName = "User", email = "PERSON@external.example", roleIds = Array.Empty<Guid>() };
+        var first = new { username = "new-user", firstName = "Fixture", lastName = "User", email = "person@external.example", roleIds = Array.Empty<long>() };
+        var duplicate = new { username = " NEW-USER ", firstName = "Fixture", lastName = "User", email = "PERSON@external.example", roleIds = Array.Empty<long>() };
         var responses = await Task.WhenAll(Client.PostAsJsonAsync("/api/users", first), second.PostAsJsonAsync("/api/users", duplicate));
         Assert.Single(responses, response => response.StatusCode == HttpStatusCode.Created);
         Assert.Single(responses, response => response.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.Conflict);
@@ -76,7 +76,7 @@ public sealed class UserProfilesSqlTests : AuthenticatedApiFixture
             BEGIN IF EXISTS(SELECT 1 FROM inserted WHERE Action = 'CREATE') THROW 51000, 'fixture audit failure', 1; END
             """));
         var response = await Client.PostAsJsonAsync("/api/users", new
-        { username = "new-user", firstName = "Fixture", lastName = "User", email = "person@external.example", roleIds = Array.Empty<Guid>() });
+        { username = "new-user", firstName = "Fixture", lastName = "User", email = "person@external.example", roleIds = Array.Empty<long>() });
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
         await InDatabase(async db => { Assert.False(await db.AppUsers.AnyAsync(user => user.Username == "new-user")); Assert.Empty(db.AuditLogs); });
     }
@@ -125,7 +125,7 @@ public sealed class UserProfilesSqlTests : AuthenticatedApiFixture
             {
                 var exception = await Assert.ThrowsAsync<SqlException>(() => db.Database.ExecuteSqlInterpolatedAsync($"""
                     INSERT dbo.AppUsers (Id, KeycloakId, KeycloakSubjectConfirmed, Username, FirstName, LastName, Email, IsActive, CreatedAt, CreatedBy)
-                    VALUES ({Guid.NewGuid()}, {Guid.NewGuid().ToString()}, {false}, {username}, {"Fixture"}, {"User"}, {email}, {true}, {DateTime.UtcNow}, {"fixture"})
+                    VALUES ({Random.Shared.NextInt64(1L << 32, 1L << 50)}, {Guid.NewGuid().ToString()}, {false}, {username}, {"Fixture"}, {"User"}, {email}, {true}, {DateTime.UtcNow}, {"fixture"})
                     """));
                 Assert.Equal(2601, exception.Number);
             }

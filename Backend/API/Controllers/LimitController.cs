@@ -24,7 +24,7 @@ public class LimitController(ILimitService limitService, IAuditService auditServ
     [HttpGet]
     [Authorize(Policy = ApplicationPolicies.LimitsRead)]
     [ProducesResponseType(typeof(List<LimitResponseDTO>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<LimitResponseDTO>>> GetAll([FromQuery] Guid? legalEntityId = null, [FromQuery] string? matbroj = null, [FromQuery] DateTime? asOf = null)
+    public async Task<ActionResult<List<LimitResponseDTO>>> GetAll([FromQuery] long? legalEntityId = null, [FromQuery] string? matbroj = null, [FromQuery] DateTime? asOf = null)
     {
         var result = asOf.HasValue ? await _limitService.GetAsOf(legalEntityId, matbroj, asOf.Value, HttpContext.RequestAborted)
             : await _limitService.GetAll(legalEntityId, matbroj);
@@ -32,7 +32,7 @@ public class LimitController(ILimitService limitService, IAuditService auditServ
     }
 
     [HttpGet("page"), Authorize(Policy = ApplicationPolicies.LimitsRead)]
-    public Task<BL.Services.ReferencePage<LimitResponseDTO>> Page(CancellationToken ct, Guid? legalEntityId = null, string? search = null, int page = 1, int pageSize = 20, DateTime? asOf = null) =>
+    public Task<BL.Services.ReferencePage<LimitResponseDTO>> Page(CancellationToken ct, long? legalEntityId = null, string? search = null, int page = 1, int pageSize = 20, DateTime? asOf = null) =>
         _limitService.Page(legalEntityId, search, page, pageSize, ct, asOf);
 
     /// <summary>
@@ -41,7 +41,7 @@ public class LimitController(ILimitService limitService, IAuditService auditServ
     /// </summary>
     [HttpGet("export")]
     [Authorize(Policy = ApplicationPolicies.LimitsRead)]
-    public async Task<IActionResult> Export([FromQuery] Guid? legalEntityId = null, [FromQuery] string? matbroj = null, [FromQuery] DateTime? asOf = null)
+    public async Task<IActionResult> Export([FromQuery] long? legalEntityId = null, [FromQuery] string? matbroj = null, [FromQuery] DateTime? asOf = null)
     {
         var result = await _limitService.ExportData(legalEntityId, matbroj, asOf, HttpContext.RequestAborted);
         if (!result.IsSuccessful) return HTTPExceptiontFromResult(result).Result!;

@@ -62,7 +62,7 @@ public class CreateRelatedPersonDTO
     public bool SpecialContract { get; set; } = false;
     public bool MalusClawback { get; set; } = false;
 
-    public Guid? RelatedToPersonId { get; set; }
+    public long? RelatedToPersonId { get; set; }
 }
 
 // ─── UPDATE ───────────────────────────────────────────────────────────────────
@@ -111,7 +111,7 @@ public class UpdateRelatedPersonDTO
     public bool SpecialContract { get; set; } = false;
     public bool MalusClawback { get; set; } = false;
 
-    public Guid? RelatedToPersonId { get; set; }
+    public long? RelatedToPersonId { get; set; }
 }
 
 // ─── RESPONSE ─────────────────────────────────────────────────────────────────
@@ -121,7 +121,7 @@ public class UpdateRelatedPersonDTO
 /// </summary>
 public class RelatedPersonResponseDTO
 {
-    public Guid Id { get; set; }
+    public long Id { get; set; }
 
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
@@ -149,7 +149,7 @@ public class RelatedPersonResponseDTO
     public bool SpecialContract { get; set; }
     public bool MalusClawback { get; set; }
 
-    public Guid? RelatedToPersonId { get; set; }
+    public long? RelatedToPersonId { get; set; }
     public string? RelatedToPersonName { get; set; }
     public string? RelatedToPersonJmbg { get; set; }
     public string? RelatedToPersonPassport { get; set; }
@@ -177,7 +177,7 @@ public class RelatedPersonResponseDTO
 /// </summary>
 public class RelatedPersonSummaryDTO
 {
-    public Guid Id { get; set; }
+    public long Id { get; set; }
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
     public string? JMBG { get; set; }
@@ -186,7 +186,7 @@ public class RelatedPersonSummaryDTO
     public ResidencyType Residency { get; set; }
     public int FamilyMemberCount { get; set; }
     public bool IsIdentifiedStaff { get; set; }
-    public Guid? RelatedToPersonId { get; set; }
+    public long? RelatedToPersonId { get; set; }
     public string PersonType => RelatedToPersonId.HasValue ? "FamilyMember" : IsIdentifiedStaff ? "Employee" : "RelatedPerson";
     public string PersonTypeLabel => RelatedToPersonId.HasValue ? "Član porodice" : IsIdentifiedStaff ? "Zaposlenik" : "Povezano lice";
     public DateTime CreatedAt { get; set; }
@@ -194,7 +194,7 @@ public class RelatedPersonSummaryDTO
 
 public sealed class RelatedPersonTreeNodeDTO
 {
-    public Guid Id { get; set; }
+    public long Id { get; set; }
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
     public string PersonType { get; set; } = string.Empty;

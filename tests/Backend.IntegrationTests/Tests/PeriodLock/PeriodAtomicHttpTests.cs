@@ -23,10 +23,10 @@ public abstract class PeriodAtomicFixture : AuthenticatedApiFixture
         services.AddScoped<RuntimeLocalizationCatalog>(); services.AddScoped<NotificationDispatcher>();
         Mail.Setup(mail => mail.SendApplicationNotificationAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
     }
-    protected async Task<Guid> Request(string reason = "Complete request reason")
+    protected async Task<long> Request(string reason = "Complete request reason")
     {
         Assert.Equal(HttpStatusCode.OK, (await Client.PostAsJsonAsync("/api/period-lock/request-unlock", new { year = 2026, month = 10, reason })).StatusCode);
-        Guid id = default; await InDatabase(async db => id = (await db.UnlockRequests.OrderByDescending(row => row.CreatedAt).FirstAsync()).Id); return id;
+        long id = default; await InDatabase(async db => id = (await db.UnlockRequests.OrderByDescending(row => row.CreatedAt).FirstAsync()).Id); return id;
     }
     protected async Task Templates()
     {
@@ -69,7 +69,7 @@ public sealed class PeriodAtomicHttpTests : PeriodAtomicFixture
     [Fact]
     public async Task ReviewerNotificationCanOnlyBeReadByItsRecipient()
     {
-        await Request(); Guid notice = default;
+        await Request(); long notice = default;
         await InDatabase(async db => { var row = await db.Notifications.SingleAsync(row => row.RecipientSubject == "reviewer"); notice = row.Id; });
         foreach (var subject in new[] { "creator", "unknown" })
         {

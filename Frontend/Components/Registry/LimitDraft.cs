@@ -4,7 +4,7 @@ namespace RBBH.RelatedPartiesRegister.Web.Components.Registry;
 
 public sealed class LimitDraft
 {
-    public Guid? LegalEntityId { get; set; }
+    public long? LegalEntityId { get; set; }
     public string? TipLimita { get; set; }
     public decimal? OdobreniLimit { get; set; }
     public decimal? MaksimalnaOcekivanaUtilizacija { get; set; }
@@ -22,7 +22,7 @@ public sealed class LimitDraft
     public Dictionary<string, string[]> Validate()
     {
         var errors = new Dictionary<string, string[]>();
-        if (LegalEntityId is null || LegalEntityId == Guid.Empty) errors[nameof(LegalEntityId)] = ["validation.required"];
+        if (LegalEntityId is null || LegalEntityId == 0) errors[nameof(LegalEntityId)] = ["validation.required"];
         if (string.IsNullOrWhiteSpace(TipLimita)) errors[nameof(TipLimita)] = ["validation.required"];
         if (OdobreniLimit < 0) errors[nameof(OdobreniLimit)] = ["limit.nonnegative"];
         if (MaksimalnaOcekivanaUtilizacija < 0) errors[nameof(MaksimalnaOcekivanaUtilizacija)] = ["limit.nonnegative"];

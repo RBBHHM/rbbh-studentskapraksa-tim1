@@ -33,7 +33,7 @@ public sealed class RelatedPersonsApiTests
     [Fact]
     public async Task DuplicateQueryEscapesValueAndPreservesEditExclusion()
     {
-        var id = Guid.NewGuid();
+        var id = Random.Shared.NextInt64(1L << 32, 1L << 50);
         await using var services = Client(request =>
         {
             Assert.Equal($"?passportNumber=AB%2F123&excludeId={id:D}", request.RequestUri!.Query);
@@ -81,7 +81,7 @@ public sealed class RelatedPersonsApiTests
         {
             Content = new StringContent("{\"detail\":\"SQL password-secret stack trace\"}", Encoding.UTF8, "application/problem+json")
         }));
-        var error = await Assert.ThrowsAsync<RegistryApiException>(() => services.GetRequiredService<IRelatedPersonsApi>().DeleteAsync(Guid.NewGuid()));
+        var error = await Assert.ThrowsAsync<RegistryApiException>(() => services.GetRequiredService<IRelatedPersonsApi>().DeleteAsync(Random.Shared.NextInt64(1L << 32, 1L << 50)));
         Assert.Equal(messageKey, error.MessageKey); Assert.DoesNotContain("password-secret", error.ToString());
     }
 

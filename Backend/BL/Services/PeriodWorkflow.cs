@@ -30,7 +30,7 @@ public sealed class PeriodWorkflow(ConnectedPartiesDbContext db)
         var notice = new ApplicationNotification { RecipientSubject = subject ?? "", RecipientEmail = email, EventKey = eventKey,
             TitleKey = "notifications.period." + kind + ".title", BodyKey = "notifications.period." + kind + ".body",
             ParametersJson = JsonSerializer.Serialize(parameters), Route = route };
-        if (Mailbox(email)) notice.Delivery = new NotificationDelivery { NotificationId = notice.Id };
+        if (Mailbox(email)) notice.Delivery = new NotificationDelivery { Notification = notice };
         db.Notifications.Add(notice);
     }
     private async Task NotifyReviewers(string eventKey, string kind, object parameters, CancellationToken ct)
@@ -94,7 +94,7 @@ public sealed class PeriodWorkflow(ConnectedPartiesDbContext db)
         await NotifyReviewers($"period-request:{request.Id}:submitted", "requested", new { year, month, requester = actor.Username, message = reason }, ct);
         await db.SaveChangesAsync(ct);
     }
-    public async Task Process(Guid id, bool reject, string note, ClaimsPrincipal principal, CancellationToken ct)
+    public async Task Process(long id, bool reject, string note, ClaimsPrincipal principal, CancellationToken ct)
     {
         Text(note, 10, 1000, "period.invalid_note"); var actor = Capture(principal);
         var request = await db.UnlockRequests.SingleOrDefaultAsync(row => row.Id == id && row.Status == "PENDING", ct)
@@ -106,7 +106,7 @@ public sealed class PeriodWorkflow(ConnectedPartiesDbContext db)
         await Owner(request, $"period-request:{id}:{request.Status}", reject ? "rejected" : "needsinfo", new { year = request.Year, month = request.Month, message = note, actor = actor.Username }, ct);
         await db.SaveChangesAsync(ct);
     }
-    public async Task Respond(Guid id, string message, ClaimsPrincipal principal, CancellationToken ct)
+    public async Task Respond(long id, string message, ClaimsPrincipal principal, CancellationToken ct)
     {
         Text(message, 10, 490, "period.invalid_response"); var actor = Capture(principal);
         var original = await db.UnlockRequests.SingleOrDefaultAsync(row => row.Id == id && row.RequestedBySubject == actor.Subject, ct)

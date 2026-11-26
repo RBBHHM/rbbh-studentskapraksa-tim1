@@ -3,7 +3,7 @@ using RBI.ApiCore;
 namespace RBBH.RelatedPartiesRegister.Web.Api;
 
 public sealed record ApplicationProfile(string? UserId, string? FullName, string? Username,
-    string? Email, IReadOnlyList<string> Roles, IReadOnlyList<string> Permissions, Guid? ApplicationUserId = null);
+    string? Email, IReadOnlyList<string> Roles, IReadOnlyList<string> Permissions, long? ApplicationUserId = null);
 
 public interface IProfileApi
 {

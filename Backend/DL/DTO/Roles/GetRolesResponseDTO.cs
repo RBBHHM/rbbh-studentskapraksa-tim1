@@ -7,7 +7,7 @@ public class GetRolesResponseDTO
 
 public class RoleDTO
 {
-    public Guid Id { get; set; }
+    public long Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public int UserCount { get; set; }
 }

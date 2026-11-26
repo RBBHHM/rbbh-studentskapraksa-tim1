@@ -15,7 +15,7 @@ namespace RBBH.ConnectedParties.DL.Entities.RelatedPersons;
 public class RelatedPerson
 {
     [Key]
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public long Id { get; set; }
 
     #region Osnovni identifikacioni podaci
 
@@ -98,7 +98,7 @@ public class RelatedPerson
     /// Postojeće fizičko lice preko kojeg je ovo lice evidentirano kao član uže porodice.
     /// Veza je samoreferentna kako bi svaka osoba postojala samo jednom u tabeli RelatedPersons.
     /// </summary>
-    public Guid? RelatedToPersonId { get; set; }
+    public long? RelatedToPersonId { get; set; }
 
     public virtual RelatedPerson? RelatedToPerson { get; set; }
 

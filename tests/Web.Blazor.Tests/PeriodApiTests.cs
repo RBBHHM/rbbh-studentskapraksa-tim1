@@ -41,7 +41,7 @@ public sealed class PeriodApiTests
     [Fact]
     public async Task ResponseSendsTheWholeUserTextOnlyAndLeavesPrefixToBackend()
     {
-        var id = Guid.NewGuid(); var text = new string('x', 490);
+        var id = Random.Shared.NextInt64(1L << 32, 1L << 50); var text = new string('x', 490);
         await using var provider = Client(async request =>
         {
             Assert.Equal(HttpMethod.Post, request.Method); Assert.Equal($"/api/period-lock/unlock-requests/{id}/respond", request.RequestUri!.AbsolutePath);
@@ -86,7 +86,7 @@ public sealed class PeriodApiTests
     [InlineData("request-info")]
     public async Task ExistingMutationsKeepBackendEndpointsAndPurposeSpecificBodies(string operation)
     {
-        var id = Guid.NewGuid();
+        var id = Random.Shared.NextInt64(1L << 32, 1L << 50);
         await using var provider = Client(async request =>
         {
             var path = operation is "reject" or "request-info" ? $"unlock-requests/{id}/{operation}" : operation;
@@ -107,7 +107,7 @@ public sealed class PeriodApiTests
     public async Task ErrorsKeepStatusWithoutExposingBackendDetails(int status)
     {
         await using var provider = Client(_ => Task.FromResult(Json((HttpStatusCode)status, new { detail = "private-fixture-marker" })));
-        var error = await Assert.ThrowsAsync<RegistryApiException>(() => provider.GetRequiredService<IPeriodApi>().RespondAsync(Guid.NewGuid(), "short"));
+        var error = await Assert.ThrowsAsync<RegistryApiException>(() => provider.GetRequiredService<IPeriodApi>().RespondAsync(Random.Shared.NextInt64(1L << 32, 1L << 50), "short"));
         Assert.Equal(status, (int?)error.StatusCode); Assert.DoesNotContain("private-fixture-marker", error.ToString());
     }
     private static ServiceProvider Client(Func<HttpRequestMessage, Task<HttpResponseMessage>> respond)

@@ -45,7 +45,7 @@ public sealed class ReportsApiTests
     [Fact]
     public async Task MonthlyCreationPreservesServerIdentityAndSummaryWithoutClientCalculations()
     {
-        var id = Guid.NewGuid();
+        var id = Random.Shared.NextInt64(1L << 32, 1L << 50);
         await using var provider = Client(request =>
         {
             Assert.Equal(HttpMethod.Post, request.Method); Assert.Equal("/api/reports/monthly/2000/12", request.RequestUri!.AbsolutePath);
@@ -75,7 +75,7 @@ public sealed class ReportsApiTests
     [Fact]
     public async Task SnapshotDownloadUsesBackendAttachmentNotRegeneration()
     {
-        var id = Guid.NewGuid();
+        var id = Random.Shared.NextInt64(1L << 32, 1L << 50);
         await using var provider = Client(request =>
         {
             Assert.Equal(HttpMethod.Get, request.Method); Assert.Equal($"/api/reports/export/generated/{id:D}", request.RequestUri!.AbsolutePath);

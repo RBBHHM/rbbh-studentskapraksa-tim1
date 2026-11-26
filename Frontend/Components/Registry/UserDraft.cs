@@ -5,13 +5,13 @@ namespace RBBH.RelatedPartiesRegister.Web.Components.Registry;
 
 public sealed class UserRoleChoice
 {
-    public required Guid Id { get; init; }
+    public required long Id { get; init; }
     public required string Name { get; init; }
     public bool Selected { get; set; }
 }
 public sealed class UserDraft
 {
-    public Guid? Id { get; init; }
+    public long? Id { get; init; }
     public string Username { get; set; } = "";
     public string FirstName { get; set; } = "";
     public string LastName { get; set; } = "";
@@ -30,7 +30,7 @@ public sealed class UserDraft
     public bool ProfileChanged => Id is not null && (Username.Trim(), FirstName.Trim(), LastName.Trim(), Email.Trim()) != _original;
     public bool RolesChanged(ApplicationUser current) => !current.Roles.Order(StringComparer.OrdinalIgnoreCase).SequenceEqual(Roles.Where(role => role.Selected).Select(role => role.Name).Order(StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase);
     public List<UserRoleChoice> Roles { get; init; } = [];
-    public Guid[] SelectedRoles => Roles.Where(role => role.Selected).Select(role => role.Id).ToArray();
+    public long[] SelectedRoles => Roles.Where(role => role.Selected).Select(role => role.Id).ToArray();
     public static UserDraft From(ApplicationUser? user, RolesCatalog catalog) => new()
     {
         _original = (user?.Username.Trim() ?? "", user?.FirstName.Trim() ?? "", user?.LastName.Trim() ?? "", user?.Email.Trim() ?? ""),

@@ -6,7 +6,7 @@
     <fieldset disabled="@_submission.IsSubmitting">
         <legend class="app-visually-hidden">@T["limit.details"]</legend>
         <div class="registry-form-grid">
-            <RbiField TValue="Guid?" Id="limit-entity" Label="@T["limit.entity"]" Required For="@(() => Model.LegalEntityId)">
+            <RbiField TValue="long?" Id="limit-entity" Label="@T["limit.entity"]" Required For="@(() => Model.LegalEntityId)">
                 <LimitEntityPicker Id="limit-entity" @bind-Value="Model.LegalEntityId" DataChanged="data => _entity = data" Disabled="_submission.IsSubmitting" />
             </RbiField>
             <RbiField TValue="string" Label="@T["limit.type"]" Required For="@(() => Model.TipLimita)">

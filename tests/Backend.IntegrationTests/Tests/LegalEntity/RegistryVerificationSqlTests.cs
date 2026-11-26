@@ -19,11 +19,11 @@ public sealed class RegistryVerificationSqlTests : AuthenticatedApiFixture
     private readonly VerificationBarrier _barrier = new();
     protected override void ConfigureDatabase(DbContextOptionsBuilder options) => options.AddInterceptors(_barrier);
 
-    private async Task<Guid> CreateLegal()
+    private async Task<long> CreateLegal()
     {
         var response = await Client.PostAsJsonAsync("/api/legal-entities", RegistryVerificationHttpTests.Legal());
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        return (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+        return (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetInt64();
     }
 
     [SqlServerFact]
@@ -78,13 +78,13 @@ public sealed class RegistryVerificationSqlTests : AuthenticatedApiFixture
             await db.Database.MigrateAsync();
 
             var origin = await db.LegalEntityVerificationOrigins.SingleAsync();
-            Assert.Equal(provenId, origin.LegalEntityId);
+            Assert.Equal((await db.LegalEntities.SingleAsync(entity => entity.Name == "Known company")).Id, origin.LegalEntityId);
             Assert.Equal(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.Unicode.GetBytes("opaque-subject"))), origin.Fingerprint);
             Assert.Equal(0, await db.Database.SqlQueryRaw<int>("""
                 SELECT COUNT(*) AS [Value] FROM sys.columns
                 WHERE object_id = OBJECT_ID(N'dbo.LegalEntities') AND name IN (N'CreatorSubject', N'ConnectionDescription', N'Version')
                 """).SingleAsync());
-            var row = await db.LegalEntities.SingleAsync(entity => entity.Id == id);
+            var row = await db.LegalEntities.SingleAsync(entity => entity.Name == "Historical company");
             Assert.Equal("Historical company", row.Name);
             Assert.Equal("historical@example.test", row.CreatedBy);
         }

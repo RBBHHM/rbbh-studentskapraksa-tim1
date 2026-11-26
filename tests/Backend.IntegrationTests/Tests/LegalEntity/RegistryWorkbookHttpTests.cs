@@ -54,7 +54,7 @@ public sealed class RegistryWorkbookHttpTests : AuthenticatedApiFixture
     public async Task PhysicalV3RoundtripResolvesChildBeforeParentAndPreservesDescriptionsWithoutHrMail()
     {
         var parent = await Client.PostAsJsonAsync("/api/related-persons", RegistryVerificationHttpTests.Physical());
-        var id = (await parent.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+        var id = (await parent.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetInt64();
         Assert.Equal(HttpStatusCode.Created, (await Client.PostAsJsonAsync("/api/related-persons", new
         { firstName = "Child", lastName = "Fixture", residency = 2, passportNumber = "CHILD01", fbaId = "12345", relationBasis = "VL",
             specialRelationBasis = "UZA_PORODICA", relatedToPersonId = id, dateFrom = "2026-01-01", dateTo = "2027-12-31" })).StatusCode);
@@ -119,7 +119,7 @@ public sealed class RegistryWorkbookHttpTests : AuthenticatedApiFixture
     public async Task CyclesAndInvalidParentsNeverProduceDanglingFamilyLinks(bool cycle)
     {
         var parent = await Client.PostAsJsonAsync("/api/related-persons", RegistryVerificationHttpTests.Physical());
-        var id = (await parent.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+        var id = (await parent.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetInt64();
         await Client.PostAsJsonAsync("/api/related-persons", new { firstName = "Child", lastName = "Fixture", residency = 2, passportNumber = "CHILD01", fbaId = "12345",
             relationBasis = "VL", specialRelationBasis = "UZA_PORODICA", relatedToPersonId = id, dateFrom = "2026-01-01", dateTo = "2027-12-31" });
         using var source = new MemoryStream(await Export(false)); using var workbook = new XLWorkbook(source); var sheet = workbook.Worksheet(1);

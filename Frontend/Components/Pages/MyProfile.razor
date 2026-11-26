@@ -65,7 +65,7 @@ else if (_user?.Identity?.IsAuthenticated == true)
     private readonly CancellationTokenSource _lifetime = new();
     private readonly CancellationToken _token;
     public MyProfile() => _token = _lifetime.Token;
-    [SupplyParameterFromQuery] public Guid? RequestId { get; set; }
+    [SupplyParameterFromQuery] public long? RequestId { get; set; }
     protected override Task OnParametersSetAsync() => LoadAsync();
     private async Task LoadAsync()
     {

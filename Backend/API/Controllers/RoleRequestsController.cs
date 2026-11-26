@@ -18,20 +18,20 @@ public sealed class RoleRequestsController(RoleRequestService service) : Control
 
     [HttpGet("mine")]
     public Task<PagedResponse<RoleRequestDTO>> Mine([FromQuery] string? status = null, [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20, [FromQuery] Guid? requestId = null, CancellationToken ct = default) =>
+        [FromQuery] int pageSize = 20, [FromQuery] long? requestId = null, CancellationToken ct = default) =>
         service.List(false, status, page, pageSize, ct, requestId);
 
     [HttpGet, Authorize(Policy = ApplicationPolicies.AdminOnly)]
     public async Task<IActionResult> Review([FromQuery] string? status = null, [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20, [FromQuery] Guid? requestId = null, CancellationToken ct = default) =>
+        [FromQuery] int pageSize = 20, [FromQuery] long? requestId = null, CancellationToken ct = default) =>
         await service.CanReview(ct) ? Ok(await service.List(true, status, page, pageSize, ct, requestId)) : Forbid();
 
-    [HttpPost("{id:guid}/approve"), Authorize(Policy = ApplicationPolicies.AdminOnly)]
-    public async Task<IActionResult> Approve(Guid id, RoleRequestDecisionDTO input, CancellationToken ct) =>
+    [HttpPost("{id:long}/approve"), Authorize(Policy = ApplicationPolicies.AdminOnly)]
+    public async Task<IActionResult> Approve(long id, RoleRequestDecisionDTO input, CancellationToken ct) =>
         MutationResponse(await service.Decide(id, true, input, ct));
 
-    [HttpPost("{id:guid}/reject"), Authorize(Policy = ApplicationPolicies.AdminOnly)]
-    public async Task<IActionResult> Reject(Guid id, RoleRequestDecisionDTO input, CancellationToken ct) =>
+    [HttpPost("{id:long}/reject"), Authorize(Policy = ApplicationPolicies.AdminOnly)]
+    public async Task<IActionResult> Reject(long id, RoleRequestDecisionDTO input, CancellationToken ct) =>
         MutationResponse(await service.Decide(id, false, input, ct));
 
     private IActionResult MutationResponse(RoleRequestResult result)

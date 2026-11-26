@@ -26,7 +26,7 @@ public sealed class SubjectLinkSqlServerTests
             var placeholder = Guid.NewGuid().ToString();
             await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO AppUsers (Id, KeycloakId, Username, FirstName, LastName, Email, IsActive, CreatedAt, CreatedBy) VALUES ({id}, {placeholder}, {"fixture"}, {"Subject"}, {"Fixture"}, {"subject@example.test"}, {true}, {DateTime.UtcNow}, {"fixture"})");
             await db.Database.MigrateAsync();
-            var migrated = await db.AppUsers.AsNoTracking().SingleAsync(user => user.Id == id);
+            var migrated = await db.AppUsers.AsNoTracking().SingleAsync(user => user.KeycloakId == placeholder);
             Assert.Equal(placeholder, migrated.KeycloakId);
             Assert.False(migrated.KeycloakSubjectConfirmed);
             var principal = new ClaimsPrincipal(new ClaimsIdentity([
@@ -34,9 +34,9 @@ public sealed class SubjectLinkSqlServerTests
             Assert.Null((await new ApplicationIdentityResolver(db).ResolveAsync(principal)).User);
             var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
             { ["IdentityBinding:AllowVerifiedEmailFirstLink"] = "true" }).Build();
-            Assert.Equal(id, (await new ApplicationIdentityResolver(db, configuration).ResolveAsync(principal)).User!.Id);
+            Assert.Equal(migrated.Id, (await new ApplicationIdentityResolver(db, configuration).ResolveAsync(principal)).User!.Id);
             await using var fresh = new ConnectedPartiesDbContext(options);
-            var linked = await fresh.AppUsers.SingleAsync(user => user.Id == id);
+            var linked = await fresh.AppUsers.SingleAsync(user => user.Id == migrated.Id);
             Assert.Equal("real-fixture-subject", linked.KeycloakId);
             Assert.True(linked.KeycloakSubjectConfirmed);
             var audit = Assert.Single(await fresh.AuditLogs.ToListAsync());

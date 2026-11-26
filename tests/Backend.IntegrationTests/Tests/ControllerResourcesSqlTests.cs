@@ -41,7 +41,7 @@ public sealed class ControllerResourcesSqlTests : RoleCatalogFixture
         var fallback = await safe.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("Naziv je obavezan.", fallback.GetProperty("errors").GetProperty("name")[0].GetString());
         Client.DefaultRequestHeaders.Remove("Accept-Language"); Client.DefaultRequestHeaders.Add("Accept-Language", "de");
-        var generic = await Client.PostAsJsonAsync("/api/role-catalog", new { name = "valid-role", displayName = "", permissionIds = Array.Empty<Guid>() });
+        var generic = await Client.PostAsJsonAsync("/api/role-catalog", new { name = "valid-role", displayName = "", permissionIds = Array.Empty<long>() });
         Assert.Equal(HttpStatusCode.BadRequest, generic.StatusCode);
         var german = await generic.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("Die eingegebenen Daten sind ungültig.", german.GetProperty("title").GetString());
@@ -65,7 +65,7 @@ public sealed class ControllerResourcesSqlTests : RoleCatalogFixture
         var body = await self.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("Sie können Ihr eigenes Konto nicht löschen.", body.GetProperty("detail").GetString());
         Client.DefaultRequestHeaders.Remove("Accept-Language"); Client.DefaultRequestHeaders.Add("Accept-Language", "EN");
-        var response = await Client.PostAsJsonAsync($"/api/period-lock/unlock-requests/{Guid.NewGuid()}/respond", new { message = new string('x', 9) });
+        var response = await Client.PostAsJsonAsync($"/api/period-lock/unlock-requests/{Random.Shared.NextInt64(1L << 32, 1L << 50)}/respond", new { message = new string('x', 9) });
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var error = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("message", error.GetProperty("errors")[0].GetProperty("field").GetString());
@@ -80,7 +80,7 @@ public sealed class ControllerResourcesSqlTests : RoleCatalogFixture
         await Task.WhenAll(languages.Select(async language =>
         {
             using var client = NewClient("creator"); client.DefaultRequestHeaders.Add("Accept-Language", language);
-            var response = await client.PostAsJsonAsync("/api/role-catalog", new { name = "isolated-role", displayName = "", permissionIds = Array.Empty<Guid>() });
+            var response = await client.PostAsJsonAsync("/api/role-catalog", new { name = "isolated-role", displayName = "", permissionIds = Array.Empty<long>() });
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             var body = await response.Content.ReadFromJsonAsync<JsonElement>();
             var expected = language switch { "EN" => "The submitted data is invalid.", "DE" => "Die eingegebenen Daten sind ungültig.", _ => "Uneseni podaci nisu ispravni." };
@@ -139,7 +139,7 @@ public sealed class ControllerResourcesSqlTests : RoleCatalogFixture
         var created = await Client.PostAsJsonAsync("/api/legal-entities", new { isResident = false, missing.name, missing.fbaId,
             missing.basisOfConnection, missing.connectionDescription, missing.connectedWithBank, missing.dateFrom });
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
-        var body = await created.Content.ReadFromJsonAsync<JsonElement>(); var id = body.GetProperty("id").GetGuid();
+        var body = await created.Content.ReadFromJsonAsync<JsonElement>(); var id = body.GetProperty("id").GetInt64();
         var update = await Client.PutAsJsonAsync($"/api/legal-entities/{id}", missing);
         Assert.Equal(HttpStatusCode.BadRequest, update.StatusCode);
         Assert.DoesNotContain("UpdateLegalEntityDTO", await update.Content.ReadAsStringAsync());

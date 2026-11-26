@@ -134,9 +134,9 @@ public class RelatedPersonService(
     }
 
     /// <inheritdoc/>
-    public async Task<Result<RelatedPersonResponseDTO>> GetById(Guid id)
+    public async Task<Result<RelatedPersonResponseDTO>> GetById(long id)
     {
-        if (id == Guid.Empty)
+        if (id == 0)
             return Result<RelatedPersonResponseDTO>.ValidationError(BackendMessages.Message("validation.identifier.invalid"));
 
         var entity = await _dbContext.RelatedPersons
@@ -150,7 +150,7 @@ public class RelatedPersonService(
         return Result<RelatedPersonResponseDTO>.Success(entity.Adapt<RelatedPersonResponseDTO>());
     }
 
-    public async Task<Result<List<RelatedPersonTreeNodeDTO>>> GetRelationshipTree(Guid relatedPersonId)
+    public async Task<Result<List<RelatedPersonTreeNodeDTO>>> GetRelationshipTree(long relatedPersonId)
     {
         var people = await _dbContext.RelatedPersons
             .AsNoTracking()
@@ -167,13 +167,13 @@ public class RelatedPersonService(
         var childrenByParent = people.Where(person => person.RelatedToPersonId.HasValue)
             .ToLookup(person => person.RelatedToPersonId!.Value);
         var root = selected;
-        var visited = new HashSet<Guid>();
+        var visited = new HashSet<long>();
         while (root.RelatedToPersonId.HasValue
                && visited.Add(root.Id)
                && byId.TryGetValue(root.RelatedToPersonId.Value, out var parent))
             root = parent;
 
-        RelatedPersonTreeNodeDTO Build(RelatedPerson person, HashSet<Guid> path)
+        RelatedPersonTreeNodeDTO Build(RelatedPerson person, HashSet<long> path)
         {
             var node = new RelatedPersonTreeNodeDTO
             {
@@ -186,7 +186,7 @@ public class RelatedPersonService(
 
             if (!path.Add(person.Id)) return node;
             node.Children = childrenByParent[person.Id]
-                .Select(candidate => Build(candidate, new HashSet<Guid>(path)))
+                .Select(candidate => Build(candidate, new HashSet<long>(path)))
                 .ToList();
             return node;
         }
@@ -198,7 +198,7 @@ public class RelatedPersonService(
         string? jmbg,
         string? passportNumber,
         string? fbaId,
-        Guid? excludeId = null)
+        long? excludeId = null)
     {
         var normalizedJmbg = NormalizeIdentifier(jmbg);
         var normalizedPassport = NormalizeIdentifier(passportNumber)?.ToUpperInvariant();
@@ -242,7 +242,6 @@ public class RelatedPersonService(
             return Result<RelatedPersonResponseDTO>.ValidationError(linkError);
 
         var entity = dto.Adapt<RelatedPerson>();
-        entity.Id = Guid.NewGuid();
         entity.Status = RelatedPersonStatus.Draft;
         entity.IsActive = true;
         entity.CreatedAt = DateTime.UtcNow;
@@ -265,9 +264,9 @@ public class RelatedPersonService(
     }
 
     /// <inheritdoc/>
-    public async Task<Result<RelatedPersonResponseDTO>> Update(Guid id, UpdateRelatedPersonDTO dto, string korisnik)
+    public async Task<Result<RelatedPersonResponseDTO>> Update(long id, UpdateRelatedPersonDTO dto, string korisnik)
     {
-        if (id == Guid.Empty)
+        if (id == 0)
             return Result<RelatedPersonResponseDTO>.ValidationError(BackendMessages.Message("validation.identifier.invalid"));
 
         ImmediateFamilyPolicy.Apply(dto);
@@ -310,9 +309,9 @@ public class RelatedPersonService(
     }
 
     /// <inheritdoc/>
-    public async Task<Result<bool>> Delete(Guid id, string korisnik)
+    public async Task<Result<bool>> Delete(long id, string korisnik)
     {
-        if (id == Guid.Empty)
+        if (id == 0)
             return Result<bool>.ValidationError(BackendMessages.Message("validation.identifier.invalid"));
 
         var entity = await _dbContext.RelatedPersons
@@ -335,7 +334,7 @@ public class RelatedPersonService(
         foreach (var member in entity.RelatedFamilyMembers.Where(member => member.IsActive))
         {
             _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("RelatedPerson", member.Id.ToString(), "UPDATE", korisnik, actor,
-                oldValues: new { relatedToPersonId = entity.Id }, newValues: new { relatedToPersonId = (Guid?)null }));
+                oldValues: new { relatedToPersonId = entity.Id }, newValues: new { relatedToPersonId = (long?)null }));
             member.RelatedToPersonId = null;
             member.MarkModified(now);
             member.ModifiedBy = korisnik;
@@ -349,9 +348,9 @@ public class RelatedPersonService(
     }
 
     /// <inheritdoc/>
-    public async Task<Result<RelatedPersonResponseDTO>> Verify(Guid id, string korisnik)
+    public async Task<Result<RelatedPersonResponseDTO>> Verify(long id, string korisnik)
     {
-        if (id == Guid.Empty)
+        if (id == 0)
             return Result<RelatedPersonResponseDTO>.ValidationError(BackendMessages.Message("validation.identifier.invalid"));
 
         var entity = await _dbContext.RelatedPersons
@@ -379,7 +378,7 @@ public class RelatedPersonService(
         return Result<RelatedPersonResponseDTO>.Success(entity.Adapt<RelatedPersonResponseDTO>());
     }
 
-    private async Task<string?> ValidateFamilyLink(Guid? relatedToPersonId, Guid? currentPersonId)
+    private async Task<string?> ValidateFamilyLink(long? relatedToPersonId, long? currentPersonId)
     {
         if (!relatedToPersonId.HasValue)
             return null;
@@ -398,10 +397,10 @@ public class RelatedPersonService(
         return null;
     }
 
-    private async Task<bool> CreatesRelatedPersonCycle(Guid currentPersonId, Guid candidateParentId)
+    private async Task<bool> CreatesRelatedPersonCycle(long currentPersonId, long candidateParentId)
     {
-        var visited = new HashSet<Guid>();
-        Guid? cursor = candidateParentId;
+        var visited = new HashSet<long>();
+        long? cursor = candidateParentId;
         while (cursor.HasValue && visited.Add(cursor.Value))
         {
             if (cursor.Value == currentPersonId)
@@ -434,7 +433,7 @@ public class RelatedPersonService(
     }
 
     /// <inheritdoc/>
-    public async Task<Result<List<FamilyMemberResponseDTO>>> GetFamilyMembers(Guid relatedPersonId)
+    public async Task<Result<List<FamilyMemberResponseDTO>>> GetFamilyMembers(long relatedPersonId)
     {
         var personExists = await RelatedPersonExists(relatedPersonId);
         if (!personExists)
@@ -452,7 +451,7 @@ public class RelatedPersonService(
     }
 
     /// <inheritdoc/>
-    public async Task<Result<List<FamilyMemberResponseDTO>>> GetFamilyTree(Guid relatedPersonId)
+    public async Task<Result<List<FamilyMemberResponseDTO>>> GetFamilyTree(long relatedPersonId)
     {
         var personExists = await RelatedPersonExists(relatedPersonId);
         if (!personExists)
@@ -474,7 +473,7 @@ public class RelatedPersonService(
     // ─── FamilyMember — CREATE / UPDATE / DELETE ────────────────────────────
 
     /// <inheritdoc/>
-    public async Task<Result<FamilyMemberResponseDTO>> AddFamilyMember(Guid relatedPersonId, CreateFamilyMemberDTO dto, string korisnik)
+    public async Task<Result<FamilyMemberResponseDTO>> AddFamilyMember(long relatedPersonId, CreateFamilyMemberDTO dto, string korisnik)
     {
         var relatedPerson = await _dbContext.RelatedPersons
             .Include(rp => rp.FamilyMembers)
@@ -504,7 +503,6 @@ public class RelatedPersonService(
         }
 
         var entity = dto.Adapt<FamilyMember>();
-        entity.Id = Guid.NewGuid();
         entity.RelatedPersonId = relatedPersonId;
         entity.IsActive = true;
         entity.CreatedAt = DateTime.UtcNow;
@@ -522,7 +520,7 @@ public class RelatedPersonService(
     }
 
     /// <inheritdoc/>
-    public async Task<Result<FamilyMemberResponseDTO>> UpdateFamilyMember(Guid relatedPersonId, Guid familyMemberId, UpdateFamilyMemberDTO dto, string korisnik)
+    public async Task<Result<FamilyMemberResponseDTO>> UpdateFamilyMember(long relatedPersonId, long familyMemberId, UpdateFamilyMemberDTO dto, string korisnik)
     {
         var validationError = RelatedPersonValidator.Validate(dto);
         if (validationError is not null)
@@ -576,7 +574,7 @@ public class RelatedPersonService(
     }
 
     /// <inheritdoc/>
-    public async Task<Result<bool>> DeleteFamilyMember(Guid relatedPersonId, Guid familyMemberId, string korisnik)
+    public async Task<Result<bool>> DeleteFamilyMember(long relatedPersonId, long familyMemberId, string korisnik)
     {
         var entity = await _dbContext.FamilyMembers
             .Include(fm => fm.ChildFamilyMembers)
@@ -731,7 +729,6 @@ public class RelatedPersonService(
 
                 var entity = new RelatedPerson
                 {
-                    Id = Guid.NewGuid(),
                     RelatedToPersonId = dto.RelatedToPersonId,
                     FirstName = dto.FirstName,
                     LastName = dto.LastName,
@@ -808,7 +805,7 @@ public class RelatedPersonService(
 
     // ─── Privatne pomoćne metode ─────────────────────────────────────────────
 
-    private async Task<bool> RelatedPersonExists(Guid relatedPersonId)
+    private async Task<bool> RelatedPersonExists(long relatedPersonId)
     {
         return await _dbContext.RelatedPersons.AnyAsync(rp => rp.Id == relatedPersonId);
     }
@@ -818,10 +815,10 @@ public class RelatedPersonService(
     /// za <paramref name="memberId"/> kreiralo ciklus u porodičnom stablu
     /// (tj. da li je <paramref name="memberId"/> negdje u lancu predaka od <paramref name="newParentId"/>).
     /// </summary>
-    private async Task<bool> CreatesCycle(Guid memberId, Guid newParentId)
+    private async Task<bool> CreatesCycle(long memberId, long newParentId)
     {
-        var currentId = (Guid?)newParentId;
-        var visited = new HashSet<Guid>();
+        var currentId = (long?)newParentId;
+        var visited = new HashSet<long>();
 
         while (currentId.HasValue)
         {

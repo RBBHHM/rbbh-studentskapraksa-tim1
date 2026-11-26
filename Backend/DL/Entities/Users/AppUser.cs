@@ -9,7 +9,7 @@ namespace RBBH.ConnectedParties.DL.Entities.Users;
 public class AppUser
 {
     [Key]
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public long Id { get; set; }
 
     /// <summary>Historical identifier; trusted as a subject only after explicit confirmation.</summary>
     [Required]

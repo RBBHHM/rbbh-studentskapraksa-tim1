@@ -132,25 +132,25 @@ public class PeriodLockController(
         return Ok(new { requests = mapped, total, page, pageSize });
     }
 
-    [HttpPost("unlock-requests/{id:guid}/reject")]
+    [HttpPost("unlock-requests/{id:long}/reject")]
     [Authorize(Policy = ApplicationPolicies.CapitalWrite)]
-    public Task<IActionResult> RejectRequest([FromRoute] Guid id, [FromBody] AdminActionDto dto)
+    public Task<IActionResult> RejectRequest([FromRoute] long id, [FromBody] AdminActionDto dto)
     {
         if (dto is null || string.IsNullOrWhiteSpace(dto.Note) || dto.Note.Length > 1000 || dto.Note.Trim().Length < 10)
             return Task.FromResult<IActionResult>(BadRequest(Err(BackendMessages.Message("errors.period.rejection.note.required"), "note")));
         return Command(() => workflow.Process(id, true, dto.Note, User, HttpContext.RequestAborted), BackendMessages.Message("messages.period.request.rejected"));
     }
 
-    [HttpPost("unlock-requests/{id:guid}/request-info"), Authorize(Policy = ApplicationPolicies.CapitalWrite)]
-    public Task<IActionResult> RequestMoreInfo([FromRoute] Guid id, [FromBody] AdminActionDto dto)
+    [HttpPost("unlock-requests/{id:long}/request-info"), Authorize(Policy = ApplicationPolicies.CapitalWrite)]
+    public Task<IActionResult> RequestMoreInfo([FromRoute] long id, [FromBody] AdminActionDto dto)
     {
         if (dto is null || string.IsNullOrWhiteSpace(dto.Note) || dto.Note.Length > 1000 || dto.Note.Trim().Length < 10)
             return Task.FromResult<IActionResult>(BadRequest(Err(BackendMessages.Message("errors.period.request.note.required"), "note")));
         return Command(() => workflow.Process(id, false, dto.Note, User, HttpContext.RequestAborted), BackendMessages.Message("messages.period.information.requested"));
     }
 
-    [HttpPost("unlock-requests/{id:guid}/respond"), Authorize(Policy = ApplicationPolicies.CapitalWrite)]
-    public Task<IActionResult> RespondToRequest([FromRoute] Guid id, [FromBody] RespondDto dto)
+    [HttpPost("unlock-requests/{id:long}/respond"), Authorize(Policy = ApplicationPolicies.CapitalWrite)]
+    public Task<IActionResult> RespondToRequest([FromRoute] long id, [FromBody] RespondDto dto)
     {
         if (dto is null || string.IsNullOrWhiteSpace(dto.Message) || dto.Message.Length > 490 || dto.Message.Trim().Length < 10)
             return Task.FromResult<IActionResult>(BadRequest(Err(BackendMessages.Message("errors.period.response.length"), "message")));

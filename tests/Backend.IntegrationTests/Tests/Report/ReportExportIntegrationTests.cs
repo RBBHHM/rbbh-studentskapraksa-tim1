@@ -51,7 +51,7 @@ namespace IntegrationTests.Tests.Report
             return new ReportController(service, new Mock<IAuditService>().Object).WithHttpContext(user);
         }
 
-        private static Limit NewLimit(Guid legalEntityId, string tip = "MM") => new()
+        private static Limit NewLimit(long legalEntityId, string tip = "MM") => new()
         {
             LegalEntityId = legalEntityId,
             TipLimita = tip,

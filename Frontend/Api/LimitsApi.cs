@@ -2,7 +2,7 @@ using RBI.ApiCore;
 
 namespace RBBH.RelatedPartiesRegister.Web.Api;
 
-public sealed record LimitRecord(int Id, Guid LegalEntityId, string Naziv, bool IsResident, string? FbaId,
+public sealed record LimitRecord(int Id, long LegalEntityId, string Naziv, bool IsResident, string? FbaId,
     string? TaxNumber, string? MaticniBroj, string? Matbroj, string TipLimita, decimal? OdobreniLimit,
     decimal? MaksimalnaOcekivanaUtilizacija, DateTime? RokOcekivaneUtilizacije, string? Komentar,
     decimal? RegulatorniKapital, decimal? OsnovniKapital, DateTime? DatumKapitala,
@@ -18,34 +18,34 @@ public sealed record LimitRecord(int Id, Guid LegalEntityId, string Naziv, bool 
         return values.Any(value => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture)?.Contains(term, StringComparison.OrdinalIgnoreCase) == true);
     }
 }
-public sealed record LimitRequest(Guid LegalEntityId, string TipLimita, decimal? OdobreniLimit,
+public sealed record LimitRequest(long LegalEntityId, string TipLimita, decimal? OdobreniLimit,
     decimal? MaksimalnaOcekivanaUtilizacija, DateTime? RokOcekivaneUtilizacije, string? Komentar);
-public sealed record LimitEntityOption(Guid Id, string Name, string? MaticniBroj, string? TaxNumber);
-public sealed record LimitEntityData(Guid Id, bool IsResident, string? FbaId, string? TaxNumber,
+public sealed record LimitEntityOption(long Id, string Name, string? MaticniBroj, string? TaxNumber);
+public sealed record LimitEntityData(long Id, bool IsResident, string? FbaId, string? TaxNumber,
     string? MaticniBroj, string? Matbroj, string Name, decimal? RegulatoryCapital, decimal? CoreCapital);
 
 public interface ILimitsApi
 {
-    Task<IReadOnlyList<LimitRecord>> ListAsync(Guid? entity = null, CancellationToken token = default);
+    Task<IReadOnlyList<LimitRecord>> ListAsync(long? entity = null, CancellationToken token = default);
     Task<LimitRecord> GetAsync(int id, CancellationToken token = default);
     Task<IReadOnlyList<LimitEntityOption>> SearchEntitiesAsync(string? search, CancellationToken token = default);
-    Task<LimitEntityData> EntityDataAsync(Guid id, CancellationToken token = default);
+    Task<LimitEntityData> EntityDataAsync(long id, CancellationToken token = default);
     Task<LimitRecord> SaveAsync(int? id, LimitRequest request, CancellationToken token = default);
     Task DeleteAsync(int id, CancellationToken token = default);
-    Task<RbiApiFile> ExportAsync(Guid? entity = null, CancellationToken token = default);
+    Task<RbiApiFile> ExportAsync(long? entity = null, CancellationToken token = default);
     /// <summary>Workbook import (needs the limits create permission; blocked with 423 while the period is locked). Always inspect Imported/Failed: HTTP 200 does not mean every row was imported.</summary>
     Task<ImportResult> ImportAsync(Stream file, string name, CancellationToken token = default);
 }
 public sealed class LimitsApi(IRbiApiFileTransport transport) : ILimitsApi
 {
-    private static string Filter(Guid? id) => id is { } key ? $"?legalEntityId={key:D}" : "";
-    public async Task<IReadOnlyList<LimitRecord>> ListAsync(Guid? entity = null, CancellationToken token = default) =>
+    private static string Filter(long? id) => id is { } key ? $"?legalEntityId={key:D}" : "";
+    public async Task<IReadOnlyList<LimitRecord>> ListAsync(long? entity = null, CancellationToken token = default) =>
         Value(await transport.GetAsync<List<LimitRecord>>("api/limiti" + Filter(entity), token), token);
     public async Task<LimitRecord> GetAsync(int id, CancellationToken token = default) =>
         Value(await transport.GetAsync<LimitRecord>($"api/limiti/{id}", token), token);
     public async Task<IReadOnlyList<LimitEntityOption>> SearchEntitiesAsync(string? search, CancellationToken token = default) =>
         Value(await transport.GetAsync<List<LimitEntityOption>>("api/legal-entities/limits/search?search=" + Uri.EscapeDataString(search ?? ""), token), token);
-    public async Task<LimitEntityData> EntityDataAsync(Guid id, CancellationToken token = default) =>
+    public async Task<LimitEntityData> EntityDataAsync(long id, CancellationToken token = default) =>
         Value(await transport.GetAsync<LimitEntityData>($"api/legal-entities/{id:D}/limit-form-data", token), token);
     public async Task<LimitRecord> SaveAsync(int? id, LimitRequest request, CancellationToken token = default) =>
         Value(await transport.SendAsync<LimitRecord>(id.HasValue ? HttpMethod.Put : HttpMethod.Post,
@@ -56,7 +56,7 @@ public sealed class LimitsApi(IRbiApiFileTransport transport) : ILimitsApi
         token.ThrowIfCancellationRequested();
         if (!result.IsSuccess) throw new RegistryApiException(result.Error?.StatusCode);
     }
-    public async Task<RbiApiFile> ExportAsync(Guid? entity = null, CancellationToken token = default) =>
+    public async Task<RbiApiFile> ExportAsync(long? entity = null, CancellationToken token = default) =>
         Value(await transport.DownloadAsync("api/limiti/export" + Filter(entity), cancellationToken: token), token);
     public async Task<ImportResult> ImportAsync(Stream file, string name, CancellationToken token = default)
     {
@@ -76,12 +76,12 @@ public sealed class LimitsApi(IRbiApiFileTransport transport) : ILimitsApi
 internal sealed class UnconfiguredLimitsApi : ILimitsApi
 {
     private static Task<T> Unavailable<T>() => Task.FromException<T>(new RegistryApiException());
-    public Task<IReadOnlyList<LimitRecord>> ListAsync(Guid? entity = null, CancellationToken token = default) => Unavailable<IReadOnlyList<LimitRecord>>();
+    public Task<IReadOnlyList<LimitRecord>> ListAsync(long? entity = null, CancellationToken token = default) => Unavailable<IReadOnlyList<LimitRecord>>();
     public Task<LimitRecord> GetAsync(int id, CancellationToken token = default) => Unavailable<LimitRecord>();
     public Task<IReadOnlyList<LimitEntityOption>> SearchEntitiesAsync(string? search, CancellationToken token = default) => Unavailable<IReadOnlyList<LimitEntityOption>>();
-    public Task<LimitEntityData> EntityDataAsync(Guid id, CancellationToken token = default) => Unavailable<LimitEntityData>();
+    public Task<LimitEntityData> EntityDataAsync(long id, CancellationToken token = default) => Unavailable<LimitEntityData>();
     public Task<LimitRecord> SaveAsync(int? id, LimitRequest request, CancellationToken token = default) => Unavailable<LimitRecord>();
     public Task DeleteAsync(int id, CancellationToken token = default) => Unavailable<object>();
-    public Task<RbiApiFile> ExportAsync(Guid? entity = null, CancellationToken token = default) => Unavailable<RbiApiFile>();
+    public Task<RbiApiFile> ExportAsync(long? entity = null, CancellationToken token = default) => Unavailable<RbiApiFile>();
     public Task<ImportResult> ImportAsync(Stream file, string name, CancellationToken token = default) { file.Dispose(); return Unavailable<ImportResult>(); }
 }

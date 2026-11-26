@@ -20,11 +20,11 @@ public interface IRelatedPersonService
     Task<Result<List<RelatedPersonResponseDTO>>> GetAllDetailed();
 
     /// <summary>Vraća jedno povezano fizičko lice po ID-u (puni prikaz).</summary>
-    Task<Result<RelatedPersonResponseDTO>> GetById(Guid id);
+    Task<Result<RelatedPersonResponseDTO>> GetById(long id);
 
-    Task<Result<List<RelatedPersonTreeNodeDTO>>> GetRelationshipTree(Guid relatedPersonId);
+    Task<Result<List<RelatedPersonTreeNodeDTO>>> GetRelationshipTree(long relatedPersonId);
 
-    Task<DuplicateIdentityResponseDTO> CheckDuplicateIdentity(string? jmbg, string? passportNumber, string? fbaId, Guid? excludeId = null);
+    Task<DuplicateIdentityResponseDTO> CheckDuplicateIdentity(string? jmbg, string? passportNumber, string? fbaId, long? excludeId = null);
 
     // ─── RelatedPerson — CREATE / UPDATE / DELETE ───────────────────────────
 
@@ -36,18 +36,18 @@ public interface IRelatedPersonService
     Task<Result<RelatedPersonResponseDTO>> Create(CreateRelatedPersonDTO dto, string korisnik);
 
     /// <summary>Ažurira postojeće povezano fizičko lice.</summary>
-    Task<Result<RelatedPersonResponseDTO>> Update(Guid id, UpdateRelatedPersonDTO dto, string korisnik);
+    Task<Result<RelatedPersonResponseDTO>> Update(long id, UpdateRelatedPersonDTO dto, string korisnik);
 
     /// <summary>Soft-delete povezanog fizičkog lica (i svih njegovih aktivnih članova porodice).</summary>
-    Task<Result<bool>> Delete(Guid id, string korisnik);
+    Task<Result<bool>> Delete(long id, string korisnik);
 
     /// <summary>Verifikuje povezano fizičko lice — mijenja status iz Draft u Verified.</summary>
-    Task<Result<RelatedPersonResponseDTO>> Verify(Guid id, string korisnik);
+    Task<Result<RelatedPersonResponseDTO>> Verify(long id, string korisnik);
 
     // ─── FamilyMember — READ ─────────────────────────────────────────────────
 
     /// <summary>Vraća ravnu listu članova porodice za dato matično lice.</summary>
-    Task<Result<List<FamilyMemberResponseDTO>>> GetFamilyMembers(Guid relatedPersonId);
+    Task<Result<List<FamilyMemberResponseDTO>>> GetFamilyMembers(long relatedPersonId);
 
     /// <summary>Vraća sve aktivne članove porodice za sva matična lica (za export).</summary>
     Task<Result<List<FamilyMemberResponseDTO>>> GetAllFamilyMembers();
@@ -58,7 +58,7 @@ public interface IRelatedPersonService
     /// Vraća samo "korijenske" članove (direktno povezane sa matičnim licem),
     /// svaki sa popunjenom kolekcijom <see cref="FamilyMemberResponseDTO.Children"/>.
     /// </summary>
-    Task<Result<List<FamilyMemberResponseDTO>>> GetFamilyTree(Guid relatedPersonId);
+    Task<Result<List<FamilyMemberResponseDTO>>> GetFamilyTree(long relatedPersonId);
 
     // ─── FamilyMember — CREATE / UPDATE / DELETE ────────────────────────────
 
@@ -66,13 +66,13 @@ public interface IRelatedPersonService
     /// Dodaje novog člana porodice matičnom licu. Vraća grešku ako matično lice
     /// ima postavljenu izjavu o nepostojanju članova porodice (DeclarationNoFamilyMembers = true).
     /// </summary>
-    Task<Result<FamilyMemberResponseDTO>> AddFamilyMember(Guid relatedPersonId, CreateFamilyMemberDTO dto, string korisnik);
+    Task<Result<FamilyMemberResponseDTO>> AddFamilyMember(long relatedPersonId, CreateFamilyMemberDTO dto, string korisnik);
 
     /// <summary>Ažurira podatke postojećeg člana porodice.</summary>
-    Task<Result<FamilyMemberResponseDTO>> UpdateFamilyMember(Guid relatedPersonId, Guid familyMemberId, UpdateFamilyMemberDTO dto, string korisnik);
+    Task<Result<FamilyMemberResponseDTO>> UpdateFamilyMember(long relatedPersonId, long familyMemberId, UpdateFamilyMemberDTO dto, string korisnik);
 
     /// <summary>Soft-delete člana porodice.</summary>
-    Task<Result<bool>> DeleteFamilyMember(Guid relatedPersonId, Guid familyMemberId, string korisnik);
+    Task<Result<bool>> DeleteFamilyMember(long relatedPersonId, long familyMemberId, string korisnik);
 
     /// <summary>
     /// Uvozi fizička lica iz Excel fajla (.xlsx). Redovi koji ne prođu validaciju se preskače

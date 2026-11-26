@@ -30,7 +30,7 @@ public sealed class ReportHttpAuthorizationTests : IAsyncLifetime
 {
     private WebApplication _app = null!;
     private HttpClient _client = null!;
-    private Guid _existingReport;
+    private long _existingReport;
 
     public async Task InitializeAsync()
     {
@@ -116,7 +116,7 @@ public sealed class ReportHttpAuthorizationTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync(path, new { });
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        var id = json.RootElement.GetProperty("id").GetGuid();
+        var id = json.RootElement.GetProperty("id").GetInt64();
         await using var scope = _app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
         var persisted = await db.Reports.AsNoTracking().SingleAsync(report => report.Id == id);

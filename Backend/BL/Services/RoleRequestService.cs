@@ -83,13 +83,13 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
             db.RoleRequests.Add(row);
             db.AuditLogs.Add(Audit(row, "ROLE_REQUEST", null, new { row.Purpose, Roles = roles.Select(role => role.Name) }));
             foreach (var admin in admins)
-                Notify(admin.KeycloakId, admin.Email, $"role-request:{row.Id}:submitted", "role_request.submitted", row, $"/app/admin/role-requests?requestId={row.Id:D}");
+                Notify(admin.KeycloakId, admin.Email, $"role-request:{row.Id}:submitted", "role_request.submitted", row, $"/app/admin/role-requests?requestId={row.Id}");
             await db.SaveChangesAsync(ct);
             return new(Map(row, false), 201);
         }, ct);
     }
 
-    public async Task<PagedResponse<RoleRequestDTO>> List(bool review, string? status, int page, int pageSize, CancellationToken ct, Guid? requestId = null)
+    public async Task<PagedResponse<RoleRequestDTO>> List(bool review, string? status, int page, int pageSize, CancellationToken ct, long? requestId = null)
     {
         var query = Query().AsNoTracking();
         if (!review) { var subject = Subject; query = query.Where(row => row.RequesterSubject == subject); }
@@ -102,7 +102,7 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
         return new(rows.Select(row => Map(row, review)).ToArray(), total, page, pageSize);
     }
 
-    public async Task<RoleRequestResult> Decide(Guid id, bool approve, RoleRequestDecisionDTO input, CancellationToken ct)
+    public async Task<RoleRequestResult> Decide(long id, bool approve, RoleRequestDecisionDTO input, CancellationToken ct)
     {
         if (input.DecisionId == Guid.Empty || input.ExpectedVersion < 1 || input.Note?.Length > 1000)
             return RoleRequestResult.Failure(400, "role_request.invalid_decision");
@@ -166,7 +166,7 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
                 new { row.Status, row.DecisionNote, EffectiveRoles = resultingRoles }));
             var recipientEmail = await db.AppUsers.Where(user => user.KeycloakSubjectConfirmed && user.KeycloakId == row.RequesterSubject)
                 .Select(user => user.Email).SingleOrDefaultAsync(ct) ?? row.Email;
-            Notify(row.RequesterSubject, recipientEmail, $"role-request:{row.Id}:{outcome}", "role_request." + outcome, row, $"/app/profile?requestId={row.Id:D}");
+            Notify(row.RequesterSubject, recipientEmail, $"role-request:{row.Id}:{outcome}", "role_request." + outcome, row, $"/app/profile?requestId={row.Id}");
             await db.SaveChangesAsync(ct); // Request, grants, audit, inbox and outbox share one commit.
             return new(Map(row, true), 200);
         }, ct);
@@ -207,7 +207,7 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
             TitleKey = "notifications." + messageKey.Replace('_', '.') + ".title", BodyKey = "notifications." + messageKey.Replace('_', '.') + ".detail",
             ParametersJson = JsonSerializer.Serialize(new { requester = row.Username, requestId = row.Id, status = row.Status,
                 roles = string.Join(", ", row.RequestedRoles.Select(item => item.Role.Name)), note = row.Note ?? "", decisionNote = row.DecisionNote ?? "" }), Route = route };
-        notice.Delivery = new NotificationDelivery { NotificationId = notice.Id };
+        notice.Delivery = new NotificationDelivery { Notification = notice };
         db.Notifications.Add(notice);
     }
 }

@@ -48,7 +48,7 @@ public sealed class RoleRequestWorkflowSqlTests : RoleRequestFixture
     [SqlServerFact]
     public async Task DetailedRoleMailRendersCompleteUnicodeNotesAndRolesWithoutRawHtmlOrDuplicateGrants()
     {
-        Guid[] roles = [];
+        long[] roles = [];
         await InDatabase(async db =>
         {
             var additions = Enumerable.Range(0, 20).Select(index => new Role { Name = new string('Č', 90) + index, CreatedBy = "fixture" }).ToArray();
@@ -69,7 +69,7 @@ public sealed class RoleRequestWorkflowSqlTests : RoleRequestFixture
     [SqlServerFact]
     public async Task CompetingApprovalAndRejectionCommitOneDecisionAndNoDuplicateGrants()
     {
-        using var guest = NewClient("new-user"); var row = await Submit(guest); var id = row.GetProperty("id").GetGuid();
+        using var guest = NewClient("new-user"); var row = await Submit(guest); var id = row.GetProperty("id").GetInt64();
         using var other = NewClient("reviewer");
         var decision = new { decisionId = Guid.NewGuid(), expectedVersion = 1 };
         var results = await Task.WhenAll(Client.PostAsJsonAsync($"/api/role-requests/{id}/approve", decision),
@@ -90,7 +90,7 @@ public sealed class RoleRequestWorkflowSqlTests : RoleRequestFixture
     [SqlServerFact]
     public async Task AuditFailureRollsBackAccountGrantsDecisionAndNotifications()
     {
-        using var guest = NewClient("new-user"); var row = await Submit(guest); var id = row.GetProperty("id").GetGuid();
+        using var guest = NewClient("new-user"); var row = await Submit(guest); var id = row.GetProperty("id").GetInt64();
         await InDatabase(db => db.Database.ExecuteSqlRawAsync("""
             CREATE TRIGGER FixtureRejectRoleAudit ON AuditLogs AFTER INSERT AS
             BEGIN IF EXISTS(SELECT 1 FROM inserted WHERE Action = 'ROLE_REQUEST_APPROVED') THROW 51000, 'fixture audit failure', 1; END
@@ -108,7 +108,7 @@ public sealed class RoleRequestWorkflowSqlTests : RoleRequestFixture
     [SqlServerFact]
     public async Task ParallelDeliveryWorkersClaimEachNoticeOnlyOnce()
     {
-        using var guest = NewClient("new-user"); var row = await Submit(guest); var id = row.GetProperty("id").GetGuid();
+        using var guest = NewClient("new-user"); var row = await Submit(guest); var id = row.GetProperty("id").GetInt64();
         Assert.Equal(HttpStatusCode.OK, (await Client.PostAsJsonAsync($"/api/role-requests/{id}/approve", new { decisionId = Guid.NewGuid(), expectedVersion = 1 })).StatusCode);
         _mail.Setup(mail => mail.SendApplicationNotificationAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns((string to, string title, string body, CancellationToken ct) => Task.Delay(20, ct));
@@ -129,13 +129,20 @@ public sealed class RoleRequestWorkflowSqlTests : RoleRequestFixture
         {
             var previous = db.Database.GetMigrations().Single(name => name.EndsWith("_AddPeriodRequestOwnership"));
             await db.GetService<IMigrator>().MigrateAsync(previous);
-            var user = new AppUser { Username = "legacy", Email = "legacy@example.test", KeycloakId = "confirmed-existing-sub", KeycloakSubjectConfirmed = true };
-            var role = new Role { Name = ApplicationAccessRoles.LegalPersons };
-            await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO AppUsers (Id,KeycloakId,KeycloakSubjectConfirmed,Username,FirstName,LastName,Email,IsActive,CreatedAt,CreatedBy) VALUES ({user.Id},{user.KeycloakId},{true},{user.Username},{"Legacy"},{"Fixture"},{user.Email},{true},{DateTime.UtcNow},{"fixture"})");
-            await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO Roles (Id,Name,IsActive,CreatedAt,CreatedBy) VALUES ({role.Id},{role.Name},{true},{DateTime.UtcNow},{"fixture"})");
-            await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO UserRoles (Id,UserId,RoleId,IsActive,CreatedAt,CreatedBy) VALUES ({Guid.NewGuid()},{user.Id},{role.Id},{true},{DateTime.UtcNow},{"fixture"})");
+            var oldUserId = Guid.NewGuid();
+            var oldRoleId = Guid.NewGuid();
+            var roleName = ApplicationAccessRoles.LegalPersons;
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT dbo.AppUsers (Id, KeycloakId, KeycloakSubjectConfirmed, Username, FirstName, LastName, Email, IsActive, CreatedAt, CreatedBy)
+                VALUES ({oldUserId}, {"confirmed-existing-sub"}, 1, {"legacy"}, {"Legacy"}, {"Fixture"}, {"legacy@example.test"}, 1, SYSUTCDATETIME(), N'fixture');
+                INSERT dbo.Roles (Id, Name, IsActive, CreatedAt, CreatedBy) VALUES ({oldRoleId}, {roleName}, 1, SYSUTCDATETIME(), N'fixture');
+                INSERT dbo.UserRoles (Id, UserId, RoleId, IsActive, CreatedAt, CreatedBy) VALUES (NEWID(), {oldUserId}, {oldRoleId}, 1, SYSUTCDATETIME(), N'fixture');
+                """);
             await db.Database.MigrateAsync();
-            Assert.Equal(user.Id, (await db.AppUsers.SingleAsync()).Id); Assert.True((await db.AppUsers.SingleAsync()).KeycloakSubjectConfirmed);
+            var user = await db.AppUsers.SingleAsync();
+            Assert.True(user.KeycloakSubjectConfirmed);
+            Assert.Equal(user.Id, (await db.UserRoles.SingleAsync()).UserId);
+            Assert.Equal((await db.Roles.SingleAsync()).Id, (await db.UserRoles.SingleAsync()).RoleId);
             Assert.Single(db.UserRoles); Assert.Empty(db.RoleRequests); Assert.Empty(db.Notifications);
         }
         finally { await db.Database.EnsureDeletedAsync(); }

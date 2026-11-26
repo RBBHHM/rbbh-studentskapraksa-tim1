@@ -36,14 +36,14 @@ public class VerificationController : BaseResuItController
     /// <summary>
     /// Verifikuje povezano fizičko lice.
     /// </summary>
-    [HttpPost("physical-person/{id:guid}")]
+    [HttpPost("physical-person/{id:long}")]
     [Authorize(Policy = ApplicationPolicies.PhysicalPersonsEdit)]
     [ProducesResponseType(typeof(RelatedPersonResponseDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<ActionResult<RelatedPersonResponseDTO>> VerifyPhysicalPerson([FromRoute] Guid id)
+    public async Task<ActionResult<RelatedPersonResponseDTO>> VerifyPhysicalPerson([FromRoute] long id)
     {
         var korisnik = CurrentUser();
         var result = await _relatedPersonService.Verify(id, korisnik);
@@ -54,14 +54,14 @@ public class VerificationController : BaseResuItController
     /// <summary>
     /// Verifikuje povezano pravno lice.
     /// </summary>
-    [HttpPost("legal-person/{id:guid}")]
+    [HttpPost("legal-person/{id:long}")]
     [Authorize(Policy = ApplicationPolicies.LegalPersonsEdit)]
     [ProducesResponseType(typeof(LegalEntityDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<ActionResult<LegalEntityDTO>> VerifyLegalPerson([FromRoute] Guid id)
+    public async Task<ActionResult<LegalEntityDTO>> VerifyLegalPerson([FromRoute] long id)
     {
         var korisnik = CurrentUser();
         var verified = await _legalEntityService.VerifyAsync(id, korisnik);

@@ -20,9 +20,9 @@ public sealed class RelationshipTreeContractTests
     {
         await using var db = InMemoryContextFactory.Create();
         var root = new RelatedPerson { FirstName = "Root", IsIdentifiedStaff = true };
-        var first = new RelatedPerson { FirstName = "Amir", RelatedToPersonId = root.Id };
-        var last = new RelatedPerson { FirstName = "Zoran", RelatedToPersonId = root.Id };
-        var inactive = new RelatedPerson { FirstName = "Hidden", RelatedToPersonId = root.Id, IsActive = false };
+        var first = new RelatedPerson { FirstName = "Amir", RelatedToPerson = root };
+        var last = new RelatedPerson { FirstName = "Zoran", RelatedToPerson = root };
+        var inactive = new RelatedPerson { FirstName = "Hidden", RelatedToPerson = root, IsActive = false };
         db.RelatedPersons.AddRange(root, last, inactive, first);
         await db.SaveChangesAsync();
         db.ChangeTracker.Clear();
@@ -41,8 +41,8 @@ public sealed class RelationshipTreeContractTests
     public async Task ExistingCycleEndsWithRepeatedLeafInsteadOfRecursingForever()
     {
         await using var db = InMemoryContextFactory.Create();
-        var first = new RelatedPerson { FirstName = "First" };
-        var second = new RelatedPerson { FirstName = "Second", RelatedToPersonId = first.Id };
+        var first = new RelatedPerson { Id = 1, FirstName = "First" };
+        var second = new RelatedPerson { Id = 2, FirstName = "Second", RelatedToPersonId = first.Id };
         first.RelatedToPersonId = second.Id;
         db.RelatedPersons.AddRange(first, second);
         await db.SaveChangesAsync();
@@ -61,7 +61,7 @@ public sealed class RelationshipTreeContractTests
     {
         await using var db = InMemoryContextFactory.Create();
         var parent = new RelatedPerson { IsActive = false };
-        var child = new RelatedPerson { RelatedToPersonId = parent.Id };
+        var child = new RelatedPerson { RelatedToPerson = parent };
         db.RelatedPersons.AddRange(parent, child);
         await db.SaveChangesAsync();
         var result = await Service(db).GetRelationshipTree(child.Id);

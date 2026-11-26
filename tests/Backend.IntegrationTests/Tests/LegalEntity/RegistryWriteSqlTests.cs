@@ -22,10 +22,10 @@ public sealed class RegistryWriteSqlTests : AuthenticatedApiFixture
         };
         await InDatabase(db => db.Database.ExecuteSqlRawAsync(sql));
     }
-    private async Task<Guid> Create(bool legal)
+    private async Task<long> Create(bool legal)
     {
         var response = await Client.PostAsJsonAsync(legal ? "/api/legal-entities" : "/api/related-persons", legal ? RegistryVerificationHttpTests.Legal() : RegistryVerificationHttpTests.Physical());
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode); return (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode); return (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetInt64();
     }
     [SqlServerFact]
     public async Task FailedCreationAuditRollsBackBothRegistries()

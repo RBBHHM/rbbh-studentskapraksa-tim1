@@ -13,7 +13,7 @@ namespace IntegrationTests.Tests;
 public abstract class LimitImportFixture : AuthenticatedApiFixture
 {
     protected override void ConfigureServices(IServiceCollection services) => services.AddScoped<ILimitService, LimitService>();
-    protected Guid Party;
+    protected long Party;
     protected async Task Seed()
     {
         await InDatabase(async db =>

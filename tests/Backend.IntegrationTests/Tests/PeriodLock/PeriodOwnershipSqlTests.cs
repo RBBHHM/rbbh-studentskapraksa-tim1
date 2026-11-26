@@ -24,7 +24,7 @@ public sealed class PeriodOwnershipSqlTests : AuthenticatedApiFixture
         services.AddSingleton(Mock.Of<IAppUserService>());
     }
 
-    private async Task<Guid> Seed()
+    private async Task<long> Seed()
     {
         var request = new UnlockRequest { RequestedBySubject = "creator", RequestedBy = "creator", RequestedByEmail = "creator@example.test",
             Year = 2026, Month = 10, Reason = "Original request reason", Status = "NEEDS_INFO", CreatedBy = "fixture" };

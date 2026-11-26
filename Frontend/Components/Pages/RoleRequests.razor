@@ -96,7 +96,7 @@ else
     private int _pageNumber = 1;
     private bool _disposed, _authenticated, _canManage, _loading = true, _refreshing, _busy, _approve;
     private int TotalPages => Math.Max(1, (int)Math.Ceiling(_page.Total / (double)Math.Max(1, _page.PageSize)));
-    [SupplyParameterFromQuery] public Guid? RequestId { get; set; }
+    [SupplyParameterFromQuery] public long? RequestId { get; set; }
 
     protected override Task OnParametersSetAsync()
     {

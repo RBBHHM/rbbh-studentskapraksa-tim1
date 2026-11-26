@@ -17,7 +17,7 @@ public abstract class RoleCatalogFixture : RoleRequestFixture
 
     protected async Task<RoleCatalogDTO> CreateCatalog(string name = "custom-reviewer")
     {
-        Guid permission = Guid.Empty;
+        long permission = 0L;
         await InDatabase(async db => permission = (await db.Permissions.SingleAsync(row => row.Code == ApplicationPermissions.AdministrationView)).Id);
         var response = await Client.PostAsJsonAsync("/api/role-catalog", new CreateRoleCatalogDTO(name, "Čitač kataloga", "Custom catalog fixture", [permission]));
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -35,7 +35,7 @@ public sealed class RoleCatalogHttpTests : RoleCatalogFixture
     [Fact]
     public async Task RoleWithoutDisplayNameCanBeDeletedWithItsPermissionsAndAudit()
     {
-        Guid permission = default;
+        long permission = default;
         await InDatabase(async db => permission = (await db.Permissions.SingleAsync(row => row.Code == ApplicationPermissions.AdministrationView)).Id);
         var response = await Client.PostAsJsonAsync("/api/role-catalog", new { name = "to-remove", description = "Temporary", permissionIds = new[] { permission } });
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -59,9 +59,9 @@ public sealed class RoleCatalogHttpTests : RoleCatalogFixture
     {
         var role = await CreateCatalog(); using var applicant = NewClient("custom-applicant");
         var options = await applicant.GetFromJsonAsync<JsonElement>("/api/role-requests/options");
-        Assert.Contains(options.GetProperty("items").EnumerateArray(), item => item.GetProperty("id").GetGuid() == role.Id && item.GetProperty("displayName").GetString() == role.DisplayName);
+        Assert.Contains(options.GetProperty("items").EnumerateArray(), item => item.GetProperty("id").GetInt64() == role.Id && item.GetProperty("displayName").GetString() == role.DisplayName);
         Assert.Equal(HttpStatusCode.Forbidden, (await applicant.GetAsync("/api/role-catalog")).StatusCode);
-        var request = await Submit(applicant, roles: [role.Id]); var requestId = request.GetProperty("id").GetGuid();
+        var request = await Submit(applicant, roles: [role.Id]); var requestId = request.GetProperty("id").GetInt64();
         var blocked = await Client.DeleteAsync(DeleteUrl(role));
         Assert.Equal(HttpStatusCode.Conflict, blocked.StatusCode);
         Assert.Equal("roles.in_use", (await blocked.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
@@ -82,7 +82,7 @@ public sealed class RoleCatalogHttpTests : RoleCatalogFixture
     [Fact]
     public async Task TechnicalDefinitionsAndOwnAssignedRoleCannotBypassSelfOrFinalAdminProtection()
     {
-        var role = await CreateCatalog(); Guid admin = Guid.Empty; Guid guest = Guid.Empty;
+        var role = await CreateCatalog(); long admin = 0L; long guest = 0L;
         await InDatabase(async db =>
         {
             admin = (await db.Roles.SingleAsync(row => row.Name == ApplicationAccessRoles.Administrator)).Id;
@@ -102,7 +102,7 @@ public sealed class RoleCatalogHttpTests : RoleCatalogFixture
         var role = await CreateCatalog();
         Assert.Equal(HttpStatusCode.Conflict, (await Client.PostAsJsonAsync("/api/role-catalog", new CreateRoleCatalogDTO(" CUSTOM-REVIEWER ", "Duplicate", null, []))).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await Client.PostAsJsonAsync("/api/role-catalog", new CreateRoleCatalogDTO("admin", "Forbidden", null, []))).StatusCode);
-        Assert.Equal(HttpStatusCode.BadRequest, (await Client.PostAsJsonAsync("/api/role-catalog", new CreateRoleCatalogDTO("unknown-grant", "Unknown", null, [Guid.NewGuid()]))).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await Client.PostAsJsonAsync("/api/role-catalog", new CreateRoleCatalogDTO("unknown-grant", "Unknown", null, [Random.Shared.NextInt64(1L << 32, 1L << 50)]))).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await Client.PutAsJsonAsync($"/api/role-catalog/{role.Id}", new UpdateRoleCatalogDTO("Invalid", null, true, role.Version, [role.PermissionIds[0], role.PermissionIds[0]]))).StatusCode);
         var first = await Client.PutAsJsonAsync($"/api/role-catalog/{role.Id}", new UpdateRoleCatalogDTO("Updated", null, true, role.Version, []));
         Assert.Equal(HttpStatusCode.OK, first.StatusCode);

@@ -25,9 +25,9 @@ public abstract class RoleRequestFixture : AuthenticatedApiFixture
         services.AddSingleton(_mail.Object);
     }
 
-    protected async Task<Guid> Role(string name)
+    protected async Task<long> Role(string name)
     {
-        Guid id = Guid.Empty;
+        long id = 0L;
         await InDatabase(async db =>
         {
             // InMemory has no migrations; seed the same logical prerequisites explicitly.
@@ -51,7 +51,7 @@ public abstract class RoleRequestFixture : AuthenticatedApiFixture
         return id;
     }
 
-    protected async Task<JsonElement> Submit(HttpClient client, string purpose = "new", Guid[]? roles = null, Guid? key = null)
+    protected async Task<JsonElement> Submit(HttpClient client, string purpose = "new", long[]? roles = null, Guid? key = null)
     {
         var response = await client.PostAsJsonAsync("/api/role-requests", new
         {
@@ -79,7 +79,7 @@ public sealed class RoleRequestWorkflowHttpTests : RoleRequestFixture
             Assert.True(await db.UserRoles.AnyAsync(item => item.UserId == user.Id && item.IsActive));
             Assert.Equal(user.Email, (await db.RoleRequests.SingleAsync()).Email);
         });
-        var id = row.GetProperty("id").GetGuid();
+        var id = row.GetProperty("id").GetInt64();
         Assert.Equal(HttpStatusCode.OK, (await Client.PostAsJsonAsync($"/api/role-requests/{id}/approve", new { decisionId = Guid.NewGuid(), expectedVersion = 1 })).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await applicant.GetAsync("/api/role-requests")).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await applicant.GetAsync("/api/role-requests/options")).StatusCode);
@@ -98,7 +98,7 @@ public sealed class RoleRequestWorkflowHttpTests : RoleRequestFixture
         var body = new { clientRequestId = Guid.NewGuid(), purpose = "new", roleIds = new[] { await Role(ApplicationAccessRoles.LegalPersons) } };
         Assert.Equal(HttpStatusCode.Forbidden, (await guest.PostAsJsonAsync("/api/role-requests", body)).StatusCode);
         guest.DefaultRequestHeaders.Remove("X-Email-Verified");
-        Assert.Equal(HttpStatusCode.BadRequest, (await guest.PostAsJsonAsync("/api/role-requests", new { clientRequestId = Guid.NewGuid(), purpose = "new", roleIds = new[] { Guid.NewGuid() } })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await guest.PostAsJsonAsync("/api/role-requests", new { clientRequestId = Guid.NewGuid(), purpose = "new", roleIds = new[] { Random.Shared.NextInt64(1L << 32, 1L << 50) } })).StatusCode);
         await InDatabase(async db => { Assert.Empty(db.RoleRequests); Assert.Empty(db.Notifications); });
     }
 
@@ -109,7 +109,7 @@ public sealed class RoleRequestWorkflowHttpTests : RoleRequestFixture
         var roles = new[] { await Role(ApplicationAccessRoles.LegalPersons), await Role(ApplicationAccessRoles.Limits) };
         var row = await Submit(applicant, roles: roles);
         await InDatabase(async db => Assert.False(await db.AppUsers.AnyAsync(user => user.KeycloakId == "new-user")));
-        using var admin = NewClient("reviewer"); var id = row.GetProperty("id").GetGuid();
+        using var admin = NewClient("reviewer"); var id = row.GetProperty("id").GetInt64();
         var decision = new { decisionId = Guid.NewGuid(), expectedVersion = 1, note = "Approved fixture" };
         Assert.Equal(HttpStatusCode.OK, (await admin.PostAsJsonAsync($"/api/role-requests/{id}/approve", decision)).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await admin.PostAsJsonAsync($"/api/role-requests/{id}/approve", decision)).StatusCode);
@@ -126,7 +126,7 @@ public sealed class RoleRequestWorkflowHttpTests : RoleRequestFixture
     [Fact]
     public async Task SelfDecisionAndStaleDecisionAreRejectedWithoutGrantOrNotice()
     {
-        var row = await Submit(Client); var id = row.GetProperty("id").GetGuid();
+        var row = await Submit(Client); var id = row.GetProperty("id").GetInt64();
         var ownDecision = await Client.PostAsJsonAsync($"/api/role-requests/{id}/approve", new { decisionId = Guid.NewGuid(), expectedVersion = 1 });
         Assert.Equal(HttpStatusCode.Forbidden, ownDecision.StatusCode);
         Assert.Equal("role_request.self_decision_denied", (await ownDecision.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
@@ -148,7 +148,7 @@ public sealed class RoleRequestWorkflowHttpTests : RoleRequestFixture
         Assert.Equal(0, mine.GetProperty("total").GetInt32());
         Assert.Equal(HttpStatusCode.Forbidden, (await guest.GetAsync("/api/role-requests")).StatusCode);
         var inbox = await Client.GetFromJsonAsync<JsonElement>("/api/notifications");
-        var id = inbox.GetProperty("items")[0].GetProperty("id").GetGuid();
+        var id = inbox.GetProperty("items")[0].GetProperty("id").GetInt64();
         Assert.Equal(HttpStatusCode.NotFound, (await guest.PostAsync($"/api/notifications/{id}/read", null)).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await Client.PostAsync($"/api/notifications/{id}/read", null)).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await Client.PostAsync($"/api/notifications/{id}/read", null)).StatusCode);
@@ -158,7 +158,7 @@ public sealed class RoleRequestWorkflowHttpTests : RoleRequestFixture
     public async Task RequestAndDecisionReplaysAreIdempotentAndRejectNeverProvisions()
     {
         using var guest = NewClient("guest"); var key = Guid.NewGuid(); var roleId = await Role(ApplicationAccessRoles.LegalPersons);
-        var row = await Submit(guest, roles: [roleId], key: key); var id = row.GetProperty("id").GetGuid();
+        var row = await Submit(guest, roles: [roleId], key: key); var id = row.GetProperty("id").GetInt64();
         var replay = await guest.PostAsJsonAsync("/api/role-requests", new { clientRequestId = key, purpose = "new", roleIds = new[] { roleId }, note = "Fixture role request" });
         Assert.Equal(HttpStatusCode.OK, replay.StatusCode);
         var decision = new { decisionId = Guid.NewGuid(), expectedVersion = 1, note = "Rejected fixture" };
@@ -174,10 +174,10 @@ public sealed class RoleRequestWorkflowHttpTests : RoleRequestFixture
     public async Task ReviewAndDecisionEmailsOpenTheExactRequest(string action, string status, string badge)
     {
         using var applicant = NewClient("mail-applicant");
-        var id = (await Submit(applicant)).GetProperty("id").GetGuid();
+        var id = (await Submit(applicant)).GetProperty("id").GetInt64();
         var reviewerPath = $"/api/role-requests?requestId={id:D}";
         var review = await Client.GetFromJsonAsync<JsonElement>(reviewerPath);
-        Assert.Equal(id, Assert.Single(review.GetProperty("items").EnumerateArray()).GetProperty("id").GetGuid());
+        Assert.Equal(id, Assert.Single(review.GetProperty("items").EnumerateArray()).GetProperty("id").GetInt64());
         Assert.Equal(HttpStatusCode.Forbidden, (await applicant.GetAsync(reviewerPath)).StatusCode);
 
         var note = "<b>Napomena administratora</b>";
@@ -211,7 +211,7 @@ public sealed class RoleRequestWorkflowHttpTests : RoleRequestFixture
     [Fact]
     public async Task MailFailureAndRetryNeverRepeatGrantsOrDecisionAudit()
     {
-        using var guest = NewClient("guest"); var row = await Submit(guest); var id = row.GetProperty("id").GetGuid();
+        using var guest = NewClient("guest"); var row = await Submit(guest); var id = row.GetProperty("id").GetInt64();
         Assert.Equal(HttpStatusCode.OK, (await Client.PostAsJsonAsync($"/api/role-requests/{id}/approve", new { decisionId = Guid.NewGuid(), expectedVersion = 1 })).StatusCode);
         _mail.Setup(mail => mail.SendApplicationNotificationAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).ThrowsAsync(new HttpRequestException("private transport detail"));
         await using (var scope = App.Services.CreateAsyncScope()) Assert.Equal(0, await scope.ServiceProvider.GetRequiredService<NotificationDispatcher>().DeliverBatchAsync(default));
@@ -232,7 +232,7 @@ public sealed class RoleRequestWorkflowHttpTests : RoleRequestFixture
     public async Task RecreatedSubjectCannotInheritConfirmedEmailOwnersPrivileges()
     {
         using var guest = NewClient("recreated"); guest.DefaultRequestHeaders.Add("X-Email", "creator@example.test");
-        var row = await Submit(guest); var id = row.GetProperty("id").GetGuid(); using var admin = NewClient("reviewer");
+        var row = await Submit(guest); var id = row.GetProperty("id").GetInt64(); using var admin = NewClient("reviewer");
         Assert.Equal(HttpStatusCode.Conflict, (await admin.PostAsJsonAsync($"/api/role-requests/{id}/approve", new { decisionId = Guid.NewGuid(), expectedVersion = 1 })).StatusCode);
         await InDatabase(async db => Assert.False(await db.AppUsers.AnyAsync(user => user.KeycloakId == "recreated")));
     }
@@ -240,7 +240,7 @@ public sealed class RoleRequestWorkflowHttpTests : RoleRequestFixture
     [Fact]
     public async Task ActiveDatabaseCatalogRoleWorksWithoutAProviderRoleOrHardcodedAllowList()
     {
-        var id = Guid.NewGuid();
+        var id = Random.Shared.NextInt64(1L << 32, 1L << 50);
         await InDatabase(async db =>
         {
             db.Roles.Add(new Role { Id = id, Name = "Fixture custom application role" });
@@ -248,7 +248,7 @@ public sealed class RoleRequestWorkflowHttpTests : RoleRequestFixture
             await db.SaveChangesAsync();
         });
         using var guest = NewClient("custom-role-user"); var row = await Submit(guest, roles: [id]);
-        Assert.Equal(HttpStatusCode.OK, (await Client.PostAsJsonAsync($"/api/role-requests/{row.GetProperty("id").GetGuid()}/approve", new { decisionId = Guid.NewGuid(), expectedVersion = 1 })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await Client.PostAsJsonAsync($"/api/role-requests/{row.GetProperty("id").GetInt64()}/approve", new { decisionId = Guid.NewGuid(), expectedVersion = 1 })).StatusCode);
         var response = await guest.PostAsJsonAsync("/api/legal-entities", new { name = "Fixture", isResident = false, fbaId = "456", basisOfConnection = "VL", connectionDescription = "Fixture relation", connectedWithBank = true, dateFrom = "2026-01-01" });
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
     }
