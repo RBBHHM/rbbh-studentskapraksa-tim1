@@ -1,5 +1,6 @@
 using System.Text.Json;
-using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 using RBBH.ConnectedParties.DL.Entities.Audit;
 using RBBH.ConnectedParties.Exceptions;
 
@@ -7,19 +8,19 @@ namespace RBBH.ConnectedParties.Helpers;
 
 internal static class RegistryVerification
 {
-    internal static string? CreatorSubject(IHttpContextAccessor? accessor)
+    internal static string? OriginFingerprint(IHttpContextAccessor? accessor)
     {
         // Offline/test construction has no validated actor and cannot establish provenance.
         if (accessor?.HttpContext is not { } context) return null;
-        return AuthenticatedActor.RequireSubject(context.User);
+        return Convert.ToHexString(SHA256.HashData(Encoding.Unicode.GetBytes(AuthenticatedActor.RequireSubject(context.User))));
     }
 
-    internal static void Authorize(string? creatorSubject, IHttpContextAccessor? accessor)
+    internal static void Authorize(string? originFingerprint, IHttpContextAccessor? accessor)
     {
-        var subject = CreatorSubject(accessor) ?? throw new MissingActorIdentityException();
-        if (string.IsNullOrEmpty(creatorSubject))
+        var actorFingerprint = OriginFingerprint(accessor) ?? throw new MissingActorIdentityException();
+        if (string.IsNullOrEmpty(originFingerprint))
             throw new BusinessRuleException(409, "verification.provenance_required");
-        if (string.Equals(creatorSubject, subject, StringComparison.Ordinal))
+        if (string.Equals(originFingerprint, actorFingerprint, StringComparison.Ordinal))
             throw new BusinessRuleException(403, "verification.self_denied");
     }
 

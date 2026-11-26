@@ -19,7 +19,7 @@ public class RegistryVerificationHttpTests : AuthenticatedApiFixture
     internal static object Physical() => new
     {
         firstName = "Fixture", lastName = "Person", residency = 1, jmbg = "2801984175000",
-        relationBasis = "VL", relationDescription = "Fixture relationship", specialRelationBasis = "GOV",
+        relationBasis = "VL", specialRelationBasis = "GOV",
         isIdentifiedStaff = true, dateFrom = "2026-01-01", dateTo = "2027-12-31", creatorSubject = "forged-creator"
     };
 
@@ -44,8 +44,8 @@ public class RegistryVerificationHttpTests : AuthenticatedApiFixture
         Assert.Contains("verification.self_denied", await response.Content.ReadAsStringAsync());
         await InDatabase(async db =>
         {
-            var creator = legal ? (await db.LegalEntityVerificationOrigins.FindAsync(id))!.Subject : (await db.RelatedPersons.FindAsync(id))!.CreatorSubject;
-            Assert.Equal("creator", creator);
+            var creator = legal ? (await db.LegalEntityVerificationOrigins.FindAsync(id))!.Fingerprint : (await db.RelatedPersons.FindAsync(id))!.VerificationOriginFingerprint;
+            Assert.Equal(Fingerprint("creator"), creator);
             Assert.Empty(await db.AuditLogs.Where(row => row.Action == "VERIFY").ToListAsync());
         });
     }
@@ -95,16 +95,16 @@ public class RegistryVerificationHttpTests : AuthenticatedApiFixture
     }
 
     [Fact]
-    public async Task CreatorSubjectIsImmutableAtPersistenceBoundary()
+    public async Task VerificationOriginIsImmutableAtPersistenceBoundary()
     {
         var id = await CreateRecord(true);
         await InDatabase(async db =>
         {
             var row = (await db.LegalEntityVerificationOrigins.FindAsync(id))!;
-            db.Entry(row).Property("Subject").CurrentValue = "forged";
+            db.Entry(row).Property("Fingerprint").CurrentValue = "forged";
             await Assert.ThrowsAsync<RBBH.ConnectedParties.Exceptions.BusinessRuleException>(() => db.SaveChangesAsync());
         });
-        await InDatabase(async db => Assert.Equal("creator", (await db.LegalEntityVerificationOrigins.FindAsync(id))!.Subject));
+        await InDatabase(async db => Assert.Equal(Fingerprint("creator"), (await db.LegalEntityVerificationOrigins.FindAsync(id))!.Fingerprint));
     }
 
     [Fact]
@@ -118,7 +118,9 @@ public class RegistryVerificationHttpTests : AuthenticatedApiFixture
         await InDatabase(async db =>
         {
             var row = (await db.RelatedPersons.FindAsync(id))!;
-            Assert.Equal(RelatedPersonStatus.Draft, row.Status); Assert.Equal("creator", row.CreatorSubject);
+            Assert.Equal(RelatedPersonStatus.Draft, row.Status); Assert.Equal(Fingerprint("creator"), row.VerificationOriginFingerprint);
         });
     }
+    private static string Fingerprint(string subject) =>
+        Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.Unicode.GetBytes(subject)));
 }

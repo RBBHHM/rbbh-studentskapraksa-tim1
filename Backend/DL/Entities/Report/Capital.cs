@@ -12,7 +12,7 @@ namespace RBBH.ConnectedParties.DL.Entities.Report;
 public class Capital
 {
     [Key]
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public long Id { get; set; }
 
     /// <summary>Regulatorni kapital banke.</summary>
     public decimal RegulatoryCapital { get; set; }

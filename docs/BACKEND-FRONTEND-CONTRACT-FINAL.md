@@ -676,7 +676,6 @@ Source: [RelatedPersonDTOs.cs](../Backend/DL/DTO/RelatedPersons/RelatedPersonDTO
 | `passportNumber` | string or null | not explicitly required by schema; minLength=0; maxLength=50 |
 | `fbaId` | string or null | not explicitly required by schema; minLength=0; maxLength=50 |
 | `relationBasis` | string or null | not explicitly required by schema; minLength=0; maxLength=500 |
-| `relationDescription` | string or null | not explicitly required by schema; minLength=0; maxLength=1000 |
 | `specialRelationBasis` | string or null | not explicitly required by schema; minLength=0; maxLength=500 |
 | `dateFrom` | string(date-time) or null | not explicitly required by schema |
 | `dateTo` | string(date-time) or null | not explicitly required by schema |
@@ -959,7 +958,6 @@ Source: [RelatedPersonDTOs.cs](../Backend/DL/DTO/RelatedPersons/RelatedPersonDTO
 | `passportNumber` | string or null | not explicitly required by schema |
 | `fbaId` | string or null | not explicitly required by schema |
 | `relationBasis` | string or null | not explicitly required by schema |
-| `relationDescription` | string or null | not explicitly required by schema |
 | `specialRelationBasis` | string or null | not explicitly required by schema |
 | `dateFrom` | string(date-time) or null | not explicitly required by schema |
 | `dateTo` | string(date-time) or null | not explicitly required by schema |
@@ -1249,7 +1247,6 @@ Source: [RelatedPersonDTOs.cs](../Backend/DL/DTO/RelatedPersons/RelatedPersonDTO
 | `passportNumber` | string or null | not explicitly required by schema; minLength=0; maxLength=50 |
 | `fbaId` | string or null | not explicitly required by schema; minLength=0; maxLength=50 |
 | `relationBasis` | string or null | not explicitly required by schema; minLength=0; maxLength=500 |
-| `relationDescription` | string or null | not explicitly required by schema; minLength=0; maxLength=1000 |
 | `specialRelationBasis` | string or null | not explicitly required by schema; minLength=0; maxLength=500 |
 | `dateFrom` | string(date-time) or null | not explicitly required by schema |
 | `dateTo` | string(date-time) or null | not explicitly required by schema |

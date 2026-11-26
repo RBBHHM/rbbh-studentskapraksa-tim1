@@ -58,7 +58,7 @@ else
                 <tbody>
                 @foreach (var row in _history)
                 {
-                    <tr @key="row.Version.Id" data-state="@row.State">
+                    <tr @key="(row.Version.Source, row.Version.Id)" data-state="@row.State">
                         <td>@CapitalDay(row.Version.EffectiveDate)</td><td>@(row.ValidTo is { } to ? CapitalDay(to) : T["capital.open-ended"])</td>
                         <td>@Money(row.Version.CoreCapital)</td><td>@Money(row.Version.RegulatoryCapital)</td><td>@Money(row.Version.SupplementaryCapital)</td>
                         <td>@(string.IsNullOrEmpty(row.Version.RecordedBy) ? "—" : row.Version.RecordedBy)</td><td>@AppFormat.Timestamp(row.Version.RecordedAt)</td>

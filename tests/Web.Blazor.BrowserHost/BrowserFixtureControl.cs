@@ -193,7 +193,7 @@ internal static partial class BrowserHostProgram
                     {
                         await using var scope = backend.Services.CreateAsyncScope();
                         var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
-                        await context.Response.WriteAsJsonAsync((await db.CapitalRevisions.AsNoTracking().OrderBy(item => item.Revision).ToArrayAsync()).Select(item => new { item.Id, item.Revision, item.RegulatoryCapital, item.CoreCapital, item.SupplementaryCapital, CapitalDate = item.EffectiveDate }).ToArray());
+                        await context.Response.WriteAsJsonAsync((await db.CapitalRevisions.AsNoTracking().OrderBy(item => item.Id).ToArrayAsync()).Select(item => new { item.Id, Revision = item.Id, item.RegulatoryCapital, item.CoreCapital, item.SupplementaryCapital, CapitalDate = item.EffectiveDate }).ToArray());
                         return;
                     }
                     if (context.Request.Path == "/__fixtures/reports" && HttpMethods.IsGet(context.Request.Method))
@@ -468,7 +468,7 @@ internal static partial class BrowserHostProgram
                                     CreatedAt = new DateTime(2026, 1, 1).AddMinutes(index)
                                 });
                                 foreach (var seeded in db.ChangeTracker.Entries<RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntity>().ToArray())
-                                    db.LegalEntityVerificationOrigins.Add(new() { LegalEntityId = seeded.Entity.Id, Subject = "fixture-author-subject" });
+                                    db.LegalEntityVerificationOrigins.Add(new() { LegalEntityId = seeded.Entity.Id, Fingerprint = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.Unicode.GetBytes("fixture-author-subject"))) });
                                 await db.SaveChangesAsync();
                             }
                             break;
@@ -476,7 +476,7 @@ internal static partial class BrowserHostProgram
                             await using (var scope = backend.Services.CreateAsyncScope())
                             {
                                 var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
-                                foreach (var person in db.RelatedPersons.IgnoreQueryFilters()) { person.CreatedBy = "fixture-author"; var creator = db.Entry(person).Property("CreatorSubject"); creator.CurrentValue = "fixture-author-subject"; creator.OriginalValue = "fixture-author-subject"; creator.IsModified = true; }
+                                foreach (var person in db.RelatedPersons.IgnoreQueryFilters()) { person.CreatedBy = "fixture-author"; var creator = db.Entry(person).Property("VerificationOriginFingerprint"); creator.CurrentValue = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.Unicode.GetBytes("fixture-author-subject"))); creator.OriginalValue = creator.CurrentValue; creator.IsModified = true; }
                                 await db.SaveChangesAsync();
                             }
                             break;

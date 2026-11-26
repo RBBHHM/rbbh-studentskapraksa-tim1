@@ -9,7 +9,7 @@ internal static class CapitalHistory
     internal static IQueryable<CapitalHistoryDTO> Query(ConnectedPartiesDbContext db) =>
         db.CapitalRevisions.AsNoTracking().Select(row => new CapitalHistoryDTO
         {
-            Id = row.Id, Revision = row.Revision, EffectiveDate = row.EffectiveDate, RegulatoryCapital = row.RegulatoryCapital,
+            Id = row.Id, Revision = row.Id, EffectiveDate = row.EffectiveDate, RegulatoryCapital = row.RegulatoryCapital,
             CoreCapital = row.CoreCapital, SupplementaryCapital = row.SupplementaryCapital, RecordedAt = row.RecordedAt, RecordedBy = row.RecordedBy, Source = "revision"
         }).Concat(db.Capitals.AsNoTracking().Select(row => new CapitalHistoryDTO
         {

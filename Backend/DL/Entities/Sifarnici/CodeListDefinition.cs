@@ -5,7 +5,7 @@ namespace RBBH.ConnectedParties.DL.Entities.Sifarnici;
 
 public sealed class CodeListDefinition
 {
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public long Id { get; set; }
     [Required, StringLength(100), Unicode(false)] public string Name { get; set; } = string.Empty;
     [StringLength(500)] public string? Description { get; set; }
     public bool IsActive { get; set; } = true;

@@ -22,8 +22,8 @@ public sealed class CapitalHistorySqlTests : CapitalHistoryFixture
         decimal expected = 0;
         await InDatabase(async db =>
         {
-            var rows = await db.CapitalRevisions.OrderBy(row => row.Revision).ToListAsync(); Assert.Equal(2, rows.Count);
-            Assert.True(rows[0].Revision < rows[1].Revision); expected = rows[1].RegulatoryCapital;
+            var rows = await db.CapitalRevisions.OrderBy(row => row.Id).ToListAsync(); Assert.Equal(2, rows.Count);
+            Assert.True(rows[0].Id < rows[1].Id); expected = rows[1].RegulatoryCapital;
             Assert.Equal(2, await db.AuditLogs.CountAsync()); Assert.All(rows, row => Assert.Equal("creator", row.ActorSubject));
         });
         var asOf = await Client.GetFromJsonAsync<JsonElement>("/api/capital/as-of?date=2026-02-01"); Assert.Equal(expected, asOf.GetProperty("regulatoryCapital").GetDecimal());

@@ -43,7 +43,7 @@ public partial class ConnectedPartiesDbContext(
         });
         modelBuilder.Entity<DL.Entities.Authorization.RequestedRole>(entity =>
         {
-            entity.HasKey(row => new { row.RequestId, row.RoleId });
+            entity.HasIndex(row => new { row.RequestId, row.RoleId }).IsUnique();
             entity.HasOne(row => row.Request).WithMany(row => row.RequestedRoles).HasForeignKey(row => row.RequestId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(row => row.Role).WithMany().HasForeignKey(row => row.RoleId).OnDelete(DeleteBehavior.Restrict);
         });
@@ -151,7 +151,7 @@ public partial class ConnectedPartiesDbContext(
 
         modelBuilder.Entity<RolePermission>(entity =>
         {
-            entity.HasKey(e => new { e.RoleId, e.PermissionId });
+            entity.HasIndex(e => new { e.RoleId, e.PermissionId }).IsUnique();
             entity.HasOne(e => e.Role)
                   .WithMany(role => role.RolePermissions)
                   .HasForeignKey(e => e.RoleId)
@@ -166,12 +166,12 @@ public partial class ConnectedPartiesDbContext(
         {
             entity.ToTable("CapitalRevisions", table => table.UseSqlOutputClause(false));
             entity.HasKey(row => row.Id);
-            entity.Property(row => row.Revision).UseIdentityColumn(); entity.HasIndex(row => row.Revision).IsUnique();
+            entity.Property(row => row.Id).UseIdentityColumn();
             entity.Property(row => row.EffectiveDate).HasColumnType("date");
             entity.Property(row => row.RegulatoryCapital).HasPrecision(18, 2);
             entity.Property(row => row.CoreCapital).HasPrecision(18, 2);
             entity.Property(row => row.SupplementaryCapital).HasPrecision(18, 2);
-            entity.HasIndex(row => new { row.EffectiveDate, row.Revision });
+            entity.HasIndex(row => new { row.EffectiveDate, row.Id });
         });
         OnModelCreatingPartial(modelBuilder);
     }
@@ -195,7 +195,7 @@ public partial class ConnectedPartiesDbContext(
         foreach (var entry in ChangeTracker.Entries().Where(entry => entry.State == EntityState.Modified &&
                      entry.Entity is DL.Entities.RelatedPersons.RelatedPerson))
         {
-            var creator = entry.Property("CreatorSubject");
+            var creator = entry.Property("VerificationOriginFingerprint");
             if (!Equals(creator.OriginalValue, creator.CurrentValue))
                 throw new Exceptions.BusinessRuleException(409, "verification.creator_immutable");
         }

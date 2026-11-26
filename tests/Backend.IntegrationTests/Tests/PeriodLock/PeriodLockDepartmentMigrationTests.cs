@@ -35,8 +35,9 @@ public sealed class PeriodLockDepartmentMigrationTests
 
             await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE dbo.PeriodLocks SET Department = NULL WHERE Id = {id}");
             await migrator.MigrateAsync();
-            var row = await db.PeriodLocks.SingleAsync(item => item.Id == id);
+            var row = await db.PeriodLocks.SingleAsync(item => item.Year == created.Year && item.Month == created.Month);
             Assert.True(row.IsLocked);
+            Assert.True(row.Id > 0);
         }
         finally
         {

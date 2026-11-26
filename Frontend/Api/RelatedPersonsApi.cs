@@ -3,7 +3,7 @@ using RBI.ApiCore;
 namespace RBBH.RelatedPartiesRegister.Web.Api;
 
 public sealed record RelatedPerson(Guid Id, string FirstName, string LastName, int Residency,
-    string? Jmbg, string? PassportNumber, string? FbaId, string? RelationBasis, string? RelationDescription,
+    string? Jmbg, string? PassportNumber, string? FbaId, string? RelationBasis,
     string? SpecialRelationBasis, DateTime? DateFrom, DateTime? DateTo, bool IsIdentifiedStaff,
     bool DeclarationNoFamilyMembers, bool ConnectedWithBank, bool SpecialRelationshipWithBank,
     bool SpecialContract, bool MalusClawback, Guid? RelatedToPersonId, string? RelatedToPersonName,
@@ -18,7 +18,7 @@ public sealed record RelatedPerson(Guid Id, string FirstName, string LastName, i
         // Same scalar response values as the existing client-side search; no
         // generic object/envelope normalization or server-side query rewrite.
         object?[] values = [Id, FirstName, LastName, Residency, ResidencyLabel, Jmbg, PassportNumber, FbaId,
-            RelationBasis, RelationDescription, SpecialRelationBasis, DateFrom?.ToString("O"), DateTo?.ToString("O"),
+            RelationBasis, SpecialRelationBasis, DateFrom?.ToString("O"), DateTo?.ToString("O"),
             IsIdentifiedStaff, DeclarationNoFamilyMembers, ConnectedWithBank, SpecialRelationshipWithBank,
             SpecialContract, MalusClawback, RelatedToPersonId, RelatedToPersonName, Status, StatusLabel,
             CreatedAt.ToString("O"), CreatedBy, ModifiedAt?.ToString("O"), ModifiedBy, VerifiedBy, VerifiedAt?.ToString("O"),
@@ -28,7 +28,7 @@ public sealed record RelatedPerson(Guid Id, string FirstName, string LastName, i
 }
 
 public sealed record PersonRequest(string FirstName, string LastName, int Residency,
-    string? Jmbg, string? PassportNumber, string? FbaId, string RelationBasis, string RelationDescription,
+    string? Jmbg, string? PassportNumber, string? FbaId, string RelationBasis,
     string SpecialRelationBasis, DateTime? DateFrom, DateTime? DateTo, bool IsIdentifiedStaff,
     bool DeclarationNoFamilyMembers, bool ConnectedWithBank, bool SpecialRelationshipWithBank,
     bool SpecialContract, bool MalusClawback, Guid? RelatedToPersonId);

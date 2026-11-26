@@ -53,7 +53,7 @@ public class ExcelExportRowDTO
 /// <summary>DTO za globalni (jedinstveni) zapis kapitala — modul Kapital.</summary>
 public class CapitalDTO
 {
-    public Guid Id { get; set; }
+    public long Id { get; set; }
     public decimal RegulatoryCapital { get; set; }
     public decimal CoreCapital { get; set; }
     public decimal SupplementaryCapital { get; set; }
@@ -70,7 +70,7 @@ public class UpdateCapitalDTO
 }
 public sealed class CapitalHistoryDTO
 {
-    public Guid Id { get; set; }
+    public long Id { get; set; }
     public long Revision { get; set; }
     public DateTime EffectiveDate { get; set; }
     public decimal RegulatoryCapital { get; set; }

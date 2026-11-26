@@ -8,6 +8,6 @@ public sealed class LegalEntityVerificationOrigin
     [Key]
     public Guid LegalEntityId { get; init; }
 
-    [Required, StringLength(100)]
-    public string Subject { get; init; } = string.Empty;
+    [Required, StringLength(64)]
+    public string Fingerprint { get; init; } = string.Empty;
 }

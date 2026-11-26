@@ -24,8 +24,7 @@ public class PeriodLockController(
     PeriodWorkflow workflow) : ControllerBase
 {
     private string ActorSubject() =>
-        Helpers.RegistryVerification.CreatorSubject(new HttpContextAccessor { HttpContext = HttpContext })
-        ?? throw new MissingActorIdentityException();
+        AuthenticatedActor.RequireSubject(User);
 
     [HttpGet("current")]
     public async Task<IActionResult> GetCurrentState()

@@ -19,7 +19,7 @@ public sealed class ApplicationNotification
 
 public sealed class NotificationDelivery
 {
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public long Id { get; set; }
     public Guid NotificationId { get; set; }
     public ApplicationNotification Notification { get; set; } = null!;
     public int Attempts { get; set; }

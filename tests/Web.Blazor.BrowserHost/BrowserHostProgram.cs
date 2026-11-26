@@ -174,7 +174,6 @@ internal static partial class BrowserHostProgram
                 PassportNumber = "READ12345",
                 FBAId = "998877",
                 RelationBasis = "ZOB-2-V-5",
-                RelationDescription = "Fixture relationship",
                 SpecialRelationBasis = "UPRAVA",
                 IsIdentifiedStaff = true,
                 IsActive = true,

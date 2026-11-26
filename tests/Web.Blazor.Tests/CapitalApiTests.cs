@@ -41,8 +41,8 @@ public sealed class CapitalApiTests
     [Fact]
     public async Task RealZeroValuesArePreserved()
     {
-        var id = Guid.NewGuid();
-        await using var provider = Client(HttpStatusCode.OK, $"{{\"id\":\"{id}\",\"regulatoryCapital\":0,\"coreCapital\":0,\"supplementaryCapital\":0,\"capitalDate\":\"2026-01-01T00:00:00\"}}");
+        const long id = 3;
+        await using var provider = Client(HttpStatusCode.OK, $"{{\"id\":{id},\"regulatoryCapital\":0,\"coreCapital\":0,\"supplementaryCapital\":0,\"capitalDate\":\"2026-01-01T00:00:00\"}}");
         var record = await provider.GetRequiredService<ICapitalApi>().GetAsync();
         Assert.NotNull(record); Assert.Equal(id, record.Id); Assert.Equal(0m, record.CoreCapital);
     }

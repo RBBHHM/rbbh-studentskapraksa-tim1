@@ -78,7 +78,6 @@ public class ImmediateFamilyRulesTests
         Residency = ResidencyType.Resident,
         JMBG = "2801984175000",
         RelationBasis = "ZOB-2-V-5",
-        RelationDescription = "Povezano fizičko lice",
         SpecialRelationBasis = "UPRAVA",
         IsIdentifiedStaff = true,
         DateFrom = new DateTime(2026, 1, 1),

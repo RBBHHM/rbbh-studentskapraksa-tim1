@@ -12,7 +12,7 @@ public sealed record UpdateCodeValue(string Naziv, string? Opis, bool Aktivan);
 public sealed record CodeImportPreview(int TotalRows, IReadOnlyList<string> ToImport, IReadOnlyList<string> Duplicates,
     IReadOnlyList<string> Errors, int Imported);
 /// <summary>Administrative metadata of a code list definition (who created it and who changed it last).</summary>
-public sealed record CodeListMeta(Guid Id, string Name, string? Description, bool IsActive, bool IsSystemRequired, int Version,
+public sealed record CodeListMeta(long Id, string Name, string? Description, bool IsActive, bool IsSystemRequired, int Version,
     DateTime? CreatedAt, string? CreatedBy, DateTime? ModifiedAt, string? ModifiedBy);
 public sealed record CodeListMetas(IReadOnlyList<CodeListMeta> Items);
 public interface ICodeListsApi

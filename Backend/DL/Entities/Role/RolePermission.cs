@@ -4,6 +4,7 @@ namespace RBBH.ConnectedParties.DL.Entities.Role;
 
 public class RolePermission
 {
+    public long Id { get; set; }
     public Guid RoleId { get; set; }
     public Guid PermissionId { get; set; }
 

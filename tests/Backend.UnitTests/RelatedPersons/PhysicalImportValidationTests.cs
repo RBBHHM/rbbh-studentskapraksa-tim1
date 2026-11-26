@@ -51,7 +51,6 @@ public sealed class PhysicalImportValidationTests
             FirstName = "Example",
             LastName = "Person",
             SpecialRelationBasis = "UPRAVA",
-            RelationDescription = "Ordinary relation explanation",
             CreatedBy = "fixture"
         });
         await db.SaveChangesAsync();
@@ -60,7 +59,6 @@ public sealed class PhysicalImportValidationTests
         Assert.True(result.IsSuccessful);
         var exported = Assert.Single(result.Value);
         Assert.Equal("Approved codebook explanation", exported.SpecialRelationBasisDescription);
-        Assert.Equal("Ordinary relation explanation", exported.RelationDescription);
     }
 
     [Fact]

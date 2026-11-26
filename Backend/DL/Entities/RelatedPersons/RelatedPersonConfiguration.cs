@@ -27,7 +27,6 @@ public class RelatedPersonConfiguration : IEntityTypeConfiguration<RelatedPerson
         builder.Property(e => e.FBAId).HasMaxLength(50).UseCollation("Latin1_General_100_CI_AS");
 
         builder.Property(e => e.RelationBasis).HasMaxLength(500);
-        builder.Property(e => e.RelationDescription).HasMaxLength(1000);
         builder.Property(e => e.SpecialRelationBasis).HasMaxLength(500);
 
         builder.Property(e => e.CreatedBy).IsRequired().HasMaxLength(100);

@@ -79,7 +79,7 @@ public sealed class RegistryVerificationSqlTests : AuthenticatedApiFixture
 
             var origin = await db.LegalEntityVerificationOrigins.SingleAsync();
             Assert.Equal(provenId, origin.LegalEntityId);
-            Assert.Equal("opaque-subject", origin.Subject);
+            Assert.Equal(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.Unicode.GetBytes("opaque-subject"))), origin.Fingerprint);
             Assert.Equal(0, await db.Database.SqlQueryRaw<int>("""
                 SELECT COUNT(*) AS [Value] FROM sys.columns
                 WHERE object_id = OBJECT_ID(N'dbo.LegalEntities') AND name IN (N'CreatorSubject', N'ConnectionDescription', N'Version')

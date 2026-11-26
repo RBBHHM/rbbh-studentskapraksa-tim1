@@ -122,7 +122,7 @@ public sealed class NotificationDispatcher(ConnectedPartiesDbContext db, IEmailS
         return result;
     }
 
-    private async Task<bool> Claim(Guid id, Guid lease, CancellationToken ct)
+    private async Task<bool> Claim(long id, Guid lease, CancellationToken ct)
     {
         var now = DateTime.UtcNow;
         var query = db.NotificationDeliveries.Where(row => row.Id == id && row.DeliveredAt == null && row.Attempts < 5 &&

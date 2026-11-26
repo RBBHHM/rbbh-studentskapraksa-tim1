@@ -9,7 +9,7 @@ namespace RBBH.ConnectedParties.DL.Entities.PeriodLock;
 public class PeriodLock
 {
     [Key]
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public long Id { get; set; }
 
     public int Year { get; set; }
     public int Month { get; set; }

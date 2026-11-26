@@ -38,8 +38,6 @@ public class CreateRelatedPersonDTO
     [StringLength(500)]
     public string? RelationBasis { get; set; }
 
-    [StringLength(1000)]
-    public string? RelationDescription { get; set; }
 
     [StringLength(500)]
     public string? SpecialRelationBasis { get; set; }
@@ -97,8 +95,6 @@ public class UpdateRelatedPersonDTO
     [StringLength(500)]
     public string? RelationBasis { get; set; }
 
-    [StringLength(1000)]
-    public string? RelationDescription { get; set; }
 
     [StringLength(500)]
     public string? SpecialRelationBasis { get; set; }
@@ -138,7 +134,6 @@ public class RelatedPersonResponseDTO
     public string? FBAId { get; set; }
 
     public string? RelationBasis { get; set; }
-    public string? RelationDescription { get; set; }
     public string? SpecialRelationBasis { get; set; }
     /// <summary>Export-only read-only label derived from the OsnovPosebnogOdnosa codebook.</summary>
     public string? SpecialRelationBasisDescription { get; set; }

@@ -54,9 +54,6 @@ public class RelatedPerson
     [StringLength(500)]
     public string? RelationBasis { get; set; }
 
-    /// <summary>Opis povezanosti.</summary>
-    [StringLength(1000)]
-    public string? RelationDescription { get; set; }
 
     /// <summary>Osnov posebnog odnosa.</summary>
     [StringLength(500)]
@@ -125,8 +122,8 @@ public class RelatedPerson
 
     public bool IsActive { get; set; } = true;
 
-    [StringLength(100)]
-    public string? CreatorSubject { get; internal set; }
+    [StringLength(64)]
+    public string? VerificationOriginFingerprint { get; internal set; }
 
     internal void MarkModified(DateTime timestamp)
     {

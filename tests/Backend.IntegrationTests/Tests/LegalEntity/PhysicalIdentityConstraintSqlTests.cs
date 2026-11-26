@@ -45,7 +45,7 @@ public sealed class PhysicalIdentityConstraintSqlTests
         await using var db = await Database();
         try
         {
-            await db.Database.ExecuteSqlRawAsync("INSERT CodeListDefinitions (Id,Name,IsActive,CreatedAt,CreatedBy,IsSystemRequired,Version) VALUES (NEWID(),'languages',1,SYSUTCDATETIME(),'fixture',0,0)");
+            await db.Database.ExecuteSqlRawAsync("INSERT CodeListDefinitions (Name,IsActive,CreatedAt,CreatedBy,IsSystemRequired,Version) VALUES ('languages',1,SYSUTCDATETIME(),'fixture',0,0)");
             var error = await Assert.ThrowsAsync<SqlException>(() => db.Database.MigrateAsync()); Assert.Equal(51005, error.Number);
             Assert.Equal(2, await db.CodeListDefinitions.CountAsync(row => row.Name.ToUpper() == "LANGUAGES"));
         }

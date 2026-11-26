@@ -44,6 +44,7 @@ public sealed class PeriodLockCoverageTests
         // Must stay usable while locked -> OPEN
         ["POST api/role-catalog"] = (Open, "administrative role definition, not reportable period data"),
         ["PUT api/role-catalog/{id}"] = (Open, "administrative role catalog and grants, not reportable period data"),
+        ["DELETE api/role-catalog/{id}"] = (Open, "administrative role catalog, not reportable period data"),
         ["PUT api/code-lists/categories/{name}"] = (Open, "administrative codebook metadata"),
         ["PUT api/localization/resources/{language}/{resourceKey}"] = (Open, "administrative localization configuration"),
         ["POST api/role-requests"] = (Open, "authenticated role request workflow"),

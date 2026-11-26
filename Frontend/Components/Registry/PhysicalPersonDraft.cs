@@ -15,7 +15,6 @@ public sealed class PhysicalPersonDraft
     public string? PassportNumber { get; set; }
     public string? FbaId { get; set; }
     public string? RelationBasis { get; set; }
-    public string? RelationDescription { get; set; }
     public string? SpecialRelationBasis { get; set; }
     public DateTime? DateFrom { get; set; }
     public DateTime? DateTo { get; set; }
@@ -33,7 +32,7 @@ public sealed class PhysicalPersonDraft
     {
         FirstName = person.FirstName, LastName = person.LastName, Residency = person.Residency,
         Jmbg = person.Jmbg, PassportNumber = person.PassportNumber, FbaId = person.FbaId,
-        RelationBasis = person.RelationBasis, RelationDescription = person.RelationDescription,
+        RelationBasis = person.RelationBasis,
         SpecialRelationBasis = person.SpecialRelationBasis, DateFrom = person.DateFrom,
         DateTo = person.DateTo, IsIdentifiedStaff = person.IsIdentifiedStaff,
         DeclarationNoFamilyMembers = person.DeclarationNoFamilyMembers, ConnectedWithBank = person.ConnectedWithBank,
@@ -77,7 +76,6 @@ public sealed class PhysicalPersonDraft
         }
         if (identityOnly) return errors;
         if (string.IsNullOrWhiteSpace(RelationBasis)) Error(nameof(RelationBasis), "validation.required");
-        if (string.IsNullOrWhiteSpace(RelationDescription)) Error(nameof(RelationDescription), "validation.required");
         if (string.IsNullOrWhiteSpace(SpecialRelationBasis)) Error(nameof(SpecialRelationBasis), "validation.required");
         foreach (var (name, value) in new (string, bool?)[]
         {
@@ -97,7 +95,7 @@ public sealed class PhysicalPersonDraft
     {
         if (Validate().Count > 0) throw new InvalidOperationException("Resolve field validation before creating the request.");
         return new(FirstName!.Trim(), LastName!.Trim(), Residency!.Value, Clean(Jmbg), Clean(PassportNumber), Clean(FbaId),
-            RelationBasis!, RelationDescription!, SpecialRelationBasis!, DateFrom, DateTo, IsIdentifiedStaff!.Value,
+            RelationBasis!, SpecialRelationBasis!, DateFrom, DateTo, IsIdentifiedStaff!.Value,
             DeclarationNoFamilyMembers!.Value, ConnectedWithBank!.Value, SpecialRelationshipWithBank!.Value,
             SpecialContract!.Value, MalusClawback!.Value, RelatedToPersonId);
     }

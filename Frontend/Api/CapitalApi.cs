@@ -4,12 +4,12 @@ using RBI.ApiCore;
 
 namespace RBBH.RelatedPartiesRegister.Web.Api;
 
-public sealed record CapitalRecord(Guid Id, decimal RegulatoryCapital, decimal CoreCapital,
+public sealed record CapitalRecord(long Id, decimal RegulatoryCapital, decimal CoreCapital,
     decimal SupplementaryCapital, DateTime CapitalDate);
 public sealed record CapitalRequest(decimal RegulatoryCapital, decimal CoreCapital,
     decimal SupplementaryCapital, DateTime CapitalDate);
 /// <summary>One immutable effective-date observation (source "revision", or "legacy" for the pre-history row).</summary>
-public sealed record CapitalVersion(Guid Id, long Revision, DateTime EffectiveDate, decimal RegulatoryCapital, decimal CoreCapital,
+public sealed record CapitalVersion(long Id, long Revision, DateTime EffectiveDate, decimal RegulatoryCapital, decimal CoreCapital,
     decimal SupplementaryCapital, DateTime RecordedAt, string RecordedBy, string Source);
 public sealed record CapitalHistoryPage(IReadOnlyList<CapitalVersion> Items, int Total, int Page, int PageSize);
 public interface ICapitalApi

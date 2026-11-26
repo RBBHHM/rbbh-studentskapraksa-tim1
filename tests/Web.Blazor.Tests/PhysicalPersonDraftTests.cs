@@ -7,7 +7,7 @@ public sealed class PhysicalPersonDraftTests
     public static PhysicalPersonDraft Valid() => new()
     {
         FirstName = "Test", LastName = "Osoba", Residency = 2, PassportNumber = "AB12345", FbaId = "12345",
-        RelationBasis = "ZOB-2-V-5", RelationDescription = "Business relationship", SpecialRelationBasis = "UPRAVA",
+        RelationBasis = "ZOB-2-V-5", SpecialRelationBasis = "UPRAVA",
         DateFrom = new(2026, 1, 1), DateTo = new(2026, 12, 31), IsIdentifiedStaff = true,
         DeclarationNoFamilyMembers = false, ConnectedWithBank = true, SpecialRelationshipWithBank = false,
         SpecialContract = false, MalusClawback = false

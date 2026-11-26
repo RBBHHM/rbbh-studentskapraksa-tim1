@@ -99,7 +99,7 @@ public static class RelatedPersonValidator
         if (nonResidentError is not null) return nonResidentError;
 
         return ValidateBusinessFields(dto.RelationBasis,
-            dto.RelationDescription, dto.SpecialRelationBasis, dto.IsIdentifiedStaff, dto.RelatedToPersonId,
+            dto.SpecialRelationBasis, dto.IsIdentifiedStaff, dto.RelatedToPersonId,
             dto.DateFrom, dto.DateTo);
     }
 
@@ -117,7 +117,7 @@ public static class RelatedPersonValidator
         if (nonResidentError is not null) return nonResidentError;
 
         return ValidateBusinessFields(dto.RelationBasis,
-            dto.RelationDescription, dto.SpecialRelationBasis, dto.IsIdentifiedStaff, dto.RelatedToPersonId,
+            dto.SpecialRelationBasis, dto.IsIdentifiedStaff, dto.RelatedToPersonId,
             dto.DateFrom, dto.DateTo);
     }
 
@@ -166,15 +166,13 @@ public static class RelatedPersonValidator
     }
 
     private static string? ValidateBusinessFields(string? relationBasis,
-        string? relationDescription, string? specialRelationBasis, bool isIdentifiedStaff, Guid? relatedToPersonId,
+        string? specialRelationBasis, bool isIdentifiedStaff, Guid? relatedToPersonId,
         DateTime? dateFrom, DateTime? dateTo)
     {
-        if (relationBasis?.Length > 500 || relationDescription?.Length > 1000 || specialRelationBasis?.Length > 500)
+        if (relationBasis?.Length > 500 || specialRelationBasis?.Length > 500)
             return BackendMessages.Message("validation.person.connection.bounds");
         if (string.IsNullOrWhiteSpace(relationBasis))
             return BackendMessages.Message("validation.registry.connection.required");
-        if (string.IsNullOrWhiteSpace(relationDescription))
-            return BackendMessages.Message("validation.registry.description.required");
         if (string.IsNullOrWhiteSpace(specialRelationBasis))
             return BackendMessages.Message("validation.person.special.basis.required");
         if (!IsImmediateFamily(specialRelationBasis) && !isIdentifiedStaff)

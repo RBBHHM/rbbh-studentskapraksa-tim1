@@ -5,8 +5,7 @@ namespace RBBH.ConnectedParties.DL.Entities.Report;
 /// <summary>Append-only effective-date observation; corrections create another database-ordered revision.</summary>
 public sealed class CapitalRevision
 {
-    public Guid Id { get; set; } = Guid.NewGuid();
-    public long Revision { get; set; }
+    public long Id { get; set; }
     public DateTime EffectiveDate { get; set; }
     public decimal RegulatoryCapital { get; set; }
     public decimal CoreCapital { get; set; }

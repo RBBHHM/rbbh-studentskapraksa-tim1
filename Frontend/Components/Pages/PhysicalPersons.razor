@@ -190,7 +190,7 @@ else
             }
             catch (RegistryApiException) { _fallback = true; }
             catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { return; }
-            if (person?.RelationBasis is { } basis && !_bases.Any(option => option.Kod == basis)) _bases = [.. _bases, new(basis, basis, person.RelationDescription)];
+            if (person?.RelationBasis is { } basis && !_bases.Any(option => option.Kod == basis)) _bases = [.. _bases, new(basis, basis, null)];
             if (person?.SpecialRelationBasis is { } specialBasis && !_special.Any(option => option.Kod == specialBasis)) _special = [.. _special, new(specialBasis, specialBasis, null)];
             _draft = person is null ? new() : PhysicalPersonDraft.From(person);
         }

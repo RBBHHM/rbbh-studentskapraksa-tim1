@@ -25,6 +25,7 @@ public sealed class RoleRequest
 
 public sealed class RequestedRole
 {
+    public long Id { get; set; }
     public Guid RequestId { get; set; }
     public RoleRequest Request { get; set; } = null!;
     public Guid RoleId { get; set; }

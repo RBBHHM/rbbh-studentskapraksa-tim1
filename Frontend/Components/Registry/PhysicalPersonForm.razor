@@ -28,11 +28,10 @@
         {
             <div class="registry-form-grid">
                 <RbiField TValue="string" Label="@T["person.basis"]" Required For="@(() => Model.RelationBasis)">
-                    <RbiSelect TValue="string" @bind-Value="Model.RelationBasis" @bind-Value:after="BasisChanged"><option value="">@T["common.select"]</option>
+                    <RbiSelect TValue="string" @bind-Value="Model.RelationBasis"><option value="">@T["common.select"]</option>
                         @foreach (var option in Bases) { <option value="@option.Kod">@option.Naziv</option> }
                     </RbiSelect>
                 </RbiField>
-                <RbiField TValue="string" Label="@T["person.description"]" Required For="@(() => Model.RelationDescription)"><RbiTextArea @bind-Value="Model.RelationDescription" ReadOnly /></RbiField>
                 <RbiField TValue="string" Label="@T["person.special-basis"]" Required For="@(() => Model.SpecialRelationBasis)">
                     <RbiSelect TValue="string" @bind-Value="Model.SpecialRelationBasis" @bind-Value:after="Model.SpecialBasisChanged"><option value="">@T["common.select"]</option>
                         @foreach (var option in SpecialBases) { <option value="@option.Kod">@option.Naziv</option> }
@@ -101,7 +100,7 @@
     protected override void OnInitialized()
     {
         _context = new(Model); _validation = new(_context); _duplicateValidation = new(_context);
-        _live = new(_context, _validation, () => Model.Validate(identityOnly: _step == 1), key => T[key], () => _ = InvokeAsync(StateHasChanged), new() { [nameof(Model.RelationBasis)] = [nameof(Model.RelationDescription)] });
+        _live = new(_context, _validation, () => Model.Validate(identityOnly: _step == 1), key => T[key], () => _ = InvokeAsync(StateHasChanged));
     }
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -109,7 +108,6 @@
         else if (_focusStep) { _focusStep = false; await _stepHeading.FocusAsync(); }
     }
     private void Back() { _step = 1; _focusStep = true; }
-    private void BasisChanged() => Model.RelationDescription = Bases.FirstOrDefault(item => item.Kod == Model.RelationBasis)?.Opis;
     private async Task SubmitAsync()
     {
         if (MutationBlocked) return;

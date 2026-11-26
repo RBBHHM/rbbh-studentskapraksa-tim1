@@ -247,7 +247,7 @@ public class RelatedPersonService(
         entity.IsActive = true;
         entity.CreatedAt = DateTime.UtcNow;
         entity.CreatedBy = korisnik;
-        entity.CreatorSubject = Helpers.RegistryVerification.CreatorSubject(actor);
+        entity.VerificationOriginFingerprint = Helpers.RegistryVerification.OriginFingerprint(actor);
 
         // Normalizacija JMBG-a (uklanjanje praznina)
         if (!string.IsNullOrWhiteSpace(entity.JMBG))
@@ -364,7 +364,7 @@ public class RelatedPersonService(
         if (entity.Status == RelatedPersonStatus.Verified)
             return Result<RelatedPersonResponseDTO>.ValidationError(BackendMessages.Message("validation.person.verified"));
 
-        Helpers.RegistryVerification.Authorize(entity.CreatorSubject, actor);
+        Helpers.RegistryVerification.Authorize(entity.VerificationOriginFingerprint, actor);
         var before = new { status = entity.Status.ToString(), verifiedBy = entity.VerifiedBy, verifiedAt = entity.VerifiedAt };
         entity.Status = RelatedPersonStatus.Verified;
         entity.VerifiedBy = korisnik;
@@ -614,12 +614,17 @@ public class RelatedPersonService(
 
         var result = new ImportResultDTO();
         var columnCount = ws.LastColumnUsed()?.ColumnNumber();
-        var isV3 = columnCount == V3Columns.Length;
-        var isV2 = isV3 || columnCount == V2Columns.Length;
+        var hasLegacyDescription = columnCount is 25 or 26 &&
+            !ExcelImportSchema.CellText(ws.Cell(1, 16)).Contains("zaposlenik", StringComparison.OrdinalIgnoreCase) &&
+            !ExcelImportSchema.CellText(ws.Cell(1, 16)).Contains("staff", StringComparison.OrdinalIgnoreCase);
+        var staffColumn = hasLegacyDescription ? 17 : 16;
+        var isV3 = columnCount == V3Columns.Length - (hasLegacyDescription ? 0 : 1);
+        var isV2 = isV3 || columnCount == V2Columns.Length - (hasLegacyDescription ? 0 : 1);
         // Prior 15/25-column files remain supported. Export v3 appends only a
         // derived informational description; imports use the authoritative code.
-        var schemaErrors = ExcelImportSchema.Validate(ws,
-            isV3 ? V3Columns : isV2 ? V2Columns : ImportColumns);
+        var columns = isV3 ? V3Columns : isV2 ? V2Columns : ImportColumns;
+        if (isV2 && !hasLegacyDescription) columns = columns.Where((_, index) => index != 15).ToArray();
+        var schemaErrors = ExcelImportSchema.Validate(ws, columns);
         if (schemaErrors.Count > 0)
         {
             result.Failed = Math.Max(lastRow - 1, 1);
@@ -633,7 +638,7 @@ public class RelatedPersonService(
         var usedFbaIds = existing.Where(person => person.FBAId != null).Select(person => person.FBAId!).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var parentIds = existing.SelectMany(person => WorkbookRelationships.Keys(person.JMBG, person.PassportNumber, person.FBAId).Select(key => (key, person.Id)))
             .GroupBy(item => item.key).ToDictionary(group => group.Key, group => group.Select(item => item.Id).Distinct().ToList());
-        var order = isV2 ? WorkbookRelationships.ParentFirst(ws, lastRow, parentIds.Keys.ToHashSet())
+        var order = isV2 ? WorkbookRelationships.ParentFirst(ws, lastRow, parentIds.Keys.ToHashSet(), staffColumn + 1)
             : (Ordered: Enumerable.Range(2, Math.Max(0, lastRow - 1)).ToList(), Blocked: new List<int>());
         foreach (var blocked in order.Blocked)
         {
@@ -662,7 +667,7 @@ public class RelatedPersonService(
                 var specContStr = ExcelImportSchema.CellText(ws.Cell(row, 14));
                 var malusStr = ExcelImportSchema.CellText(ws.Cell(row, 15));
 
-                if (ws.Row(row).Cells(1, isV2 ? 20 : ImportColumns.Length).All(cell => string.IsNullOrWhiteSpace(cell.GetString())))
+                if (ws.Row(row).Cells(1, isV2 ? staffColumn + 3 : ImportColumns.Length).All(cell => string.IsNullOrWhiteSpace(cell.GetString())))
                     continue; // Only entirely empty rows may be ignored.
 
                 if (string.IsNullOrWhiteSpace(firstName))
@@ -691,11 +696,10 @@ public class RelatedPersonService(
                     PassportNumber = string.IsNullOrWhiteSpace(passport) ? null : passport,
                     FBAId = string.IsNullOrWhiteSpace(fbaId) ? null : fbaId,
                     RelationBasis = string.IsNullOrWhiteSpace(relationBasis) ? null : relationBasis,
-                    RelationDescription = isV2 ? ExcelImportSchema.CellText(ws.Cell(row, 16)) : string.IsNullOrWhiteSpace(relationBasis) ? null : relationBasis,
                     SpecialRelationBasis = string.IsNullOrWhiteSpace(specialBasis) ? null : specialBasis,
                     DateFrom = dateFrom,
                     DateTo = dateTo,
-                    IsIdentifiedStaff = !isV2 || ParseRequiredBool(ExcelImportSchema.CellText(ws.Cell(row, 17)), "Identifikovani zaposlenik"),
+                    IsIdentifiedStaff = !isV2 || ParseRequiredBool(ExcelImportSchema.CellText(ws.Cell(row, staffColumn)), "Identifikovani zaposlenik"),
                     DeclarationNoFamilyMembers = ParseRequiredBool(noFamilyStr, "Izjava o nepostojanju članova porodice"),
                     ConnectedWithBank = ParseRequiredBool(connBankStr, "Povezano lice sa Bankom"),
                     SpecialRelationshipWithBank = ParseRequiredBool(specialRelStr, "Lice u posebnom odnosu sa Bankom"),
@@ -704,7 +708,7 @@ public class RelatedPersonService(
                 };
                 if (isV2)
                 {
-                    var links = WorkbookRelationships.Keys(ExcelImportSchema.CellText(ws.Cell(row, 18)), ExcelImportSchema.CellText(ws.Cell(row, 19)), ExcelImportSchema.CellText(ws.Cell(row, 20)));
+                    var links = WorkbookRelationships.Keys(ExcelImportSchema.CellText(ws.Cell(row, staffColumn + 1)), ExcelImportSchema.CellText(ws.Cell(row, staffColumn + 2)), ExcelImportSchema.CellText(ws.Cell(row, staffColumn + 3)));
                     if (links.Length > 0)
                     {
                         var resolved = links.Where(parentIds.ContainsKey).SelectMany(key => parentIds[key]).Distinct().ToArray();
@@ -736,7 +740,6 @@ public class RelatedPersonService(
                     PassportNumber = dto.PassportNumber,
                     FBAId = dto.FBAId,
                     RelationBasis = dto.RelationBasis,
-                    RelationDescription = dto.RelationDescription,
                     SpecialRelationBasis = dto.SpecialRelationBasis,
                     DateFrom = dto.DateFrom,
                     DateTo = dto.DateTo,
@@ -749,7 +752,7 @@ public class RelatedPersonService(
                     Status = RelatedPersonStatus.Draft,
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
-                    CreatorSubject = Helpers.RegistryVerification.CreatorSubject(actor),
+                    VerificationOriginFingerprint = Helpers.RegistryVerification.OriginFingerprint(actor),
                     CreatedBy = createdBy
                 };
 

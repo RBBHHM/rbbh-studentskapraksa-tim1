@@ -27,7 +27,7 @@ public sealed class CapitalHistoryHttpTests : CapitalHistoryFixture
     {
         await InDatabase(async db => { db.Capitals.Add(new() { CapitalDate = new(2026, 1, 1), RegulatoryCapital = 100, CoreCapital = 50, SupplementaryCapital = 25, CreatedBy = "original" }); await db.SaveChangesAsync(); });
         var first = await Save(new(2026, 2, 1), 200); var correction = await Save(new(2026, 2, 1), 240); await Save(new(2027, 1, 1), 400);
-        Assert.NotEqual(first.GetProperty("id").GetGuid(), correction.GetProperty("id").GetGuid());
+        Assert.NotEqual(first.GetProperty("id").GetInt64(), correction.GetProperty("id").GetInt64());
         var before = await Client.GetAsync("/api/capital/as-of?date=2025-12-31");
         Assert.Equal(HttpStatusCode.NoContent, before.StatusCode); Assert.Equal("", await before.Content.ReadAsStringAsync());
         var january = await Client.GetFromJsonAsync<JsonElement>("/api/capital/as-of?date=2026-01-31"); Assert.Equal(100, january.GetProperty("regulatoryCapital").GetDecimal());
