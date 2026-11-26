@@ -134,7 +134,7 @@ public sealed class RuntimeLocalizationCatalog(ConnectedPartiesDbContext db, IOp
         row.Localization.ResourcePlaceholder = input.Placeholder;
         if (input.ContextInfo is not null) row.Localization.ContextInfo = string.IsNullOrWhiteSpace(input.ContextInfo) ? null : input.ContextInfo.Trim();
         row.Aktivan = input.IsActive; row.IzmijenjenDatum = now; row.IzmijenioKorisnik = actor;
-        db.AuditLogs.Add(BusinessAudit.Create("CodeList", row.Kod, "LOCALIZATION_UPDATE",
+        db.AuditLogs.Add(BusinessAudit.Create("CodeList", "LOCALIZATION_UPDATE",
             actor, null, before, Snapshot(row)));
         await db.SaveChangesAsync(ct);
     }

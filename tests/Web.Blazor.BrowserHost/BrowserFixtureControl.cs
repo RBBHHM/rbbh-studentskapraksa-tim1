@@ -60,7 +60,7 @@ internal static partial class BrowserHostProgram
                         {
                             users = await db.AppUsers.Select(item => new { item.Id, item.Username, item.FirstName, item.LastName, item.Email, item.IsActive }).ToArrayAsync(),
                             roles = await db.Roles.Select(item => new { item.Id, item.Name }).ToArrayAsync(),
-                            audit = await db.AuditLogs.Select(item => new { item.Action, item.RecordId, item.Username }).ToArrayAsync()
+                            audit = await db.AuditLogs.Select(item => new { item.Action, item.Username }).ToArrayAsync()
                         }); return;
                     }
                     if (context.Request.Path == "/__fixtures/period-state" && HttpMethods.IsGet(context.Request.Method))
@@ -71,7 +71,7 @@ internal static partial class BrowserHostProgram
                         {
                             requests = await db.UnlockRequests.OrderBy(item => item.CreatedAt).Select(item => new { item.Id, item.Status, item.Reason, item.RequestedBy, item.Year, item.Month }).ToArrayAsync(),
                             locks = await db.PeriodLocks.Select(item => new { item.Year, item.Month, item.IsLocked }).ToArrayAsync(),
-                            audit = await db.AuditLogs.OrderBy(item => item.Timestamp).Select(item => new { item.Action, item.RecordId, item.Username }).ToArrayAsync()
+                            audit = await db.AuditLogs.OrderBy(item => item.Timestamp).Select(item => new { item.Action, item.Username }).ToArrayAsync()
                         }); return;
                     }
                     if (context.Request.Path == "/__fixtures/codes-state" && HttpMethods.IsGet(context.Request.Method))
@@ -82,7 +82,7 @@ internal static partial class BrowserHostProgram
                         {
                             values = await db.CodeLists.IgnoreQueryFilters().OrderBy(item => item.ID).Select(item => new { item.ID, item.Kategorija, item.Kod, item.Naziv, item.Opis, item.Aktivan, item.IzmijenioKorisnik }).ToArrayAsync(),
                             definitions = await db.CodeListDefinitions.Select(item => new { item.Name, item.Description, item.IsActive }).ToArrayAsync(),
-                            audit = await db.AuditLogs.OrderBy(item => item.Timestamp).Select(item => new { item.Action, item.RecordId, item.Username, item.NewValues }).ToArrayAsync()
+                            audit = await db.AuditLogs.OrderBy(item => item.Timestamp).Select(item => new { item.Action, item.Username, item.NewValues }).ToArrayAsync()
                         }); return;
                     }
                     if (context.Request.Path == "/__fixtures/codes-denied-probes" && HttpMethods.IsPost(context.Request.Method))
@@ -334,6 +334,8 @@ internal static partial class BrowserHostProgram
                                 var languages = new CodeListDefinition { Name = "LANGUAGES", CreatedBy = "fixture" };
                                 var packs = new CodeListDefinition { Name = "LANGUAGE_PACKS", CreatedBy = "fixture" };
                                 db.CodeListDefinitions.AddRange(languages, packs);
+                                db.Entry(packs).Property("ColumnName13").CurrentValue = "RESOURCE_KEY";
+                                db.Entry(packs).Property("ColumnDescription13").CurrentValue = "Stable resource key used by the application.";
                                 db.CodeLists.AddRange(
                                     new CodeList { Kategorija = "LANGUAGES", Kod = "BS", Naziv = "Bosanski", KreiraoKorisnik = "fixture" },
                                     new CodeList { Kategorija = "LANGUAGES", Kod = "EN", Naziv = "English", KreiraoKorisnik = "fixture" });
@@ -356,7 +358,7 @@ internal static partial class BrowserHostProgram
                                 await scope.ServiceProvider.GetRequiredService<IAuditService>().LogAsync(new AuditEntry
                                 {
                                     TableName = "RelatedPerson",
-                                    RecordId = "fixture-record",
+
                                     Action = "INSERT",
                                     UserId = "fixture-user",
                                     Username = "fixture-auditor",
@@ -371,7 +373,7 @@ internal static partial class BrowserHostProgram
                                 for (var index = 0; index < 201; index++) db.AuditLogs.Add(new RBBH.ConnectedParties.DL.Entities.Audit.AuditLog
                                 {
                                     TableName = "RelatedPerson",
-                                    RecordId = $"audit-record-{index:D3}",
+
                                     Action = "INSERT",
                                     Username = $"audit-page-{index:D3}",
                                     Timestamp = DateTime.UtcNow.AddMinutes(-index)

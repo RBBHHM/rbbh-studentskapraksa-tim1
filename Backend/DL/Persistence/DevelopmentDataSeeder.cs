@@ -123,9 +123,9 @@ public static class DevelopmentDataSeeder
         foreach (var limit in db.Limiti.Local) limit.Capital = capital;
 
         db.AuditLogs.AddRange(
-            new AuditLog { TableName = "RelatedPerson", RecordId = resident.Id.ToString(), Action = "VERIFY", NewValues = "{\"status\":\"Verified\",\"verifiedBy\":\"demo.verifier\"}", Username = verifier.Username, Timestamp = now.AddHours(-2) },
-            new AuditLog { TableName = "LegalEntity", RecordId = legalForeign.Id.ToString(), Action = "INSERT", NewValues = "{\"name\":\"International Partner GmbH\",\"status\":\"Draft\"}", Username = admin.Username, Timestamp = now.AddDays(-1) },
-            new AuditLog { TableName = "PeriodLock", RecordId = $"{now.Year}-{now.Month}", Action = "PERIOD_UNLOCK", NewValues = "{\"isLocked\":false}", Username = admin.Username, Timestamp = now.AddDays(-2) });
+            new AuditLog { TableName = "RelatedPerson", Action = "VERIFY", NewValues = "{\"status\":\"Verified\",\"verifiedBy\":\"demo.verifier\"}", Username = verifier.Username, Timestamp = now.AddHours(-2) },
+            new AuditLog { TableName = "LegalEntity", Action = "INSERT", NewValues = "{\"name\":\"International Partner GmbH\",\"status\":\"Draft\"}", Username = admin.Username, Timestamp = now.AddDays(-1) },
+            new AuditLog { TableName = "PeriodLock", Action = "PERIOD_UNLOCK", NewValues = "{\"isLocked\":false}", Username = admin.Username, Timestamp = now.AddDays(-2) });
 
         await db.SaveChangesAsync(ct);
         await EnsureApplicationRolesAsync(db, ct);

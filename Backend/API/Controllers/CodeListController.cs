@@ -43,23 +43,31 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
 
     [HttpPost("categories")]
     [Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
-    public async Task<ActionResult<object>> CreateCategory([FromBody] CreateCodeListDefinitionDTO dto)
+    public async Task<ActionResult<object>> CreateCategory([FromBody] CreateCodeListDefinitionDTO dto, CancellationToken ct)
     {
         var name = CodebookName.Canonical(dto.Name ?? "");
         if (name.Length < 2 || name.Length > 100 || dto.Description?.Length > 500)
             return BadRequest(new ProblemDetails { Title = BackendMessages.Message("errors.codelist.name.invalid.title"), Detail = BackendMessages.Message("errors.codelist.name.length") });
-        if (await db.CodeListDefinitions.AnyAsync(item => item.Name.Trim().ToUpper() == name.ToUpper()) || await db.CodeLists.IgnoreQueryFilters().AnyAsync(item => item.Kategorija.Trim().ToUpper() == name.ToUpper()))
-            return Conflict(new ProblemDetails { Title = BackendMessages.Message("errors.codelist.duplicate.title"), Detail = BackendMessages.Message("errors.codelist.duplicate.detail", name) });
+        ConflictObjectResult Duplicate() => Conflict(new ProblemDetails
+        {
+            Title = BackendMessages.Message("errors.codelist.duplicate.title"),
+            Detail = BackendMessages.Message("errors.codelist.duplicate.detail", name)
+        });
+        if (await db.CodeListDefinitions.AnyAsync(item => item.Name.ToUpper() == name, ct) ||
+            await db.CodeLists.IgnoreQueryFilters().AnyAsync(item => item.Kategorija.ToUpper() == name, ct))
+            return Duplicate();
         var korisnik = GetKorisnik();
         var definition = new CodeListDefinition { Name = name, Description = dto.Description?.Trim(), CreatedBy = korisnik };
         db.CodeListDefinitions.Add(definition);
-        db.AuditLogs.Add(Helpers.BusinessAudit.Create("CodeList", definition.Id.ToString(), "CODELIST_ADD", korisnik, null,
+        db.AuditLogs.Add(Helpers.BusinessAudit.Create("CodeList", "CODELIST_ADD", korisnik, null,
             newValues: new { definition.Name, definition.Description, definition.IsActive }));
-        await db.SaveChangesAsync(HttpContext.RequestAborted);
-
-
-
-        return Created($"{Request.Path}/{definition.Id}", new { definition.Id, definition.Name, definition.Description });
+        try { await db.SaveChangesAsync(ct); }
+        catch (DbUpdateException exception) when (exception.GetBaseException() is SqlException { Number: 2601 or 2627 })
+        {
+            return Duplicate();
+        }
+        return CreatedAtAction(nameof(Columns), new { name = definition.Name },
+            new { definition.Id, definition.Name, definition.Description });
     }
 
     [HttpGet("categories/definitions")]
@@ -119,7 +127,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
         if (definition.Version != input.ExpectedVersion) return Conflict(new ProblemDetails { Status = 409, Title = BackendMessages.Message("errors.codelist.concurrent.change") });
         var before = new { definition.Description };
         var actor = GetKorisnik(); definition.Description = input.Description?.Trim(); definition.ModifiedBy = actor;
-        db.AuditLogs.Add(Helpers.BusinessAudit.Create("CodeList", definition.Id.ToString(), "CODELIST_UPDATE", actor, null,
+        db.AuditLogs.Add(Helpers.BusinessAudit.Create("CodeList", "CODELIST_UPDATE", actor, null,
             before, new { definition.Description }));
         await db.SaveChangesAsync(ct);
         return Ok(new { definition.Id, definition.Name, definition.Description, definition.Version, definition.ModifiedAt, definition.ModifiedBy });
@@ -452,7 +460,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
             preview.Imported++;
         }
         definition.ModifiedBy = korisnik;
-        db.AuditLogs.Add(new() { TableName = "CodeList", RecordId = definition.Name, Action = "IMPORT",
+        db.AuditLogs.Add(new() { TableName = "CodeList", Action = "IMPORT",
             Username = korisnik, Timestamp = DateTime.UtcNow,
             NewValues = System.Text.Json.JsonSerializer.Serialize(new { imported = preview.Imported, failed = preview.Errors.Count }) });
         await db.SaveChangesAsync(HttpContext.RequestAborted);

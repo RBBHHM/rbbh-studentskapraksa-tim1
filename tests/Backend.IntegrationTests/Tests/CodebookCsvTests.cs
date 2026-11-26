@@ -115,6 +115,26 @@ public sealed class CodebookCsvSqlTests : CodebookCsvFixture
     protected override bool UseSql => true;
 
     [SqlServerFact]
+    public async Task CreateReturnsCanonicalNameAndDuplicateLeavesSingleDefinition()
+    {
+        var request = new { name = "testni sifrarnik", description = "Testni šifrarnik" };
+        using var created = await Client.PostAsJsonAsync("/api/code-lists/categories", request);
+        Assert.True(created.StatusCode == HttpStatusCode.Created, await created.Content.ReadAsStringAsync());
+        var result = await created.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("TESTNI_SIFRARNIK", result.GetProperty("name").GetString());
+        using var columns = await Client.GetAsync(created.Headers.Location);
+        Assert.Equal(HttpStatusCode.OK, columns.StatusCode);
+
+        using var duplicate = await Client.PostAsJsonAsync("/api/code-lists/categories", new { name = "TESTNI_SIFRARNIK" });
+        Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
+        await InDatabase(async db =>
+        {
+            Assert.Single(await db.CodeListDefinitions.Where(row => row.Name == "TESTNI_SIFRARNIK").ToListAsync());
+            Assert.Single(await db.AuditLogs.Where(row => row.Action == "CODELIST_ADD").ToListAsync());
+        });
+    }
+
+    [SqlServerFact]
     public async Task UpgradeAcceptsAlreadyCanonicalLimitCodebook()
     {
         await UpgradeDatabase(async db =>

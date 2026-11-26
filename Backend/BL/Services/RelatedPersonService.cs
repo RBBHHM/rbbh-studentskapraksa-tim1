@@ -255,7 +255,7 @@ public class RelatedPersonService(
         entity.PassportNumber = NormalizeIdentifier(entity.PassportNumber)?.ToUpperInvariant();
         entity.FBAId = NormalizeIdentifier(entity.FBAId);
         _dbContext.RelatedPersons.Add(entity);
-        _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("RelatedPerson", entity.Id.ToString(), "INSERT", korisnik, actor,
+        _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("RelatedPerson", "INSERT", korisnik, actor,
             newValues: entity.Adapt<RelatedPersonResponseDTO>()));
         await _dbContext.SaveChangesAsync(actor?.HttpContext?.RequestAborted ?? default);
 
@@ -300,7 +300,7 @@ public class RelatedPersonService(
         entity.MarkModified(DateTime.UtcNow);
         entity.ModifiedBy = korisnik;
 
-        _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("RelatedPerson", entity.Id.ToString(), "UPDATE", korisnik, actor,
+        _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("RelatedPerson", "UPDATE", korisnik, actor,
             oldValues: before, newValues: entity.Adapt<RelatedPersonResponseDTO>()));
         await _dbContext.SaveChangesAsync(actor?.HttpContext?.RequestAborted ?? default);
 
@@ -333,14 +333,14 @@ public class RelatedPersonService(
         // Povezana lica ostaju u registru; uklanja se samo veza prema obrisanom licu.
         foreach (var member in entity.RelatedFamilyMembers.Where(member => member.IsActive))
         {
-            _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("RelatedPerson", member.Id.ToString(), "UPDATE", korisnik, actor,
+            _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("RelatedPerson", "UPDATE", korisnik, actor,
                 oldValues: new { relatedToPersonId = entity.Id }, newValues: new { relatedToPersonId = (long?)null }));
             member.RelatedToPersonId = null;
             member.MarkModified(now);
             member.ModifiedBy = korisnik;
         }
 
-        _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("RelatedPerson", entity.Id.ToString(), "DELETE", korisnik, actor,
+        _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("RelatedPerson", "DELETE", korisnik, actor,
             oldValues: before, newValues: new { isActive = false }));
         await _dbContext.SaveChangesAsync(actor?.HttpContext?.RequestAborted ?? default);
 
@@ -371,7 +371,7 @@ public class RelatedPersonService(
         entity.ModifiedBy = korisnik;
         entity.MarkModified(DateTime.UtcNow);
 
-        _dbContext.AuditLogs.Add(Helpers.RegistryVerification.Audit("RelatedPerson", entity.Id, korisnik, actor,
+        _dbContext.AuditLogs.Add(Helpers.RegistryVerification.Audit("RelatedPerson", korisnik, actor,
             before, new { status = entity.Status.ToString(), verifiedBy = entity.VerifiedBy, verifiedAt = entity.VerifiedAt }));
         await _dbContext.SaveChangesAsync();
 
@@ -512,7 +512,7 @@ public class RelatedPersonService(
             entity.JMBG = entity.JMBG.Trim();
 
         _dbContext.FamilyMembers.Add(entity);
-        _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("FamilyMember", entity.Id.ToString(), "INSERT", korisnik, actor,
+        _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("FamilyMember", "INSERT", korisnik, actor,
             newValues: entity.Adapt<FamilyMemberResponseDTO>()));
         await _dbContext.SaveChangesAsync(actor?.HttpContext?.RequestAborted ?? default);
 
@@ -566,7 +566,7 @@ public class RelatedPersonService(
         entity.ModifiedAt = DateTime.UtcNow;
         entity.ModifiedBy = korisnik;
 
-        _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("FamilyMember", entity.Id.ToString(), "UPDATE", korisnik, actor,
+        _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("FamilyMember", "UPDATE", korisnik, actor,
             oldValues: before, newValues: entity.Adapt<FamilyMemberResponseDTO>()));
         await _dbContext.SaveChangesAsync(actor?.HttpContext?.RequestAborted ?? default);
 
@@ -594,7 +594,7 @@ public class RelatedPersonService(
         entity.ModifiedAt = DateTime.UtcNow;
         entity.ModifiedBy = korisnik;
 
-        _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("FamilyMember", entity.Id.ToString(), "DELETE", korisnik, actor,
+        _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("FamilyMember", "DELETE", korisnik, actor,
             oldValues: before, newValues: new { isActive = false }));
         await _dbContext.SaveChangesAsync(actor?.HttpContext?.RequestAborted ?? default);
 
@@ -776,7 +776,7 @@ public class RelatedPersonService(
 
         if (result.Imported > 0)
         {
-            _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("RelatedPerson", "-", "IMPORT", createdBy, actor, newValues: new { result.Imported, result.Failed }));
+            _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("RelatedPerson", "IMPORT", createdBy, actor, newValues: new { result.Imported, result.Failed }));
             await _dbContext.SaveChangesAsync(actor?.HttpContext?.RequestAborted ?? default);
         }
 

@@ -76,7 +76,7 @@ public sealed class CapitalHistorySqlTests : CapitalHistoryFixture
             Assert.Equal(150, limit.OdobreniLimit);
             Assert.Equal(160, limit.MaksimalnaOcekivanaUtilizacija);
             Assert.Contains("EUR", limit.Komentar);
-            Assert.Equal(limit.LegalEntityId.ToString(), (await db.AuditLogs.SingleAsync()).RecordId);
+            Assert.Equal("VERIFY", (await db.AuditLogs.SingleAsync()).Action);
 
             var service = new CapitalService(db);
             Assert.Null((await service.AsOf(new(2025, 12, 31), default)).Value);

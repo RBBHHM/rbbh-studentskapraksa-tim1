@@ -118,7 +118,6 @@ public class ReportController : ControllerBase
         await _auditService.LogAsync(new AuditEntry
         {
             TableName = "Report",
-            RecordId = identifier,
             Action = "EXPORT",
             NewValues = System.Text.Json.JsonSerializer.Serialize(new { type = "client", identifier }),
             UserId = RBBH.ConnectedParties.Helpers.AuthenticatedActor.RequireSubject(User),
@@ -147,7 +146,6 @@ public class ReportController : ControllerBase
         await _auditService.LogAsync(new AuditEntry
         {
             TableName = "Report",
-            RecordId = "-",
             Action = "EXPORT",
             NewValues = System.Text.Json.JsonSerializer.Serialize(new { type = "all-clients" }),
             UserId = RBBH.ConnectedParties.Helpers.AuthenticatedActor.RequireSubject(User),
@@ -170,7 +168,6 @@ public class ReportController : ControllerBase
         await _auditService.LogAsync(new AuditEntry
         {
             TableName = "Report",
-            RecordId = reportId.ToString(),
             Action = "EXPORT",
             NewValues = System.Text.Json.JsonSerializer.Serialize(new { type = "generated" }),
             UserId = RBBH.ConnectedParties.Helpers.AuthenticatedActor.RequireSubject(User),

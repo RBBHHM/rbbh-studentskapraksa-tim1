@@ -182,7 +182,7 @@ public partial class LegalEntityService
 
         if (result.Imported > 0)
         {
-            _context.AuditLogs.Add(Helpers.BusinessAudit.Create("LegalEntity", "-", "IMPORT", createdBy, _actor, newValues: new { result.Imported, result.Failed }));
+            _context.AuditLogs.Add(Helpers.BusinessAudit.Create("LegalEntity", "IMPORT", createdBy, _actor, newValues: new { result.Imported, result.Failed }));
             await _context.SaveChangesAsync(_actor?.HttpContext?.RequestAborted ?? default);
         }
 

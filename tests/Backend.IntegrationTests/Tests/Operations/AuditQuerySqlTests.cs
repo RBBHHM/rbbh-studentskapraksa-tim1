@@ -36,7 +36,7 @@ public sealed class AuditQuerySqlTests : AuthenticatedApiFixture
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var row = Assert.Single(body.RootElement.GetProperty("logs").EnumerateArray());
-        Assert.Equal("last-day", row.GetProperty("recordId").GetString());
+        Assert.Equal("last-day", row.GetProperty("username").GetString());
     }
 
     [SqlServerFact]
@@ -47,7 +47,8 @@ public sealed class AuditQuerySqlTests : AuthenticatedApiFixture
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var row = Assert.Single(body.RootElement.GetProperty("logs").EnumerateArray());
-        Assert.Equal("ordinary-day", row.GetProperty("recordId").GetString());
+        Assert.Equal("ordinary-day", row.GetProperty("username").GetString());
+        Assert.False(row.TryGetProperty("recordId", out _));
         using var guest = NewClient("unmapped-guest");
         using var denied = await guest.GetAsync("/api/audit-logs");
         Assert.Equal(HttpStatusCode.Forbidden, denied.StatusCode);
@@ -72,18 +73,27 @@ public sealed class AuditQuerySqlTests : AuthenticatedApiFixture
         {
             await db.GetService<IMigrator>().MigrateAsync("20261124140633_MoveLegalEntityVerificationOrigin");
             await db.Database.ExecuteSqlRawAsync("""
-                INSERT INTO dbo.AuditLogs (Id, TableName, RecordId, Action, Username, Timestamp, IpAddress, OldValues)
-                VALUES (NEWID(), N'AuditQueryFixture', N'legacy', N'UPDATE', N'creator', SYSUTCDATETIME(), N'192.0.2.15', N'{{"old":true}}');
+                INSERT INTO dbo.AuditLogs (Id, TableName, RecordId, Action, Username, Timestamp, IpAddress, OldValues, NewValues)
+                VALUES (NEWID(), N'AuditQueryFixture', N'legacy', N'UPDATE', N'creator', SYSUTCDATETIME(), N'192.0.2.15',
+                            N'{{"old":true}}', N'{{"_recordId":"legacy","value":null}}'),
+                       (NEWID(), N'AppUser', N'42', N'UPDATE', N'creator', SYSUTCDATETIME(), NULL,
+                            N'{{"Username":"User","Email":"user@example.test"}}',
+                            N'{{"Username":"user","Email":"user@example.test"}}');
                 """);
 
             await db.Database.MigrateAsync();
-            var historical = await db.AuditLogs.SingleAsync();
+            var historical = await db.AuditLogs.SingleAsync(row => row.TableName == Area);
             Assert.True(historical.Id > 0);
-            Assert.Equal("legacy", historical.RecordId);
             using var snapshot = System.Text.Json.JsonDocument.Parse(historical.OldValues!);
             Assert.True(snapshot.RootElement.GetProperty("old").GetBoolean());
+            Assert.Null(historical.NewValues);
+            var profile = await db.AuditLogs.SingleAsync(row => row.TableName == "AppUser");
+            using var before = JsonDocument.Parse(profile.OldValues!);
+            using var after = JsonDocument.Parse(profile.NewValues!);
+            Assert.Equal("User", Assert.Single(before.RootElement.EnumerateObject()).Value.GetString());
+            Assert.Equal("user", Assert.Single(after.RootElement.EnumerateObject()).Value.GetString());
 
-            var next = new AuditLog { TableName = Area, RecordId = "fresh", Action = "INSERT", Username = "creator" };
+            var next = new AuditLog { TableName = Area, Action = "INSERT", Username = "creator" };
             db.AuditLogs.Add(next);
             await db.SaveChangesAsync();
             Assert.True(next.Id > historical.Id);
@@ -99,10 +109,10 @@ public sealed class AuditQuerySqlTests : AuthenticatedApiFixture
     private Task Seed() => InDatabase(async db =>
     {
         db.AuditLogs.AddRange(
-            new AuditLog { TableName = Area, RecordId = "ordinary-day", Action = "INSERT",
-                Username = "creator", Timestamp = new DateTime(2026, 11, 1, 23, 59, 59, DateTimeKind.Utc) },
-            new AuditLog { TableName = Area, RecordId = "last-day", Action = "INSERT",
-                Username = "creator", Timestamp = new DateTime(9999, 12, 31, 23, 59, 59, DateTimeKind.Utc) });
+            new AuditLog { TableName = Area, Action = "INSERT",
+                Username = "ordinary-day", Timestamp = new DateTime(2026, 11, 1, 23, 59, 59, DateTimeKind.Utc) },
+            new AuditLog { TableName = Area, Action = "INSERT",
+                Username = "last-day", Timestamp = new DateTime(9999, 12, 31, 23, 59, 59, DateTimeKind.Utc) });
         await db.SaveChangesAsync();
     });
 }

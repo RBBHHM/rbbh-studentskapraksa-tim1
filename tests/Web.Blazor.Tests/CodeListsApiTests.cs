@@ -68,17 +68,27 @@ public sealed class CodeListsApiTests
                 Assert.Equal("CODE", body.RootElement.GetProperty("kod").GetString()); Assert.True(body.RootElement.GetProperty("aktivan").GetBoolean());
                 Assert.False(body.RootElement.TryGetProperty("redoslijedPrikaza", out _));
             }
-            return Json(200, new { message = "fixture" });
+            return operation == "category-create" ? Json(201, new { name = "FIXTURE_CATEGORY" }) :
+                Json(200, new { message = "fixture" });
         });
         var api = provider.GetRequiredService<ICodeListsApi>();
         switch (operation)
         {
-            case "category-create": await api.CreateCategoryAsync("Fixture category", null); break;
+            case "category-create":
+                Assert.Equal(new CodebookCreation("FIXTURE_CATEGORY"), await api.CreateCategoryAsync("Fixture category", null));
+                break;
             case "category-delete": await api.DeleteCategoryAsync("Fixture category"); break;
             case "create": await api.CreateAsync(new("Fixture category", "CODE", "Name", null, true)); break;
             case "update": await api.UpdateAsync(7, new("Updated", null, false)); break;
             case "delete": await api.DeleteAsync(7); break;
         }
+    }
+    [Fact]
+    public async Task DuplicateDefinitionIsReturnedAsAnInlineError()
+    {
+        await using var provider = Client(_ => Task.FromResult(Json(409, new { title = "Duplicate" })));
+        var result = await provider.GetRequiredService<ICodeListsApi>().CreateCategoryAsync("TEST", null);
+        Assert.Equal(new CodebookCreation(null, "codes.definition-duplicate"), result);
     }
     [Fact]
     public async Task PreviewAndConfirmedImportUseFreshOwnedStreamsAndIdenticalBytesWithNoClientExcelParsing()

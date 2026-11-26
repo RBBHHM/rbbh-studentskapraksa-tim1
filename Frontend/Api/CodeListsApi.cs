@@ -21,13 +21,14 @@ public sealed record CodeListMeta(long Id, string Name, string? Description, boo
 public sealed record CodebookColumn(int Slot, string Name, string? Description, int? Position, string TypeKey = "codes.csv.type-text");
 public sealed record CodebookColumns(IReadOnlyList<CodebookColumn> Items);
 public sealed record CodeListMetas(IReadOnlyList<CodeListMeta> Items);
+public sealed record CodebookCreation(string? Name, string? ErrorKey = null);
 public interface ICodeListsApi
 {
     Task<CodebookColumns> ColumnsAsync(string category, CancellationToken token = default);
     Task<CodeListMetas> DefinitionsAsync(CancellationToken token = default);
     Task<CodeCategories> CategoriesAsync(CancellationToken token = default);
     Task<CodeValues> ValuesAsync(string category, CancellationToken token = default);
-    Task CreateCategoryAsync(string name, string? description, CancellationToken token = default);
+    Task<CodebookCreation> CreateCategoryAsync(string name, string? description, CancellationToken token = default);
     Task DeleteCategoryAsync(string category, CancellationToken token = default);
     Task CreateAsync(CreateCodeValue request, CancellationToken token = default);
     Task UpdateAsync(int id, UpdateCodeValue request, CancellationToken token = default);
@@ -58,8 +59,20 @@ public sealed class CodeListsApi(IRbiApiFileTransport transport) : ICodeListsApi
         var value = Value(await transport.GetAsync<CodeValues>($"api/code-lists/{Uri.EscapeDataString(category)}", token), token);
         return value.Items is null ? throw new RegistryApiException() : value;
     }
-    public Task CreateCategoryAsync(string name, string? description, CancellationToken token = default) =>
-        SendAsync(HttpMethod.Post, "api/code-lists/categories", new { name, description }, token);
+    public async Task<CodebookCreation> CreateCategoryAsync(string name, string? description, CancellationToken token = default)
+    {
+        var result = await transport.SendAsync<CodebookCreation>(HttpMethod.Post, "api/code-lists/categories", new { name, description }, token);
+        token.ThrowIfCancellationRequested();
+        if (result.IsSuccess && !string.IsNullOrWhiteSpace(result.Value.Name)) return new(result.Value.Name);
+        return new(null, result.Error?.StatusCode switch
+        {
+            System.Net.HttpStatusCode.Conflict => "codes.definition-duplicate",
+            System.Net.HttpStatusCode.BadRequest => "errors.validation",
+            System.Net.HttpStatusCode.Unauthorized => "errors.unauthorized",
+            System.Net.HttpStatusCode.Forbidden => "errors.forbidden",
+            _ => "codes.definition-uncertain"
+        });
+    }
     public Task DeleteCategoryAsync(string category, CancellationToken token = default) =>
         SendAsync(HttpMethod.Delete, $"api/code-lists/categories/{Uri.EscapeDataString(category)}", null, token);
     public Task CreateAsync(CreateCodeValue request, CancellationToken token = default) => SendAsync(HttpMethod.Post, "api/code-lists", request, token);
@@ -100,7 +113,8 @@ internal sealed class UnconfiguredCodeListsApi : ICodeListsApi
     public Task<CodebookColumns> ColumnsAsync(string category, CancellationToken token = default) => Task.FromException<CodebookColumns>(new RegistryApiException());
     public Task<CodeListMetas> DefinitionsAsync(CancellationToken token = default) => Task.FromException<CodeListMetas>(new RegistryApiException());
     public Task<CodeValues> ValuesAsync(string category, CancellationToken token = default) => Task.FromException<CodeValues>(new RegistryApiException());
-    public Task CreateCategoryAsync(string name, string? description, CancellationToken token = default) => Unavailable();
+    public Task<CodebookCreation> CreateCategoryAsync(string name, string? description, CancellationToken token = default) =>
+        Task.FromResult(new CodebookCreation(null, "errors.unavailable"));
     public Task DeleteCategoryAsync(string category, CancellationToken token = default) => Unavailable();
     public Task CreateAsync(CreateCodeValue request, CancellationToken token = default) => Unavailable();
     public Task UpdateAsync(int id, UpdateCodeValue request, CancellationToken token = default) => Unavailable();

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using RBBH.ConnectedParties.DL.Entities.Role;
 using RBBH.ConnectedParties.DL.Entities.Sifarnici;
 using RBBH.ConnectedParties.DL.Entities.Users;
@@ -216,10 +217,35 @@ public partial class ConnectedPartiesDbContext(
     {
         foreach (var entry in ChangeTracker.Entries<AuditLog>().Where(entry => entry.State == EntityState.Added))
         {
-            entry.Entity.EmbedReference();
-            entry.Entity.OldValues = FormatAuditSnapshot(entry.Entity.OldValues);
-            entry.Entity.NewValues = FormatAuditSnapshot(entry.Entity.NewValues);
+            var audit = entry.Entity;
+            var before = audit.OldValues;
+            var after = audit.NewValues;
+            if (audit.Action == "UPDATE" || audit.Action.EndsWith("_UPDATE", StringComparison.Ordinal))
+                (before, after) = ChangedAuditSnapshots(before, after);
+            audit.OldValues = FormatAuditSnapshot(before);
+            audit.NewValues = FormatAuditSnapshot(after);
         }
+    }
+
+    private static (string? Before, string? After) ChangedAuditSnapshots(string? before, string? after)
+    {
+        if (before is null || after is null) return (before, after);
+        try
+        {
+            if (JsonNode.Parse(before) is not JsonObject original ||
+                JsonNode.Parse(after) is not JsonObject current)
+                return (before, after);
+
+            foreach (var key in original.Select(property => property.Key).ToArray())
+            {
+                if (!current.TryGetPropertyValue(key, out var value) ||
+                    !JsonNode.DeepEquals(original[key], value)) continue;
+                original.Remove(key);
+                current.Remove(key);
+            }
+            return (original.Count == 0 ? null : original.ToJsonString(), current.Count == 0 ? null : current.ToJsonString());
+        }
+        catch (JsonException) { return (before, after); }
     }
 
     private static string? FormatAuditSnapshot(string? snapshot)
@@ -261,7 +287,8 @@ public partial class ConnectedPartiesDbContext(
         var categories = ChangedCodebookCategories();
         if (categories.Length > 0 || ChangeTracker.Entries<CodeListDefinition>().Any(entry => entry.State is EntityState.Added or EntityState.Modified))
         {
-            var definitions = await CodeListDefinitions.Where(row => categories.Contains(row.Name.ToUpper())).ToListAsync(cancellationToken);
+            List<CodeListDefinition> definitions = categories.Length == 0 ? [] :
+                await CodeListDefinitions.Where(row => categories.Contains(row.Name.ToUpper())).ToListAsync(cancellationToken);
             TouchCodebookVersions(categories, definitions);
         }
         return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
@@ -275,7 +302,8 @@ public partial class ConnectedPartiesDbContext(
     {
         var categories = ChangedCodebookCategories();
         if (categories.Length == 0 && !ChangeTracker.Entries<CodeListDefinition>().Any(entry => entry.State is EntityState.Added or EntityState.Modified)) return;
-        TouchCodebookVersions(categories, CodeListDefinitions.Where(row => categories.Contains(row.Name.ToUpper())).ToList());
+        TouchCodebookVersions(categories,
+            categories.Length == 0 ? [] : CodeListDefinitions.Where(row => categories.Contains(row.Name.ToUpper())).ToList());
     }
 
     private void TouchCodebookVersions(string[] categories, List<CodeListDefinition> definitions)

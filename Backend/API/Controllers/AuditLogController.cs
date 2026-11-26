@@ -79,7 +79,8 @@ public class AuditLogController(ConnectedPartiesDbContext db) : ControllerBase
                 ? query.Where(l => EF.Functions.Like(l.Username, $"%{term}%")
                     || (l.Id.ToString() == term || EF.Functions.Like(l.NewValues ?? "", $"%{term}%") || EF.Functions.Like(l.OldValues ?? "", $"%{term}%")))
                 : query.Where(l => l.Username.ToLower().Contains(term.ToLower())
-                    || l.RecordId.ToLower().Contains(term.ToLower()));
+                    || l.Id.ToString() == term || (l.OldValues ?? "").Contains(term, StringComparison.OrdinalIgnoreCase)
+                    || (l.NewValues ?? "").Contains(term, StringComparison.OrdinalIgnoreCase));
         }
 
         if (dateFrom.HasValue)
@@ -97,13 +98,12 @@ public class AuditLogController(ConnectedPartiesDbContext db) : ControllerBase
             .ToListAsync();
         var logs = logEntities.Select(l =>
         {
-            var oldValues = AuditLog.SnapshotWithoutReference(l.OldValues);
-            var newValues = AuditLog.SnapshotWithoutReference(l.NewValues);
+            var oldValues = l.OldValues;
+            var newValues = l.NewValues;
             return new
             {
                 id            = l.Id,
                 tableName     = l.TableName,
-                recordId      = l.RecordId,
                 action        = l.Action,
                 actionDisplay = ActionDisplayName(l.Action, english),
                 areaDisplay   = AreaDisplayName(l.TableName, english),

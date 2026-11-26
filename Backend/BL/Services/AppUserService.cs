@@ -157,7 +157,6 @@ public partial class AppUserService(ConnectedPartiesDbContext dbContext, Keycloa
         await _audit.LogAsync(new AuditEntry
         {
             TableName = "AppUser",
-            RecordId = keycloakId,
             Action = "CREATE",
             NewValues = System.Text.Json.JsonSerializer.Serialize(new
             { user.Username, user.Email, user.IsActive, Roles = roleNames }),

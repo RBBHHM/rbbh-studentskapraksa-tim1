@@ -28,7 +28,7 @@ public sealed class AuditApiTests
     [Fact]
     public void ScalarSearchIncludesHiddenResponseMetadataAndTrimsInput()
     {
-        var entry = new AuditRecord(1, "RelatedPerson", "record", "INSERT", "Create", "Individuals", "note", "old-value", "new-value", "auditor", DateTime.UtcNow);
+        var entry = new AuditRecord(1, "RelatedPerson", "INSERT", "Create", "Individuals", "note", "old-value", "new-value", "auditor", DateTime.UtcNow);
         Assert.True(entry.Matches("  OLD-VALUE  ")); Assert.True(entry.Matches("1")); Assert.False(entry.Matches("unmatched"));
     }
     [Fact]

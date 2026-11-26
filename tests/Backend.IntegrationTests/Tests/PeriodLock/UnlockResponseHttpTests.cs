@@ -113,7 +113,7 @@ public sealed class UnlockResponseHttpTests : IAsyncLifetime
             $"Accepted HTTP {(int)response.StatusCode}: input={length}, persisted Reason={saved.Reason.Length}, EF/SQL maximum={maximum}. " +
             "The controller adds '[ODGOVOR] ' before storing; no live SQL was executed.");
         var audit = Assert.Single(await db.AuditLogs.ToListAsync());
-        Assert.Equal("UNLOCK_REQUEST", audit.Action); Assert.Equal(_originalId.ToString(), audit.RecordId);
+        Assert.Equal("UNLOCK_REQUEST", audit.Action);
         Assert.Equal("period-fixture", audit.Username); Assert.Contains("user_response", audit.NewValues);
         var delivery = Assert.Single(await db.NotificationDeliveries.Include(row => row.Notification).ToListAsync());
         Assert.Null(delivery.DeliveredAt); Assert.Equal("period-fixture@example.test", delivery.Notification.RecipientEmail);

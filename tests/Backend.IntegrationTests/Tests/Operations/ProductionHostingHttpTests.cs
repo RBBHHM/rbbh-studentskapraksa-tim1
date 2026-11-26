@@ -71,7 +71,7 @@ public sealed class ProductionHostingHttpTests
         app.UseForwardedHeaders();
         app.MapPost("/audit", async (Microsoft.AspNetCore.Http.HttpContext context, ConnectedPartiesDbContext db) =>
         {
-            db.AuditLogs.Add(new() { TableName = "Role", Action = "UPDATE", RecordId = "test", Username = "tester" });
+            db.AuditLogs.Add(new() { TableName = "Role", Action = "UPDATE", Username = "tester" });
             await db.SaveChangesAsync();
             return new { scheme = context.Request.Scheme, host = context.Request.Host.Host, address = context.Connection.RemoteIpAddress is { } peer && !IPAddress.IsLoopback(peer) ? (peer.IsIPv4MappedToIPv6 ? peer.MapToIPv4() : peer).ToString() : null };
         });

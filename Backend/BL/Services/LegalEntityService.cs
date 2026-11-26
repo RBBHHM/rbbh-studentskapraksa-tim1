@@ -127,7 +127,7 @@ public partial class LegalEntityService : ILegalEntityService
         };
 
         AddNewEntity(entity);
-        _context.AuditLogs.Add(Helpers.BusinessAudit.Create("LegalEntity", entity.Id.ToString(), "INSERT", createdBy, _actor, newValues: MapToDto(entity)));
+        _context.AuditLogs.Add(Helpers.BusinessAudit.Create("LegalEntity", "INSERT", createdBy, _actor, newValues: MapToDto(entity)));
         var result = await WithConnectionDescription(entity);
         await _context.SaveChangesAsync(_actor?.HttpContext?.RequestAborted ?? default);
 
@@ -176,7 +176,7 @@ public partial class LegalEntityService : ILegalEntityService
         entity.ModifiedBy = modifiedBy;
         entity.MarkModified(DateTime.UtcNow);
 
-        _context.AuditLogs.Add(Helpers.BusinessAudit.Create("LegalEntity", entity.Id.ToString(), "UPDATE", modifiedBy, _actor, oldValues: before, newValues: MapToDto(entity)));
+        _context.AuditLogs.Add(Helpers.BusinessAudit.Create("LegalEntity", "UPDATE", modifiedBy, _actor, oldValues: before, newValues: MapToDto(entity)));
         var result = await WithConnectionDescription(entity);
         await _context.SaveChangesAsync(_actor?.HttpContext?.RequestAborted ?? default);
 
@@ -199,7 +199,7 @@ public partial class LegalEntityService : ILegalEntityService
         entity.ModifiedBy = deletedBy;
         entity.MarkModified(DateTime.UtcNow);
 
-        _context.AuditLogs.Add(Helpers.BusinessAudit.Create("LegalEntity", entity.Id.ToString(), "DELETE", deletedBy, _actor,
+        _context.AuditLogs.Add(Helpers.BusinessAudit.Create("LegalEntity", "DELETE", deletedBy, _actor,
             oldValues: new { isActive = true }, newValues: new { isActive = false }));
         await _context.SaveChangesAsync(_actor?.HttpContext?.RequestAborted ?? default);
 
@@ -230,7 +230,7 @@ public partial class LegalEntityService : ILegalEntityService
         entity.ModifiedBy = verifiedBy;
         entity.MarkModified(DateTime.UtcNow);
 
-        _context.AuditLogs.Add(Helpers.RegistryVerification.Audit("LegalEntity", entity.Id, verifiedBy, _actor,
+        _context.AuditLogs.Add(Helpers.RegistryVerification.Audit("LegalEntity", verifiedBy, _actor,
             before, new { status = entity.Status.ToString(), verifiedBy = entity.VerifiedBy, verifiedAt = entity.VerifiedAt }));
         var result = await WithConnectionDescription(entity);
         await _context.SaveChangesAsync();

@@ -81,7 +81,7 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
                 Username = username, FirstName = first, LastName = last, Email = email, Purpose = input.Purpose, Note = input.Note?.Trim() };
             row.RequestedRoles = roles.Select(role => new RequestedRole { Role = role, RoleId = role.Id, RequestId = row.Id }).ToList();
             db.RoleRequests.Add(row);
-            db.AuditLogs.Add(Audit(row, "ROLE_REQUEST", null, new { row.Purpose, Roles = roles.Select(role => role.Name) }));
+            db.AuditLogs.Add(Audit("ROLE_REQUEST", null, new { row.Purpose, Roles = roles.Select(role => role.Name) }));
             foreach (var admin in admins)
                 Notify(admin.KeycloakId, admin.Email, $"role-request:{row.Id}:submitted", "role_request.submitted", row, $"/app/admin/role-requests?requestId={row.Id}");
             await db.SaveChangesAsync(ct);
@@ -162,7 +162,7 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
             var before = new { row.Status, row.DecisionNote, EffectiveRoles = oldRoles };
             row.Status = outcome; row.DecisionId = input.DecisionId; row.DecisionNote = input.Note?.Trim();
             row.ProcessedAt = DateTime.UtcNow; row.ProcessedBy = Subject; row.Version++;
-            db.AuditLogs.Add(Audit(row, approve ? "ROLE_REQUEST_APPROVED" : "ROLE_REQUEST_REJECTED", before,
+            db.AuditLogs.Add(Audit(approve ? "ROLE_REQUEST_APPROVED" : "ROLE_REQUEST_REJECTED", before,
                 new { row.Status, row.DecisionNote, EffectiveRoles = resultingRoles }));
             var recipientEmail = await db.AppUsers.Where(user => user.KeycloakSubjectConfirmed && user.KeycloakId == row.RequesterSubject)
                 .Select(user => user.Email).SingleOrDefaultAsync(ct) ?? row.Email;
@@ -194,9 +194,9 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
         row.RequestedRoles.Select(item => item.RoleId).Order().ToArray(), row.RequestedRoles.Select(item => item.Role.Name).Order().ToArray(),
         row.Note, row.CreatedAt, row.ProcessedAt, row.ProcessedBy, row.DecisionNote, row.Version,
         review ? row.Username : null, review ? row.Email : null);
-    private AuditLog Audit(RoleRequest row, string action, object? before, object after) => new()
+    private AuditLog Audit(string action, object? before, object after) => new()
     {
-        TableName = "RoleRequest", RecordId = row.Id.ToString(), Action = action,
+        TableName = "RoleRequest", Action = action,
         Username = Principal.FindFirst("preferred_username")?.Value ?? Subject,
 
         OldValues = before is null ? null : JsonSerializer.Serialize(before), NewValues = JsonSerializer.Serialize(after)

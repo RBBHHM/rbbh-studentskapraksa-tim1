@@ -216,7 +216,7 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
             var now = DateTime.UtcNow;
             foreach (var values in pending) Add(definition, values, actor, now);
             definition.ModifiedBy = actor;
-            db.AuditLogs.Add(BusinessAudit.Create("CodeList", definition.Name, "IMPORT", actor, null,
+            db.AuditLogs.Add(BusinessAudit.Create("CodeList", "IMPORT", actor, null,
                 newValues: new { Imported = pending.Count, Duplicates = duplicates }));
             await db.SaveChangesAsync(ct);
             imported = pending.Count;

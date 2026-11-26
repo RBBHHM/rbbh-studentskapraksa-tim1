@@ -598,6 +598,7 @@ h1[tabindex="-1"]:focus, h1:focus-visible { outline: none; }
 .codes-cards { grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr)); gap: .75rem; }
 .codes-card { min-height: 3.75rem; border-color: var(--border-subtle); }
 .codebook-detail { margin-block-end: 1rem; }
+.codebook-detail__title { margin: 0 0 .75rem; font-size: 1.125rem; overflow-wrap: anywhere; }
 .codebook-detail__actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
 .codebook-detail__delete { margin-inline-start: auto; }
 .codebook-detail__meta { display: flex; flex-wrap: wrap; justify-content: center; gap: .75rem 1.5rem; margin-block-start: .75rem; font-size: var(--font-size-sm); color: var(--text-secondary); }

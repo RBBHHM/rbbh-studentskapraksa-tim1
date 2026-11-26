@@ -30,7 +30,7 @@ test("allowed other-Admin deactivation produces a real audit entry visible in Bl
   expect(result.status).toBe(200);
   const after = await (await request.get("/__fixtures/users-state", { headers })).json();
   expect(after.users.find((user: { id: string }) => user.id === other.id).isActive).toBe(false);
-  expect(after.audit).toEqual([{ action: "DEACTIVATE", recordId: other.id, username: "admin@fixture.test" }]);
+  expect(after.audit).toEqual([{ action: "DEACTIVATE", username: "admin@fixture.test" }]);
   await page.goto("/app/admin/audit"); await interactive(page);
   await expect(page.getByRole("cell", { name: "Deaktivacija korisnika", exact: true })).toBeVisible();
   await expect(page.getByRole("cell", { name: "admin@fixture.test", exact: true })).toBeVisible();

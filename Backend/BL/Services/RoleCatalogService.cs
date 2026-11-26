@@ -61,7 +61,7 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
             CreatedBy = AuthenticatedActor.Username(Actor) };
         foreach (var id in input.PermissionIds) row.RolePermissions.Add(new RolePermission { RoleId = row.Id, PermissionId = id });
         db.Roles.Add(row);
-        db.AuditLogs.Add(BusinessAudit.Create("Role", row.Id.ToString(), "ROLE_CATALOG_CREATE", AuthenticatedActor.Username(Actor), accessor, null,
+        db.AuditLogs.Add(BusinessAudit.Create("Role", "ROLE_CATALOG_CREATE", AuthenticatedActor.Username(Actor), accessor, null,
             new { row.Name, row.DisplayName, row.Description, row.IsActive, PermissionIds = input.PermissionIds }));
         await db.SaveChangesAsync(ct); return Map(row);
     }, ct);
@@ -90,7 +90,7 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
         var now = DateTime.UtcNow;
         row.ModifiedAt = now > previous ? now : previous.AddTicks(1);
         row.ModifiedBy = AuthenticatedActor.Username(Actor);
-        db.AuditLogs.Add(BusinessAudit.Create("Role", row.Id.ToString(), "ROLE_CATALOG_UPDATE", AuthenticatedActor.Username(Actor), accessor, before,
+        db.AuditLogs.Add(BusinessAudit.Create("Role", "ROLE_CATALOG_UPDATE", AuthenticatedActor.Username(Actor), accessor, before,
             new { row.Name, row.DisplayName, row.Description, row.IsActive, PermissionIds = input.PermissionIds }));
         await db.SaveChangesAsync(ct);
         // Removed tracked children need not remain in the returned grant set.
@@ -108,7 +108,7 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
             await db.Set<DL.Entities.Authorization.RequestedRole>().AnyAsync(request => request.RoleId == id, ct))
             return RoleDeletionResult.InUse;
 
-        db.AuditLogs.Add(BusinessAudit.Create("Role", row.Id.ToString(), "ROLE_CATALOG_DELETE",
+        db.AuditLogs.Add(BusinessAudit.Create("Role", "ROLE_CATALOG_DELETE",
             AuthenticatedActor.Username(Actor), accessor,
             new { row.Name, row.DisplayName, row.Description, row.IsActive, PermissionIds = row.RolePermissions.Select(grant => grant.PermissionId).ToArray() }, null));
         db.Roles.Remove(row);

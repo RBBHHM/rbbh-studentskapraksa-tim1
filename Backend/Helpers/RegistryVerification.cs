@@ -26,10 +26,10 @@ internal static class RegistryVerification
 
     private static readonly JsonSerializerOptions AuditFormat = new() { WriteIndented = true };
 
-    internal static AuditLog Audit(string table, long id, string displayActor, IHttpContextAccessor? accessor,
+    internal static AuditLog Audit(string table, string displayActor, IHttpContextAccessor? accessor,
         object before, object after) => new()
     {
-        TableName = table, RecordId = id.ToString(), Action = "VERIFY",
+        TableName = table, Action = "VERIFY",
         Username = accessor?.HttpContext?.User.FindFirst("preferred_username")?.Value ?? displayActor,
 
         OldValues = JsonSerializer.Serialize(before, AuditFormat),

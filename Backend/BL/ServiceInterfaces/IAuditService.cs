@@ -3,11 +3,10 @@ namespace RBBH.ConnectedParties.BL.ServiceInterfaces;
 public class AuditEntry
 {
     /// <summary>Common metadata when both audit identifiers are the actor email.</summary>
-    public static AuditEntry ForActor(string table, string recordId, string action,
+    public static AuditEntry ForActor(string table, string action,
         string actorEmail, string? oldValues = null, string? newValues = null) => new()
         {
             TableName = table,
-            RecordId = recordId,
             Action = action,
             UserId = actorEmail,
             Username = actorEmail,
@@ -16,15 +15,14 @@ public class AuditEntry
             NewValues = newValues
         };
 
-    public static AuditEntry ForActor(string table, string recordId, string action,
+    public static AuditEntry ForActor(string table, string action,
         Helpers.ActorIdentity actor, string? oldValues = null, string? newValues = null) => new()
         {
-            TableName = table, RecordId = recordId, Action = action, UserId = actor.Subject ?? actor.Email,
+            TableName = table, Action = action, UserId = actor.Subject ?? actor.Email,
             Username = actor.DisplayName, OldValues = oldValues, NewValues = newValues
         };
 
     public string TableName { get; set; } = string.Empty;
-    public string RecordId { get; set; } = string.Empty;
     public string Action { get; set; } = string.Empty;
     public string? OldValues { get; set; }
     public string? NewValues { get; set; }

@@ -14,6 +14,33 @@ namespace IntegrationTests.Tests.Users;
 public sealed class UsersMutationContractHttpTests : UsersHttpFixture
 {
     [Fact]
+    public async Task ChangingOnlyUsernameStoresOnlyItsOldAndNewValues()
+    {
+        var id = await AddUser(ApplicationAccessRoles.PhysicalPersons, "profile@example.test");
+        await using var scope = _app.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+        var user = await db.AppUsers.AsNoTracking().SingleAsync(row => row.Id == id);
+        using var response = await _client.PutAsJsonAsync($"/api/users/{id}", new
+        {
+            username = "changed.username", user.FirstName, user.LastName, user.Email
+        });
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var audit = await db.AuditLogs.SingleAsync();
+        Assert.Equal("UPDATE", audit.Action);
+        using var before = JsonDocument.Parse(audit.OldValues!);
+        using var after = JsonDocument.Parse(audit.NewValues!);
+        Assert.Equal(("Username", user.Username), Field(before));
+        Assert.Equal(("Username", "changed.username"), Field(after));
+
+        static (string, string?) Field(JsonDocument snapshot)
+        {
+            var property = Assert.Single(snapshot.RootElement.EnumerateObject());
+            return (property.Name, property.Value.GetString());
+        }
+    }
+
+    [Fact]
     public async Task CancelledMutationNeverPersistsOrAudits()
     {
         var other = await AddUser(ApplicationAccessRoles.PhysicalPersons, "cancelled@example.test");
@@ -100,7 +127,6 @@ public sealed class UsersMutationContractHttpTests : UsersHttpFixture
         Assert.False(await db.UserRoles.AnyAsync(mapping => mapping.UserId == id));
         var audit = Assert.Single(await db.AuditLogs.AsNoTracking().ToListAsync());
         Assert.Equal("AppUser", audit.TableName);
-        Assert.Equal(subject, audit.RecordId);
         Assert.Equal("ROLE_REMOVE", audit.Action);
 
         Assert.Equal("admin-fixture", audit.Username);
@@ -123,7 +149,6 @@ public sealed class UsersMutationContractHttpTests : UsersHttpFixture
         Assert.Equal(HttpStatusCode.NotFound, (await _client.PostAsJsonAsync($"/api/users/{subject}/reactivate", new { })).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await _client.PostAsJsonAsync($"/api/users/{id}/reactivate", new { })).StatusCode);
         var audit = Assert.Single(await db.AuditLogs.AsNoTracking().ToListAsync());
-        Assert.Equal(id.ToString(), audit.RecordId);
         Assert.Equal("REACTIVATE", audit.Action);
         using var before = JsonDocument.Parse(audit.OldValues!);
         using var after = JsonDocument.Parse(audit.NewValues!);

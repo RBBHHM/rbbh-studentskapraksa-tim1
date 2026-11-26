@@ -2,7 +2,7 @@ using RBI.ApiCore;
 
 namespace RBBH.RelatedPartiesRegister.Web.Api;
 
-public sealed record AuditRecord(long Id, string TableName, string RecordId, string Action, string ActionDisplay,
+public sealed record AuditRecord(long Id, string TableName, string Action, string ActionDisplay,
     string AreaDisplay, string ChangeSummary, string? OldValues, string? NewValues,
     string Username, DateTime Timestamp)
 {
@@ -10,7 +10,7 @@ public sealed record AuditRecord(long Id, string TableName, string RecordId, str
     {
         if (string.IsNullOrWhiteSpace(search)) return true;
         var term = search.Trim();
-        string?[] values = [Id.ToString(), TableName, RecordId, Action, ActionDisplay, AreaDisplay,
+        string?[] values = [Id.ToString(), TableName, Action, ActionDisplay, AreaDisplay,
             ChangeSummary, OldValues, NewValues, Username, Timestamp.ToString("O")];
         return values.Any(value => value?.Contains(term, StringComparison.OrdinalIgnoreCase) == true);
     }

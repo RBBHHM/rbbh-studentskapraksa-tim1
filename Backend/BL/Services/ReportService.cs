@@ -44,7 +44,7 @@ public class ReportService : IReportService
         };
 
         _context.Reports.Add(report);
-        _context.AuditLogs.Add(Helpers.BusinessAudit.Create("Report", report.Id.ToString(), "GENERATE", createdBy, _actor,
+        _context.AuditLogs.Add(Helpers.BusinessAudit.Create("Report", "GENERATE", createdBy, _actor,
             newValues: new { report.ReportType, report.ReportDate, report.DataSource, report.TotalClients, report.TotalExposure }));
         await _context.SaveChangesAsync(Cancellation);
 
@@ -73,7 +73,7 @@ public class ReportService : IReportService
         };
 
         _context.Reports.Add(report);
-        _context.AuditLogs.Add(Helpers.BusinessAudit.Create("Report", report.Id.ToString(), "GENERATE", createdBy, _actor,
+        _context.AuditLogs.Add(Helpers.BusinessAudit.Create("Report", "GENERATE", createdBy, _actor,
             newValues: new { report.ReportType, report.ReportDate, report.DataSource, report.TotalClients, report.TotalExposure }));
         await _context.SaveChangesAsync(Cancellation);
 

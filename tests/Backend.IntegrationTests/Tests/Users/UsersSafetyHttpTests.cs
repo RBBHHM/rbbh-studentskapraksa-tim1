@@ -211,7 +211,6 @@ public sealed class UsersSafetyHttpTests : UsersHttpFixture
         }
         var audit = Assert.Single(await db.AuditLogs.ToListAsync());
         Assert.Equal("AppUser", audit.TableName);
-        Assert.Equal(id.ToString(), audit.RecordId);
 
         Assert.Equal("admin-fixture", audit.Username);
         Assert.Equal(action switch { "role" => "ROLE_ASSIGN", "empty" => "ROLE_REMOVE", "deactivate" => "DEACTIVATE", _ => "DELETE" }, audit.Action);

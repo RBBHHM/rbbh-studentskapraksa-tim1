@@ -19,7 +19,13 @@ public sealed class LimitCommitAckSqlTests : LimitImportFixture
     public async Task LostCommitAcknowledgementDoesNotDuplicateCreatedOrImportedLimits()
     {
         await Seed(); _failure.Arm = true; var id = await Create();
-        await InDatabase(async db => { Assert.Single(db.Limiti); Assert.Equal(id.ToString(), (await db.AuditLogs.SingleAsync()).RecordId); });
+        await InDatabase(async db =>
+        {
+            Assert.Single(db.Limiti);
+            var audit = await db.AuditLogs.SingleAsync();
+            using var snapshot = JsonDocument.Parse(audit.NewValues!);
+            Assert.Equal(id, Assert.Single(snapshot.RootElement.GetProperty("ids").EnumerateArray()).GetInt32());
+        });
         var bytes = await File(200); _failure.Arm = true;
         var response = await Import(bytes); Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(1, (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("imported").GetInt32());

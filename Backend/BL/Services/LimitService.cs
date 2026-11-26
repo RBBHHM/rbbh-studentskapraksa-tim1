@@ -143,7 +143,7 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
         entitet.ModifiedAt = DateTime.UtcNow;
         entitet.ModifiedBy = korisnik;
 
-        _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("Limit", entitet.Id.ToString(CultureInfo.InvariantCulture), "UPDATE", korisnik, actor, before, Snapshot(entitet)));
+        _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("Limit", "UPDATE", korisnik, actor, before, Snapshot(entitet)));
         await _dbContext.SaveChangesAsync(actor?.HttpContext?.RequestAborted ?? default);
         return await GetByID(entitet.Id);
     }
@@ -166,7 +166,7 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
 
         if (string.IsNullOrWhiteSpace(korisnik)) throw new Helpers.MissingActorIdentityException();
         _dbContext.Limiti.Remove(entitet);
-        _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("Limit", entitet.Id.ToString(CultureInfo.InvariantCulture), "DELETE", korisnik, actor, Snapshot(entitet)));
+        _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("Limit", "DELETE", korisnik, actor, Snapshot(entitet)));
         await _dbContext.SaveChangesAsync(actor?.HttpContext?.RequestAborted ?? default);
 
         return Result<bool>.Success(true);
@@ -300,7 +300,7 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
                 _dbContext.Limiti.AddRange(rows);
                 if (_dbContext.Database.IsRelational()) await _dbContext.SaveChangesAsync(ct);
                 var ids = rows.Select(row => row.Id).ToArray();
-                audit = Helpers.BusinessAudit.Create("Limit", action == "INSERT" ? ids[0].ToString(CultureInfo.InvariantCulture) : "-", action, username, actor,
+                audit = Helpers.BusinessAudit.Create("Limit", action, username, actor,
                     newValues: new { ids, values = rows.Select(Snapshot).ToArray() });
                 _dbContext.AuditLogs.Add(audit);
                 await _dbContext.SaveChangesAsync(ct);

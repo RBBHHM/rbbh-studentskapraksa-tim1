@@ -22,8 +22,8 @@ public sealed class PeriodWorkflow(ConnectedPartiesDbContext db)
     private static void Text(string? value, int minimum, int maximum, string code)
     { if (string.IsNullOrWhiteSpace(value) || value.Length > maximum || value.Trim().Length < minimum) throw new BusinessRuleException(400, code, new object?[] { minimum, maximum }); }
     private static bool Mailbox(string? email) => email is { Length: > 0 and <= 200 } && MailAddress.TryCreate(email, out var address) && address.Address == email;
-    private void Audit(string id, string action, Actor actor, object? before, object after) => db.AuditLogs.Add(new()
-    { TableName = "PeriodLock", RecordId = id, Action = action, Username = actor.Username,
+    private void Audit(string action, Actor actor, object? before, object after) => db.AuditLogs.Add(new()
+    { TableName = "PeriodLock", Action = action, Username = actor.Username,
         Timestamp = DateTime.UtcNow, OldValues = before is null ? null : JsonSerializer.Serialize(before), NewValues = JsonSerializer.Serialize(after) });
     private void Notice(string? subject, string email, string eventKey, string kind, object parameters, string route = "/app/admin/period")
     {
@@ -75,7 +75,7 @@ public sealed class PeriodWorkflow(ConnectedPartiesDbContext db)
         {
             request.Status = "APPROVED"; request.ProcessedAt = now; request.ProcessedBy = actor.Username; request.MarkModified(now); request.ModifiedBy = actor.Username;
         }
-        Audit($"{year}-{month:D2}", locked ? "PERIOD_LOCK" : "PERIOD_UNLOCK", actor, new { isLocked = wasLocked }, new { isLocked = locked, year, month, approvedRequestIds = pending.Select(request => request.Id) });
+        Audit(locked ? "PERIOD_LOCK" : "PERIOD_UNLOCK", actor, new { isLocked = wasLocked }, new { isLocked = locked, year, month, approvedRequestIds = pending.Select(request => request.Id) });
         var eventKey = $"period:{year}-{month:D2}:{Guid.NewGuid():N}";
         var recipients = await db.AppUsers.Where(user => user.IsActive && user.KeycloakSubjectConfirmed && user.KeycloakId != "")
             .Select(user => new { user.KeycloakId, user.Email }).ToListAsync(ct);
@@ -90,7 +90,7 @@ public sealed class PeriodWorkflow(ConnectedPartiesDbContext db)
         var request = new UnlockRequest { Year = year, Month = month, Reason = reason, RequestedBySubject = actor.Subject,
             RequestedBy = actor.Username, RequestedByEmail = actor.Email, Status = "PENDING", CreatedBy = actor.Username, CreatedAt = DateTime.UtcNow };
         db.UnlockRequests.Add(request);
-        Audit($"{year}-{month:D2}", "UNLOCK_REQUEST", actor, null, new { request.Id, year, month, requestedBy = actor.Username, reason });
+        Audit("UNLOCK_REQUEST", actor, null, new { request.Id, year, month, requestedBy = actor.Username, reason });
         await NotifyReviewers($"period-request:{request.Id}:submitted", "requested", new { year, month, requester = actor.Username, message = reason }, ct);
         await db.SaveChangesAsync(ct);
     }
@@ -102,7 +102,7 @@ public sealed class PeriodWorkflow(ConnectedPartiesDbContext db)
         var before = new { request.Status, request.AdminNote, request.ProcessedBy, request.ProcessedAt };
         request.Status = reject ? "REJECTED" : "NEEDS_INFO"; request.AdminNote = note.Trim(); request.ProcessedBy = actor.Username;
         var now = DateTime.UtcNow; request.ProcessedAt = now; request.MarkModified(now); request.ModifiedBy = actor.Username;
-        Audit(id.ToString(), reject ? "UNLOCK_REQUEST_REJECTED" : "UNLOCK_REQUEST_NEEDS_INFO", actor, before, new { request.Status, request.AdminNote, request.ProcessedBy, request.ProcessedAt });
+        Audit(reject ? "UNLOCK_REQUEST_REJECTED" : "UNLOCK_REQUEST_NEEDS_INFO", actor, before, new { request.Status, request.AdminNote, request.ProcessedBy, request.ProcessedAt });
         await Owner(request, $"period-request:{id}:{request.Status}", reject ? "rejected" : "needsinfo", new { year = request.Year, month = request.Month, message = note, actor = actor.Username }, ct);
         await db.SaveChangesAsync(ct);
     }
@@ -118,7 +118,7 @@ public sealed class PeriodWorkflow(ConnectedPartiesDbContext db)
             RequestedByEmail = actor.Email, Year = original.Year, Month = original.Month, Reason = "[ODGOVOR] " + message.Trim(),
             Status = "PENDING", CreatedBy = actor.Username, CreatedAt = now };
         original.MarkModified(now); original.ModifiedBy = actor.Username; db.UnlockRequests.Add(response);
-        Audit(id.ToString(), "UNLOCK_REQUEST", actor, null, new { type = "user_response", originalRequestId = id, responseId = response.Id, year = original.Year, month = original.Month });
+        Audit("UNLOCK_REQUEST", actor, null, new { type = "user_response", originalRequestId = id, responseId = response.Id, year = original.Year, month = original.Month });
         await NotifyReviewers($"period-request:{response.Id}:response", "response", new { year = original.Year, month = original.Month, requester = actor.Username, message = message.Trim() }, ct);
         await db.SaveChangesAsync(ct);
     }

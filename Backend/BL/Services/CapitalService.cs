@@ -116,7 +116,7 @@ public sealed class CapitalService(ConnectedPartiesDbContext db, IHttpContextAcc
         row.SupplementaryCapital = dto.SupplementaryCapital!.Value;
         if (db.Database.IsRelational()) await db.SaveChangesAsync(RequestCancellation);
         var after = CapitalHistory.Map(row);
-        var audit = Helpers.BusinessAudit.Create("Capital", row.Id.ToString(), create ? "INSERT" : "UPDATE", username, actor, before, after);
+        var audit = Helpers.BusinessAudit.Create("Capital", create ? "INSERT" : "UPDATE", username, actor, before, after);
         db.AuditLogs.Add(audit);
         await db.SaveChangesAsync(RequestCancellation);
         captureAuditId?.Invoke(audit.Id);

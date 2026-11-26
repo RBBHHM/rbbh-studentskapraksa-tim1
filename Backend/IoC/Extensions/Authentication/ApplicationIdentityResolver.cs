@@ -64,7 +64,6 @@ public sealed class ApplicationIdentityResolver(ConnectedPartiesDbContext db, IC
             await new AuditService(db).LogAsync(new()
             {
                 TableName = "AppUser",
-                RecordId = row.Id.ToString(),
                 Action = "SUBJECT_LINK",
                 Username = row.ModifiedBy,
                 OldValues = System.Text.Json.JsonSerializer.Serialize(new { legacyIdentifier = previousIdentifier }),

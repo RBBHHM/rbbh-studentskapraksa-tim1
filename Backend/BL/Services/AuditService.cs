@@ -11,7 +11,6 @@ public class AuditService(ConnectedPartiesDbContext db) : IAuditService
         db.AuditLogs.Add(new AuditLog
         {
             TableName = entry.TableName,
-            RecordId  = entry.RecordId,
             Action    = entry.Action,
             OldValues = entry.OldValues,
             NewValues = entry.NewValues,

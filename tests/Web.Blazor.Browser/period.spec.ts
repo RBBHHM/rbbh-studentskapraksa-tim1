@@ -37,7 +37,7 @@ for (const length of [9, 10, 490, 491, 500]) test(`native clarification boundary
   if (accepted) {
     expect(state.requests[1].reason).toBe("[ODGOVOR] " + "x".repeat(length)); expect(state.requests[1].reason.length).toBeLessThanOrEqual(500);
     expect(state.requests[0].status).toBe("NEEDS_INFO"); expect(state.requests[1].status).toBe("PENDING");
-    expect(state.audit).toEqual([{ action: "UNLOCK_REQUEST", recordId: state.requests[0].id, username: "admin@fixture.test" }]);
+    expect(state.audit).toEqual([{ action: "UNLOCK_REQUEST", username: "admin@fixture.test" }]);
   } else {
     expect(state.audit).toEqual([]); expect((await (await request.get("/__fixtures/counts", { headers })).json()).mutations).toBe(0);
     const probe = await (await request.post("/__fixtures/period-response", { headers, data: { id: state.requests[0].id, message: "x".repeat(length) } })).json(); expect(probe.status).toBe(400);

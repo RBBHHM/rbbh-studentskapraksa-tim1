@@ -151,6 +151,12 @@ test("LANGUAGE_PACKS exposes translation fields and saves changes by resource ke
   expect((await request.post("/__fixtures/notifications-seed", { headers })).status()).toBe(204);
   await visit(page);
   await page.getByRole("button", { name: "LANGUAGE_PACKS", exact: true }).click();
+  await page.getByRole("button", { name: "Struktura kolona", exact: true }).click();
+  const structure = page.getByRole("dialog", { name: "Struktura kolona" });
+  await expect(structure).toContainText("Ključ resursa");
+  await expect(structure).toContainText("Ključ po kojem aplikacija pronalazi tekst.");
+  await expect(structure).not.toContainText("Stable resource key");
+  await structure.getByRole("button", { name: "Zatvori", exact: true }).click();
   const row = page.getByRole("row").filter({ hasText: "Rola dodijeljena" });
   await row.getByRole("button", { name: "Uredi vrijednost", exact: true }).click();
   const dialog = page.getByRole("dialog");
@@ -161,4 +167,19 @@ test("LANGUAGE_PACKS exposes translation fields and saves changes by resource ke
   await expect(dialog).toHaveCount(0);
   const updated = page.getByRole("row").filter({ hasText: "Ažurirana poruka" });
   await expect(updated).toContainText("Unesite vrijednost");
+});
+
+test("duplicate definition shows an alert and allows retry with a new name", async ({ page }) => {
+  await visit(page);
+  await page.getByRole("button", { name: "Novi šifrarnik", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Novi šifrarnik" });
+  const name = dialog.getByRole("textbox", { name: /^Naziv definicije/ });
+  const submit = dialog.getByRole("button", { name: "Kreiraj", exact: true });
+  await name.fill("osnov povezanosti");
+  await submit.click();
+  await expect(dialog.getByText("Šifrarnik s tim nazivom već postoji.")).toBeVisible();
+  await name.fill("testni sifrarnik");
+  await submit.click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "TESTNI_SIFRARNIK", exact: true })).toBeVisible();
 });

@@ -26,7 +26,7 @@ public partial class AppUserService
         row.Username = username; row.FirstName = dto.FirstName.Trim(); row.LastName = dto.LastName.Trim(); row.Email = email;
         row.ModifiedAt = DateTime.UtcNow; row.ModifiedBy = actor.DisplayName;
         await _db.SaveChangesAsync(cancellationToken);
-        await _audit.LogAsync(AuditEntry.ForActor("AppUser", row.Id.ToString(), "UPDATE", actor, before,
+        await _audit.LogAsync(AuditEntry.ForActor("AppUser", "UPDATE", actor, before,
             JsonSerializer.Serialize(new { row.Username, row.FirstName, row.LastName, row.Email })));
         return new(UserMutationStatus.Success);
     }, cancellationToken);
@@ -65,8 +65,7 @@ public partial class AppUserService
             await _db.SaveChangesAsync(cancellationToken);
 
             var roles = localRoles.Select(role => role.Name).ToList();
-            await _audit.LogAsync(AuditEntry.ForActor("AppUser", userId,
-                isRemoval ? "ROLE_REMOVE" : "ROLE_ASSIGN", actor,
+            await _audit.LogAsync(AuditEntry.ForActor("AppUser", isRemoval ? "ROLE_REMOVE" : "ROLE_ASSIGN", actor,
                 oldValues: JsonSerializer.Serialize(new { Roles = previousRoles }),
                 newValues: JsonSerializer.Serialize(new { Roles = roles.Order() })));
             return new(UserMutationStatus.Success, roles);
@@ -83,7 +82,7 @@ public partial class AppUserService
             localUser.ModifiedBy = actor.DisplayName;
             await _db.SaveChangesAsync(cancellationToken);
 
-            await _audit.LogAsync(AuditEntry.ForActor("AppUser", userId, "DEACTIVATE", actor,
+            await _audit.LogAsync(AuditEntry.ForActor("AppUser", "DEACTIVATE", actor,
                 oldValues: JsonSerializer.Serialize(new { IsActive = true }),
                 newValues: JsonSerializer.Serialize(new { IsActive = false })));
             return new(UserMutationStatus.Success);
@@ -100,7 +99,7 @@ public partial class AppUserService
         if (localUser.IsActive) return new(UserMutationStatus.Success);
         localUser.IsActive = true; localUser.ModifiedAt = DateTime.UtcNow; localUser.ModifiedBy = actor.DisplayName;
         await _db.SaveChangesAsync(cancellationToken);
-        await _audit.LogAsync(AuditEntry.ForActor("AppUser", userId, "REACTIVATE", actor,
+        await _audit.LogAsync(AuditEntry.ForActor("AppUser", "REACTIVATE", actor,
             oldValues: JsonSerializer.Serialize(new { IsActive = false }), newValues: JsonSerializer.Serialize(new { IsActive = true })));
         return new(UserMutationStatus.Success);
     }, cancellationToken);
@@ -117,7 +116,7 @@ public partial class AppUserService
             _db.UserRoles.RemoveRange(assignments);
             _db.AppUsers.Remove(localUser);
             await _db.SaveChangesAsync(cancellationToken);
-            await _audit.LogAsync(AuditEntry.ForActor("AppUser", userId, "DELETE", actor, oldValues: JsonSerializer.Serialize(before)));
+            await _audit.LogAsync(AuditEntry.ForActor("AppUser", "DELETE", actor, oldValues: JsonSerializer.Serialize(before)));
             return new(UserMutationStatus.Success);
         }, cancellationToken);
 

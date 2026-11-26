@@ -55,6 +55,7 @@ else
         else
         {
             <header class="codebook-detail">
+                <h2 class="codebook-detail__title">@_category</h2>
                 <div class="codebook-detail__actions">
                     <RbiButton Disabled="@(_busy || _refreshing)" OnClick="BackToOverviewAsync" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.ArrowLeft" />@T["codes.all"]</RbiButton>
                     <RbiButton Disabled="@(_busy || _refreshing)" OnClick="OpenColumnsAsync" Variant="RbiButtonVariant.Secondary">@T["codes.column-structure"]</RbiButton>
@@ -123,9 +124,9 @@ else
                     @foreach (var column in _columns)
                     {
                         <div class="codebook-column">
-                            <dt><strong>@column.Name</strong> <small>ID@(column.Slot)</small></dt>
+                            <dt><strong>@ColumnLabel(column)</strong> <small>ID@(column.Slot)</small></dt>
                             <dd>@T[column.TypeKey]</dd>
-                            @if (column.Description is not null) { <dd>@column.Description</dd> }
+                            @if (ColumnDescription(column) is { } description) { <dd>@description</dd> }
                         </div>
                     }
                 </dl>
@@ -209,6 +210,21 @@ else
         finally { _loading = _refreshing = false; }
     }
     private bool IsLanguagePack => _category.Equals("LANGUAGE_PACKS", StringComparison.OrdinalIgnoreCase);
+    private string ColumnLabel(CodebookColumn column) => LanguageColumnKey(column) is { } key ? T[key] : column.Name;
+    private string? ColumnDescription(CodebookColumn column) =>
+        LanguageColumnKey(column) is { } key ? T[key + ".column-description"] : column.Description;
+    private string? LanguageColumnKey(CodebookColumn column) => (_category, column.Slot) switch
+    {
+        ("LANGUAGES" or "LANGUAGE_PACKS", 1) => "codes.active",
+        ("LANGUAGES" or "LANGUAGE_PACKS", 12) => "codes.language-code",
+        ("LANGUAGES", 13) => "codes.language-name",
+        ("LANGUAGE_PACKS", 13) => "codes.resource-key",
+        ("LANGUAGE_PACKS", 14) => "codes.context-info",
+        ("LANGUAGE_PACKS", 16) => "codes.label-text",
+        ("LANGUAGE_PACKS", 19) => "codes.help-text",
+        ("LANGUAGE_PACKS", 20) => "codes.placeholder-text",
+        _ => null
+    };
     private bool _columnsOpen;
     private IReadOnlyList<CodebookColumn>? _columns;
     private string? _columnsError;
@@ -236,7 +252,17 @@ else
         if (_busy) return; _busy = true;
         try
         {
-            if (draft.Definition) { await Api.CreateCategoryAsync(draft.DefinitionName, draft.NullDescription, _token); _category = draft.DefinitionName; }
+            draft.SaveError = null;
+            if (draft.Definition)
+            {
+                var result = await Api.CreateCategoryAsync(draft.DefinitionName, draft.NullDescription, _token);
+                if (result.Name is null)
+                {
+                    draft.SaveError = result.ErrorKey;
+                    return;
+                }
+                _category = result.Name;
+            }
             else if (draft.IsLanguagePack)
             {
                 draft.SaveError = await Localization.SaveAsync(draft.LanguageCode.Trim(), draft.ResourceKey.Trim(),

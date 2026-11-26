@@ -52,7 +52,7 @@ public class UnlockRequestRepository(ConnectedPartiesDbContext db) : IUnlockRequ
         db.UnlockRequests.Add(response);
         db.AuditLogs.Add(new DL.Entities.Audit.AuditLog
         {
-            TableName = audit.TableName, RecordId = audit.RecordId, Action = audit.Action,
+            TableName = audit.TableName, Action = audit.Action,
             Username = audit.Username,
             OldValues = audit.OldValues, NewValues = audit.NewValues, Timestamp = DateTime.UtcNow
         });
