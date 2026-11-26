@@ -14,6 +14,12 @@ async function fillValue(page: Page, code: string, name: string) {
   await page.getByRole("button", { name: "Nova vrijednost", exact: true }).click(); const dialog = page.getByRole("dialog");
   await dialog.getByRole("textbox", { name: /^Naziv/ }).fill(name); await dialog.getByRole("textbox", { name: /^Kod/ }).fill(code); return dialog;
 }
+async function configureColumn(dialog: Locator, slot: string, name: string, position: string) {
+  await dialog.getByLabel("Kolona i tip podataka").selectOption(slot);
+  await dialog.getByRole("checkbox", { name: "Uključi kolonu" }).press("Space");
+  await dialog.getByLabel("Naziv kolone").fill(name);
+  await dialog.getByLabel("Redoslijed (1–20)").fill(position);
+}
 test.beforeEach(async ({ request }) => { expect((await request.post("/__fixtures/reset", { headers })).status()).toBe(204); });
 
 test("real categories/history and native definition/value forms remain accessible", async ({ page }) => {
@@ -27,24 +33,56 @@ test("real categories/history and native definition/value forms remain accessibl
   await page.getByRole("button", { name: "Nova vrijednost", exact: true }).click(); await settled(page.getByRole("dialog"));
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
 });
-test("create definition, value, immutable code edit and soft-delete preserve actual records and audit", async ({ page, request }) => {
-  await visit(page); await page.getByRole("button", { name: "Novi šifrarnik", exact: true }).click(); let dialog = page.getByRole("dialog");
-  await dialog.getByRole("textbox", { name: /^Naziv definicije/ }).fill("NativeCodes"); await dialog.getByRole("textbox", { name: "Poslovna svrha", exact: true }).fill("Native fixture purpose");
-  await dialog.getByRole("button", { name: "Kreiraj", exact: true }).click(); await expect(dialog).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Svi šifrarnici", exact: true })).toBeVisible(); await expect(page.getByText("Nema vrijednosti u odabranoj kategoriji.", { exact: true })).toBeVisible();
-  dialog = await fillValue(page, "CODE_1", "Native value");
-  await dialog.getByRole("textbox", { name: "Opis", exact: true }).fill("Owned description"); await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).toHaveCount(0);
-  const row = page.getByRole("row").filter({ hasText: "CODE_1" }); await expect(row).toContainText("Native value"); await row.getByRole("button", { name: "Uredi vrijednost", exact: true }).click(); dialog = page.getByRole("dialog");
-  await expect(dialog.getByRole("textbox", { name: /^Kod/ })).toBeDisabled();
-  await dialog.getByRole("textbox", { name: /^Naziv/ }).fill("Edited value");
-  await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).toHaveCount(0); await expect(row).toContainText("Edited value");
-  await row.getByRole("button", { name: "Obriši vrijednost", exact: true }).click(); await page.getByRole("alertdialog").getByRole("button", { name: "Odustani", exact: true }).click(); await expect(row).toContainText("Aktivan");
-  await row.getByRole("button", { name: "Obriši vrijednost", exact: true }).click(); await page.getByRole("alertdialog").getByRole("button", { name: "Obriši", exact: true }).click(); await expect(row).toContainText("Neaktivan");
-  await page.reload(); await interactive(page); await openCategory(page, "NATIVE_CODES"); await expect(row).toContainText("Neaktivan");
+test("custom definition controls create, edit, CSV headers and soft-delete", async ({ page, request }) => {
+  await visit(page);
+  await page.getByRole("button", { name: "Novi šifrarnik", exact: true }).click();
+  let dialog = page.getByRole("dialog");
+  await dialog.getByRole("textbox", { name: /^Naziv definicije/ }).fill("NativeCodes");
+  await dialog.getByRole("textbox", { name: "Poslovna svrha", exact: true }).fill("Native fixture purpose");
+  await configureColumn(dialog, "17", "Poruka", "1");
+  await configureColumn(dialog, "3", "Količina", "2");
+  await dialog.getByRole("button", { name: "Kreiraj", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "NATIVE_CODES" })).toBeVisible();
+
+  const pending = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Preuzmi CSV predložak", exact: true }).click();
+  const download = await pending;
+  const template = await readFile((await download.path())!, "utf8");
+  expect(template.trimStart().split("\r\n")[0]).toBe('"Poruka","Količina"');
+
+  await page.getByRole("button", { name: "Nova vrijednost", exact: true }).click();
+  dialog = page.getByRole("dialog");
+  await expect(dialog.getByLabel("Kod", { exact: true })).toHaveCount(0);
+  await dialog.getByLabel("Poruka").fill("Prva poruka");
+  await dialog.getByLabel("Količina").fill("42");
+  await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  const card = page.locator(".custom-codebook-values .rbi-card");
+  await expect(card).toContainText("Prva poruka");
+  await expect(card).toContainText("42");
+
+  await card.getByRole("button", { name: "Uredi vrijednost" }).click();
+  dialog = page.getByRole("dialog");
+  await expect(dialog.getByLabel("Količina")).toHaveValue("42");
+  await dialog.getByLabel("Poruka").fill("Druga poruka");
+  await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
+  await expect(card).toContainText("Druga poruka");
+
+  await page.getByRole("button", { name: "Uredi kolone" }).click();
+  dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Naziv kolone").fill("Napomena");
+  await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
+  await expect(card).toContainText("Napomena");
+  await expect(card).toContainText("Druga poruka");
+
+  await card.getByRole("button", { name: "Obriši vrijednost" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Obriši", exact: true }).click();
+  await expect(card).toContainText("Neaktivan");
   const state = await (await request.get("/__fixtures/codes-state", { headers })).json();
-  expect(state.values.find((item: any) => item.kod === "CODE_1")).toMatchObject({ kategorija: "NATIVE_CODES", naziv: "Edited value", aktivan: false, izmijenioKorisnik: "admin@fixture.test" });
-  expect(state.audit.map((item: any) => item.action)).toEqual(["CODELIST_ADD", "CODELIST_ADD", "CODELIST_UPDATE", "CODELIST_DELETE"]); expect(state.audit.every((item: any) => item.username === "admin@fixture.test")).toBe(true);
+  expect(state.values.find((item: any) => item.kategorija === "NATIVE_CODES")).toMatchObject({ aktivan: false });
 });
+
 test("changed reference value immediately reaches the actual business form dropdown", async ({ page }) => {
   await visit(page, "OSNOV_POVEZANOSTI"); await page.getByRole("button", { name: "Uredi vrijednost", exact: true }).click(); const dialog = page.getByRole("dialog");
   await dialog.getByRole("textbox", { name: /^Naziv/ }).fill("Updated relationship basis"); await dialog.getByRole("textbox", { name: "Opis", exact: true }).fill("Updated reference description");
@@ -176,6 +214,7 @@ test("duplicate definition shows an alert and allows retry with a new name", asy
   const name = dialog.getByRole("textbox", { name: /^Naziv definicije/ });
   const submit = dialog.getByRole("button", { name: "Kreiraj", exact: true });
   await name.fill("osnov povezanosti");
+  await configureColumn(dialog, "17", "Napomena", "1");
   await submit.click();
   await expect(dialog.getByText("Šifrarnik s tim nazivom već postoji.")).toBeVisible();
   await name.fill("testni sifrarnik");

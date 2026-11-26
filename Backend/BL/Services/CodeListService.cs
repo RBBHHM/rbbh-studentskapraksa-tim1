@@ -116,7 +116,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
         };
 
         var definition = await _dbContext.CodeListDefinitions.SingleOrDefaultAsync(item => item.Name == category);
-        if (definition is not null && !definition.IsActive)
+        if (definition?.UsesCustomColumns == true || (definition is not null && !definition.IsActive))
             return Result<CodeListResponseDTO>.ValidationError(BackendMessages.Message("validation.codelist.inactive"));
         if (definition is null)
         {
@@ -153,6 +153,9 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
 
         if (entitet is null)
             return Result<CodeListResponseDTO>.NotFoundError(BackendMessages.Message("validation.codelist.value.missing", id));
+
+        if (await _dbContext.CodeListDefinitions.AnyAsync(definition => definition.Name == entitet.Kategorija && definition.UsesCustomColumns))
+            return Result<CodeListResponseDTO>.ValidationError(BackendMessages.Message("validation.codelist.inactive"));
 
         // Updating Aktivan must enforce the same reference guard as Delete.
         if (entitet.Aktivan && !dto.Aktivan && (entitet.IsSystemRequired || await JeVrijednostUUpotrebi(entitet.Kategorija, entitet.Kod)))

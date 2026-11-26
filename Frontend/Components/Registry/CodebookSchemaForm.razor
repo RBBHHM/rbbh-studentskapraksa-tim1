@@ -1,0 +1,122 @@
+@using RBI.DesignSystem.Components.Forms
+
+<form class="custom-codebook-form" @onsubmit="SubmitAsync" @onsubmit:preventDefault novalidate>
+    @if (Error is not null)
+    {
+        <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[Error]" Announcement="RbiAlertAnnouncement.Assertive" />
+    }
+    <fieldset disabled="@_busy">
+        <legend class="app-visually-hidden">@T["codes.column-structure"]</legend>
+        <div class="registry-form-grid">
+            <div class="role-catalog-field">
+                <label for="codebook-definition-name">@T["codes.definition-name"]</label>
+                <RbiInput Id="codebook-definition-name" @bind-Value="_name" ReadOnly="@(Existing is not null)" maxlength="100" Required />
+            </div>
+            <div class="role-catalog-field">
+                <label for="codebook-definition-purpose">@T["codes.purpose"]</label>
+                <RbiInput Id="codebook-definition-purpose" @bind-Value="_description" maxlength="500" />
+            </div>
+            <div class="role-catalog-field app-span-2">
+                <label for="codebook-slot">@T["codes.storage-column"]</label>
+                <RbiSelect TValue="int" Id="codebook-slot" @bind-Value="_selectedSlot">
+                    @foreach (var slot in _slots)
+                    {
+                        <option value="@slot.Slot">@OptionLabel(slot)</option>
+                    }
+                </RbiSelect>
+            </div>
+            @{
+                var column = _slots[_selectedSlot - 1];
+            }
+            <RbiCheckbox @key="column.Slot" Class="app-span-2" Id="codebook-slot-enabled" @bind-Value="column.Enabled">@T["codes.column-enabled"]</RbiCheckbox>
+            @if (column.Enabled)
+            {
+                <div class="role-catalog-field">
+                    <label for="codebook-column-name">@T["codes.column-name"]</label>
+                    <RbiInput @key="column.Slot" Id="codebook-column-name" UpdateMode="RbiInputUpdateMode.Input" @bind-Value="column.Name" maxlength="128" Required />
+                </div>
+                <div class="role-catalog-field">
+                    <label for="codebook-column-position">@T["codes.column-position"]</label>
+                    <RbiInput @key="column.Slot" Id="codebook-column-position" Type="RbiInputType.Number" UpdateMode="RbiInputUpdateMode.Input" @bind-Value="column.Position" min="1" max="20" step="1" Required />
+                </div>
+                <div class="role-catalog-field app-span-2">
+                    <label for="codebook-column-description">@T["codes.description"]</label>
+                    <RbiTextArea @key="column.Slot" Id="codebook-column-description" @bind-Value="column.Description" Rows="2" maxlength="4000" />
+                </div>
+            }
+        </div>
+    </fieldset>
+    <div class="registry-toolbar">
+        <RbiButton Variant="RbiButtonVariant.Secondary" OnClick="Cancel" Disabled="_busy">@T["common.cancel"]</RbiButton>
+        <RbiButton Type="RbiButtonType.Submit" Disabled="_busy">@T[Existing is null ? "codes.create-submit" : "common.save"]</RbiButton>
+    </div>
+</form>
+
+@code {
+    [Parameter] public CodeListMeta? Existing { get; set; }
+    [Parameter] public IReadOnlyList<CodebookColumn> Columns { get; set; } = [];
+    [Parameter, EditorRequired] public Func<string, string?, IReadOnlyList<CodebookColumnInput>, Task<string?>> Save { get; set; } = null!;
+    [Parameter] public EventCallback Cancel { get; set; }
+
+    private sealed class SlotDraft(int slot)
+    {
+        public int Slot { get; } = slot;
+        public bool Enabled { get; set; }
+        public string? Name { get; set; }
+        public string? Description { get; set; }
+        public string? Position { get; set; } = slot.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private readonly SlotDraft[] _slots = Enumerable.Range(1, 20).Select(slot => new SlotDraft(slot)).ToArray();
+    private int _selectedSlot = 1;
+    private string? _name, _description;
+    private bool _busy;
+    private string? Error;
+
+    protected override void OnInitialized()
+    {
+        _name = Existing?.Name;
+        _description = Existing?.Description;
+        foreach (var column in Columns)
+        {
+            var draft = _slots[column.Slot - 1];
+            draft.Enabled = true;
+            draft.Name = column.Name;
+            draft.Description = column.Description;
+            draft.Position = (column.Position ?? column.Slot).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
+        _selectedSlot = Columns.FirstOrDefault()?.Slot ?? 1;
+    }
+
+    private string OptionLabel(SlotDraft slot)
+    {
+        var type = T[CodebookField.TypeKey(slot.Slot)];
+        return slot.Enabled && !string.IsNullOrWhiteSpace(slot.Name)
+            ? $"ID{slot.Slot} · {type} · {slot.Name}"
+            : $"ID{slot.Slot} · {type}";
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (_busy) return;
+        Error = null;
+        if (_name?.Trim() is not { Length: >= 2 and <= 100 } name)
+        {
+            Error = "codes.definition-range";
+            return;
+        }
+        var columns = _slots.Where(slot => slot.Enabled)
+            .Select(slot => new CodebookColumnInput(slot.Slot, slot.Name?.Trim() ?? "", slot.Description,
+                int.TryParse(slot.Position, out var position) ? position : 0)).ToArray();
+        if (columns.Length == 0 || columns.Any(column => column.Name.Length is < 1 or > 128 || column.Position is < 1 or > 20) ||
+            columns.Select(column => column.Position).Distinct().Count() != columns.Length ||
+            columns.Select(column => column.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count() != columns.Length)
+        {
+            Error = "codes.schema-invalid";
+            return;
+        }
+        _busy = true;
+        try { Error = await Save(name, _description, columns); }
+        finally { _busy = false; }
+    }
+}

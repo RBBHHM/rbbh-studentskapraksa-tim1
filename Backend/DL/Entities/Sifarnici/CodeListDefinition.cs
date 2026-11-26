@@ -10,6 +10,7 @@ public sealed class CodeListDefinition
     [Required, StringLength(100), Unicode(false)] public string Name { get; set; } = string.Empty;
     [StringLength(500)] public string? Description { get; set; }
     public bool IsActive { get; set; } = true;
+    public bool UsesCustomColumns { get; set; }
     public bool IsSystemRequired { get; set; }
     [ConcurrencyCheck] public int Version { get; set; }
     public DateTime? ModifiedAt { get; set; }

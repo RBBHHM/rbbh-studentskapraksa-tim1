@@ -1,0 +1,98 @@
+@using RBI.DesignSystem.Components.Forms
+
+<form class="custom-codebook-form" @onsubmit="SubmitAsync" @onsubmit:preventDefault novalidate>
+    @if (_error is not null)
+    {
+        <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_error]" Announcement="RbiAlertAnnouncement.Assertive" />
+    }
+    <fieldset disabled="@_busy">
+        <legend class="app-visually-hidden">@T["codes.create"]</legend>
+        <div class="registry-form-grid">
+            @foreach (var field in _fields.Skip((_page - 1) * PageSize).Take(PageSize))
+            {
+                var slot = field.Column.Slot;
+                var id = $"codebook-value-{slot}";
+                <div class="role-catalog-field" @key="slot">
+                    <label for="@id">@field.Column.Name</label>
+                    @if (slot is 1 or 2)
+                    {
+                        <RbiSelect TValue="string" Id="@id" @bind-Value="field.Text">
+                            <option value="">—</option>
+                            @foreach (var flag in new[] { true, false })
+                            {
+                                <option value="@(flag ? "true" : "false")">@T[flag ? "common.yes" : "common.no"]</option>
+                            }
+                        </RbiSelect>
+                    }
+                    else if (slot is 9 or 10 or 11)
+                    {
+                        <InputDate TValue="DateTime?" Type="@(slot == 11 ? InputDateType.DateTimeLocal : InputDateType.Date)" id="@id"
+                                   class="rbi-control" step="@(slot == 11 ? "0.001" : null)" @bind-Value="field.Date" />
+                    }
+                    else if (slot is 3 or 4 or 5 or 6 or 7 or 8)
+                    {
+                        <RbiInput Id="@id" @bind-Value="field.Text" inputmode="@(slot <= 5 ? "numeric" : "decimal")" />
+                    }
+                    else if (CodebookField.TextLimit(slot) > 200)
+                    {
+                        <RbiTextArea Id="@id" @bind-Value="field.Text" maxlength="@CodebookField.TextLimit(slot)" Rows="2" />
+                    }
+                    else
+                    {
+                        <RbiInput Id="@id" @bind-Value="field.Text" maxlength="@CodebookField.TextLimit(slot)" />
+                    }
+                    @if (!string.IsNullOrWhiteSpace(field.Column.Description)) { <small class="app-hint">@field.Column.Description</small> }
+                </div>
+            }
+        </div>
+        @if (TotalPages > 1)
+        {
+            <RbiPagination @bind-CurrentPage="_page" TotalPages="TotalPages" AccessibleLabel="@T["codes.column-structure"]"
+                           PreviousLabel="@T["common.back"]" NextLabel="@T["common.actions.continue"]"
+                           PreviousAccessibleLabel="@T["legal.previous"]" NextAccessibleLabel="@T["legal.next"]"
+                           PageAccessibleLabel="@(number => T.Format("legal.page", number))" />
+        }
+        @if (!Columns.Any(column => column.Slot == 1))
+        {
+            <RbiCheckbox @bind-Value="_active">@T["codes.active"]</RbiCheckbox>
+        }
+    </fieldset>
+    <div class="registry-toolbar">
+        <RbiButton Variant="RbiButtonVariant.Secondary" OnClick="Cancel" Disabled="_busy">@T["common.cancel"]</RbiButton>
+        <RbiButton Type="RbiButtonType.Submit" Disabled="_busy">@T["common.save"]</RbiButton>
+    </div>
+</form>
+
+@code {
+    [Parameter] public CodeValue? Value { get; set; }
+    [Parameter, EditorRequired] public IReadOnlyList<CodebookColumn> Columns { get; set; } = [];
+    [Parameter, EditorRequired] public Func<Dictionary<int, string?>, bool, Task<string?>> Save { get; set; } = null!;
+    [Parameter] public EventCallback Cancel { get; set; }
+
+    private const int PageSize = 4;
+    private int _page = 1;
+    private int TotalPages => (_fields.Length + PageSize - 1) / PageSize;
+    private bool _busy, _active;
+    private CodebookField[] _fields = [];
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        _active = Value?.IsActive ?? true;
+        _fields = Columns.Select(column => new CodebookField(column, Value?.SlotValues?.GetValueOrDefault(column.Slot) ?? default)).ToArray();
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (_busy) return;
+        _error = null;
+        if (_fields.All(field => string.IsNullOrWhiteSpace(field.Text)))
+        {
+            _error = "codes.cell-required";
+            return;
+        }
+        _busy = true;
+        try { _error = await Save(_fields.ToDictionary(field => field.Column.Slot, field => field.Text), _active); }
+        finally { _busy = false; }
+    }
+}

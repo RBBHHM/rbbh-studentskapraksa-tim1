@@ -395,6 +395,14 @@ h1[tabindex="-1"]:focus, h1:focus-visible { outline: none; }
 .audit-row--added > * { background: var(--feedback-success-background); color: var(--feedback-success-foreground); }
 .audit-row--removed > * { background: var(--feedback-danger-background); color: var(--feedback-danger-foreground); }
 .audit-row--changed > * { background: var(--feedback-warning-background); color: var(--feedback-warning-foreground); }
+.rbi-dialog.audit-detail-dialog:not(.rbi-command-dialog) { width: min(calc(100vw - 2rem), 58rem); }
+.audit-detail-dialog .rbi-modal__body { overflow-wrap: anywhere; }
+.audit-detail-dialog .rbi-table-scroll { box-sizing: border-box; overflow: visible; }
+.audit-detail-table th[scope="row"] { width: 26%; }
+.audit-detail-table :is(th[scope="row"], td) { overflow-wrap: anywhere; white-space: pre-wrap; }
+@media (max-width: 48rem) {
+    .audit-detail-table th[scope="row"] { display: block; width: auto; padding: var(--space-2); }
+}
 .audit-raw { white-space: pre-wrap; overflow-wrap: anywhere; }
 .codes-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 1rem; list-style: none; padding: 0; margin: 0; }
 .codes-card { display: flex; align-items: center; gap: .75rem; width: 100%; min-height: 4.5rem; padding: 1rem; text-align: start; cursor: pointer; border: 1px solid var(--border-strong); border-radius: .75rem; background: var(--surface-raised, var(--surface-muted)); color: var(--text-primary); font: inherit; }
@@ -640,8 +648,17 @@ h1[tabindex="-1"]:focus, h1:focus-visible { outline: none; }
 .codebook-detail { margin-block-end: 1rem; }
 .codebook-detail__title { margin: 0 0 .75rem; font-size: 1.125rem; overflow-wrap: anywhere; }
 .codebook-detail__actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
-.codebook-detail__delete { margin-inline-start: auto; }
-.codebook-detail__meta { display: flex; flex-wrap: wrap; justify-content: center; gap: .75rem 1.5rem; margin-block-start: .75rem; font-size: var(--font-size-sm); color: var(--text-secondary); }
+.codebook-detail__meta { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin-inline-start: auto; font-size: var(--font-size-sm); color: var(--text-secondary); }
+.custom-codebook-form fieldset { margin: 0; border: 0; padding: 0; min-width: 0; }
+.custom-codebook-form .registry-toolbar { margin-block-start: var(--space-4); }
+.custom-codebook-form .rbi-pagination { margin-block: var(--space-3); }
+.custom-codebook-values { display: grid; gap: var(--space-3); }
+.custom-codebook-values__fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(10rem, 100%), 1fr)); gap: var(--space-4); margin: 0; }
+.custom-codebook-values__fields > div { min-width: 0; overflow-wrap: anywhere; }
+.custom-codebook-values__fields dt { font-size: var(--font-size-sm); color: var(--text-secondary); }
+.custom-codebook-values__fields dd { margin: .25rem 0 0; white-space: pre-wrap; }
+.custom-codebook-values__actions { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-block-start: var(--space-3); }
+.custom-codebook-values__actions:has(.registry-row-actions) { border-top: 1px solid var(--border-subtle); padding-block-start: var(--space-2); }
 .registry-codes-table { min-width: 37rem; table-layout: fixed; }
 .registry-codes-table th, .registry-codes-table td,
 .registry-codes-table td:not(:nth-child(3)) { white-space: normal; overflow-wrap: anywhere; vertical-align: top; }

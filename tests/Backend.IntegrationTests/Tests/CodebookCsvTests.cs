@@ -115,6 +115,70 @@ public sealed class CodebookCsvSqlTests : CodebookCsvFixture
     protected override bool UseSql => true;
 
     [SqlServerFact]
+    public async Task CustomDefinitionControlsValuesAndCsvWithoutLegacyFields()
+    {
+        const string category = "CUSTOM_TYPED";
+        var options = new[]
+        {
+            new { slot = 17, name = "Napomena", description = "Dugi tekst", position = 3 },
+            new { slot = 8, name = "Precizno", description = "Šest decimala", position = 1 },
+            new { slot = 9, name = "Datum", description = "Datum zapisa", position = 2 },
+            new { slot = 12, name = "Kratko", description = "Tekst do 10 znakova", position = 4 },
+            new { slot = 2, name = "Da ili ne", description = "Logičko polje", position = 5 }
+        };
+        using var invalidDefinition = await Client.PostAsJsonAsync("/api/code-lists/categories",
+            new { name = category, columns = new[] { options[0], options[0] } });
+        Assert.Equal(HttpStatusCode.BadRequest, invalidDefinition.StatusCode);
+        using var created = await Client.PostAsJsonAsync("/api/code-lists/categories", new { name = category, columns = options });
+        Assert.True(created.StatusCode == HttpStatusCode.Created, await created.Content.ReadAsStringAsync());
+
+        var path = $"/api/code-lists/categories/{category}/values";
+        var initial = await Client.GetFromJsonAsync<JsonElement>($"/api/code-lists/{category}");
+        Assert.True(initial.GetProperty("usesCustomColumns").GetBoolean());
+        Assert.Equal(new[] { 8, 9, 17, 12, 2 }, initial.GetProperty("columns").EnumerateArray().Select(column => column.GetProperty("slot").GetInt32()));
+        var version = initial.GetProperty("version").GetInt32();
+        var values = new Dictionary<int, string?> { [8] = "1.000001", [9] = "2026-11-26", [17] = "Prvi red", [12] = "Ž", [2] = "false" };
+        using var invalidValue = await Client.PostAsJsonAsync(path, new { expectedVersion = version, values = new Dictionary<int, string?> { [8] = "1.1234567" } });
+        Assert.Equal(HttpStatusCode.BadRequest, invalidValue.StatusCode);
+        using var insert = await Client.PostAsJsonAsync(path, new { expectedVersion = version, values });
+        Assert.True(insert.StatusCode == HttpStatusCode.Created, await insert.Content.ReadAsStringAsync());
+        var id = (await insert.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetInt32();
+
+        var updated = await Client.GetFromJsonAsync<JsonElement>($"/api/code-lists/{category}");
+        var slots = updated.GetProperty("items")[0].GetProperty("slotValues");
+        Assert.Equal(1.000001m, slots.GetProperty("8").GetDecimal());
+        Assert.Equal("Ž", slots.GetProperty("12").GetString());
+        Assert.False(slots.GetProperty("2").GetBoolean());
+        using var stale = await Client.PutAsJsonAsync($"{path}/{id}", new { expectedVersion = version, values });
+        Assert.Equal(HttpStatusCode.Conflict, stale.StatusCode);
+        version = updated.GetProperty("version").GetInt32();
+        using var removal = await Client.PutAsJsonAsync($"/api/code-lists/categories/{category}", new { expectedVersion = version, columns = options.Skip(1) });
+        Assert.Equal(HttpStatusCode.Conflict, removal.StatusCode);
+        values[17] = "Drugi red";
+        using var edit = await Client.PutAsJsonAsync($"{path}/{id}", new { expectedVersion = version, values });
+        Assert.True(edit.StatusCode == HttpStatusCode.OK, await edit.Content.ReadAsStringAsync());
+        var template = await Client.GetStringAsync($"/api/code-lists/{category}/csv-template");
+        Assert.Contains("\"Precizno\",\"Datum\",\"Napomena\",\"Kratko\",\"Da ili ne\"", template);
+        Assert.DoesNotContain("VALUE_KEY", template);
+        var csv = "Precizno,Datum,Napomena,Kratko,Da ili ne\n2.000002,2027-01-02,CSV,XX,true";
+        Assert.Equal(1, (await Import(category, csv, false)).GetProperty("imported").GetInt32());
+        Assert.Equal(1, (await Import(category, csv, false)).GetProperty("duplicates").GetInt32());
+    }
+
+    [SqlServerFact]
+    public async Task ExistingRelationshipCodebookAcceptsManualEntry()
+    {
+        using var result = await Client.PostAsJsonAsync("/api/code-lists",
+            new { kategorija = "SRODSTVO", kod = "RPR_QA_TT", naziv = "Testno srodstvo", opis = "Provjera", aktivan = true });
+        Assert.True(result.StatusCode == HttpStatusCode.Created, await result.Content.ReadAsStringAsync());
+        using var value = await Client.GetAsync(result.Headers.Location);
+        Assert.Equal(HttpStatusCode.OK, value.StatusCode);
+        using var duplicate = await Client.PostAsJsonAsync("/api/code-lists",
+            new { kategorija = "SRODSTVO", kod = "RPR_QA_TT", naziv = "Ponovni unos", aktivan = true });
+        Assert.Equal(HttpStatusCode.BadRequest, duplicate.StatusCode);
+    }
+
+    [SqlServerFact]
     public async Task CreateReturnsCanonicalNameAndDuplicateLeavesSingleDefinition()
     {
         var request = new { name = "testni sifrarnik", description = "Testni šifrarnik" };

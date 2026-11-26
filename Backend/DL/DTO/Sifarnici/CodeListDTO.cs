@@ -98,6 +98,9 @@ public sealed class CreateCodeListDefinitionDTO
 {
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
+    public CodebookColumnInput[]? Columns { get; set; }
 }
 
-public sealed record UpdateCodeListDefinitionDTO(string? Description, int ExpectedVersion);
+public sealed record CodebookColumnInput(int Slot, string? Name, string? Description, int Position);
+public sealed record UpdateCodeListDefinitionDTO(string? Description, int ExpectedVersion, CodebookColumnInput[]? Columns = null);
+public sealed record CodebookCellsRequest(int ExpectedVersion, Dictionary<int, string?>? Values, bool Active = true);

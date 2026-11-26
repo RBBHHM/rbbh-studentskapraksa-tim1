@@ -22,7 +22,7 @@ namespace RBBH.ConnectedParties.API.Controllers;
 [ApiController]
 [Route("api/code-lists")]
 [Authorize(Policy = ApplicationPolicies.CodeListsRead)]
-public class CodeListController(ICodeListService codeListService, ConnectedPartiesDbContext db, IAuditService auditService) : BaseResuItController
+public partial class CodeListController(ICodeListService codeListService, ConnectedPartiesDbContext db, IAuditService auditService) : BaseResuItController
 {
     private readonly ICodeListService _codeListService = codeListService;
     // Kept in the constructor for source compatibility; mutations now persist their audit in the same SaveChanges.
@@ -48,6 +48,8 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
         var name = CodebookName.Canonical(dto.Name ?? "");
         if (name.Length < 2 || name.Length > 100 || dto.Description?.Length > 500)
             return BadRequest(new ProblemDetails { Title = BackendMessages.Message("errors.codelist.name.invalid.title"), Detail = BackendMessages.Message("errors.codelist.name.length") });
+        if (dto.Columns is { } columns && !CodebookDefinitions.ValidColumns(columns))
+            return BadRequest(new { code = "codes.schema_invalid" });
         ConflictObjectResult Duplicate() => Conflict(new ProblemDetails
         {
             Title = BackendMessages.Message("errors.codelist.duplicate.title"),
@@ -59,8 +61,9 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
         var korisnik = GetKorisnik();
         var definition = new CodeListDefinition { Name = name, Description = dto.Description?.Trim(), CreatedBy = korisnik };
         db.CodeListDefinitions.Add(definition);
+        if (dto.Columns is not null) CodebookDefinitions.Apply(db, definition, dto.Columns);
         db.AuditLogs.Add(Helpers.BusinessAudit.Create("CodeList", "CODELIST_ADD", korisnik, null,
-            newValues: new { definition.Name, definition.Description, definition.IsActive }));
+            newValues: new { definition.Name, definition.Description, definition.IsActive, Columns = dto.Columns }));
         try { await db.SaveChangesAsync(ct); }
         catch (DbUpdateException exception) when (exception.GetBaseException() is SqlException { Number: 2601 or 2627 })
         {
@@ -74,7 +77,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
     public async Task<IActionResult> Definitions(CancellationToken ct) => Ok(new
     {
         items = await db.CodeListDefinitions.AsNoTracking().OrderBy(row => row.Name).Select(row => new
-        { row.Id, row.Name, row.Description, row.IsActive, row.IsSystemRequired, row.Version, row.CreatedAt, row.CreatedBy, row.ModifiedAt, row.ModifiedBy }).ToListAsync(ct)
+        { row.Id, row.Name, row.Description, row.IsActive, row.IsSystemRequired, row.UsesCustomColumns, row.Version, row.CreatedAt, row.CreatedBy, row.ModifiedAt, row.ModifiedBy }).ToListAsync(ct)
     });
 
     [HttpGet("categories/{name}/columns")]
@@ -125,11 +128,24 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
         var definition = await db.CodeListDefinitions.SingleOrDefaultAsync(row => row.Name == name, ct);
         if (definition is null) return NotFound();
         if (definition.Version != input.ExpectedVersion) return Conflict(new ProblemDetails { Status = 409, Title = BackendMessages.Message("errors.codelist.concurrent.change") });
-        var before = new { definition.Description };
-        var actor = GetKorisnik(); definition.Description = input.Description?.Trim(); definition.ModifiedBy = actor;
+        var previousColumns = definition.UsesCustomColumns ? CodebookCsv.Columns(db, definition) : null;
+        if (input.Columns is { } columns)
+        {
+            if (!CodebookDefinitions.ValidColumns(columns)) return BadRequest(new { code = "codes.schema_invalid" });
+            if (!definition.UsesCustomColumns || !definition.IsActive ||
+                (previousColumns!.Any(column => !columns.Any(next => next.Slot == column.Slot)) &&
+                 await db.CodeLists.IgnoreQueryFilters().AnyAsync(row => row.Kategorija == definition.Name, ct)))
+                return Conflict(new { code = "codes.schema_protected" });
+            CodebookDefinitions.Apply(db, definition, columns);
+        }
+        var before = new { definition.Description, Columns = previousColumns };
+        var actor = GetKorisnik();
+        definition.Description = input.Description?.Trim();
+        definition.ModifiedBy = actor;
         db.AuditLogs.Add(Helpers.BusinessAudit.Create("CodeList", "CODELIST_UPDATE", actor, null,
-            before, new { definition.Description }));
-        await db.SaveChangesAsync(ct);
+            before, new { definition.Description, Columns = previousColumns is null ? null : CodebookCsv.Columns(db, definition) }));
+        try { await db.SaveChangesAsync(ct); }
+        catch (DbUpdateConcurrencyException) { return Conflict(new { code = "codes.concurrent" }); }
         return Ok(new { definition.Id, definition.Name, definition.Description, definition.Version, definition.ModifiedAt, definition.ModifiedBy });
     }
 
@@ -161,12 +177,12 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<object>> GetAll([FromRoute] string kategorija)
     {
+        var definition = await db.CodeListDefinitions.SingleOrDefaultAsync(row => row.Name == kategorija, HttpContext.RequestAborted);
         var result = await _codeListService.GetAllByKategorija(kategorija);
         if (!result.IsSuccessful) return HandleResult(result);
 
-        var definition = await db.CodeListDefinitions.SingleOrDefaultAsync(row => row.Name == kategorija, HttpContext.RequestAborted);
         var columns = definition is null ? [] : CodebookCsv.Columns(db, definition)
-            .Where(column => column.Slot != 1 && (definition.Name != LanguageBooks.Packs || column.Slot is not (12 or 13 or 14 or 16 or 19 or 20))
+            .Where(column => definition.UsesCustomColumns || column.Slot != 1 && (definition.Name != LanguageBooks.Packs || column.Slot is not (12 or 13 or 14 or 16 or 19 or 20))
                 && (definition.Name != LanguageBooks.Languages || column.Slot is not (12 or 13))).ToArray();
         var slots = new Dictionary<int, Dictionary<int, object?>>();
         if (columns.Length > 0)
@@ -191,7 +207,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
             modifiedAt = x.IzmijenjenDatum ?? x.KreiranDatum
         }).ToList();
 
-        return Ok(new { category = kategorija, items, columns });
+        return Ok(new { category = kategorija, items, columns, usesCustomColumns = definition?.UsesCustomColumns == true, definition?.Version });
     }
 
     /// <summary>
@@ -217,14 +233,18 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
     public async Task<ActionResult<CodeListResponseDTO>> Create([FromBody] CreateCodeListDTO dto)
     {
         var korisnik = GetKorisnik();
-        var result = await _codeListService.Create(dto, korisnik);
-
-        if (result.IsSuccessful)
+        try
         {
-            return Created($"{Request.Path}/{result.Value.ID}", result.Value);
+            var result = await _codeListService.Create(dto, korisnik);
+            if (result.IsSuccessful)
+                return CreatedAtAction(nameof(GetByID), new { id = result.Value.ID }, result.Value);
+            return HTTPExceptiontFromResult(result);
         }
-
-        return HTTPExceptiontFromResult(result);
+        catch (DbUpdateException exception) when (exception is DbUpdateConcurrencyException ||
+            exception.GetBaseException() is SqlException { Number: 2601 or 2627 })
+        {
+            return Conflict(new { code = "codes.concurrent" });
+        }
     }
 
     /// <summary>
@@ -438,6 +458,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
         var normalizedCategory = kategorija.Trim().ToUpperInvariant();
         if (kategorija.Trim().Length is < 1 or > 100) return BadRequest(new { error = BackendMessages.Message("errors.codelist.name.invalid") });
         var definition = await db.CodeListDefinitions.SingleOrDefaultAsync(item => item.Name.ToUpper() == normalizedCategory, HttpContext.RequestAborted);
+        if (definition?.UsesCustomColumns == true) return BadRequest(new { code = "codes.schema_invalid" });
         if (definition is { IsActive: false }) return BadRequest(new { error = BackendMessages.Message("validation.codelist.inactive") });
         if (definition is null)
         {

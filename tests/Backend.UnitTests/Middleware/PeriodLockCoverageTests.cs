@@ -67,6 +67,8 @@ public sealed class PeriodLockCoverageTests
         ["DELETE api/users/{userId}"] = (Open, "user administration"),
         ["POST api/users/{userId}/reactivate"] = (Open, "user administration"),
         ["DELETE api/users/{userId}/permanent"] = (Open, "user administration"),
+        ["POST api/code-lists/categories/{name}/values"] = (Open, "configuration codebook values"),
+        ["PUT api/code-lists/categories/{name}/values/{id}"] = (Open, "configuration codebook values"),
         ["POST api/code-lists/categories"] = (Open, "configuration data, not period data"),
         ["DELETE api/code-lists/categories/{name}"] = (Open, "configuration data, not period data"),
         ["POST api/code-lists"] = (Open, "configuration data, not period data"),

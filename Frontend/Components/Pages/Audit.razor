@@ -26,7 +26,7 @@ else
             <thead><tr><th scope="col">@T["audit.time"]</th><th scope="col">@T["audit.action"]</th><th scope="col">@T["audit.area"]</th><th scope="col">@T["audit.change"]</th><th scope="col">@T["audit.user"]</th></tr></thead>
             <tbody>@foreach (var entry in Filtered)
             {
-                <tr @key="entry.Id"><td>@AppFormat.Timestamp(entry.Timestamp)</td><td><span class="audit-badge audit-badge--@AuditChange.Tone(entry.Action)">@entry.ActionDisplay</span></td><td>@entry.AreaDisplay</td><td><span class="audit-summary">@entry.ChangeSummary</span> <RbiButton Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Small" OnClick="() => _detail = entry" AccessibleLabel="@($"{T["audit.details"]}: {entry.ActionDisplay} {entry.AreaDisplay} {AppFormat.Timestamp(entry.Timestamp)}")">@T["audit.details"]</RbiButton></td><td>@entry.Username</td></tr>
+                <tr @key="entry.Id"><td>@AppFormat.Timestamp(entry.Timestamp)</td><td><span class="audit-badge audit-badge--@AuditChange.Tone(entry.Action)">@entry.ActionDisplay</span></td><td>@entry.AreaDisplay</td><td><span class="audit-summary">@entry.ChangeSummary</span> <RbiButton Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Small" OnClick="() => OpenDetail(entry)" AccessibleLabel="@($"{T["audit.details"]}: {entry.ActionDisplay} {entry.AreaDisplay} {AppFormat.Timestamp(entry.Timestamp)}")">@T["audit.details"]</RbiButton></td><td>@entry.Username</td></tr>
             }</tbody>
         </RbiTable>
     }
@@ -38,20 +38,29 @@ else
 }
 @if (_detail is { } detail)
 {
-    <RbiDialog Open Class="app-form-dialog app-form-dialog--md" Title="@T["audit.details"]" CloseLabel="@T["common.close"]" OpenChanged="CloseDetail">
+    <RbiDialog Open Class="app-form-dialog audit-detail-dialog" Title="@T["audit.details"]" CloseLabel="@T["common.close"]" OpenChanged="CloseDetail">
         <DialogBody>
             <p><span class="audit-badge audit-badge--@AuditChange.Tone(detail.Action)">@detail.ActionDisplay</span> @detail.AreaDisplay · @detail.Username · @AppFormat.Timestamp(detail.Timestamp)</p>
             @if (!string.IsNullOrWhiteSpace(detail.ChangeSummary)) { <p>@detail.ChangeSummary</p> }
             @{ var changes = AuditChange.Compare(detail.OldValues, detail.NewValues); }
             @if (changes.Count > 0)
             {
-                <RbiTable AccessibleLabel="@T["audit.change"]" Class="registry-table">
+                <RbiTable AccessibleLabel="@T["audit.change"]" Class="registry-table audit-detail-table registry-reflow-table">
                     <thead><tr><th scope="col">@T["audit.field"]</th><th scope="col">@T["audit.old"]</th><th scope="col">@T["audit.new"]</th></tr></thead>
-                    <tbody>@foreach (var change in changes)
+                    <tbody>@foreach (var change in changes.Skip((_detailPage - 1) * DetailPageSize).Take(DetailPageSize))
                     {
-                        <tr class="audit-row audit-row--@change.Kind.ToString().ToLowerInvariant()"><th scope="row">@change.Field</th><td>@change.Old</td><td>@change.New</td></tr>
+                        <tr class="audit-row audit-row--@change.Kind.ToString().ToLowerInvariant()"><th scope="row">@change.Field</th>
+                            <td><span class="registry-cell-label" aria-hidden="true">@T["audit.old"]</span><span>@change.Old</span></td>
+                            <td><span class="registry-cell-label" aria-hidden="true">@T["audit.new"]</span><span>@change.New</span></td></tr>
                     }</tbody>
                 </RbiTable>
+                @if (changes.Count > DetailPageSize)
+                {
+                    <RbiPagination @bind-CurrentPage="_detailPage" TotalPages="@((changes.Count + DetailPageSize - 1) / DetailPageSize)"
+                                   AccessibleLabel="@T["audit.change"]" PreviousLabel="@T["common.back"]" NextLabel="@T["common.actions.continue"]"
+                                   PreviousAccessibleLabel="@T["legal.previous"]" NextAccessibleLabel="@T["legal.next"]"
+                                   PageAccessibleLabel="@(number => T.Format("legal.page", number))" />
+                }
             }
             else if (!string.IsNullOrWhiteSpace(detail.OldValues) || !string.IsNullOrWhiteSpace(detail.NewValues))
             {
@@ -64,7 +73,14 @@ else
     </RbiDialog>
 }
 @code {
+    private const int DetailPageSize = 6;
+    private int _detailPage = 1;
     private AuditRecord? _detail;
+    private void OpenDetail(AuditRecord detail)
+    {
+        _detailPage = 1;
+        _detail = detail;
+    }
     private void CloseDetail(bool open) { if (!open) _detail = null; }
     private readonly CancellationTokenSource _lifetime = new();
     private readonly CancellationToken _token;

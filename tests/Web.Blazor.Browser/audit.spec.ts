@@ -29,6 +29,12 @@ test("audit details open in a dialog with highlighted field changes and inert ma
   await expect(dialog.locator(".audit-row--added")).toContainText("audit-body-needle");
   await expect(dialog.locator("img")).toHaveCount(0);
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
+  const table = dialog.locator(".rbi-table-scroll");
+  const body = dialog.locator(".rbi-modal__body");
+  expect(await table.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
+  await page.setViewportSize({ width: 375, height: 812 });
+  expect(await table.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
+  expect(await body.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
   await page.keyboard.press("Escape"); await expect(dialog).toHaveCount(0);
 });
 test("audit paging reaches records beyond the source first 200", async ({ page, request }) => {

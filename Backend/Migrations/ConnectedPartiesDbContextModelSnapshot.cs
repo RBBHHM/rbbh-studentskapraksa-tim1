@@ -1795,6 +1795,10 @@ namespace RBBH.ConnectedParties.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
+                    b.Property<bool>("UsesCustomColumns")
+                        .HasColumnType("bit")
+                        .HasColumnName("USES_CUSTOM_COLUMNS");
+
                     b.ToTable("CODELIST_DEFINITIONS", t =>
                         {
                             t.HasCheckConstraint("CK_CodeListDefinitions_Name_Trimmed", "DATALENGTH([NAME]) = DATALENGTH(LTRIM(RTRIM([NAME])))");

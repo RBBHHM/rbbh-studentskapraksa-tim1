@@ -60,8 +60,8 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
         await db.CodeListDefinitions.SingleOrDefaultAsync(row =>
             row.Name.ToUpper() == category.ToUpper() && row.IsActive, ct);
 
-    private sealed record Field(string Header, int Slot, bool Required, string Example);
-    private static Field Slot(int slot, string header, bool required = false) => new(header, slot, required,
+    internal sealed record Field(string Header, int Slot, bool Required, string Example);
+    internal static Field Slot(int slot, string header, bool required = false) => new(header, slot, required,
         slot switch
         {
             1 or 2 => "true", >= 3 and <= 5 => "42", >= 6 and <= 8 => "123.45",
@@ -71,6 +71,7 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
     private Field[] Schema(CodeListDefinition definition, string exampleLanguage)
     {
         var columns = Columns(db, definition);
+        if (definition.UsesCustomColumns) return columns.Select(column => Slot(column.Slot, column.Name)).ToArray();
         if (definition.Name == LanguageBooks.Packs)
             return [Slot(1, "IS_ACTIVE"), new("LANGUAGE_CODE", 12, true, exampleLanguage), new("RESOURCE_KEY", 13, true, "example.field"),
                 Slot(14, "CONTEXT_INFO"), Slot(16, "LABEL_TEXT", true), Slot(19, "HELP_TEXT"), Slot(20, "PLACEHOLDER_TEXT"),
@@ -94,7 +95,7 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
 
     private static string Escape(string value) => "\"" + value.Replace("\"", "\"\"", StringComparison.Ordinal) + "\"";
     private static bool ValidSchema(Field[] schema) =>
-        schema.All(field => field.Header[0] is not ('=' or '+' or '-' or '@') && !field.Header.Any(char.IsControl)) &&
+        schema.Length > 0 && schema.All(field => field.Header[0] is not ('=' or '+' or '-' or '@') && !field.Header.Any(char.IsControl)) &&
         schema.Select(field => field.Header).Distinct(StringComparer.OrdinalIgnoreCase).Count() == schema.Length;
 
     private async Task<string> ExampleLanguage(CancellationToken ct)
@@ -146,11 +147,21 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
         if (missing is not null) return Failure("codes.csv.header-missing", missing.Header);
 
         var indices = schema.Select(field => byHeader[field.Header]).ToArray();
-        var existing = await db.CodeLists.IgnoreQueryFilters().Where(row => row.Kategorija == definition.Name)
-            .Select(row => new { row.Kod, row.Localization!.LanguageCode, row.Localization!.ResourceKey }).ToListAsync(ct);
-        var used = existing.Select(row => packs ? Pair(row.LanguageCode, row.ResourceKey) :
-            languages ? row.LanguageCode ?? row.Kod : row.Kod).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var rows = db.CodeLists.IgnoreQueryFilters().Where(row => row.Kategorija == definition.Name);
+        HashSet<string> used;
+        if (definition.UsesCustomColumns)
+        {
+            var existing = await rows.ToListAsync(ct);
+            used = existing.Select(row => CellKey(schema.Select(field => ReadValue(db, row, field.Slot))))
+                .ToHashSet(StringComparer.Ordinal);
+        }
+        else
+        {
+            var existing = await rows.Select(row => new { row.Kod, row.Localization!.LanguageCode, row.Localization!.ResourceKey }).ToListAsync(ct);
+            used = existing.Select(row => packs ? Pair(row.LanguageCode, row.ResourceKey) :
+                languages ? row.LanguageCode ?? row.Kod : row.Kod).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+        var seen = new HashSet<string>(used.Comparer);
         var pending = new List<Dictionary<int, object?>>();
         var issues = new List<CsvIssue>();
         var duplicates = 0;
@@ -185,6 +196,22 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
                 values.Add(field.Slot, value);
             }
             if (values.Count != schema.Length) continue;
+            if (definition.UsesCustomColumns)
+            {
+                var signature = CellKey(schema.Select(field => field.Slot == 1 ? values[field.Slot] ?? true : values[field.Slot]));
+                if (!seen.Add(signature))
+                {
+                    issues.Add(new("codes.csv.row-duplicate", line));
+                    continue;
+                }
+                if (used.Contains(signature))
+                {
+                    duplicates++;
+                    continue;
+                }
+                pending.Add(values);
+                continue;
+            }
             var code = (string)values[packs || languages ? 12 : -1]!;
             string? resourceKey = packs ? (string?)values[13] : null;
             if (packs && !supported.Contains(code))
@@ -225,6 +252,13 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
     }
 
     private static CsvPreview Failure(string key, params string[] parameters) => new(0, 0, 0, 0, false, [new(key, parameters)]);
+    private static string CellKey(IEnumerable<object?> values) => System.Text.Json.JsonSerializer.Serialize(values.Select(value => value switch
+    {
+        decimal number => number.ToString("G29", Invariant),
+        IFormattable formattable => formattable.ToString(null, Invariant),
+        _ => value?.ToString()
+    }));
+
     private static string Pair(string? language, string? key) => language + "\u001f" + key;
 
     private static string Delimiter(string text)
@@ -278,7 +312,7 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
         return openingLine == 0 ? null : openingLine;
     }
 
-    private static bool TryValue(Field field, string input, out object? value)
+    internal static bool TryValue(Field field, string input, out object? value)
     {
         value = null;
         var trimmed = input.Trim();
@@ -320,22 +354,33 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
         string? Text(int slot) => (string?)values.GetValueOrDefault(slot);
         var packs = definition.Name == LanguageBooks.Packs;
         var languages = definition.Name == LanguageBooks.Languages;
+        var code = packs || definition.UsesCustomColumns ? Guid.NewGuid().ToString("N") :
+            languages ? Text(12)!.ToUpperInvariant() : Text(-1)!;
         var row = new CodeList
         {
-            Definition = definition, Kategorija = definition.Name,
-            Kod = packs ? Guid.NewGuid().ToString("N") : languages ? Text(12)!.ToUpperInvariant() : Text(-1)!,
-            Naziv = packs || languages ? Text(13)! : Text(-2)!,
+            Definition = definition, Kategorija = definition.Name, Kod = code,
+            Naziv = definition.UsesCustomColumns ? "" : packs || languages ? Text(13)! : Text(-2)!,
             Opis = Text(-3), Aktivan = (bool?)values.GetValueOrDefault(1) ?? true,
             KreiraoKorisnik = actor, KreiranDatum = now
         };
+        db.CodeLists.Add(row);
+        WriteSlots(db, row, values, packs || languages);
+    }
+
+    internal static void WriteSlots(ConnectedPartiesDbContext db, CodeList row, Dictionary<int, object?> values, bool languageBook = false)
+    {
+        string? Text(int slot) => (string?)values.GetValueOrDefault(slot);
         if (values.Keys.Any(slot => slot is 12 or 13 or 14 or 16 or 19 or 20))
-            row.Localization = new()
-            {
-                LanguageCode = packs || languages ? Text(12)?.ToUpperInvariant() : Text(12),
-                ResourceKey = Text(13), ContextInfo = Text(14), ResourceLabel = Text(16),
-                ResourceHelper = Text(19), ResourcePlaceholder = Text(20)
-            };
-        var entry = db.CodeLists.Add(row);
+        {
+            row.Localization ??= new();
+            if (values.ContainsKey(12)) row.Localization.LanguageCode = languageBook ? Text(12)?.ToUpperInvariant() : Text(12);
+            if (values.ContainsKey(13)) row.Localization.ResourceKey = Text(13);
+            if (values.ContainsKey(14)) row.Localization.ContextInfo = Text(14);
+            if (values.ContainsKey(16)) row.Localization.ResourceLabel = Text(16);
+            if (values.ContainsKey(19)) row.Localization.ResourceHelper = Text(19);
+            if (values.ContainsKey(20)) row.Localization.ResourcePlaceholder = Text(20);
+        }
+        var entry = db.Entry(row);
         foreach (var slot in values.Keys.Where(slot => slot is (>= 2 and <= 11) or 15 or 17 or 18))
             entry.Property($"Slot{slot}").CurrentValue = values[slot];
     }
