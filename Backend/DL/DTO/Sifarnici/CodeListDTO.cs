@@ -13,12 +13,23 @@ public class CodeListResponseDTO
     public string Naziv { get; set; } = null!;
     public string? Opis { get; set; }
     public bool Aktivan { get; set; }
+    public CodeListResourceDTO? Localization { get; set; }
 
     // Audit polja
     public DateTime KreiranDatum { get; set; }
     public string KreiraoKorisnik { get; set; } = null!;
     public DateTime? IzmijenjenDatum { get; set; }
     public string? IzmijenioKorisnik { get; set; }
+}
+
+public sealed record CodeListResourceDTO
+{
+    public string? LanguageCode { get; set; }
+    public string? ResourceKey { get; set; }
+    public string? ResourceLabel { get; set; }
+    public string? ResourceHelper { get; set; }
+    public string? ResourcePlaceholder { get; set; }
+    public string? ContextInfo { get; set; }
 }
 
 // ─── Create DTO ───────────────────────────────────────────────────────────────

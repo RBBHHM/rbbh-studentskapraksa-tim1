@@ -3,6 +3,7 @@
 @using RBI.Localization
 @using RBI.DesignSystem.Components.Forms
 @inject RbiCultureCatalog Cultures
+@inject RuntimeResources Resources
 @inject NavigationManager Navigation
 @inject IJSRuntime Js
 
@@ -11,7 +12,7 @@
     <RbiIcon Name="RbiIconName.Languages" Class="app-language__icon" />
     <label for="@Id" class="app-visually-hidden">@T["common.language"]</label>
     <RbiSelect TValue="string" id="@Id" Value="_culture" ValueChanged="CultureChanged" ValueExpression="@(() => _culture)">
-        @foreach (var culture in Cultures.SupportedCultures)
+        @foreach (var culture in EnabledCultures)
         {
             <option value="@culture">@LanguageName(culture)</option>
         }
@@ -20,7 +21,15 @@
 
 @code {
     [Parameter] public string Id { get; set; } = "app-culture";
-    private static string LanguageName(string culture) { var info = CultureInfo.GetCultureInfo(culture); return info.TextInfo.ToTitleCase(info.NativeName); }
+    private IEnumerable<string> EnabledCultures => Cultures.SupportedCultures.Where(culture =>
+        Resources.Languages is null || culture == _culture || FindLanguage(culture) is not null);
+    private RuntimeLanguage? FindLanguage(string culture) => Resources.Languages?.FirstOrDefault(language =>
+        language.Code.Equals(CultureInfo.GetCultureInfo(culture).TwoLetterISOLanguageName, StringComparison.OrdinalIgnoreCase));
+    private string LanguageName(string culture)
+    {
+        var info = CultureInfo.GetCultureInfo(culture);
+        return FindLanguage(culture)?.Name ?? info.TextInfo.ToTitleCase(info.NativeName);
+    }
     private string _culture = CultureInfo.CurrentUICulture.Name;
     private bool _submit;
     private string Action => $"/rbi-localization/culture/{Uri.EscapeDataString(_culture)}?returnUrl={Uri.EscapeDataString("/" + Navigation.ToBaseRelativePath(Navigation.Uri))}";

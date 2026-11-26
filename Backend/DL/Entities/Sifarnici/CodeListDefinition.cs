@@ -6,6 +6,7 @@ namespace RBBH.ConnectedParties.DL.Entities.Sifarnici;
 public sealed class CodeListDefinition
 {
     public long Id { get; set; }
+    public string Owner { get; set; } = "registry";
     [Required, StringLength(100), Unicode(false)] public string Name { get; set; } = string.Empty;
     [StringLength(500)] public string? Description { get; set; }
     public bool IsActive { get; set; } = true;

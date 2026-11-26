@@ -11,14 +11,14 @@ namespace RBBH.ConnectedParties.BL.Services;
 
 public sealed class RuntimeLocalizationOptions
 {
-    public string LanguagesCodebook { get; set; } = "Languages";
-    public string LanguagePacksCodebook { get; set; } = "LanguagePacks";
+    public string LanguagesCodebook { get; set; } = LanguageBooks.Languages;
+    public string LanguagePacksCodebook { get; set; } = LanguageBooks.Packs;
     public string DefaultLanguage { get; set; } = "BS";
 }
 
-public sealed record RuntimeResource(string ResourceKey, string Label, string? Helper, string? Placeholder);
+public sealed record RuntimeResource(string ResourceKey, string Label, string? Helper, string? Placeholder, string? ContextInfo = null);
 public sealed record RuntimeResourcePack(string Language, string FallbackLanguage, string Version, IReadOnlyList<RuntimeResource> Items);
-public sealed record PutRuntimeResource(string Label, string? Helper = null, string? Placeholder = null, bool IsActive = true);
+public sealed record PutRuntimeResource(string Label, string? Helper = null, string? Placeholder = null, bool IsActive = true, string? ContextInfo = null);
 
 public sealed class RuntimeLocalizationCache : IDisposable
 {
@@ -33,16 +33,17 @@ public sealed class RuntimeLocalizationCatalog(ConnectedPartiesDbContext db, IOp
     private RuntimeLocalizationOptions Settings => options.Value;
     public string DefaultLanguage => Settings.DefaultLanguage.Trim().ToUpperInvariant();
 
-    public async Task<object> Languages(CancellationToken ct) => new
+    public async Task<object> Languages(CancellationToken ct)
     {
-        items = await db.CodeLists.AsNoTracking().Where(row => row.Kategorija == Settings.LanguagesCodebook &&
-                !db.CodeListDefinitions.Any(definition => definition.Name == row.Kategorija && !definition.IsActive))
+        var rows = await db.CodeLists.AsNoTracking().Where(row => row.Kategorija == Settings.LanguagesCodebook &&
+                db.CodeListDefinitions.Any(definition => definition.Name == row.Kategorija && definition.IsActive))
             .OrderBy(row => row.Kod)
-            .Select(row => new { code = row.Kod, name = row.Naziv }).ToListAsync(ct)
-    };
+            .Select(row => new { row.Kod, row.Naziv, row.Localization!.LanguageCode, row.Localization!.ResourceKey }).ToListAsync(ct);
+        return new { items = rows.Select(row => new { code = row.LanguageCode ?? row.Kod, name = row.ResourceKey ?? row.Naziv }) };
+    }
 
     private Task<bool> Supported(string language, CancellationToken ct) => db.CodeLists.AsNoTracking().AnyAsync(row =>
-        row.Kategorija == Settings.LanguagesCodebook && row.Kod.ToUpper() == language && !db.CodeListDefinitions.Any(definition => definition.Name == row.Kategorija && !definition.IsActive), ct);
+        row.Kategorija == Settings.LanguagesCodebook && (row.Localization!.LanguageCode ?? row.Kod).ToUpper() == language && db.CodeListDefinitions.Any(definition => definition.Name == row.Kategorija && definition.IsActive), ct);
 
     public async Task<RuntimeResourcePack> Resources(string language, CancellationToken ct)
     {
@@ -51,13 +52,13 @@ public sealed class RuntimeLocalizationCatalog(ConnectedPartiesDbContext db, IOp
             throw new BusinessRuleException(404, "localization.language_unavailable");
         var versions = await db.CodeListDefinitions.AsNoTracking().Where(row => row.Name == Settings.LanguagesCodebook || row.Name == Settings.LanguagePacksCodebook)
             .OrderBy(row => row.Name).Select(row => new { row.Id, row.Version, row.IsActive }).ToListAsync(ct);
-        var version = string.Join(':', versions.Select(row => $"{row.Id:N}.{row.Version}.{row.IsActive}"));
+        var version = string.Join(':', versions.Select(row => $"{row.Id}.{row.Version}.{row.IsActive}"));
         var cacheKey = $"pack:{Settings.LanguagesCodebook}:{Settings.LanguagePacksCodebook}:{language}:{DefaultLanguage}:{version}";
         if (cache.Values.TryGetValue(cacheKey, out RuntimeResourcePack? existing)) return existing!;
         var fallback = DefaultLanguage;
         var rows = await db.CodeLists.AsNoTracking().Where(row => row.Kategorija == Settings.LanguagePacksCodebook &&
                 row.Localization != null && row.Localization.ResourceKey != null && row.Localization.LanguageCode != null && (row.Localization!.LanguageCode == language || row.Localization!.LanguageCode == fallback) &&
-                !db.CodeListDefinitions.Any(definition => definition.Name == row.Kategorija && !definition.IsActive)).Take(10_001).ToListAsync(ct);
+                db.CodeListDefinitions.Any(definition => definition.Name == row.Kategorija && definition.IsActive)).Take(10_001).ToListAsync(ct);
         if (rows.Count > 10_000) throw new BusinessRuleException(503, "localization.catalog_limit");
         var defaults = rows.Where(row => row.Localization!.LanguageCode == fallback).ToDictionary(row => row.Localization!.ResourceKey!, StringComparer.OrdinalIgnoreCase);
         var requested = rows.Where(row => row.Localization!.LanguageCode == language).ToDictionary(row => row.Localization!.ResourceKey!, StringComparer.OrdinalIgnoreCase);
@@ -66,10 +67,11 @@ public sealed class RuntimeLocalizationCatalog(ConnectedPartiesDbContext db, IOp
         {
             defaults.TryGetValue(key, out var baseline); requested.TryGetValue(key, out var preferred);
             return new RuntimeResource(key, preferred?.Localization?.ResourceLabel ?? baseline?.Localization?.ResourceLabel ?? key,
-                preferred?.Localization?.ResourceHelper ?? baseline?.Localization?.ResourceHelper, preferred?.Localization?.ResourcePlaceholder ?? baseline?.Localization?.ResourcePlaceholder);
+                preferred?.Localization?.ResourceHelper ?? baseline?.Localization?.ResourceHelper, preferred?.Localization?.ResourcePlaceholder ?? baseline?.Localization?.ResourcePlaceholder,
+                preferred?.Localization?.ContextInfo ?? baseline?.Localization?.ContextInfo);
         }).ToArray();
         var pack = new RuntimeResourcePack(language, fallback, version, items);
-        cache.Values.Set(cacheKey, pack, new MemoryCacheEntryOptions { Size = Math.Max(1, items.Length), SlidingExpiration = TimeSpan.FromMinutes(10) });
+        cache.Values.Set(cacheKey, pack, new MemoryCacheEntryOptions { Size = Math.Max(1, items.Length), AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(2) });
         return pack;
     }
 
@@ -105,12 +107,12 @@ public sealed class RuntimeLocalizationCatalog(ConnectedPartiesDbContext db, IOp
     {
         language = language.Trim().ToUpperInvariant();
         if (!await Supported(language, ct)) throw new BusinessRuleException(400, "localization.language_unavailable");
-        if (string.IsNullOrWhiteSpace(input.Label) || input.Label.Length > 4000 || input.Helper?.Length > 4000 || input.Placeholder?.Length > 500 || key.Length > 200)
+        if (string.IsNullOrWhiteSpace(input.Label) || input.Label.Length > 4000 || input.Helper?.Length > 4000 || input.Placeholder?.Length > 4000 || input.ContextInfo?.Length > 100 || key.Length > 200)
             throw new BusinessRuleException(400, "localization.invalid_resource");
         var normalized = key.ToUpperInvariant();
         var row = await db.CodeLists.IgnoreQueryFilters().SingleOrDefaultAsync(row => row.Kategorija == Settings.LanguagePacksCodebook &&
             row.Localization != null && row.Localization.LanguageCode == language && row.Localization.ResourceKey != null && row.Localization.ResourceKey.ToUpper() == normalized, ct);
-        if (row is null && !Regex.IsMatch(key, "^[a-z][a-z0-9]*(\\.[a-z][a-z0-9]*)+$", RegexOptions.CultureInvariant))
+        if (row is null && !Regex.IsMatch(key, "^[a-z][a-z0-9]*(?:[.-][a-z][a-z0-9]*)+$", RegexOptions.CultureInvariant))
             throw new BusinessRuleException(400, "localization.invalid_key");
         if (row?.IsSystemRequired == true && !input.IsActive)
             throw new BusinessRuleException(409, "codelist.system_required");
@@ -124,12 +126,13 @@ public sealed class RuntimeLocalizationCatalog(ConnectedPartiesDbContext db, IOp
         if (row is null)
         {
             row = new CodeList { Kategorija = definition.Name, Kod = Guid.NewGuid().ToString("N"),
-                Naziv = key, Localization = new() { Category = definition.Name, ResourceKey = key, LanguageCode = language }, KreiranDatum = now, KreiraoKorisnik = actor };
+                Naziv = key, Localization = new() { ResourceKey = key, LanguageCode = language }, KreiranDatum = now, KreiraoKorisnik = actor };
             db.CodeLists.Add(row);
         }
         row.Localization!.ResourceLabel = input.Label;
         row.Localization.ResourceHelper = input.Helper;
         row.Localization.ResourcePlaceholder = input.Placeholder;
+        if (input.ContextInfo is not null) row.Localization.ContextInfo = string.IsNullOrWhiteSpace(input.ContextInfo) ? null : input.ContextInfo.Trim();
         row.Aktivan = input.IsActive; row.IzmijenjenDatum = now; row.IzmijenioKorisnik = actor;
         db.AuditLogs.Add(BusinessAudit.Create("CodeList", row.Kod, "LOCALIZATION_UPDATE",
             actor, null, before, Snapshot(row)));
@@ -143,6 +146,7 @@ public sealed class RuntimeLocalizationCatalog(ConnectedPartiesDbContext db, IOp
         Label = row.Localization.ResourceLabel,
         Helper = row.Localization.ResourceHelper,
         Placeholder = row.Localization.ResourcePlaceholder,
+        row.Localization.ContextInfo,
         IsActive = row.Aktivan
     };
 }

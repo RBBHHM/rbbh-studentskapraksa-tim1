@@ -6,10 +6,10 @@
     <fieldset disabled="@_submission.IsSubmitting">
         <legend class="app-visually-hidden">@T["capital.edit"]</legend>
         <div class="registry-form-grid">
-            <RbiField TValue="decimal?" Id="capital-regulatory" Label="@T["limit.regulatory"]" Required For="@(() => Model.RegulatoryCapital)"><InputNumber TValue="decimal?" id="capital-regulatory" class="rbi-control" @bind-Value="Model.RegulatoryCapital" min="0" step="0.01" ParsingErrorMessage="@T["limit.number"]" /></RbiField>
-            <RbiField TValue="decimal?" Id="capital-core" Label="@T["limit.core"]" Required For="@(() => Model.CoreCapital)"><InputNumber TValue="decimal?" id="capital-core" class="rbi-control" @bind-Value="Model.CoreCapital" min="0" step="0.01" ParsingErrorMessage="@T["limit.number"]" /></RbiField>
-            <RbiField TValue="decimal?" Id="capital-supplementary" Label="@T["capital.supplementary"]" Required For="@(() => Model.SupplementaryCapital)"><InputNumber TValue="decimal?" id="capital-supplementary" class="rbi-control" @bind-Value="Model.SupplementaryCapital" min="0" step="0.01" ParsingErrorMessage="@T["limit.number"]" /></RbiField>
-            <RbiField TValue="DateTime?" Id="capital-date" Label="@T["capital.valid-to"]" Required For="@(() => Model.ValidTill)"><InputDate TValue="DateTime?" id="capital-date" class="rbi-control" @bind-Value="Model.ValidTill" ParsingErrorMessage="@T["validation.date"]" /></RbiField>
+            <RbiField TValue="decimal?" Id="capital-regulatory" Label="@T["capital.regulatory"]" HelpText="@T.Helper("capital.regulatory")" Required For="@(() => Model.RegulatoryCapital)"><InputNumber TValue="decimal?" id="capital-regulatory" class="rbi-control" placeholder="@T.Placeholder("capital.regulatory")" @bind-Value="Model.RegulatoryCapital" min="0" step="0.01" ParsingErrorMessage="@T["limit.number"]" /></RbiField>
+            <RbiField TValue="decimal?" Id="capital-core" Label="@T["capital.core"]" HelpText="@T.Helper("capital.core")" Required For="@(() => Model.CoreCapital)"><InputNumber TValue="decimal?" id="capital-core" class="rbi-control" placeholder="@T.Placeholder("capital.core")" @bind-Value="Model.CoreCapital" min="0" step="0.01" ParsingErrorMessage="@T["limit.number"]" /></RbiField>
+            <RbiField TValue="decimal?" Id="capital-supplementary" Label="@T["capital.supplementary"]" HelpText="@T.Helper("capital.supplementary")" Required For="@(() => Model.SupplementaryCapital)"><InputNumber TValue="decimal?" id="capital-supplementary" class="rbi-control" placeholder="@T.Placeholder("capital.supplementary")" @bind-Value="Model.SupplementaryCapital" min="0" step="0.01" ParsingErrorMessage="@T["limit.number"]" /></RbiField>
+            <RbiField TValue="DateTime?" Id="capital-date" Label="@T["capital.valid-to"]" HelpText="@T.Helper("capital.valid-to")" Required For="@(() => Model.ValidTill)"><InputDate TValue="DateTime?" id="capital-date" class="rbi-control" min="@CapitalDraft.Today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)" @bind-Value="Model.ValidTill" ParsingErrorMessage="@T["validation.date"]" /></RbiField>
         </div>
     <FormSummary @ref="_summary" Context="_context" />
         <div class="registry-toolbar"><RbiButton OnClick="Cancel" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton><RbiButton Type="RbiButtonType.Submit" Disabled="@(MutationBlocked || _live.Incomplete)">@T["common.save"]</RbiButton></div>
@@ -18,7 +18,7 @@
 @code {
     [Parameter] public bool MutationBlocked { get; set; }
     [Parameter, EditorRequired] public CapitalDraft Model { get; set; } = null!;
-    [Parameter] public EventCallback<CapitalRequest> Save { get; set; }
+    [Parameter, EditorRequired] public Func<CapitalRequest, Task<string?>> Save { get; set; } = null!;
     [Parameter] public EventCallback Cancel { get; set; }
     private EditContext _context = null!;
     private RbiServerValidation _validation = null!;
@@ -38,8 +38,16 @@
         var parsed = _context.Validate(); var errors = Model.Validate();
         _validation.DisplayErrors(errors.ToDictionary(item => item.Key, item => item.Value.Select(key => T[key]).ToArray()));
         if (!parsed || errors.Count > 0) { _focusErrors = true; return; }
-        try { await Save.InvokeAsync(Model.ToRequest()); }
-        catch (RegistryApiException exception) { _validation.DisplayFormError(T[exception.MessageKey]); _focusErrors = true; }
+        try
+        {
+            var error = await Save(Model.ToRequest());
+            if (error is null) return;
+            if (error == "capital.valid-to-past")
+                _validation.DisplayErrors(new Dictionary<string, string[]> { [nameof(Model.ValidTill)] = [T[error]] });
+            else
+                _validation.DisplayFormError(T[error]);
+            _focusErrors = true;
+        }
         catch (OperationCanceledException) { /* The owning route cancels on disposal. */ }
     });
     public void Dispose() { _live.Dispose(); _validation.Dispose(); }

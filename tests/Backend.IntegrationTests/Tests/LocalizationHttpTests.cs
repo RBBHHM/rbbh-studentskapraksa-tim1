@@ -22,9 +22,9 @@ public abstract class LocalizationFixture : AuthenticatedApiFixture
     {
         await InDatabase(async db =>
         {
-            if (await db.CodeListDefinitions.AnyAsync(row => row.Name == "Languages")) return;
-            var languages = new CodeListDefinition { Name = "Languages", CreatedBy = "fixture", IsSystemRequired = true };
-            var packs = new CodeListDefinition { Name = "LanguagePacks", CreatedBy = "fixture", IsSystemRequired = true };
+            if (await db.CodeListDefinitions.AnyAsync(row => row.Name == "LANGUAGES")) return;
+            var languages = new CodeListDefinition { Name = "LANGUAGES", CreatedBy = "fixture", IsSystemRequired = true };
+            var packs = new CodeListDefinition { Name = "LANGUAGE_PACKS", CreatedBy = "fixture", IsSystemRequired = true };
             db.CodeListDefinitions.AddRange(languages, packs);
             foreach (var code in new[] { "BS", "EN", "DE" })
                 db.CodeLists.Add(new() { Kategorija = languages.Name, Kod = code, Naziv = code,
@@ -53,7 +53,7 @@ public sealed class LocalizationHttpTests : LocalizationFixture
         var second = await Pack("DE"); Assert.NotEqual(first.GetProperty("version").GetString(), second.GetProperty("version").GetString());
         item = second.GetProperty("items")[0]; Assert.Equal("Name", item.GetProperty("label").GetString());
         Assert.Equal("Pomoć", item.GetProperty("helper").GetString()); Assert.Equal("Unesite", item.GetProperty("placeholder").GetString());
-        await InDatabase(async db => { Assert.Equal(2, await db.AuditLogs.CountAsync()); Assert.Equal("creator", (await db.CodeListDefinitions.SingleAsync(row => row.Name == "LanguagePacks")).ModifiedBy); });
+        await InDatabase(async db => { Assert.Equal(2, await db.AuditLogs.CountAsync()); Assert.Equal("creator", (await db.CodeListDefinitions.SingleAsync(row => row.Name == "LANGUAGE_PACKS")).ModifiedBy); });
     }
     [Theory]
     [InlineData("BS", "Invalid_Key", "Text", 400)]
@@ -65,23 +65,23 @@ public sealed class LocalizationHttpTests : LocalizationFixture
         using var response = await Client.PutAsJsonAsync($"/api/localization/resources/{language}/{key}", new { label });
         Assert.Equal((HttpStatusCode)status, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync(); Assert.DoesNotContain("SqlException", content);
-        await InDatabase(async db => { Assert.Empty(db.AuditLogs); Assert.False(await db.CodeLists.AnyAsync(row => row.Localization != null && row.Localization.ResourceKey != null)); });
+        await InDatabase(async db => { Assert.Empty(db.AuditLogs); Assert.False(await db.CodeLists.AnyAsync(row => row.Kategorija == "LANGUAGE_PACKS" && row.Localization != null && row.Localization.ResourceKey != null)); });
     }
     [Fact]
     public async Task LegacyKeyCasingIsReadableAndUpdatableButCannotBeIntroducedAsNew()
     {
         await Seed(); await InDatabase(async db =>
         {
-            var definition = await db.CodeListDefinitions.SingleAsync(row => row.Name == "LanguagePacks");
+            var definition = await db.CodeListDefinitions.SingleAsync(row => row.Name == "LANGUAGE_PACKS");
             db.CodeLists.Add(new() { Kategorija = definition.Name, Kod = "LEGACY", Naziv = "LegacyKey",
-                Localization = new() { Category = "LanguagePacks", LanguageCode = "BS", ResourceKey = "LegacyKey", ResourceLabel = "Before" }, KreiraoKorisnik = "fixture" });
+                Localization = new() { LanguageCode = "BS", ResourceKey = "LegacyKey", ResourceLabel = "Before" }, KreiraoKorisnik = "fixture" });
             await db.SaveChangesAsync();
         });
         Assert.Equal(HttpStatusCode.NoContent, (await Client.PutAsJsonAsync("/api/localization/resources/BS/legacykey", new { label = "After" })).StatusCode);
         Assert.Equal("After", (await Pack("BS")).GetProperty("items")[0].GetProperty("label").GetString());
         await InDatabase(async db =>
         {
-            var row = await db.CodeLists.SingleAsync(row => row.Localization != null && row.Localization.ResourceKey != null);
+            var row = await db.CodeLists.SingleAsync(row => row.Kategorija == "LANGUAGE_PACKS" && row.Localization != null && row.Localization.ResourceKey != null);
             Assert.Equal("LegacyKey", row.Localization!.ResourceKey);
             var audit = await db.AuditLogs.SingleAsync();
             using var before = JsonDocument.Parse(audit.OldValues!);
@@ -107,10 +107,10 @@ public sealed class LocalizationHttpTests : LocalizationFixture
     public async Task RequiredLanguagesAndDefinitionsCannotBeDeactivatedThroughGenericCrud()
     {
         await Seed(); var id = 0;
-        await InDatabase(async db => id = (await db.CodeLists.SingleAsync(row => row.Kategorija == "Languages" && row.Kod == "BS")).ID);
+        await InDatabase(async db => id = (await db.CodeLists.SingleAsync(row => row.Kategorija == "LANGUAGES" && row.Kod == "BS")).ID);
         Assert.Equal(HttpStatusCode.BadRequest, (await Client.PutAsJsonAsync($"/api/code-lists/{id}", new { naziv = "BS", aktivan = false })).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await Client.DeleteAsync($"/api/code-lists/{id}")).StatusCode);
-        Assert.Equal(HttpStatusCode.BadRequest, (await Client.DeleteAsync("/api/code-lists/categories/Languages")).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await Client.DeleteAsync("/api/code-lists/categories/LANGUAGES")).StatusCode);
         await InDatabase(async db => { Assert.Equal(3, await db.CodeLists.CountAsync()); Assert.Empty(db.AuditLogs); });
     }
     [Fact]
@@ -140,11 +140,11 @@ public sealed class LocalizationHttpTests : LocalizationFixture
     public async Task DefinitionMetadataUsesExpectedVersionAndAtomicAudit()
     {
         await Seed(); var definitions = await Client.GetFromJsonAsync<JsonElement>("/api/code-lists/categories/definitions");
-        var version = definitions.GetProperty("items").EnumerateArray().Single(row => row.GetProperty("name").GetString() == "Languages").GetProperty("version").GetInt32();
-        var response = await Client.PutAsJsonAsync("/api/code-lists/categories/Languages", new { description = "Updated description", expectedVersion = version });
+        var version = definitions.GetProperty("items").EnumerateArray().Single(row => row.GetProperty("name").GetString() == "LANGUAGES").GetProperty("version").GetInt32();
+        var response = await Client.PutAsJsonAsync("/api/code-lists/categories/LANGUAGES", new { description = "Updated description", expectedVersion = version });
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal(HttpStatusCode.Conflict, (await Client.PutAsJsonAsync("/api/code-lists/categories/Languages", new { description = "Stale", expectedVersion = version })).StatusCode);
-        await InDatabase(async db => { Assert.Equal("Updated description", (await db.CodeListDefinitions.SingleAsync(row => row.Name == "Languages")).Description); Assert.Single(db.AuditLogs); });
+        Assert.Equal(HttpStatusCode.Conflict, (await Client.PutAsJsonAsync("/api/code-lists/categories/LANGUAGES", new { description = "Stale", expectedVersion = version })).StatusCode);
+        await InDatabase(async db => { Assert.Equal("Updated description", (await db.CodeListDefinitions.SingleAsync(row => row.Name == "LANGUAGES")).Description); Assert.Single(db.AuditLogs); });
     }
 
     [Fact]

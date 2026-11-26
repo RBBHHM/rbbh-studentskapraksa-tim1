@@ -5,7 +5,9 @@ namespace RBBH.RelatedPartiesRegister.Web.Api;
 
 public sealed record CodeCategories(IReadOnlyList<string> Categories);
 public sealed record CodeValue(int Id, string Category, string Code, string Value, string? Description,
-    bool IsActive, string? ModifiedBy, DateTime? ModifiedAt);
+    bool IsActive, string? ModifiedBy, DateTime? ModifiedAt, CodeListResource? Localization = null);
+public sealed record CodeListResource(string? LanguageCode, string? ResourceKey, string? ResourceLabel,
+    string? ResourceHelper, string? ResourcePlaceholder, string? ContextInfo);
 public sealed record CodeValues(string Category, IReadOnlyList<CodeValue> Items);
 public sealed record CreateCodeValue(string Kategorija, string Kod, string Naziv, string? Opis, bool Aktivan);
 public sealed record UpdateCodeValue(string Naziv, string? Opis, bool Aktivan);
@@ -14,9 +16,12 @@ public sealed record CodeImportPreview(int TotalRows, IReadOnlyList<string> ToIm
 /// <summary>Administrative metadata of a code list definition (who created it and who changed it last).</summary>
 public sealed record CodeListMeta(long Id, string Name, string? Description, bool IsActive, bool IsSystemRequired, int Version,
     DateTime? CreatedAt, string? CreatedBy, DateTime? ModifiedAt, string? ModifiedBy);
+public sealed record CodebookColumn(int Slot, string Name, string? Description, int? Position);
+public sealed record CodebookColumns(IReadOnlyList<CodebookColumn> Items);
 public sealed record CodeListMetas(IReadOnlyList<CodeListMeta> Items);
 public interface ICodeListsApi
 {
+    Task<CodebookColumns> ColumnsAsync(string category, CancellationToken token = default);
     Task<CodeListMetas> DefinitionsAsync(CancellationToken token = default);
     Task<CodeCategories> CategoriesAsync(CancellationToken token = default);
     Task<CodeValues> ValuesAsync(string category, CancellationToken token = default);
@@ -33,6 +38,11 @@ public sealed class CodeListsApi(IRbiApiFileTransport transport) : ICodeListsApi
     {
         var value = Value(await transport.GetAsync<CodeCategories>("api/code-lists", token), token);
         return value.Categories is null ? throw new RegistryApiException() : value;
+    }
+    public async Task<CodebookColumns> ColumnsAsync(string category, CancellationToken token = default)
+    {
+        var value = Value(await transport.GetAsync<CodebookColumns>($"api/code-lists/categories/{Uri.EscapeDataString(category)}/columns", token), token);
+        return value.Items is null ? throw new RegistryApiException() : value;
     }
     public async Task<CodeListMetas> DefinitionsAsync(CancellationToken token = default)
     {
@@ -72,6 +82,7 @@ internal sealed class UnconfiguredCodeListsApi : ICodeListsApi
 {
     private static Task Unavailable() => Task.FromException(new RegistryApiException());
     public Task<CodeCategories> CategoriesAsync(CancellationToken token = default) => Task.FromException<CodeCategories>(new RegistryApiException());
+    public Task<CodebookColumns> ColumnsAsync(string category, CancellationToken token = default) => Task.FromException<CodebookColumns>(new RegistryApiException());
     public Task<CodeListMetas> DefinitionsAsync(CancellationToken token = default) => Task.FromException<CodeListMetas>(new RegistryApiException());
     public Task<CodeValues> ValuesAsync(string category, CancellationToken token = default) => Task.FromException<CodeValues>(new RegistryApiException());
     public Task CreateCategoryAsync(string name, string? description, CancellationToken token = default) => Unavailable();

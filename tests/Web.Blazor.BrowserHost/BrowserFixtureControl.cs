@@ -331,16 +331,16 @@ internal static partial class BrowserHostProgram
                             await using (var scope = backend.Services.CreateAsyncScope())
                             {
                                 var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
-                                var languages = new CodeListDefinition { Name = "Languages", CreatedBy = "fixture" };
-                                var packs = new CodeListDefinition { Name = "LanguagePacks", CreatedBy = "fixture" };
+                                var languages = new CodeListDefinition { Name = "LANGUAGES", CreatedBy = "fixture" };
+                                var packs = new CodeListDefinition { Name = "LANGUAGE_PACKS", CreatedBy = "fixture" };
                                 db.CodeListDefinitions.AddRange(languages, packs);
                                 db.CodeLists.AddRange(
-                                    new CodeList { Kategorija = "Languages", Kod = "BS", Naziv = "Bosanski", KreiraoKorisnik = "fixture" },
-                                    new CodeList { Kategorija = "Languages", Kod = "EN", Naziv = "English", KreiraoKorisnik = "fixture" });
+                                    new CodeList { Kategorija = "LANGUAGES", Kod = "BS", Naziv = "Bosanski", KreiraoKorisnik = "fixture" },
+                                    new CodeList { Kategorija = "LANGUAGES", Kod = "EN", Naziv = "English", KreiraoKorisnik = "fixture" });
                                 foreach (var (language, key, label) in new[] {
                                     ("BS", "notifications.fixture.title", "Rola dodijeljena"), ("BS", "notifications.fixture.body", "Odobrena rola {role}."),
                                     ("EN", "notifications.fixture.title", "Role granted"), ("EN", "notifications.fixture.body", "Role {role} was approved.") })
-                                    db.CodeLists.Add(new CodeList { Kategorija = "LanguagePacks", Kod = language + ":" + key, Naziv = key, Localization = new() { Category = "LanguagePacks", LanguageCode = language, ResourceKey = key, ResourceLabel = label }, KreiraoKorisnik = "fixture" });
+                                    db.CodeLists.Add(new CodeList { Kategorija = "LANGUAGE_PACKS", Kod = language + ":" + key, Naziv = key, Localization = new() { LanguageCode = language, ResourceKey = key, ResourceLabel = label }, KreiraoKorisnik = "fixture" });
                                 var now = DateTime.UtcNow;
                                 db.Notifications.AddRange(
                                     new ApplicationNotification { RecipientSubject = "fixture-user", RecipientEmail = "fixture@example.test", EventKey = "fixture.a", TitleKey = "notifications.fixture.title", BodyKey = "notifications.fixture.body", ParametersJson = "{\"role\":\"FL\"}", Route = "/app/profile", CreatedAt = now.AddMinutes(-1) },

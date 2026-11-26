@@ -9,6 +9,8 @@ public sealed class AppText
     private readonly IRbiLocalizer _localizer;
     private readonly RuntimeResources? _runtime;
     public AppText(IRbiLocalizer localizer, RuntimeResources? runtime = null) { _localizer = localizer; _runtime = runtime; }
+    public string? Helper(string key) => _runtime?.Helper(key);
+    public string? Placeholder(string key) => _runtime?.Placeholder(key);
     public string this[string key]
     {
         get

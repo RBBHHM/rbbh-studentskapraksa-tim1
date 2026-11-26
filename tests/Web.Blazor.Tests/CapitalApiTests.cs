@@ -46,6 +46,18 @@ public sealed class CapitalApiTests
         var record = await provider.GetRequiredService<ICapitalApi>().GetAsync();
         Assert.NotNull(record); Assert.Equal(id, record.Id); Assert.Equal(0m, record.CoreCapital);
     }
+    [Fact]
+    public async Task InvalidCapitalEndDateReturnsTheResourceKeyWithoutThrowing()
+    {
+        const string problem = """
+            {"code":"capital.valid_to_past","detail":"internal details"}
+            """;
+        await using var provider = Client(HttpStatusCode.BadRequest, problem);
+        var result = await provider.GetRequiredService<ICapitalApi>().SaveAsync(new(60, 50, 40, DateTime.UtcNow.Date.AddDays(-1)));
+        Assert.Equal("capital.valid-to-past", result.ErrorKey);
+        Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
+    }
+
     private sealed class Handler(HttpStatusCode status, string? body) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)

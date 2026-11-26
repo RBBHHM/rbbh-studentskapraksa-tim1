@@ -70,6 +70,24 @@ public sealed class CapitalHistoryHttpTests : CapitalHistoryFixture
         var june = await Client.GetFromJsonAsync<JsonElement>("/api/limiti/page?asOf=2026-06-15"); Assert.Equal(200, june.GetProperty("items")[0].GetProperty("regulatorniKapital").GetDecimal());
         var unknown = await Client.GetFromJsonAsync<JsonElement>("/api/limiti?asOf=2025-12-31"); Assert.Equal(JsonValueKind.Null, unknown[0].GetProperty("regulatorniKapital").ValueKind);
     }
+    [Fact]
+    public async Task ExpiredEndDateReturnsAFieldErrorAndLeavesActiveCapitalUntouched()
+    {
+        var today = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTimeOffset.UtcNow, "Europe/Sarajevo").Date;
+        var existing = await Save(today.AddMonths(1), 200);
+        var response = await Client.PostAsJsonAsync("/api/capital", new
+        {
+            regulatoryCapital = 60, coreCapital = 50, supplementaryCapital = 40, validTill = today.AddDays(-1)
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("capital.valid_to_past", (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
+        await InDatabase(async db =>
+        {
+            Assert.Equal(existing.GetProperty("id").GetInt64(), (await db.Capitals.SingleAsync()).Id);
+            Assert.Single(db.AuditLogs);
+        });
+    }
+
     [Theory]
     [InlineData(-1)]
     [InlineData(1.111)]

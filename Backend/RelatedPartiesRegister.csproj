@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Localization\BackendMessages.json" />
+    <EmbeddedResource Include="Migrations/Resources/CodebookLanguageCatalog.json" LogicalName="CodebookLanguageCatalog.json" />
     <Compile Remove="UnitTests\**\*.cs;IntegrationTests\**\*.cs" />
     <Content Remove="UnitTests\**;IntegrationTests\**" />
     <EmbeddedResource Remove="UnitTests\**;IntegrationTests\**" />

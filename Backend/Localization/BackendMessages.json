@@ -131,6 +131,7 @@
   "messages.users.profile.updated": "Podaci korisnika su ažurirani.",
   "messages.users.reactivated": "Korisnik uspješno reaktiviran.",
   "messages.users.roles.updated": "Role korisnika su uspješno ažurirane.",
+  "validation.capital.date.past": "Datum „Vrijedi do” mora biti danas ili kasnije.",
   "validation.capital.amounts": "Unesite sva tri nenegativna iznosa kapitala, s najviše dvije decimale i do 16 cifara prije decimalnog zareza.",
   "validation.capital.date.required": "Datum kapitala je obavezan.",
   "validation.codelist.category.required": "Kategorija ne smije biti prazna.",

@@ -31,18 +31,18 @@ public abstract class RoleRequestFixture : AuthenticatedApiFixture
         await InDatabase(async db =>
         {
             // InMemory has no migrations; seed the same logical prerequisites explicitly.
-            if (!await db.CodeListDefinitions.AnyAsync(row => row.Name == "LanguagePacks"))
+            if (!await db.CodeListDefinitions.AnyAsync(row => row.Name == "LANGUAGE_PACKS"))
             {
-                var languages = new RBBH.ConnectedParties.DL.Entities.Sifarnici.CodeListDefinition { Name = "Languages", CreatedBy = "fixture" };
-                var packs = new RBBH.ConnectedParties.DL.Entities.Sifarnici.CodeListDefinition { Name = "LanguagePacks", CreatedBy = "fixture" };
+                var languages = new RBBH.ConnectedParties.DL.Entities.Sifarnici.CodeListDefinition { Name = "LANGUAGES", CreatedBy = "fixture" };
+                var packs = new RBBH.ConnectedParties.DL.Entities.Sifarnici.CodeListDefinition { Name = "LANGUAGE_PACKS", CreatedBy = "fixture" };
                 db.CodeListDefinitions.AddRange(languages, packs);
-                db.CodeLists.Add(new() { Kategorija = "Languages", Kod = "BS", Naziv = "Bosanski", KreiraoKorisnik = "fixture" });
+                db.CodeLists.Add(new() { Kategorija = "LANGUAGES", Kod = "BS", Naziv = "Bosanski", KreiraoKorisnik = "fixture" });
                 foreach (var outcome in new[] { "submitted", "approved", "rejected" })
                 foreach (var part in new[] { "title", "body", "detail" })
                 {
                     var key = $"notifications.role.request.{outcome}.{part}";
-                    db.CodeLists.Add(new() { Kategorija = "LanguagePacks", Kod = Guid.NewGuid().ToString("N"), Naziv = key,
-                        Localization = new() { Category = "LanguagePacks", ResourceKey = key, LanguageCode = "BS", ResourceLabel = part == "detail" ? "Role: {roles}\nNapomena: {" + (outcome == "submitted" ? "note" : "decisionNote") + "}" : "Fixture notification " + outcome }, KreiraoKorisnik = "fixture" });
+                    db.CodeLists.Add(new() { Kategorija = "LANGUAGE_PACKS", Kod = Guid.NewGuid().ToString("N"), Naziv = key,
+                        Localization = new() { ResourceKey = key, LanguageCode = "BS", ResourceLabel = part == "detail" ? "Role: {roles}\nNapomena: {" + (outcome == "submitted" ? "note" : "decisionNote") + "}" : "Fixture notification " + outcome }, KreiraoKorisnik = "fixture" });
                 }
                 await db.SaveChangesAsync();
             }

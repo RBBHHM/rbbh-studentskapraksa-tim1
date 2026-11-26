@@ -86,7 +86,7 @@ public partial class ConnectedPartiesDbContext(
             entity.Property(e => e.Kod).HasColumnName("ValueKey").UseCollation("Latin1_General_100_CI_AS");
             entity.Property(e => e.Naziv).HasColumnName("Name");
             entity.Property(e => e.Opis).HasColumnName("Description");
-            entity.Property(e => e.Aktivan).HasColumnName("IsActive");
+            entity.Property(e => e.Aktivan).HasColumnName("ID1");
             entity.Property(e => e.KreiranDatum).HasColumnName("CreatedAt");
             entity.Property(e => e.KreiraoKorisnik).HasColumnName("CreatedBy");
             entity.Property(e => e.IzmijenjenDatum).HasColumnName("ModifiedAt");
@@ -102,20 +102,16 @@ public partial class ConnectedPartiesDbContext(
                 table.HasCheckConstraint("CK_CodeListValues_ValueKey_Trimmed",
                     "DATALENGTH([VALUE_KEY]) = DATALENGTH(LTRIM(RTRIM([VALUE_KEY])))");
             });
-            entity.OwnsOne(e => e.Localization, localization =>
-            {
-                localization.ToTable("CodeListLocalization");
-                localization.Property(row => row.Category).UseCollation("Latin1_General_100_CI_AS");
-                localization.Property(row => row.ResourceKey).UseCollation("Latin1_General_100_CI_AS");
-                localization.HasIndex(row => new { row.Category, row.LanguageCode, row.ResourceKey })
-                    .IsUnique().HasFilter("[LANGUAGE_CODE] IS NOT NULL AND [RESOURCE_KEY] IS NOT NULL");
-            });
+            entity.HasOne(row => row.Definition).WithMany().HasForeignKey(row => row.DefinitionId).OnDelete(DeleteBehavior.Restrict);
+            ConfigureCodeListSlots(entity);
+
         });
         modelBuilder.Entity<CodeListDefinition>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.Name).IsUnique();
             entity.Property(e => e.Name).UseCollation("Latin1_General_100_CI_AS");
+            ConfigureDefinitionSlots(entity);
             entity.ToTable(table => table.HasCheckConstraint("CK_CodeListDefinitions_Name_Trimmed",
                 "DATALENGTH([NAME]) = DATALENGTH(LTRIM(RTRIM([NAME])))"));
         });
@@ -284,7 +280,24 @@ public partial class ConnectedPartiesDbContext(
 
     private void TouchCodebookVersions(string[] categories, List<CodeListDefinition> definitions)
     {
-        foreach (var row in CodeListDefinitions.Local.Where(row => categories.Contains(row.Name.ToUpper())).Concat(definitions).Distinct())
+        var knownDefinitions = CodeListDefinitions.Local.Where(row => categories.Contains(row.Name.ToUpperInvariant())).Concat(definitions)
+            .Distinct().ToDictionary(row => row.Name, StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in ChangeTracker.Entries<CodeList>().Where(item => item.State is EntityState.Added or EntityState.Modified))
+        {
+            var value = entry.Entity;
+            if (entry.State == EntityState.Added && value.Definition is null &&
+                knownDefinitions.TryGetValue(value.Kategorija, out var definition))
+                value.Definition = definition;
+            if (value.Kategorija.Equals(LanguageBooks.Languages, StringComparison.OrdinalIgnoreCase) &&
+                (entry.State == EntityState.Added || entry.Property(item => item.Naziv).IsModified))
+            {
+                value.Localization ??= new();
+                value.Localization.LanguageCode = value.Kod;
+                value.Localization.ResourceKey = value.Naziv;
+            }
+        }
+
+        foreach (var row in knownDefinitions.Values)
         {
             var entry = Entry(row);
             if (entry.State == EntityState.Added) row.Version = Math.Max(1, row.Version);

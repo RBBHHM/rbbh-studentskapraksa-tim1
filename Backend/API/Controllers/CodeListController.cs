@@ -67,6 +67,23 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
         { row.Id, row.Name, row.Description, row.IsActive, row.IsSystemRequired, row.Version, row.CreatedAt, row.CreatedBy, row.ModifiedAt, row.ModifiedBy }).ToListAsync(ct)
     });
 
+    [HttpGet("categories/{name}/columns")]
+    public async Task<IActionResult> Columns(string name, CancellationToken ct)
+    {
+        var definition = await db.CodeListDefinitions.SingleOrDefaultAsync(row => row.Name == name, ct);
+        if (definition is null) return NotFound();
+        var entry = db.Entry(definition);
+        var items = Enumerable.Range(1, 20).Select(slot => new
+        {
+            slot,
+            name = entry.Property<string>($"ColumnName{slot}").CurrentValue,
+            description = entry.Property<string>($"ColumnDescription{slot}").CurrentValue,
+            position = entry.Property<int?>($"ColumnPosition{slot}").CurrentValue
+        }).Where(column => !string.IsNullOrWhiteSpace(column.name))
+            .OrderBy(column => column.position ?? column.slot).ThenBy(column => column.slot);
+        return Ok(new { items });
+    }
+
     [HttpPut("categories/{name}"), Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
     public async Task<IActionResult> UpdateDefinition(string name, UpdateCodeListDefinitionDTO input, CancellationToken ct)
     {
@@ -122,6 +139,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
             value = x.Naziv,
             description = x.Opis,
             isActive = x.Aktivan,
+            localization = x.Localization,
             modifiedBy = x.IzmijenioKorisnik ?? x.KreiraoKorisnik,
             modifiedAt = x.IzmijenjenDatum ?? x.KreiranDatum
         }).ToList();

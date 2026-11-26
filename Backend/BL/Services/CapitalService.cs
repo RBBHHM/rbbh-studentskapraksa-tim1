@@ -44,12 +44,15 @@ public sealed class CapitalService(ConnectedPartiesDbContext db, IHttpContextAcc
         const decimal maximum = 9_999_999_999_999_999.99m;
         var values = new[] { dto.RegulatoryCapital, dto.CoreCapital, dto.SupplementaryCapital };
         if (values.Any(value => value is null || value < 0 || value > maximum || decimal.Round(value.Value, 2) != value.Value))
-            return Result<CapitalDTO>.ValidationError(BackendMessages.Message("validation.capital.amounts"));
+            return Result<CapitalDTO>.ValidationError(BackendMessages.Message("validation.capital.amounts"), code: "capital.amounts");
         if (dto.ValidTill is null)
             return Result<CapitalDTO>.ValidationError(BackendMessages.Message("validation.capital.date.required"));
 
         var now = DateTime.UtcNow;
         var today = Today;
+        if (dto.ValidTill.Value.Date < today)
+            return InvalidEndDate();
+
         if (!db.Database.IsRelational())
         {
             await InMemoryMutationLock.WaitAsync(RequestCancellation);
@@ -74,6 +77,9 @@ public sealed class CapitalService(ConnectedPartiesDbContext db, IHttpContextAcc
         });
     }
 
+    private static Result<CapitalDTO> InvalidEndDate() =>
+        Result<CapitalDTO>.ValidationError(BackendMessages.Message("validation.capital.date.past"), code: "capital.valid_to_past");
+
     private async Task<Result<CapitalDTO>> Save(UpdateCapitalDTO dto, string username, bool create, DateTime now, DateTime today,
         Action<long>? captureAuditId = null)
     {
@@ -82,7 +88,7 @@ public sealed class CapitalService(ConnectedPartiesDbContext db, IHttpContextAcc
             throw new Exceptions.BusinessRuleException(409, "request.concurrent_change");
         var from = create ? today : previous!.CapitalDate;
         if ((create && previous?.CapitalDate > today) || dto.ValidTill!.Value.Date < today || dto.ValidTill.Value.Date < from)
-            return Result<CapitalDTO>.ValidationError(BackendMessages.Message("validation.capital.date.required"));
+            return InvalidEndDate();
 
         var before = previous is null ? null : CapitalHistory.Map(previous);
         var row = create ? new Capital { CapitalDate = from, CreatedBy = username, CreatedAt = now } : previous!;

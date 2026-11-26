@@ -6,6 +6,17 @@
     <fieldset disabled="@_submission.IsSubmitting">
         <legend class="app-visually-hidden">@T[Model.Definition ? "codes.definition-create" : Model.Id is null ? "codes.create" : "codes.edit"]</legend>
         <div class="registry-form-grid">
+        @if (Model.IsLanguagePack)
+        {
+            <RbiField TValue="string" Id="code-language" Label="@T["codes.language-code"]" Required For="@(() => Model.LanguageCode)"><RbiInput Id="code-language" @bind-Value="Model.LanguageCode" Disabled="@(Model.Id is not null)" maxlength="10" /></RbiField>
+            <RbiField TValue="string" Id="code-resource" Label="@T["codes.resource-key"]" Required For="@(() => Model.ResourceKey)"><RbiInput Id="code-resource" @bind-Value="Model.ResourceKey" Disabled="@(Model.Id is not null)" maxlength="200" /></RbiField>
+            <RbiField Class="app-span-2" TValue="string" Id="code-label" Label="@T["codes.label-text"]" Required For="@(() => Model.Name)"><RbiTextArea Id="code-label" @bind-Value="Model.Name" maxlength="4000" /></RbiField>
+            <RbiField TValue="string" Id="code-context" Label="@T["codes.context-info"]" For="@(() => Model.ContextInfo)"><RbiInput Id="code-context" @bind-Value="Model.ContextInfo" maxlength="100" /></RbiField>
+            <RbiField TValue="string" Id="code-placeholder" Label="@T["codes.placeholder-text"]" For="@(() => Model.Placeholder)"><RbiInput Id="code-placeholder" @bind-Value="Model.Placeholder" maxlength="4000" /></RbiField>
+            <RbiField Class="app-span-2" TValue="string" Id="code-helper" Label="@T["codes.help-text"]" For="@(() => Model.Helper)"><RbiTextArea Id="code-helper" @bind-Value="Model.Helper" maxlength="4000" /></RbiField>
+        }
+        else
+        {
         <RbiField Class="app-span-2" TValue="string" Id="code-name" Label="@T[Model.Definition ? "codes.definition-name" : "codes.name"]" Required For="@(() => Model.Name)"><RbiInput Id="code-name" @bind-Value="Model.Name" maxlength="@(Model.Definition ? 100 : 200)" /></RbiField>
         @if (!Model.Definition)
         {
@@ -13,6 +24,7 @@
 
         }
         <RbiField TValue="string" Id="code-description" Label="@T[Model.Definition ? "codes.purpose" : "codes.description"]" For="@(() => Model.Description)"><RbiTextArea Id="code-description" @bind-Value="Model.Description" maxlength="500" /></RbiField>
+        }
         @if (!Model.Definition) { <RbiCheckbox @bind-Value="Model.Active">@T["codes.active"]</RbiCheckbox> }
         </div>
         @if (!Model.Definition) { <p class="app-visually-hidden">@T["codes.immutable"]</p> }
@@ -42,7 +54,7 @@
         var parsed = _context.Validate(); var errors = Model.Validate();
         _validation.DisplayErrors(errors.ToDictionary(item => item.Key, item => item.Value.Select(key => T[key]).ToArray()));
         if (!parsed || errors.Count > 0) { _focusErrors = true; return; }
-        try { await Save.InvokeAsync(Model); }
+        try { await Save.InvokeAsync(Model); if (Model.SaveError is not null) { _validation.DisplayFormError(T[Model.SaveError]); _focusErrors = true; } }
         catch (RegistryApiException exception) { _validation.DisplayFormError(T[exception.StatusCode is null || (int)exception.StatusCode >= 500 ? "period.uncertain" : exception.MessageKey]); _focusErrors = true; }
         catch (OperationCanceledException) { }
     });

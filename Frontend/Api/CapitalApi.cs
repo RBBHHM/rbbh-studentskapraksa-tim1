@@ -11,6 +11,7 @@ public sealed record CapitalRequest(decimal RegulatoryCapital, decimal CoreCapit
 /// <summary>One immutable effective-date observation (source "revision", or "legacy" for the pre-history row).</summary>
 public sealed record CapitalVersion(long Id, DateTime ValidTill, DateTime EffectiveDate, decimal RegulatoryCapital, decimal CoreCapital,
     decimal SupplementaryCapital, DateTime RecordedAt, string RecordedBy);
+public sealed record CapitalSaveResult(string? ErrorKey = null, HttpStatusCode? StatusCode = null);
 public sealed record CapitalHistoryPage(IReadOnlyList<CapitalVersion> Items, int Total, int Page, int PageSize);
 public interface ICapitalApi
 {
@@ -18,7 +19,7 @@ public interface ICapitalApi
     /// <summary>Capital valid on the date (latest effective date not after it); null when none was recorded.</summary>
     Task<CapitalRecord?> AsOfAsync(DateOnly date, CancellationToken token = default);
     Task<CapitalRecord?> GetAsync(CancellationToken token = default);
-    Task<CapitalRecord> SaveAsync(CapitalRequest request, CancellationToken token = default);
+    Task<CapitalSaveResult> SaveAsync(CapitalRequest request, CancellationToken token = default);
     Task<RbiApiFile> ExportAsync(CancellationToken token = default);
 }
 public sealed class CapitalApi(IRbiApiFileTransport transport) : ICapitalApi
@@ -58,12 +59,19 @@ public sealed class CapitalApi(IRbiApiFileTransport transport) : ICapitalApi
         }
         catch (JsonException) { throw new RegistryApiException(); }
     }
-    public async Task<CapitalRecord> SaveAsync(CapitalRequest request, CancellationToken token = default)
+    public async Task<CapitalSaveResult> SaveAsync(CapitalRequest request, CancellationToken token = default)
     {
         var result = await transport.SendAsync<CapitalRecord>(request.ExpectedId is null ? HttpMethod.Post : HttpMethod.Put, "api/capital", request, token);
         token.ThrowIfCancellationRequested();
-        if (!result.IsSuccess) throw new RegistryApiException(result.Error?.StatusCode);
-        return result.Value;
+        if (result.IsSuccess) return new();
+        var error = result.Error;
+        var key = error?.Code switch
+        {
+            "capital.valid_to_past" => "capital.valid-to-past",
+            "capital.amounts" => "capital.amounts-invalid",
+            _ => new RegistryApiException(error?.StatusCode, error?.Code).MessageKey
+        };
+        return new(key, error?.StatusCode);
     }
     public async Task<RbiApiFile> ExportAsync(CancellationToken token = default)
     {
@@ -78,6 +86,6 @@ internal sealed class UnconfiguredCapitalApi : ICapitalApi
     public Task<CapitalHistoryPage> HistoryAsync(int page = 1, int pageSize = 100, CancellationToken token = default) => Task.FromException<CapitalHistoryPage>(new RegistryApiException());
     public Task<CapitalRecord?> AsOfAsync(DateOnly date, CancellationToken token = default) => Task.FromException<CapitalRecord?>(new RegistryApiException());
     public Task<CapitalRecord?> GetAsync(CancellationToken token = default) => Task.FromException<CapitalRecord?>(new RegistryApiException());
-    public Task<CapitalRecord> SaveAsync(CapitalRequest request, CancellationToken token = default) => Task.FromException<CapitalRecord>(new RegistryApiException());
+    public Task<CapitalSaveResult> SaveAsync(CapitalRequest request, CancellationToken token = default) => Task.FromResult(new CapitalSaveResult("errors.unavailable"));
     public Task<RbiApiFile> ExportAsync(CancellationToken token = default) => Task.FromException<RbiApiFile>(new RegistryApiException());
 }

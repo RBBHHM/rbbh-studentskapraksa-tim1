@@ -5,6 +5,8 @@
 @inject AuthenticationStateProvider AuthenticationState
 @inject IProfileApi Profile
 @inject ICodeListsApi Api
+@inject ILocalizationApi Localization
+@inject RuntimeResources Runtime
 
 <PageTitle>@T["codes.title"]</PageTitle>
 <HeroBar Title="@T["codes.title"]" Description="@T["codes.subtitle"]">
@@ -15,7 +17,7 @@
             @if (_canWrite)
             {
                 <RbiButton Disabled="@(_busy || _refreshing)" OnClick="NewDefinition" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.Plus" />@T["codes.definition-create"]</RbiButton>
-                @if (_category.Length > 0) { <label class="registry-file-button"><RbiIcon Name="RbiIconName.FileUp" /><span>@T["codes.import"]</span><InputFile @key="_fileKey" id="code-file" accept=".xlsx" OnChange="PreviewAsync" disabled="@(_busy || _refreshing)" /></label> }
+                @if (_category.Length > 0 && !IsLanguagePack) { <label class="registry-file-button"><RbiIcon Name="RbiIconName.FileUp" /><span>@T["codes.import"]</span><InputFile @key="_fileKey" id="code-file" accept=".xlsx" OnChange="PreviewAsync" disabled="@(_busy || _refreshing)" /></label> }
                 <RbiButton Disabled="@(_busy || _refreshing || _category.Length == 0)" OnClick="NewValue"><RbiIcon Name="RbiIconName.Plus" />@T["codes.create"]</RbiButton>
             }
         }
@@ -49,6 +51,7 @@ else
         {
             <div class="registry-category">
                 <RbiButton Disabled="@(_busy || _refreshing)" OnClick="BackToOverviewAsync" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.ArrowLeft" />@T["codes.all"]</RbiButton>
+                <RbiButton Disabled="@(_busy || _refreshing)" OnClick="OpenColumnsAsync" Variant="RbiButtonVariant.Secondary">@T["codes.column-structure"]</RbiButton>
                 @if (Meta(_category) is { Length: > 0 } openMeta) { <p class="codes-meta" role="status">@openMeta</p> }
                 @if (_canWrite)
                 {
@@ -64,16 +67,54 @@ else
         {
             <p class="registry-help app-visually-hidden">@T["codes.history"]</p>
             <RbiTable AccessibleLabel="@T["codes.title"]" Class="registry-table registry-codes-table"><caption>@_category</caption>
-                <thead><tr><th scope="col">@T["codes.code"]</th><th scope="col">@T["codes.name"]</th><th scope="col">@T["codes.description"]</th><th scope="col" class="registry-center">@T["codes.active"]</th>@if (_canWrite) { <th scope="col" class="registry-center registry-actions-cell">@T["users.actions"]</th> }</tr></thead>
+                <thead><tr>
+                @if (IsLanguagePack)
+                {
+                    <th scope="col">@T["codes.language-code"]</th><th scope="col">@T["codes.resource-key"]</th><th scope="col">@T["codes.context-info"]</th><th scope="col">@T["codes.label-text"]</th><th scope="col">@T["codes.help-text"]</th><th scope="col">@T["codes.placeholder-text"]</th>
+                }
+                else
+                {
+                    <th scope="col">@T["codes.code"]</th><th scope="col">@T["codes.name"]</th><th scope="col">@T["codes.description"]</th>
+                }
+                <th scope="col" class="registry-center">@T["codes.active"]</th>@if (_canWrite) { <th scope="col" class="registry-center registry-actions-cell">@T["users.actions"]</th> }</tr></thead>
                 <tbody>@foreach (var value in _values)
                 {
-                    <tr @key="value.Id"><td>@value.Code</td><td class="registry-strong">@value.Value</td><td>@(string.IsNullOrWhiteSpace(value.Description) ? "—" : value.Description)</td><td class="registry-center"><Indicator Kind="@(value.IsActive ? "active" : "inactive")" Label="@T[value.IsActive ? "codes.active" : "codes.inactive"]" /></td>
+                    <tr @key="value.Id">
+                        @if (IsLanguagePack)
+                        {
+                            <td>@value.Localization?.LanguageCode</td><td class="registry-strong">@value.Localization?.ResourceKey</td><td>@value.Localization?.ContextInfo</td><td>@value.Localization?.ResourceLabel</td><td>@value.Localization?.ResourceHelper</td><td>@value.Localization?.ResourcePlaceholder</td>
+                        }
+                        else
+                        {
+                            <td>@value.Code</td><td class="registry-strong">@value.Value</td><td>@(string.IsNullOrWhiteSpace(value.Description) ? "—" : value.Description)</td>
+                        }
+                        <td class="registry-center"><Indicator Kind="@(value.IsActive ? "active" : "inactive")" Label="@T[value.IsActive ? "codes.active" : "codes.inactive"]" /></td>
                         @if (_canWrite) { <td class="registry-actions-cell"><div class="registry-row-actions"><RbiButton Disabled="@(_busy || _refreshing)" OnClick="() => Edit(value)" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["codes.edit"]" title="@T["codes.edit"]"><RbiIcon Name="RbiIconName.Pencil" /></RbiButton><RbiButton Disabled="@(_busy || _refreshing)" OnClick="() => _deleteValue = value" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["codes.delete-value"]" title="@T["codes.delete-value"]" Class="registry-danger-icon"><RbiIcon Name="RbiIconName.Trash2" /></RbiButton></div></td> }
                     </tr>
                 }</tbody>
             </RbiTable>
         }
     }
+}
+@if (_columnsOpen)
+{
+    <RbiDialog Open Title="@T["codes.column-structure"]" CloseLabel="@T["common.close"]" OpenChanged="@(open => _columnsOpen = open)">
+        <DialogBody>
+            @if (_columnsError is not null) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_columnsError]" /> }
+            else if (_columns is null) { <RbiText>@T["state.loading"]</RbiText> }
+            else if (_columns.Count == 0) { <RbiText>@T["codes.no-column-structure"]</RbiText> }
+            else
+            {
+                <dl>
+                    @foreach (var column in _columns)
+                    {
+                        <dt><strong>@column.Name</strong> <small>ID@(column.Slot)</small></dt>
+                        @if (column.Description is not null) { <dd>@column.Description</dd> }
+                    }
+                </dl>
+            }
+        </DialogBody>
+    </RbiDialog>
 }
 @if (_draft is { } draft)
 {
@@ -144,6 +185,19 @@ else
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         finally { _loading = _refreshing = false; }
     }
+    private bool IsLanguagePack => _category.Equals("LANGUAGE_PACKS", StringComparison.OrdinalIgnoreCase);
+    private bool _columnsOpen;
+    private IReadOnlyList<CodebookColumn>? _columns;
+    private string? _columnsError;
+    private async Task OpenColumnsAsync()
+    {
+        _columns = null;
+        _columnsError = null;
+        _columnsOpen = true;
+        try { _columns = (await Api.ColumnsAsync(_category, _token)).Items; }
+        catch (RegistryApiException exception) { _columnsError = exception.MessageKey; }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+    }
     private string _search = "";
     private IEnumerable<string> FilteredCategories => _categories.Where(item => string.IsNullOrWhiteSpace(_search) || item.Contains(_search.Trim(), StringComparison.OrdinalIgnoreCase));
     // Values are loaded only for the list the user opens, never for an automatically chosen first one.
@@ -160,12 +214,20 @@ else
         try
         {
             if (draft.Definition) { await Api.CreateCategoryAsync(draft.Name.Trim(), draft.NullDescription, _token); _category = draft.Name.Trim(); }
+            else if (draft.IsLanguagePack)
+            {
+                draft.SaveError = await Localization.SaveAsync(draft.LanguageCode.Trim(), draft.ResourceKey.Trim(),
+                    new(draft.Name.Trim(), OptionalText(draft.Helper), OptionalText(draft.Placeholder), draft.Active, draft.ContextInfo.Trim()), _token);
+                if (draft.SaveError is not null) return;
+                await Runtime.EnsureAsync(_token, force: true);
+            }
             else if (draft.Id is { } id) await Api.UpdateAsync(id, draft.UpdateRequest(), _token);
             else await Api.CreateAsync(draft.CreateRequest(), _token);
             _notice = T[draft.Definition ? "toast.code-def" : "toast.code-saved"]; _draft = null; await LoadAsync();
         }
         finally { _busy = false; }
     }
+    private static string? OptionalText(string value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     private void CancelDelete() { if (!_busy) { _deleteValue = null; _deleteCategory = null; } }
     private void CloseDelete(bool open) { if (!open) CancelDelete(); }
     private async Task DeleteAsync()

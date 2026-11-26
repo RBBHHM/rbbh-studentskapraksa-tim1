@@ -142,15 +142,28 @@ else
     }
     private void Edit() { if (!_authenticated || !_canEdit || _periodLocked || _busy || _refreshing) return; _draft = CapitalDraft.From(_record); }
     private void CloseEditor(bool open) { if (!open && !_busy) _draft = null; }
-    private async Task SaveAsync(CapitalRequest request)
+    private async Task<string?> SaveAsync(CapitalRequest request)
     {
-        if (!_authenticated || !_canEdit) throw new RegistryApiException(System.Net.HttpStatusCode.Forbidden);
-        if (_periodLocked) throw new RegistryApiException((System.Net.HttpStatusCode)423);
-        if (_busy) return; _busy = true;
-        try { await Api.SaveAsync(request, _token); _notice = true; await LoadAsync(); }
-        catch (RegistryApiException exception) when ((int?)exception.StatusCode == 423) { _periodLocked = true; await InvokeAsync(StateHasChanged); throw; }
-        finally { _busy = false; }
-        _draft = null;
+        if (!_authenticated || !_canEdit) return "errors.forbidden";
+        if (_periodLocked) return "errors.locked";
+        if (_busy) return null;
+        _busy = true;
+        try
+        {
+            var result = await Api.SaveAsync(request, _token);
+            if ((int?)result.StatusCode == 423) _periodLocked = true;
+            if (result.ErrorKey is not null) return result.ErrorKey;
+
+            _draft = null;
+            _notice = true;
+            await LoadAsync();
+            return null;
+        }
+        finally
+        {
+            _busy = false;
+            if (!_disposed) StateHasChanged();
+        }
     }
     private async Task ExportAsync()
     {

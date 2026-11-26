@@ -4,6 +4,8 @@ namespace RBBH.RelatedPartiesRegister.Web.Components.Registry;
 
 public sealed class CapitalDraft
 {
+    internal static DateTime Today => TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTimeOffset.UtcNow, "Europe/Sarajevo").Date;
+
     public decimal? RegulatoryCapital { get; set; }
     public decimal? CoreCapital { get; set; }
     public decimal? SupplementaryCapital { get; set; }
@@ -26,8 +28,10 @@ public sealed class CapitalDraft
         {
             if (value is null) errors[field] = ["validation.required"];
             else if (value < 0) errors[field] = ["limit.nonnegative"];
+            else if (value > 9_999_999_999_999_999.99m || decimal.Round(value.Value, 2) != value.Value) errors[field] = ["capital.amounts-invalid"];
         }
         if (ValidTill is null) errors[nameof(ValidTill)] = ["validation.date"];
+        else if (ValidTill.Value.Date < Today) errors[nameof(ValidTill)] = ["capital.valid-to-past"];
         return errors;
     }
     public CapitalRequest ToRequest()

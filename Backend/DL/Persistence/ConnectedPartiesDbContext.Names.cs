@@ -51,7 +51,12 @@ public partial class ConnectedPartiesDbContext
                     property.SetColumnOrder(index);
             }
 
-            var sqlTable = table == "CodeListDefinitions" ? "CODELIST_DEFINITIONS" : SqlName(table);
+            var sqlTable = table switch
+            {
+                "CodeListDefinitions" => "CODELIST_DEFINITIONS",
+                "CodeListValues" => "CODELIST_VALUES",
+                _ => SqlName(table)
+            };
             if (table != sqlTable) entity.SetTableName(sqlTable);
         }
     }

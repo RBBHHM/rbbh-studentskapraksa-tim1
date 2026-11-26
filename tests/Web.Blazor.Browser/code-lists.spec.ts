@@ -32,17 +32,17 @@ test("create definition, value, immutable code edit and soft-delete preserve act
   await dialog.getByRole("textbox", { name: /^Naziv definicije/ }).fill("NativeCodes"); await dialog.getByRole("textbox", { name: "Poslovna svrha", exact: true }).fill("Native fixture purpose");
   await dialog.getByRole("button", { name: "Kreiraj", exact: true }).click(); await expect(dialog).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Svi šifrarnici", exact: true })).toBeVisible(); await expect(page.getByText("Nema vrijednosti u odabranoj kategoriji.", { exact: true })).toBeVisible();
-  dialog = await fillValue(page, "CODE_1", "Native value"); await dialog.getByRole("textbox", { name: "Redoslijed prikaza", exact: true }).fill("0");
+  dialog = await fillValue(page, "CODE_1", "Native value");
   await dialog.getByRole("textbox", { name: "Opis", exact: true }).fill("Owned description"); await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).toHaveCount(0);
   const row = page.getByRole("row").filter({ hasText: "CODE_1" }); await expect(row).toContainText("Native value"); await row.getByRole("button", { name: "Uredi vrijednost", exact: true }).click(); dialog = page.getByRole("dialog");
-  await expect(dialog.getByRole("textbox", { name: /^Kod/ })).toBeDisabled(); await expect(dialog.getByRole("textbox", { name: "Redoslijed prikaza", exact: true })).toHaveValue("0");
-  await dialog.getByRole("textbox", { name: /^Naziv/ }).fill("Edited value"); await dialog.getByRole("textbox", { name: "Redoslijed prikaza", exact: true }).fill("");
+  await expect(dialog.getByRole("textbox", { name: /^Kod/ })).toBeDisabled();
+  await dialog.getByRole("textbox", { name: /^Naziv/ }).fill("Edited value");
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).toHaveCount(0); await expect(row).toContainText("Edited value");
   await row.getByRole("button", { name: "Obriši vrijednost", exact: true }).click(); await page.getByRole("alertdialog").getByRole("button", { name: "Odustani", exact: true }).click(); await expect(row).toContainText("Aktivan");
   await row.getByRole("button", { name: "Obriši vrijednost", exact: true }).click(); await page.getByRole("alertdialog").getByRole("button", { name: "Obriši", exact: true }).click(); await expect(row).toContainText("Neaktivan");
   await page.reload(); await interactive(page); await openCategory(page, "NativeCodes"); await expect(row).toContainText("Neaktivan");
   const state = await (await request.get("/__fixtures/codes-state", { headers })).json();
-  expect(state.values.find((item: any) => item.kod === "CODE_1")).toMatchObject({ kategorija: "NativeCodes", naziv: "Edited value", redoslijedPrikaza: null, aktivan: false, izmijenioKorisnik: "admin@fixture.test" });
+  expect(state.values.find((item: any) => item.kod === "CODE_1")).toMatchObject({ kategorija: "NativeCodes", naziv: "Edited value", aktivan: false, izmijenioKorisnik: "admin@fixture.test" });
   expect(state.audit.map((item: any) => item.action)).toEqual(["CODELIST_ADD", "CODELIST_ADD", "CODELIST_UPDATE", "CODELIST_DELETE"]); expect(state.audit.every((item: any) => item.username === "admin@fixture.test")).toBe(true);
 });
 test("changed reference value immediately reaches the actual business form dropdown", async ({ page }) => {
@@ -59,9 +59,9 @@ test("validation blocks requests and duplicate code remains an authoritative bac
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog.getByText("Naziv je obavezan").first()).toBeVisible();
   expect((await (await request.get("/__fixtures/counts", { headers })).json()).mutations).toBe(0);
   await dialog.getByRole("textbox", { name: /^Naziv/ }).fill("Duplicate attempt"); await dialog.getByRole("textbox", { name: /^Kod/ }).fill("ZOB-2-V-5");
-  await dialog.getByRole("textbox", { name: "Redoslijed prikaza", exact: true }).fill("1.5"); await page.keyboard.press("Tab"); await expect(dialog.getByText("nenegativan cijeli broj").first()).toBeVisible(); await expect(dialog.getByRole("button", { name: "Sačuvaj", exact: true })).toBeDisabled();
-  expect((await (await request.get("/__fixtures/counts", { headers })).json()).mutations).toBe(0);
-  await dialog.getByRole("textbox", { name: "Redoslijed prikaza", exact: true }).fill(""); await page.keyboard.press("Tab"); await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog.getByText("Backend je odbio podatke. Provjerite unesena polja.", { exact: true })).toBeVisible();
+  await page.keyboard.press("Tab");
+  await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
+  await expect(dialog.getByText("Backend je odbio podatke. Provjerite unesena polja.", { exact: true })).toBeVisible();
   expect((await (await request.get("/__fixtures/codes-state", { headers })).json()).audit).toEqual([]);
 });
 test("referenced value and entire category deletion are rejected with no data/audit change", async ({ page, request }) => {
@@ -121,4 +121,20 @@ test("category cards show who created the list, without changing the button's ac
   await expect(card).toBeVisible();
   await expect(page.locator(".codes-card__meta").filter({ hasText: "Kreirao: fixture" }).first()).toBeVisible();
   await expect(card).toHaveAccessibleDescription(/Kreirao: fixture/);
+});
+
+test("LANGUAGE_PACKS exposes translation fields and saves changes by resource key", async ({ page, request }) => {
+  expect((await request.post("/__fixtures/notifications-seed", { headers })).status()).toBe(204);
+  await visit(page);
+  await page.getByRole("button", { name: "LANGUAGE_PACKS", exact: true }).click();
+  const row = page.getByRole("row").filter({ hasText: "Rola dodijeljena" });
+  await row.getByRole("button", { name: "Uredi vrijednost", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByLabel("Ključ resursa", { exact: false })).toHaveValue("notifications.fixture.title");
+  await dialog.getByLabel("Prikazani tekst", { exact: false }).fill("Ažurirana poruka");
+  await dialog.getByLabel("Tekst unutar polja", { exact: false }).fill("Unesite vrijednost");
+  await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  const updated = page.getByRole("row").filter({ hasText: "Ažurirana poruka" });
+  await expect(updated).toContainText("Unesite vrijednost");
 });

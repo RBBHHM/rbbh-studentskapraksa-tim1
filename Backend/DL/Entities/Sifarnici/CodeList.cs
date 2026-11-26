@@ -13,6 +13,8 @@ public class CodeList
     [Key]
     public int ID { get; set; }
     public bool IsSystemRequired { get; set; }
+    public long? DefinitionId { get; set; }
+    public CodeListDefinition? Definition { get; set; }
     public CodeListLocalization? Localization { get; set; }
 
     /// <summary>
@@ -70,10 +72,10 @@ public class CodeList
 
 public sealed class CodeListLocalization
 {
-    [Required, StringLength(100), Unicode(false)] public string Category { get; set; } = string.Empty;
     [StringLength(10)] public string? LanguageCode { get; set; }
     [StringLength(200)] public string? ResourceKey { get; set; }
     [StringLength(4000)] public string? ResourceLabel { get; set; }
     [StringLength(4000)] public string? ResourceHelper { get; set; }
-    [StringLength(500)] public string? ResourcePlaceholder { get; set; }
+    [StringLength(4000)] public string? ResourcePlaceholder { get; set; }
+    [StringLength(100)] public string? ContextInfo { get; set; }
 }

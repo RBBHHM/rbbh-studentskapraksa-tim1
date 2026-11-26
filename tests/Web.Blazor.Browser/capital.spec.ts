@@ -96,6 +96,19 @@ test("create and edit the active capital, then keep the previous capital in read
   await show.click();
   await expect(page.getByText("Za datum 2100-01-01 nema evidentiranog kapitala.", { exact: true })).toBeVisible();
 });
+test("an expired end date is explained on the form without touching active capital", async ({ page, request }) => {
+  expect((await request.post("/__fixtures/limit-reference", { headers })).status()).toBe(204);
+  await open(page);
+  await page.getByRole("button", { name: "Novi kapital", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await fill(dialog, "60", "50", "40", "2025-12-31");
+  await page.keyboard.press("Tab");
+  await expect(dialog.getByRole("button", { name: "Sačuvaj", exact: true })).toBeDisabled();
+  await expect(dialog.getByText("Datum „Vrijedi do” mora biti danas ili kasnije.", { exact: true }).first()).toBeVisible();
+  const records = await (await request.get("/__fixtures/capital", { headers })).json();
+  expect(records).toHaveLength(1);
+  expect(records[0].isActive).toBe(true);
+});
 test("required amounts/date and negative values cannot persist", async ({ page, request }) => {
   await open(page); await page.getByRole("button", { name: "Novi kapital", exact: true }).click(); const dialog = page.getByRole("dialog");
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();

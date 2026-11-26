@@ -91,7 +91,7 @@ namespace RBBH.ConnectedParties.API.Controllers.BaseController
         /// <returns>Mapped ProblemDetails instance.</returns>
         private static ProblemDetails ToProblemDetails<T>(Result<T> result, int statusCode, HttpRequest request)
         {
-            return new ProblemDetails
+            var problem = new ProblemDetails
             {
                 Title = GetExceptionTitle(result.ExceptionType),
                 Detail = result.ExceptionMessage,
@@ -103,6 +103,8 @@ namespace RBBH.ConnectedParties.API.Controllers.BaseController
                     ["timestamp"] = DateTime.UtcNow
                 }
             };
+            if (result.Code is not null) problem.Extensions["code"] = result.Code;
+            return problem;
         }
 
         /// <summary>

@@ -1315,7 +1315,11 @@ namespace RBBH.ConnectedParties.Migrations
 
                     b.Property<bool>("Aktivan")
                         .HasColumnType("bit")
-                        .HasColumnName("IS_ACTIVE");
+                        .HasColumnName("ID1");
+
+                    b.Property<long?>("DefinitionId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("DEFINITION_ID");
 
                     b.Property<bool>("IsSystemRequired")
                         .HasColumnType("bit")
@@ -1369,14 +1373,74 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasColumnType("nvarchar(500)")
                         .HasColumnName("DESCRIPTION");
 
+                    b.Property<DateTime?>("Slot10")
+                        .HasColumnType("date")
+                        .HasColumnName("ID10");
+
+                    b.Property<DateTime?>("Slot11")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("ID11");
+
+                    b.Property<string>("Slot15")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("ID15");
+
+                    b.Property<string>("Slot17")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
+                        .HasColumnName("ID17");
+
+                    b.Property<string>("Slot18")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
+                        .HasColumnName("ID18");
+
+                    b.Property<bool?>("Slot2")
+                        .HasColumnType("bit")
+                        .HasColumnName("ID2");
+
+                    b.Property<int?>("Slot3")
+                        .HasColumnType("int")
+                        .HasColumnName("ID3");
+
+                    b.Property<int?>("Slot4")
+                        .HasColumnType("int")
+                        .HasColumnName("ID4");
+
+                    b.Property<int?>("Slot5")
+                        .HasColumnType("int")
+                        .HasColumnName("ID5");
+
+                    b.Property<decimal?>("Slot6")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("ID6");
+
+                    b.Property<decimal?>("Slot7")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("ID7");
+
+                    b.Property<decimal?>("Slot8")
+                        .HasPrecision(19, 6)
+                        .HasColumnType("decimal(19,6)")
+                        .HasColumnName("ID8");
+
+                    b.Property<DateTime?>("Slot9")
+                        .HasColumnType("date")
+                        .HasColumnName("ID9");
+
                     b.HasKey("ID");
+
+                    b.HasIndex("DefinitionId");
 
                     b.HasIndex("Kategorija");
 
                     b.HasIndex("Kategorija", "Kod")
                         .IsUnique();
 
-                    b.ToTable("CODE_LIST_VALUES", null, t =>
+                    b.ToTable("CODELIST_VALUES", null, t =>
                         {
                             t.HasCheckConstraint("CK_CodeListValues_Category_Trimmed", "DATALENGTH([CATEGORY]) = DATALENGTH(LTRIM(RTRIM([CATEGORY])))");
 
@@ -1392,6 +1456,286 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasColumnName("ID");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("ColumnDescription1")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
+                        .HasColumnName("COLUMN_DESCRIPTION_1");
+
+                    b.Property<string>("ColumnDescription10")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
+                        .HasColumnName("COLUMN_DESCRIPTION_10");
+
+                    b.Property<string>("ColumnDescription11")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
+                        .HasColumnName("COLUMN_DESCRIPTION_11");
+
+                    b.Property<string>("ColumnDescription12")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
+                        .HasColumnName("COLUMN_DESCRIPTION_12");
+
+                    b.Property<string>("ColumnDescription13")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
+                        .HasColumnName("COLUMN_DESCRIPTION_13");
+
+                    b.Property<string>("ColumnDescription14")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
+                        .HasColumnName("COLUMN_DESCRIPTION_14");
+
+                    b.Property<string>("ColumnDescription15")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
+                        .HasColumnName("COLUMN_DESCRIPTION_15");
+
+                    b.Property<string>("ColumnDescription16")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
+                        .HasColumnName("COLUMN_DESCRIPTION_16");
+
+                    b.Property<string>("ColumnDescription17")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
+                        .HasColumnName("COLUMN_DESCRIPTION_17");
+
+                    b.Property<string>("ColumnDescription18")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
+                        .HasColumnName("COLUMN_DESCRIPTION_18");
+
+                    b.Property<string>("ColumnDescription19")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
+                        .HasColumnName("COLUMN_DESCRIPTION_19");
+
+                    b.Property<string>("ColumnDescription2")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
+                        .HasColumnName("COLUMN_DESCRIPTION_2");
+
+                    b.Property<string>("ColumnDescription20")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
+                        .HasColumnName("COLUMN_DESCRIPTION_20");
+
+                    b.Property<string>("ColumnDescription3")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
+                        .HasColumnName("COLUMN_DESCRIPTION_3");
+
+                    b.Property<string>("ColumnDescription4")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
+                        .HasColumnName("COLUMN_DESCRIPTION_4");
+
+                    b.Property<string>("ColumnDescription5")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
+                        .HasColumnName("COLUMN_DESCRIPTION_5");
+
+                    b.Property<string>("ColumnDescription6")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
+                        .HasColumnName("COLUMN_DESCRIPTION_6");
+
+                    b.Property<string>("ColumnDescription7")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
+                        .HasColumnName("COLUMN_DESCRIPTION_7");
+
+                    b.Property<string>("ColumnDescription8")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
+                        .HasColumnName("COLUMN_DESCRIPTION_8");
+
+                    b.Property<string>("ColumnDescription9")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
+                        .HasColumnName("COLUMN_DESCRIPTION_9");
+
+                    b.Property<string>("ColumnName1")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("COLUMN_NAME_1");
+
+                    b.Property<string>("ColumnName10")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("COLUMN_NAME_10");
+
+                    b.Property<string>("ColumnName11")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("COLUMN_NAME_11");
+
+                    b.Property<string>("ColumnName12")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("COLUMN_NAME_12");
+
+                    b.Property<string>("ColumnName13")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("COLUMN_NAME_13");
+
+                    b.Property<string>("ColumnName14")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("COLUMN_NAME_14");
+
+                    b.Property<string>("ColumnName15")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("COLUMN_NAME_15");
+
+                    b.Property<string>("ColumnName16")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("COLUMN_NAME_16");
+
+                    b.Property<string>("ColumnName17")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("COLUMN_NAME_17");
+
+                    b.Property<string>("ColumnName18")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("COLUMN_NAME_18");
+
+                    b.Property<string>("ColumnName19")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("COLUMN_NAME_19");
+
+                    b.Property<string>("ColumnName2")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("COLUMN_NAME_2");
+
+                    b.Property<string>("ColumnName20")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("COLUMN_NAME_20");
+
+                    b.Property<string>("ColumnName3")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("COLUMN_NAME_3");
+
+                    b.Property<string>("ColumnName4")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("COLUMN_NAME_4");
+
+                    b.Property<string>("ColumnName5")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("COLUMN_NAME_5");
+
+                    b.Property<string>("ColumnName6")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("COLUMN_NAME_6");
+
+                    b.Property<string>("ColumnName7")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("COLUMN_NAME_7");
+
+                    b.Property<string>("ColumnName8")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("COLUMN_NAME_8");
+
+                    b.Property<string>("ColumnName9")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("COLUMN_NAME_9");
+
+                    b.Property<int?>("ColumnPosition1")
+                        .HasColumnType("int")
+                        .HasColumnName("COLUMN_POSITION_1");
+
+                    b.Property<int?>("ColumnPosition10")
+                        .HasColumnType("int")
+                        .HasColumnName("COLUMN_POSITION_10");
+
+                    b.Property<int?>("ColumnPosition11")
+                        .HasColumnType("int")
+                        .HasColumnName("COLUMN_POSITION_11");
+
+                    b.Property<int?>("ColumnPosition12")
+                        .HasColumnType("int")
+                        .HasColumnName("COLUMN_POSITION_12");
+
+                    b.Property<int?>("ColumnPosition13")
+                        .HasColumnType("int")
+                        .HasColumnName("COLUMN_POSITION_13");
+
+                    b.Property<int?>("ColumnPosition14")
+                        .HasColumnType("int")
+                        .HasColumnName("COLUMN_POSITION_14");
+
+                    b.Property<int?>("ColumnPosition15")
+                        .HasColumnType("int")
+                        .HasColumnName("COLUMN_POSITION_15");
+
+                    b.Property<int?>("ColumnPosition16")
+                        .HasColumnType("int")
+                        .HasColumnName("COLUMN_POSITION_16");
+
+                    b.Property<int?>("ColumnPosition17")
+                        .HasColumnType("int")
+                        .HasColumnName("COLUMN_POSITION_17");
+
+                    b.Property<int?>("ColumnPosition18")
+                        .HasColumnType("int")
+                        .HasColumnName("COLUMN_POSITION_18");
+
+                    b.Property<int?>("ColumnPosition19")
+                        .HasColumnType("int")
+                        .HasColumnName("COLUMN_POSITION_19");
+
+                    b.Property<int?>("ColumnPosition2")
+                        .HasColumnType("int")
+                        .HasColumnName("COLUMN_POSITION_2");
+
+                    b.Property<int?>("ColumnPosition20")
+                        .HasColumnType("int")
+                        .HasColumnName("COLUMN_POSITION_20");
+
+                    b.Property<int?>("ColumnPosition3")
+                        .HasColumnType("int")
+                        .HasColumnName("COLUMN_POSITION_3");
+
+                    b.Property<int?>("ColumnPosition4")
+                        .HasColumnType("int")
+                        .HasColumnName("COLUMN_POSITION_4");
+
+                    b.Property<int?>("ColumnPosition5")
+                        .HasColumnType("int")
+                        .HasColumnName("COLUMN_POSITION_5");
+
+                    b.Property<int?>("ColumnPosition6")
+                        .HasColumnType("int")
+                        .HasColumnName("COLUMN_POSITION_6");
+
+                    b.Property<int?>("ColumnPosition7")
+                        .HasColumnType("int")
+                        .HasColumnName("COLUMN_POSITION_7");
+
+                    b.Property<int?>("ColumnPosition8")
+                        .HasColumnType("int")
+                        .HasColumnName("COLUMN_POSITION_8");
+
+                    b.Property<int?>("ColumnPosition9")
+                        .HasColumnType("int")
+                        .HasColumnName("COLUMN_POSITION_9");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2")
@@ -1432,6 +1776,14 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasColumnType("varchar(100)")
                         .HasColumnName("NAME")
                         .UseCollation("Latin1_General_100_CI_AS");
+
+                    b.Property<string>("Owner")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasDefaultValue("registry")
+                        .HasColumnName("OWNER");
 
                     b.Property<int>("Version")
                         .IsConcurrencyToken()
@@ -1672,57 +2024,63 @@ namespace RBBH.ConnectedParties.Migrations
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Sifarnici.CodeList", b =>
                 {
+                    b.HasOne("RBBH.ConnectedParties.DL.Entities.Sifarnici.CodeListDefinition", "Definition")
+                        .WithMany()
+                        .HasForeignKey("DefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.OwnsOne("RBBH.ConnectedParties.DL.Entities.Sifarnici.CodeListLocalization", "Localization", b1 =>
                         {
-                            b1.Property<int>("CodeListID")
+                            b1.Property<int>("ID")
                                 .HasColumnType("int")
-                                .HasColumnName("CODE_LIST_ID");
+                                .HasColumnName("ID");
 
-                            b1.Property<string>("Category")
-                                .IsRequired()
+                            b1.Property<string>("ContextInfo")
                                 .HasMaxLength(100)
-                                .IsUnicode(false)
-                                .HasColumnType("varchar(100)")
-                                .HasColumnName("CATEGORY")
-                                .UseCollation("Latin1_General_100_CI_AS");
+                                .HasColumnType("nvarchar(100)")
+                                .HasColumnName("ID14");
 
                             b1.Property<string>("LanguageCode")
                                 .HasMaxLength(10)
                                 .HasColumnType("nvarchar(10)")
-                                .HasColumnName("LANGUAGE_CODE");
+                                .HasColumnName("ID12")
+                                .UseCollation("Latin1_General_100_CI_AS");
 
                             b1.Property<string>("ResourceHelper")
                                 .HasMaxLength(4000)
                                 .HasColumnType("nvarchar(4000)")
-                                .HasColumnName("RESOURCE_HELPER");
+                                .HasColumnName("ID19");
 
                             b1.Property<string>("ResourceKey")
                                 .HasMaxLength(200)
                                 .HasColumnType("nvarchar(200)")
-                                .HasColumnName("RESOURCE_KEY")
+                                .HasColumnName("ID13")
                                 .UseCollation("Latin1_General_100_CI_AS");
 
                             b1.Property<string>("ResourceLabel")
                                 .HasMaxLength(4000)
                                 .HasColumnType("nvarchar(4000)")
-                                .HasColumnName("RESOURCE_LABEL");
+                                .HasColumnName("ID16");
 
                             b1.Property<string>("ResourcePlaceholder")
-                                .HasMaxLength(500)
-                                .HasColumnType("nvarchar(500)")
-                                .HasColumnName("RESOURCE_PLACEHOLDER");
+                                .HasMaxLength(4000)
+                                .HasColumnType("nvarchar(4000)")
+                                .HasColumnName("ID20");
 
-                            b1.HasKey("CodeListID");
+                            b1.HasKey("ID");
 
-                            b1.HasIndex("Category", "LanguageCode", "ResourceKey")
+                            b1.HasIndex("LanguageCode", "ResourceKey")
                                 .IsUnique()
-                                .HasFilter("[LANGUAGE_CODE] IS NOT NULL AND [RESOURCE_KEY] IS NOT NULL");
+                                .HasDatabaseName("IX_CODELIST_VALUES_LANGUAGE_RESOURCE")
+                                .HasFilter("[CATEGORY] = 'LANGUAGE_PACKS' AND [ID12] IS NOT NULL AND [ID13] IS NOT NULL");
 
-                            b1.ToTable("CODE_LIST_LOCALIZATION", (string)null);
+                            b1.ToTable("CODELIST_VALUES");
 
                             b1.WithOwner()
-                                .HasForeignKey("CodeListID");
+                                .HasForeignKey("ID");
                         });
+
+                    b.Navigation("Definition");
 
                     b.Navigation("Localization");
                 });

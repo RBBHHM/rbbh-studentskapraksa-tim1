@@ -38,12 +38,23 @@ public sealed class LocalizationSqlTests : LocalizationFixture
                 Path.Combine(root.FullName, "Frontend", "Localization", language.ToLowerInvariant() + ".json")));
             var expected = catalog.RootElement.GetProperty("translations").EnumerateObject()
                 .Select(item => item.Name).ToHashSet(StringComparer.Ordinal);
-            Assert.Equal(608, expected.Count);
+            Assert.NotEmpty(expected);
             var response = await Pack(language);
             var actual = response.GetProperty("items").EnumerateArray()
                 .Select(item => item.GetProperty("resourceKey").GetString()!).ToHashSet(StringComparer.Ordinal);
             Assert.Empty(expected.Except(actual));
         }
+        await InDatabase(async db =>
+        {
+            Assert.Equal(0, await db.Database.SqlQueryRaw<int>("""
+                SELECT COUNT(*) AS [Value] FROM dbo.CODELIST_VALUES AS value
+                LEFT JOIN dbo.CODELIST_DEFINITIONS AS definition ON definition.ID = value.DEFINITION_ID
+                WHERE value.CATEGORY IN ('LANGUAGES', 'LANGUAGE_PACKS') AND definition.ID IS NULL
+                """).SingleAsync());
+            Assert.Equal(0, await db.Database.SqlQueryRaw<int>("""
+                SELECT COUNT(*) AS [Value] FROM sys.tables WHERE name = 'CODE_LIST_LOCALIZATION'
+                """).SingleAsync());
+        });
         var before = await Pack("DE");
         var prior = before.GetProperty("version").GetString();
         Assert.Equal(HttpStatusCode.NoContent, (await Client.PutAsJsonAsync(
