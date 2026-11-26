@@ -1,5 +1,6 @@
 @page "/app/admin/role-catalog"
 @implements IDisposable
+@using RBI.DesignSystem.Components.Forms
 @inject AuthenticationStateProvider AuthenticationState
 @inject IProfileApi Profile
 @inject IRoleCatalogApi Api
@@ -24,7 +25,7 @@ else
     }
     @if (_deleteError is not null)
     {
-        <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_deleteError]" Announcement="RbiAlertAnnouncement.Assertive" />
+        <RbiAlert Class="role-catalog-alert" Tone="RbiAlertTone.Danger" Title="@T[_deleteError]" Announcement="RbiAlertAnnouncement.Assertive" />
     }
     @if (_notice is not null) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@T[_notice]" /></div> }
     <div class="role-catalog-search">
@@ -39,7 +40,7 @@ else
     }
     else if (_error is null)
     {
-        <RbiTable AccessibleLabel="@T["rolecatalog.title"]" Class="registry-table">
+        <RbiTable AccessibleLabel="@T["rolecatalog.title"]" Class="registry-table registry-reflow-table">
             <thead>
                 <tr>
                     <th scope="col">@T["rolecatalog.name"]</th>
@@ -53,11 +54,11 @@ else
                 @foreach (var role in _page.Items)
                 {
                     <tr @key="role.Id">
-                        <td class="registry-strong">@(role.Name.Equals("gost", StringComparison.OrdinalIgnoreCase) ? T.Role(role.Name) : role.Name)</td>
-                        <td>@(string.IsNullOrWhiteSpace(role.Description) ? "—" : role.Description)</td>
-                        <td>@role.PermissionIds.Count</td>
-                        <td><Indicator Kind="@(role.IsActive ? "active" : "inactive")" Label="@T[role.IsActive ? "codes.active" : "codes.inactive"]" /></td>
-                        <td>
+                        <td class="registry-strong"><span class="registry-cell-label" aria-hidden="true">@T["rolecatalog.name"]</span><span>@(role.Name.Equals("gost", StringComparison.OrdinalIgnoreCase) ? T.Role(role.Name) : role.Name)</span></td>
+                        <td><span class="registry-cell-label" aria-hidden="true">@T["rolecatalog.description-field"]</span><span>@(string.IsNullOrWhiteSpace(role.Description) ? "—" : role.Description)</span></td>
+                        <td><span class="registry-cell-label" aria-hidden="true">@T["rolecatalog.permissions"]</span>@role.PermissionIds.Count</td>
+                        <td><span class="registry-cell-label" aria-hidden="true">@T["rolecatalog.status"]</span><Indicator Kind="@(role.IsActive ? "active" : "inactive")" Label="@T[role.IsActive ? "codes.active" : "codes.inactive"]" /></td>
+                        <td><span class="registry-cell-label" aria-hidden="true">@T["common.actions"]</span>
                             @if (_canWrite && !role.IsProtected)
                             {
                                 <div class="role-catalog-actions">
@@ -93,61 +94,73 @@ else
 {
     <RbiDialog Open Class="app-form-dialog role-catalog-dialog" Title="@T[draft.Id is null ? "rolecatalog.new" : "rolecatalog.edit"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseDialog">
         <DialogBody>
-            <form class="role-catalog-form" @onsubmit="SaveAsync" @onsubmit:preventDefault novalidate>
-                <div class="role-catalog-fields">
-                    <div class="role-catalog-field">
-                        <label for="rolecatalog-name">@T["rolecatalog.name"] @if (draft.Id is null) { <span aria-hidden="true">*</span> }</label>
-                        <input id="rolecatalog-name" class="rbi-input" maxlength="100" required readonly="@(draft.Id is not null)"
-                               aria-invalid="@(NameError is not null ? "true" : null)" aria-describedby="@(NameError is not null ? "rolecatalog-name-error" : null)"
-                               @bind="draft.Name" @bind:event="oninput" @bind:after="ClearFormError" @onblur="ShowValidation" />
-                        @if (NameError is { } nameError) { <p class="app-error" id="rolecatalog-name-error" role="status">@T[nameError]</p> }
-                    </div>
-                    <div class="role-catalog-field">
-                        <label for="rolecatalog-description">@T["rolecatalog.description-field"]</label>
-                        <textarea id="rolecatalog-description" class="rbi-textarea" rows="2" maxlength="500"
-                                  aria-invalid="@(DescriptionError is not null ? "true" : null)" aria-describedby="@(DescriptionError is not null ? "rolecatalog-description-error" : null)"
-                                  @bind="draft.Description" @bind:event="oninput" @onblur="ShowValidation"></textarea>
-                        @if (DescriptionError is { } descriptionError) { <p class="app-error" id="rolecatalog-description-error" role="status">@T[descriptionError]</p> }
-                    </div>
-                </div>
-                @if (draft.Id is not null)
-                {
-                    <label class="app-label" for="rolecatalog-active">
-                        <input id="rolecatalog-active" type="checkbox" @bind="draft.IsActive" />
-                        @T["rolecatalog.active"]
-                    </label>
-                }
-                <fieldset class="role-catalog-permissions">
-                    <legend>@T["rolecatalog.permissions"]</legend>
-                    <div class="role-catalog-permission-grid">
-                        @foreach (var group in _permissions.GroupBy(item => item.Module).OrderBy(item => item.Key))
-                        {
-                            <fieldset class="role-catalog-permission-group">
-                                <legend>@group.Key</legend>
-                                @foreach (var permission in group)
-                                {
-                                    <label class="role-catalog-permission" for="@("rolecatalog-permission-" + permission.Id.ToString("N"))">
-                                        <input id="@("rolecatalog-permission-" + permission.Id.ToString("N"))" type="checkbox" checked="@draft.PermissionIds.Contains(permission.Id)" @onchange="args => SelectPermission(permission.Id, args.Value is true)" />
-                                        @permission.Code
-                                    </label>
-                                }
-                            </fieldset>
-                        }
-                    </div>
-                </fieldset>
+            <form id="role-catalog-editor" class="role-catalog-form" @onsubmit="SaveAsync" @onsubmit:preventDefault novalidate>
+                <RbiTabs TValue="string" @bind-Value="_editorTab" Class="role-catalog-tabs" AccessibleLabel="@T[draft.Id is null ? "rolecatalog.new" : "rolecatalog.edit"]">
+                    <TabList>
+                        <RbiTab TValue="string" Value="@("details")">@T["rolecatalog.details"]</RbiTab>
+                        <RbiTab TValue="string" Value="@("permissions")">@T["rolecatalog.permissions"]</RbiTab>
+                    </TabList>
+                    <ChildContent>
+                        <RbiTabPanel TValue="string" Value="@("details")">
+                            <div class="role-catalog-fields">
+                                <div class="role-catalog-field">
+                                    <label for="rolecatalog-name">@T["rolecatalog.name"] @if (draft.Id is null) { <span aria-hidden="true">*</span> }</label>
+                                    <RbiInput Id="rolecatalog-name" maxlength="100" Required ReadOnly="@(draft.Id is not null)"
+                                              Invalid="@(NameError is not null)" aria-describedby="@(NameError is not null ? "rolecatalog-name-error" : null)"
+                                              UpdateMode="RbiInputUpdateMode.Input" @bind-Value="draft.Name" @bind-Value:after="ClearFormError" @onblur="ShowValidation" />
+                                    @if (NameError is { } nameError) { <p class="app-error" id="rolecatalog-name-error" role="status">@T[nameError]</p> }
+                                </div>
+                                <div class="role-catalog-field">
+                                    <label for="rolecatalog-description">@T["rolecatalog.description-field"]</label>
+                                    <RbiTextArea Id="rolecatalog-description" Rows="2" maxlength="500"
+                                                 Invalid="@(DescriptionError is not null)" aria-describedby="@(DescriptionError is not null ? "rolecatalog-description-error" : null)"
+                                                 @bind-Value="draft.Description" @onblur="ShowValidation" />
+                                    @if (DescriptionError is { } descriptionError) { <p class="app-error" id="rolecatalog-description-error" role="status">@T[descriptionError]</p> }
+                                </div>
+                            </div>
+                            @if (draft.Id is not null)
+                            {
+                                <RbiCheckbox Id="rolecatalog-active" @bind-Value="draft.IsActive">@T["rolecatalog.active"]</RbiCheckbox>
+                            }
+                        </RbiTabPanel>
+                        <RbiTabPanel TValue="string" Value="@("permissions")">
+                            @if (draft.Permissions.Length > 0)
+                            {
+                                <RbiSelect TValue="string" Id="rolecatalog-module" aria-label="@T["rolecatalog.permission-module"]" @bind-Value="_permissionModule">
+                                    @foreach (var module in draft.Modules)
+                                    {
+                                        <option value="@module">@module</option>
+                                    }
+                                </RbiSelect>
+                                <div class="role-catalog-permission-grid">
+                                    @foreach (var choice in draft.Permissions.Where(choice => choice.Option.Module == _permissionModule))
+                                    {
+                                        <RbiCheckbox @key="choice.Option.Id" Id="@($"rolecatalog-permission-{choice.Option.Id}")" @bind-Value="choice.Selected">@choice.Option.Code</RbiCheckbox>
+                                    }
+                                </div>
+                            }
+                        </RbiTabPanel>
+                    </ChildContent>
+                </RbiTabs>
                 @if (_formError is not null)
                 {
                     <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_formError]" Announcement="RbiAlertAnnouncement.Assertive" />
                 }
-                <div class="registry-toolbar">
-                    <RbiButton Variant="RbiButtonVariant.Secondary" Disabled="_busy" OnClick="() => CloseDialog(false)">@T["common.cancel"]</RbiButton>
-                    <RbiButton Type="RbiButtonType.Submit" Disabled="@_busy">@T["common.save"]</RbiButton>
-                </div>
             </form>
         </DialogBody>
+        <DialogFooter>
+            <RbiButton Variant="RbiButtonVariant.Secondary" Disabled="_busy" OnClick="() => CloseDialog(false)">@T["common.cancel"]</RbiButton>
+            <RbiButton Type="RbiButtonType.Submit" form="role-catalog-editor" Disabled="_busy">@T["common.save"]</RbiButton>
+        </DialogFooter>
     </RbiDialog>
 }
 @code {
+    private sealed class PermissionChoice(RolePermissionOption option, bool selected)
+    {
+        public RolePermissionOption Option { get; } = option;
+        public bool Selected { get; set; } = selected;
+    }
+
     private sealed class RoleDraft
     {
         public long? Id { get; init; }
@@ -155,7 +168,11 @@ else
         public string Description { get; set; } = "";
         public bool IsActive { get; set; } = true;
         public DateTime Version { get; init; }
-        public HashSet<long> PermissionIds { get; init; } = [];
+        public PermissionChoice[] Permissions { get; init; } = [];
+        public IEnumerable<string> Modules => Permissions.Select(choice => choice.Option.Module).Distinct();
+        public IEnumerable<long> OtherPermissionIds { get; init; } = [];
+        public long[] SelectedPermissionIds => Permissions.Where(choice => choice.Selected)
+            .Select(choice => choice.Option.Id).Concat(OtherPermissionIds).ToArray();
     }
 
     private readonly CancellationTokenSource _lifetime = new();
@@ -172,6 +189,7 @@ else
     private RoleDraft? _draft;
     private int TotalPages => Math.Max(1, (int)Math.Ceiling(_page.Total / (double)Math.Max(1, _page.PageSize)));
     private bool _showValidation;
+    private string _editorTab = "details", _permissionModule = "";
     private string? NameError
     {
         get
@@ -249,27 +267,34 @@ else
         }
     }
     private async Task ChangePageAsync(int page) { if (_busy || _refreshing || _searchRequest is not null || page < 1 || page > TotalPages) return; _pageNumber = page; await LoadAsync(); }
-    private void NewRole() { if (_canWrite && !_busy) { _showValidation = false; _formError = null; _draft = new(); } }
+    private void NewRole()
+    {
+        if (_canWrite && !_busy) OpenEditor();
+    }
+
     private void EditRole(RoleDefinition role)
     {
-        if (!_canWrite || role.IsProtected || _busy) return;
+        if (_canWrite && !role.IsProtected && !_busy) OpenEditor(role);
+    }
+
+    private void OpenEditor(RoleDefinition? role = null)
+    {
         _showValidation = false;
         _formError = null;
+        _editorTab = "details";
+        var selected = role?.PermissionIds.ToHashSet() ?? [];
         _draft = new()
         {
-            Id = role.Id,
-            Name = role.Name,
-            Description = role.Description ?? "",
-            IsActive = role.IsActive,
-            Version = role.Version,
-            PermissionIds = role.PermissionIds.ToHashSet()
+            Id = role?.Id,
+            Name = role?.Name ?? "",
+            Description = role?.Description ?? "",
+            IsActive = role?.IsActive ?? true,
+            Version = role?.Version ?? default,
+            OtherPermissionIds = selected.Except(_permissions.Select(permission => permission.Id)).ToArray(),
+            Permissions = _permissions.OrderBy(permission => permission.Module).ThenBy(permission => permission.Code)
+                .Select(permission => new PermissionChoice(permission, selected.Contains(permission.Id))).ToArray()
         };
-    }
-    private void SelectPermission(long id, bool selected)
-    {
-        if (_draft is null) return;
-        if (selected) _draft.PermissionIds.Add(id);
-        else _draft.PermissionIds.Remove(id);
+        _permissionModule = _draft.Modules.FirstOrDefault() ?? "";
     }
     private void ClearFormError()
     {
@@ -310,20 +335,28 @@ else
     {
         if (!_canWrite || _draft is not { } draft || _busy) return;
         _showValidation = true;
-        if (NameError is not null || DescriptionError is not null) return;
+        if (NameError is not null || DescriptionError is not null)
+        {
+            _editorTab = "details";
+            return;
+        }
         _busy = true;
         _formError = null;
         try
         {
             if (draft.Id is { } id)
-                await Api.UpdateAsync(id, new(null, string.IsNullOrWhiteSpace(draft.Description) ? null : draft.Description.Trim(), draft.IsActive, draft.Version, draft.PermissionIds.ToArray()), _token);
+                await Api.UpdateAsync(id, new(null, string.IsNullOrWhiteSpace(draft.Description) ? null : draft.Description.Trim(), draft.IsActive, draft.Version, draft.SelectedPermissionIds), _token);
             else
-                await Api.CreateAsync(new(draft.Name.Trim(), null, string.IsNullOrWhiteSpace(draft.Description) ? null : draft.Description.Trim(), draft.PermissionIds.ToArray()), _token);
+                await Api.CreateAsync(new(draft.Name.Trim(), null, string.IsNullOrWhiteSpace(draft.Description) ? null : draft.Description.Trim(), draft.SelectedPermissionIds), _token);
             _draft = null;
             _notice = "rolecatalog.saved";
             await LoadAsync();
         }
-        catch (RegistryApiException exception) { _formError = exception.MessageKey; }
+        catch (RegistryApiException exception)
+        {
+            _formError = exception.MessageKey;
+            if (_formError == "errors.roles.duplicate.name") _editorTab = "details";
+        }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         finally { _busy = false; }
     }

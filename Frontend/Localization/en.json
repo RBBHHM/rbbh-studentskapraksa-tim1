@@ -662,6 +662,8 @@
     "rolecatalog.invalid-name": "Use letters, numbers, periods, underscores or hyphens. The names admin and gost are reserved.",
     "rolecatalog.name": "Role name",
     "rolecatalog.display-name": "Display name",
+    "rolecatalog.details": "Details",
+    "rolecatalog.permission-module": "Permission group",
     "rolecatalog.permissions": "Permissions",
     "rolecatalog.status": "Status",
     "rolecatalog.active": "Active role",

@@ -662,6 +662,8 @@
     "rolecatalog.invalid-name": "Verwenden Sie Buchstaben, Zahlen, Punkte, Unterstriche oder Bindestriche. Die Namen admin und gost sind reserviert.",
     "rolecatalog.name": "Rollenname",
     "rolecatalog.display-name": "Anzeigename",
+    "rolecatalog.details": "Details",
+    "rolecatalog.permission-module": "Berechtigungsgruppe",
     "rolecatalog.permissions": "Berechtigungen",
     "rolecatalog.status": "Status",
     "rolecatalog.active": "Aktive Rolle",

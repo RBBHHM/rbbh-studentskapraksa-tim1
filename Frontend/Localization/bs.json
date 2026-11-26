@@ -662,6 +662,8 @@
     "rolecatalog.invalid-name": "Koristite slova, brojeve, tačku, podvlaku ili crticu. Nazivi admin i gost su rezervisani.",
     "rolecatalog.name": "Naziv role",
     "rolecatalog.display-name": "Prikazni naziv",
+    "rolecatalog.details": "Detalji",
+    "rolecatalog.permission-module": "Grupa dozvola",
     "rolecatalog.permissions": "Dozvole",
     "rolecatalog.status": "Status",
     "rolecatalog.active": "Aktivna rola",

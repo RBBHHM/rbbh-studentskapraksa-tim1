@@ -31,7 +31,20 @@ test("admin can create a DB-backed role with selected permission and search for 
   await page.getByRole("button", { name: "Nova rola" }).click();
   await page.locator("#rolecatalog-name").fill("qa_custom");
   await page.locator("#rolecatalog-description").fill("Automated test role");
-  await page.locator("input[id^='rolecatalog-permission-']").first().check();
+  const dialog = page.getByRole("dialog", { name: "Nova rola" });
+  await dialog.getByRole("tab", { name: "Dozvole", exact: true }).click();
+  const firstPermission = dialog.getByRole("checkbox").first();
+  await firstPermission.press("Space");
+  await expect(firstPermission).toBeChecked();
+  const group = dialog.getByRole("combobox", { name: "Grupa dozvola" });
+  const firstModule = await group.inputValue();
+  const lastModule = await group.locator("option").last().getAttribute("value");
+  expect(lastModule).not.toBe(firstModule);
+  await group.selectOption(lastModule!);
+  await group.selectOption(firstModule);
+  await expect(firstPermission).toBeChecked();
+  await dialog.getByRole("tab", { name: "Detalji", exact: true }).click();
+  await expect(dialog.locator("#rolecatalog-name")).toHaveValue("qa_custom");
   await page.getByRole("button", { name: "Sačuvaj" }).click();
   await expect(page.getByRole("status").getByText("Rola je uspješno sačuvana.")).toBeVisible();
   await page.locator("#rolecatalog-search").fill("qa_custom");
@@ -49,12 +62,24 @@ test("duplicate role shows an alert and fields adapt to smaller screens", async 
   await page.getByRole("button", { name: "Nova rola" }).click();
   const dialog = page.getByRole("dialog", { name: "Nova rola" });
   const columns = dialog.locator(".role-catalog-permission-grid");
+  await dialog.getByRole("tab", { name: "Dozvole", exact: true }).click();
   await expect(columns).toHaveCSS("grid-template-columns", /^\S+ \S+$/);
+  await dialog.getByRole("tab", { name: "Detalji", exact: true }).click();
   await dialog.locator("#rolecatalog-name").fill("FL");
   await dialog.getByRole("button", { name: "Sačuvaj" }).click();
   await expect(dialog.getByRole("alert")).toHaveText("Rola s odabranim nazivom već postoji.");
-  await page.setViewportSize({ width: 390, height: 844 });
-  await expect(columns).toHaveCSS("grid-template-columns", /^\S+$/);
+  await page.setViewportSize({ width: 390, height: 620 });
   await dialog.locator("#rolecatalog-name").fill("nova_qa_rola");
   await expect(dialog.getByRole("alert")).toHaveCount(0);
+  await dialog.getByRole("tab", { name: "Dozvole", exact: true }).click();
+  await expect(columns).toHaveCSS("grid-template-columns", /^\S+$/);
+  const group = dialog.getByRole("combobox", { name: "Grupa dozvola" });
+  for (const option of await group.locator("option").evaluateAll(nodes => nodes.map(node => (node as HTMLOptionElement).value))) {
+    await group.selectOption(option);
+    await expect.poll(() => dialog.locator(".rbi-modal__body").evaluate(node =>
+      node.scrollHeight <= node.clientHeight && node.scrollWidth <= node.clientWidth)).toBe(true);
+  }
+  await expect(dialog.getByRole("button", { name: "Sačuvaj" })).toBeInViewport();
+  await dialog.getByRole("button", { name: "Odustani", exact: true }).click();
+  expect(await page.locator(".rbi-table-scroll").evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
 });

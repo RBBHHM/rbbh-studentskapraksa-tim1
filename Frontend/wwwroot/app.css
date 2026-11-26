@@ -422,8 +422,6 @@ h1[tabindex="-1"]:focus, h1:focus-visible { outline: none; }
 .profile-requests__list { margin: .5rem 0 0; padding-inline-start: 1.25rem; }
 @media (max-width: 40rem) { .app-role-request { display: none; } }
 .capital-section { margin: 1.5rem 0 .5rem; font-size: var(--font-size-lg, 1.125rem); }
-.capital-asof__controls { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
-.capital-asof__result { margin: .75rem 0 0; }
 .capital-state { display: inline-block; padding: .1rem .6rem; border-radius: 999px; border: 1px solid var(--border-subtle); font-size: var(--font-size-sm); }
 .capital-state--active { background: var(--surface-brand-subtle); border-color: var(--border-brand); font-weight: 700; }
 .capital-state--corrected { text-decoration: line-through; }
@@ -464,10 +462,27 @@ h1[tabindex="-1"]:focus, h1:focus-visible { outline: none; }
     box-shadow: none;
     outline: none;
 }
-.rbi-dialog.role-catalog-dialog:not(.rbi-command-dialog) { width: min(calc(100vw - 2rem), 56rem); }
+.rbi-dialog.role-catalog-dialog:not(.rbi-command-dialog) {
+    width: min(calc(100vw - 2rem), 54rem);
+    max-height: calc(100dvh - 2rem);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+}
+.rbi-dialog.role-catalog-dialog .rbi-modal__footer {
+    flex-flow: row wrap;
+    justify-content: flex-end;
+    padding-block-start: var(--space-4);
+}
 .role-catalog-form { display: grid; gap: .75rem; }
 .role-request-dialog textarea { box-sizing: border-box; width: 100%; min-width: 0; font: inherit; }
-.role-catalog-fields, .role-catalog-permission-grid { display: grid; gap: .625rem .875rem; }
+.role-catalog-fields, .role-catalog-permission-grid { display: grid; gap: var(--space-3) var(--space-4); }
+.role-catalog-alert { margin-block: var(--space-4); align-items: center; }
+.role-catalog-alert .rbi-alert__icon { margin-block-start: 0; }
+.role-catalog-alert .rbi-alert__description:empty { display: none; }
+.role-catalog-tabs .rbi-tabs__list { flex-wrap: wrap; overflow: visible; }
+.role-catalog-tabs .rbi-tab-panel:not([hidden]) { display: grid; gap: var(--space-4); min-width: 0; }
+.role-catalog-tabs .rbi-tab:focus-visible { outline-offset: calc(-1 * var(--focus-ring-width)); }
+.role-catalog-tabs .rbi-select { width: min(100%, 24rem); }
+.role-catalog-permission-grid .rbi-choice__label { overflow-wrap: anywhere; }
 .role-catalog-field { display: grid; gap: .25rem; min-width: 0; }
 .role-catalog-field label { font-weight: var(--font-weight-semibold, 600); }
 .role-catalog-fields :is(input, textarea) {
@@ -477,7 +492,6 @@ h1[tabindex="-1"]:focus, h1:focus-visible { outline: none; }
     border-radius: .625rem;
 }
 .role-catalog-fields input[readonly] { background: var(--surface-muted); }
-.role-catalog-permissions legend { font-weight: var(--font-weight-semibold, 600); }
 .role-catalog-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .375rem; }
 .role-catalog-actions .role-catalog-delete {
     background: color-mix(in srgb, var(--feedback-danger-foreground) 10%, var(--surface-default));
@@ -486,18 +500,6 @@ h1[tabindex="-1"]:focus, h1:focus-visible { outline: none; }
 .role-catalog-actions .role-catalog-delete:hover:not(:disabled) {
     background: color-mix(in srgb, var(--feedback-danger-foreground) 18%, var(--surface-default));
 }
-.role-catalog-permissions, .role-catalog-permission-group { min-width: 0; margin: 0; }
-.role-catalog-permissions { padding: 0; border: 0; }
-.role-catalog-permission-grid { margin-block-start: .375rem; align-items: start; }
-.role-catalog-permission-group {
-    padding: .25rem .625rem .375rem;
-    border: 1px solid var(--border-subtle);
-    border-radius: .5rem;
-}
-.role-catalog-permission-group legend { padding-inline: .25rem; font-size: var(--font-size-sm); overflow-wrap: anywhere; }
-.role-catalog-permission { display: flex; align-items: center; gap: .5rem; min-height: 1.65rem; overflow-wrap: anywhere; }
-.role-catalog-permission input { flex: none; margin: 0; accent-color: var(--text-primary); }
-.role-catalog-form > :is(.app-hint, .app-error, .registry-toolbar) { margin: 0; }
 @media (min-width: 42rem) {
     .role-catalog-permission-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
@@ -579,20 +581,58 @@ h1[tabindex="-1"]:focus, h1:focus-visible { outline: none; }
     .role-request-dialog textarea.role-request-note:focus-visible { outline: 2px solid Highlight; }
 }
 
-.capital-current {
+.rbi-card.capital-current {
     background: var(--surface-brand-subtle);
-    border: 1px solid var(--border-subtle);
-    border-inline-start: .25rem solid var(--border-brand);
-    border-radius: .75rem;
-    padding: .75rem 1rem 1rem;
+    border-inline-start: var(--border-width-accent) solid var(--border-brand);
 }
 .capital-current .capital-section { margin-block-start: 0; }
-.capital-asof__controls { display: grid; grid-template-columns: minmax(0, 10.5rem) minmax(0, 1fr); }
-.capital-asof__controls input { width: 100%; min-width: 0; }
+.capital-asof__controls {
+    display: grid;
+    grid-template-columns: minmax(0, 14rem) minmax(0, 1fr);
+    gap: var(--space-4);
+    align-items: center;
+}
+.capital-asof__date {
+    width: min(100%, 14rem);
+    min-width: 0;
+    min-height: var(--size-touch-target-min);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radii-md);
+    font-size: var(--font-size-sm);
+}
+:is(.capital-asof__date, .registry-form-grid .rbi-control:is([type="number"], [type="date"])):focus-visible {
+    outline-offset: calc(-1 * var(--focus-ring-width));
+}
 .capital-asof__result { margin: 0; }
-@media (max-width: 420px) {
+@media (max-width: 36rem) {
     .capital-asof__controls { grid-template-columns: minmax(0, 1fr); }
-    .capital-asof__controls input { max-width: 10.5rem; }
+}
+
+.registry-table.registry-reflow-table { min-width: 0; table-layout: fixed; }
+.registry-table.registry-reflow-table :is(th, td) { white-space: normal; overflow-wrap: anywhere; }
+.registry-cell-label { display: none; }
+@media (max-width: 48rem) {
+    .registry-reflow-table :is(thead, tbody, tr) { display: block; }
+    .registry-reflow-table thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+    }
+    .registry-reflow-table tbody tr { padding: var(--space-2) var(--space-3); }
+    .registry-table.registry-reflow-table td { display: block; max-width: none; padding: var(--space-2); }
+    .registry-table.registry-reflow-table td:has(> .registry-cell-label) {
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+        align-items: center;
+        gap: var(--space-3);
+    }
+    .registry-cell-label {
+        display: block;
+        color: var(--text-secondary);
+        font-weight: var(--font-weight-medium);
+    }
 }
 
 .codes-cards { grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr)); gap: .75rem; }

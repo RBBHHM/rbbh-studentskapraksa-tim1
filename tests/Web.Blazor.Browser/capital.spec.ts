@@ -135,8 +135,19 @@ test("375px capital view/editor retain keyboard focus and no page overflow", asy
   await page.setViewportSize({ width: 375, height: 812 }); await request.post("/__fixtures/limit-reference", { headers }); await open(page);
   const launcher = page.getByRole("button", { name: "Uredi kapital", exact: true }); await launcher.click();
   await expect(page.getByRole("dialog").getByLabel("Vrijedi do", { exact: false })).toHaveValue("9999-12-31");
+  const number = page.locator("#capital-regulatory");
+  await number.press("Tab");
+  const next = page.locator("#capital-core");
+  await expect(next).toBeFocused();
+  await expect(next).toHaveCSS("outline-offset", /^-/);
+  await expect(next).toHaveCSS("outline-style", "solid");
   await page.keyboard.press("Escape"); await expect(page.getByRole("dialog")).not.toBeVisible(); await expect(launcher).toBeFocused();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  expect(await page.locator(".rbi-table-scroll").evaluateAll(nodes =>
+    nodes.every(node => node.scrollWidth <= node.clientWidth))).toBe(true);
+  const lookup = page.locator("#capital-asof-date");
+  expect(await lookup.evaluate(node => parseFloat(getComputedStyle(node).paddingInlineStart))).toBeGreaterThanOrEqual(12);
+  await expect(page.locator(".rbi-card.capital-current")).toBeVisible();
   await page.screenshot({ path: info.outputPath("capital-mobile.png"), fullPage: true });
 });
 test("BS/EN capital wording and API culture persist", async ({ page, request }) => {

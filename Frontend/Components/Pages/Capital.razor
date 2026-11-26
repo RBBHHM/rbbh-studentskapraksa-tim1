@@ -34,21 +34,38 @@ else
 {
     @if (_canEdit && _periodLocked) { <RbiAlert Title="@T[_periodError ?? "errors.locked"]" /> }
     @if (_notice) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@T["toast.capital"]" /></div> }
-    <section class="capital-current" aria-labelledby="capital-active-title">
-    <h2 id="capital-active-title" class="capital-section">@T["capital.active"]</h2>
-    <RbiTable AccessibleLabel="@T["capital.title"]" Class="registry-table registry-capital-table">
-        <thead><tr><th scope="col">@T["limit.core"]</th><th scope="col">@T["limit.regulatory"]</th><th scope="col">@T["capital.supplementary"]</th><th scope="col">@T["capital.valid-from"]</th><th scope="col">@T["capital.valid-to"]</th></tr></thead>
-        <tbody>
-            @if (_record is { } record) { <tr><td>@Money(record.CoreCapital)</td><td>@Money(record.RegulatoryCapital)</td><td>@Money(record.SupplementaryCapital)</td><td>@CapitalDay(record.CapitalDate)</td><td>@CapitalDay(record.ValidTill)</td></tr> }
-            else { <tr><td colspan="5" role="status">@T["capital.empty"]</td></tr> }
-        </tbody>
-    </RbiTable>
-    </section>
+    <RbiCard Class="capital-current" Padding="RbiCardPadding.Compact" role="region" aria-labelledby="capital-active-title">
+        <h2 id="capital-active-title" class="capital-section">@T["capital.active"]</h2>
+        <RbiTable AccessibleLabel="@T["capital.title"]" Class="registry-table registry-capital-table registry-reflow-table">
+            <thead>
+                <tr>
+                    <th scope="col">@T["limit.core"]</th>
+                    <th scope="col">@T["limit.regulatory"]</th>
+                    <th scope="col">@T["capital.supplementary"]</th>
+                    <th scope="col">@T["capital.valid-from"]</th>
+                    <th scope="col">@T["capital.valid-to"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (_record is { } record)
+                {
+                    <tr>
+                        <td><span class="registry-cell-label" aria-hidden="true">@T["limit.core"]</span>@Money(record.CoreCapital)</td>
+                        <td><span class="registry-cell-label" aria-hidden="true">@T["limit.regulatory"]</span>@Money(record.RegulatoryCapital)</td>
+                        <td><span class="registry-cell-label" aria-hidden="true">@T["capital.supplementary"]</span>@Money(record.SupplementaryCapital)</td>
+                        <td><span class="registry-cell-label" aria-hidden="true">@T["capital.valid-from"]</span>@CapitalDay(record.CapitalDate)</td>
+                        <td><span class="registry-cell-label" aria-hidden="true">@T["capital.valid-to"]</span>@CapitalDay(record.ValidTill)</td>
+                    </tr>
+                }
+                else { <tr><td colspan="5" role="status">@T["capital.empty"]</td></tr> }
+            </tbody>
+        </RbiTable>
+    </RbiCard>
     <section class="capital-asof" aria-labelledby="capital-asof-title">
         <h2 id="capital-asof-title" class="capital-section">@T["capital.asof"]</h2>
         <div class="capital-asof__controls">
-            <input id="capital-asof-date" class="rbi-control" type="date" aria-labelledby="capital-asof-title"
-                   @bind="_asOfDate" @bind:format="yyyy-MM-dd" @bind:after="AsOfAsync" />
+            <InputDate TValue="DateTime?" id="capital-asof-date" class="rbi-control capital-asof__date"
+                       aria-labelledby="capital-asof-title" @bind-Value="_asOfDate" @bind-Value:after="AsOfAsync" />
             <p role="status" class="capital-asof__result">
                 @if (_asOfLoading) { @T["state.loading"] }
                 else if (_asOfError is not null) { @T[_asOfError] }
@@ -65,16 +82,16 @@ else
         @if (_history.Count == 0) { <p role="status">@T["capital.history-empty"]</p> }
         else
         {
-            <RbiTable AccessibleLabel="@T["capital.history"]" Class="registry-table registry-capital-history">
+            <RbiTable AccessibleLabel="@T["capital.history"]" Class="registry-table registry-capital-history registry-reflow-table">
                 <thead><tr><th scope="col">@T["capital.valid-from"]</th><th scope="col">@T["capital.valid-to"]</th><th scope="col">@T["limit.core"]</th><th scope="col">@T["limit.regulatory"]</th><th scope="col">@T["capital.supplementary"]</th><th scope="col">@T["capital.recorded-by"]</th><th scope="col">@T["capital.state"]</th></tr></thead>
                 <tbody>
                 @foreach (var row in _history)
                 {
                     <tr @key="row.Id" data-state="previous">
-                        <td>@CapitalDay(row.EffectiveDate)</td><td>@CapitalDay(row.ValidTill)</td>
-                        <td>@Money(row.CoreCapital)</td><td>@Money(row.RegulatoryCapital)</td><td>@Money(row.SupplementaryCapital)</td>
-                        <td>@(string.IsNullOrEmpty(row.RecordedBy) ? "—" : row.RecordedBy)</td>
-                        <td><span class="capital-state capital-state--previous">@T["capital.state.previous"]</span></td>
+                        <td><span class="registry-cell-label" aria-hidden="true">@T["capital.valid-from"]</span>@CapitalDay(row.EffectiveDate)</td><td><span class="registry-cell-label" aria-hidden="true">@T["capital.valid-to"]</span>@CapitalDay(row.ValidTill)</td>
+                        <td><span class="registry-cell-label" aria-hidden="true">@T["limit.core"]</span>@Money(row.CoreCapital)</td><td><span class="registry-cell-label" aria-hidden="true">@T["limit.regulatory"]</span>@Money(row.RegulatoryCapital)</td><td><span class="registry-cell-label" aria-hidden="true">@T["capital.supplementary"]</span>@Money(row.SupplementaryCapital)</td>
+                        <td><span class="registry-cell-label" aria-hidden="true">@T["capital.recorded-by"]</span>@(string.IsNullOrEmpty(row.RecordedBy) ? "—" : row.RecordedBy)</td>
+                        <td><span class="registry-cell-label" aria-hidden="true">@T["capital.state"]</span><span class="capital-state capital-state--previous">@T["capital.state.previous"]</span></td>
                     </tr>
                 }
                 </tbody>
