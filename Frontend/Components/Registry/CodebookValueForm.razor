@@ -3,7 +3,7 @@
 <form class="custom-codebook-form" @onsubmit="SubmitAsync" @onsubmit:preventDefault novalidate>
     @if (_error is not null)
     {
-        <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_error]" Announcement="RbiAlertAnnouncement.Assertive" />
+        <RbiAlert Class="codebook-form-alert" Tone="RbiAlertTone.Danger" Title="@T[_error]" Announcement="RbiAlertAnnouncement.Assertive" />
     }
     <fieldset disabled="@_busy">
         <legend class="app-visually-hidden">@T["codes.create"]</legend>

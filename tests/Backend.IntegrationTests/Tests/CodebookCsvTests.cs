@@ -29,11 +29,11 @@ public abstract class CodebookCsvFixture : LocalizationFixture
         });
     }
 
-    protected async Task<JsonElement> Import(string category, string data, bool dryRun)
+    protected async Task<JsonElement> Import(string category, string data, bool dryRun, bool allowPartial = false)
     {
         using var body = new MultipartFormDataContent();
         body.Add(new ByteArrayContent(Encoding.UTF8.GetBytes(data)), "file", "values.csv");
-        using var response = await Client.PostAsync($"/api/code-lists/{category}/csv-import?dryRun={dryRun}", body);
+        using var response = await Client.PostAsync($"/api/code-lists/{category}/csv-import?dryRun={dryRun}&allowPartial={allowPartial}", body);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         return await response.Content.ReadFromJsonAsync<JsonElement>();
     }
@@ -93,6 +93,72 @@ public sealed class CodebookCsvTests : CodebookCsvFixture
         Assert.Contains(result.GetProperty("errors").EnumerateArray(), issue => issue.GetProperty("key").GetString() == expected);
         Assert.Equal(0, result.GetProperty("imported").GetInt32());
         await InDatabase(async db => Assert.Empty(await db.CodeLists.Where(row => row.Kategorija == "CSV_FIXTURE").ToListAsync()));
+    }
+
+    [Fact]
+    public async Task ExistingRelationshipCodebookAcceptsManualEntry()
+    {
+        await InDatabase(async db =>
+        {
+            db.CodeListDefinitions.Add(new() { Name = "SRODSTVO", CreatedBy = "fixture" });
+            await db.SaveChangesAsync();
+        });
+        using var result = await Client.PostAsJsonAsync("/api/code-lists",
+            new { kategorija = "SRODSTVO", kod = "TT", naziv = "Testno srodstvo", aktivan = true });
+        Assert.True(result.StatusCode == HttpStatusCode.Created, await result.Content.ReadAsStringAsync());
+        using var value = await Client.GetAsync(result.Headers.Location);
+        Assert.Equal(HttpStatusCode.OK, value.StatusCode);
+        using var duplicate = await Client.PostAsJsonAsync("/api/code-lists",
+            new { kategorija = "SRODSTVO", kod = "tt", naziv = "Ponovni unos", aktivan = true });
+        Assert.Equal(HttpStatusCode.BadRequest, duplicate.StatusCode);
+        Assert.Equal("codes.value_duplicate", (await duplicate.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task CustomCsvPreviewsEveryInvalidCellAndImportsValidRowsAfterOptIn()
+    {
+        const string category = "EXCEL_DATES";
+        using var definition = await Client.PostAsJsonAsync("/api/code-lists/categories", new
+        {
+            name = category,
+            columns = new[]
+            {
+                new { slot = 2, name = "bit kolona", position = 1 },
+                new { slot = 3, name = "cijena", position = 2 },
+                new { slot = 9, name = "neki datum", position = 3 },
+                new { slot = 11, name = "datum i vrijeme kolona", position = 4 }
+            }
+        });
+        Assert.Equal(HttpStatusCode.Created, definition.StatusCode);
+
+        const string csv = """
+            bit kolona,cijena,neki datum,datum i vrijeme kolona
+            TRUE,42,12/31/2026,2026-12-31T13:45:00
+            FALSE,31241,12/31/2026,2026-12-31T13:45:00
+            TRUE,2154,12/31/2026,2026-12-31T13:45:00
+            213,12,12/31/2026,2026-12-31T13:45:00
+            213,2141,12/31/2026,2026-12-31T13:45:00
+            TRUE,124,12/31/2026,2026-12-31T13:45:00
+            """;
+        var preview = await Import(category, csv, true);
+        Assert.Equal(6, preview.GetProperty("totalRows").GetInt32());
+        Assert.Equal(4, preview.GetProperty("ready").GetInt32());
+        Assert.True(preview.GetProperty("allowsPartial").GetBoolean());
+        Assert.Equal(new[] { "5", "6" },
+            preview.GetProperty("errors").EnumerateArray().Select(issue => issue.GetProperty("arguments")[0].GetString()));
+        Assert.All(preview.GetProperty("errors").EnumerateArray(),
+            issue => Assert.Equal("bit kolona", issue.GetProperty("arguments")[1].GetString()));
+
+        Assert.Equal(0, (await Import(category, csv, false)).GetProperty("imported").GetInt32());
+        var validation = await Import(category, csv.Replace("213,12,12/31/2026", "213,12,2/30/2026"), true);
+        Assert.Equal(new[] { "bit kolona", "neki datum" }, validation.GetProperty("errors").EnumerateArray()
+            .Where(issue => issue.GetProperty("arguments")[0].GetString() == "5")
+            .Select(issue => issue.GetProperty("arguments")[1].GetString()));
+
+        Assert.Equal(4, (await Import(category, csv, false, allowPartial: true)).GetProperty("imported").GetInt32());
+        var retry = await Import(category, csv, false, allowPartial: true);
+        Assert.Equal(0, retry.GetProperty("imported").GetInt32());
+        Assert.Equal(4, retry.GetProperty("duplicates").GetInt32());
     }
 
     [Fact]
@@ -176,6 +242,7 @@ public sealed class CodebookCsvSqlTests : CodebookCsvFixture
         using var duplicate = await Client.PostAsJsonAsync("/api/code-lists",
             new { kategorija = "SRODSTVO", kod = "RPR_QA_TT", naziv = "Ponovni unos", aktivan = true });
         Assert.Equal(HttpStatusCode.BadRequest, duplicate.StatusCode);
+        Assert.Equal("codes.value_duplicate", (await duplicate.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
     }
 
     [SqlServerFact]

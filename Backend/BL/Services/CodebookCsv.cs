@@ -22,7 +22,8 @@ public sealed record CodebookColumn(int Slot, string Name, string? Description, 
     };
 }
 public sealed record CsvIssue(string Key, params string[] Arguments);
-public sealed record CsvPreview(int TotalRows, int Ready, int Duplicates, int Imported, bool ExampleSkipped, IReadOnlyList<CsvIssue> Errors);
+public sealed record CsvPreview(int TotalRows, int Ready, int Duplicates, int Imported, bool ExampleSkipped, IReadOnlyList<CsvIssue> Errors,
+    bool AllowsPartial = false);
 
 internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
 {
@@ -32,6 +33,8 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
     private static readonly Regex Code = new("^[A-Za-z0-9_-]+$", RegexOptions.CultureInvariant);
     private static readonly Regex ResourceKey = new("^[a-z][a-z0-9]*(?:[.-][a-z][a-z0-9]*)+$", RegexOptions.CultureInvariant);
     private static readonly UTF8Encoding Utf8 = new(false, true);
+    private static readonly string[] DateFormats = ["yyyy-MM-dd", "M/d/yyyy", "d.M.yyyy"];
+    private static readonly string[] DateTimeFormats = ["yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd'T'HH:mm:ss.FFFFFFF"];
 
     internal static IReadOnlyList<CodebookColumn> Columns(ConnectedPartiesDbContext db, CodeListDefinition definition)
     {
@@ -112,7 +115,7 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
         return values.ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
-    internal async Task<CsvPreview> Import(CodeListDefinition definition, Stream file, bool dryRun, string actor, CancellationToken ct)
+    internal async Task<CsvPreview> Import(CodeListDefinition definition, Stream file, bool dryRun, string actor, CancellationToken ct, bool allowPartial = false)
     {
         var packs = definition.Name == LanguageBooks.Packs;
         var languages = definition.Name == LanguageBooks.Languages;
@@ -191,7 +194,7 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
                 if (!TryValue(field, input, out var value))
                 {
                     issues.Add(new(string.IsNullOrWhiteSpace(input) ? "codes.csv.required" : "codes.csv.invalid", line, field.Header, field.Example));
-                    break;
+                    continue;
                 }
                 values.Add(field.Slot, value);
             }
@@ -238,7 +241,7 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
 
         if (total == 0) return Failure("codes.csv.data");
         var imported = 0;
-        if (!dryRun && issues.Count == 0 && pending.Count > 0)
+        if (!dryRun && pending.Count > 0 && (issues.Count == 0 || (allowPartial && definition.UsesCustomColumns)))
         {
             var now = DateTime.UtcNow;
             foreach (var values in pending) Add(definition, values, actor, now);
@@ -248,7 +251,7 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
             await db.SaveChangesAsync(ct);
             imported = pending.Count;
         }
-        return new(total - (exampleSkipped ? 1 : 0), pending.Count, duplicates, imported, exampleSkipped, issues);
+        return new(total - (exampleSkipped ? 1 : 0), pending.Count, duplicates, imported, exampleSkipped, issues, definition.UsesCustomColumns);
     }
 
     private static CsvPreview Failure(string key, params string[] parameters) => new(0, 0, 0, 0, false, [new(key, parameters)]);
@@ -337,7 +340,7 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
                 value = number;
                 return true;
             case 9 or 10 or 11:
-                string[] formats = field.Slot == 11 ? ["yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd'T'HH:mm:ss.FFFFFFF"] : ["yyyy-MM-dd"];
+                var formats = field.Slot == 11 ? DateTimeFormats : DateFormats;
                 if (!DateTime.TryParseExact(trimmed, formats, Invariant, DateTimeStyles.None, out var date)) return false;
                 value = date;
                 return true;

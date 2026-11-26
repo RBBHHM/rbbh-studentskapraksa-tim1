@@ -103,7 +103,7 @@ public partial class CodeListController(ICodeListService codeListService, Connec
     [Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(CodebookCsv.MaximumBytes + 64 * 1024)]
-    public async Task<IActionResult> ImportCsv(string category, IFormFile? file, CancellationToken ct, [FromQuery] bool dryRun = true)
+    public async Task<IActionResult> ImportCsv(string category, IFormFile? file, CancellationToken ct, [FromQuery] bool dryRun = true, [FromQuery] bool allowPartial = false)
     {
         if (file is null || file.Length is <= 0 or > CodebookCsv.MaximumBytes ||
             !Path.GetExtension(file.FileName).Equals(".csv", StringComparison.OrdinalIgnoreCase))
@@ -113,7 +113,7 @@ public partial class CodeListController(ICodeListService codeListService, Connec
         if (definition is null) return NotFound();
 
         await using var stream = file.OpenReadStream();
-        try { return Ok(await csv.Import(definition, stream, dryRun, GetKorisnik(), ct)); }
+        try { return Ok(await csv.Import(definition, stream, dryRun, GetKorisnik(), ct, allowPartial)); }
         catch (DbUpdateException exception) when (exception is DbUpdateConcurrencyException ||
             exception.GetBaseException() is SqlException { Number: 2601 or 2627 })
         {

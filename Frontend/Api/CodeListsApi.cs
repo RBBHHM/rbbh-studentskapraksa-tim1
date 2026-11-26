@@ -12,7 +12,11 @@ public sealed record CodeValues(string Category, IReadOnlyList<CodeValue> Items,
 public sealed record CreateCodeValue(string Kategorija, string Kod, string Naziv, string? Opis, bool Aktivan);
 public sealed record UpdateCodeValue(string Naziv, string? Opis, bool Aktivan);
 public sealed record CodeCsvIssue(string Key, string[] Arguments);
-public sealed record CodeCsvPreview(int TotalRows, int Ready, int Duplicates, int Imported, bool ExampleSkipped, IReadOnlyList<CodeCsvIssue> Errors);
+public sealed record CodeCsvPreview(int TotalRows, int Ready, int Duplicates, int Imported, bool ExampleSkipped, IReadOnlyList<CodeCsvIssue> Errors,
+    bool AllowsPartial = false)
+{
+    public bool CanImport => Ready > 0 && (Errors.Count == 0 || AllowsPartial);
+}
 public sealed record CodeImportPreview(int TotalRows, IReadOnlyList<string> ToImport, IReadOnlyList<string> Duplicates,
     IReadOnlyList<string> Errors, int Imported);
 /// <summary>Administrative metadata of a code list definition (who created it and who changed it last).</summary>
@@ -38,7 +42,7 @@ public interface ICodeListsApi
     Task UpdateAsync(int id, UpdateCodeValue request, CancellationToken token = default);
     Task DeleteAsync(int id, CancellationToken token = default);
     Task<RbiApiFile> CsvTemplateAsync(string category, CancellationToken token = default);
-    Task<CodeCsvPreview> ImportCsvAsync(string category, Stream file, string fileName, bool dryRun, CancellationToken token = default);
+    Task<CodeCsvPreview> ImportCsvAsync(string category, Stream file, string fileName, bool dryRun, CancellationToken token = default, bool allowPartial = false);
     Task<CodeImportPreview> ImportAsync(string category, Stream file, string fileName, bool dryRun, CancellationToken token = default);
 }
 public sealed class CodeListsApi(IRbiApiFileTransport transport) : ICodeListsApi
@@ -107,6 +111,9 @@ public sealed class CodeListsApi(IRbiApiFileTransport transport) : ICodeListsApi
             "codes.cell_invalid" => "codes.cell-invalid",
             "codes.cell_required" => "codes.cell-required",
             "codes.concurrent" => "codes.concurrent",
+            "codes.value_duplicate" => "codes.value-code-used",
+            "codes.value_inactive_category" => "codes.value-inactive-category",
+            "codes.value_in_use" => "codes.value-in-use",
             _ when error?.StatusCode is null || (int)error.StatusCode >= 500 => "codes.value-uncertain",
             _ => new RegistryApiException(error.StatusCode).MessageKey
         };
@@ -121,14 +128,14 @@ public sealed class CodeListsApi(IRbiApiFileTransport transport) : ICodeListsApi
         Value(await transport.SendAsync<JsonElement>(method, path, body, token), token);
     public async Task<RbiApiFile> CsvTemplateAsync(string category, CancellationToken token = default) =>
         Value(await transport.DownloadAsync($"api/code-lists/{Uri.EscapeDataString(category)}/csv-template", cancellationToken: token), token);
-    public async Task<CodeCsvPreview> ImportCsvAsync(string category, Stream file, string fileName, bool dryRun, CancellationToken token = default)
+    public async Task<CodeCsvPreview> ImportCsvAsync(string category, Stream file, string fileName, bool dryRun, CancellationToken token = default, bool allowPartial = false)
     {
         using var multipart = new MultipartFormDataContent();
         var content = new StreamContent(file);
         content.Headers.ContentType = new("text/csv");
         multipart.Add(content, "file", fileName);
         return Value(await transport.PostMultipartAsync<CodeCsvPreview>(
-            $"api/code-lists/{Uri.EscapeDataString(category)}/csv-import?dryRun={dryRun.ToString().ToLowerInvariant()}", multipart, token), token);
+            $"api/code-lists/{Uri.EscapeDataString(category)}/csv-import?dryRun={dryRun.ToString().ToLowerInvariant()}&allowPartial={allowPartial.ToString().ToLowerInvariant()}", multipart, token), token);
     }
     public async Task<CodeImportPreview> ImportAsync(string category, Stream file, string fileName, bool dryRun, CancellationToken token = default)
     {
@@ -165,7 +172,7 @@ internal sealed class UnconfiguredCodeListsApi : ICodeListsApi
     public Task UpdateAsync(int id, UpdateCodeValue request, CancellationToken token = default) => Unavailable();
     public Task DeleteAsync(int id, CancellationToken token = default) => Unavailable();
     public Task<RbiApiFile> CsvTemplateAsync(string category, CancellationToken token = default) => Task.FromException<RbiApiFile>(new RegistryApiException());
-    public Task<CodeCsvPreview> ImportCsvAsync(string category, Stream file, string fileName, bool dryRun, CancellationToken token = default) => Task.FromException<CodeCsvPreview>(new RegistryApiException());
+    public Task<CodeCsvPreview> ImportCsvAsync(string category, Stream file, string fileName, bool dryRun, CancellationToken token = default, bool allowPartial = false) => Task.FromException<CodeCsvPreview>(new RegistryApiException());
     public Task<CodeImportPreview> ImportAsync(string category, Stream file, string fileName, bool dryRun, CancellationToken token = default)
     { file.Dispose(); return Task.FromException<CodeImportPreview>(new RegistryApiException()); }
 }

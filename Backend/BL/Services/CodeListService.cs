@@ -102,7 +102,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
 
         if (postoji)
             return Result<CodeListResponseDTO>.ValidationError(
-                BackendMessages.Message("validation.codelist.value.duplicate", dto.Kod, dto.Kategorija));
+                BackendMessages.Message("validation.codelist.value.duplicate", dto.Kod, dto.Kategorija), code: "codes.value_duplicate");
 
         var entitet = new CodeList
         {
@@ -116,8 +116,10 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
         };
 
         var definition = await _dbContext.CodeListDefinitions.SingleOrDefaultAsync(item => item.Name == category);
-        if (definition?.UsesCustomColumns == true || (definition is not null && !definition.IsActive))
-            return Result<CodeListResponseDTO>.ValidationError(BackendMessages.Message("validation.codelist.inactive"));
+        if (definition?.UsesCustomColumns == true)
+            return Result<CodeListResponseDTO>.ValidationError(BackendMessages.Message("validation.codelist.inactive"), code: "codes.schema_invalid");
+        if (definition is { IsActive: false })
+            return Result<CodeListResponseDTO>.ValidationError(BackendMessages.Message("validation.codelist.inactive"), code: "codes.value_inactive_category");
         if (definition is null)
         {
             definition = new CodeListDefinition { Name = category, CreatedBy = korisnik };
@@ -159,7 +161,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
 
         // Updating Aktivan must enforce the same reference guard as Delete.
         if (entitet.Aktivan && !dto.Aktivan && (entitet.IsSystemRequired || await JeVrijednostUUpotrebi(entitet.Kategorija, entitet.Kod)))
-            return Result<CodeListResponseDTO>.ValidationError(BackendMessages.Message("validation.codelist.value.in.use"));
+            return Result<CodeListResponseDTO>.ValidationError(BackendMessages.Message("validation.codelist.value.in.use"), code: "codes.value_in_use");
 
         // Ažuriramo dopuštena polja (Kategorija i Kod se ne mijenjaju)
         var before = Snapshot(entitet);

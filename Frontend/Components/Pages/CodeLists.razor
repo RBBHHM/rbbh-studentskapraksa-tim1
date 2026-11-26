@@ -81,36 +81,16 @@ else
         @if (_refreshing) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
         else if (_category.Length == 0) { }
         else if (_values.Count == 0 && _error is null) { <div class="registry-surface"><RegistryEmpty Body="@T["codes.empty"]" /></div> }
-        else if (_error is null && _customColumns)
-        {
-            <div class="custom-codebook-values">
-                @foreach (var value in _values)
-                {
-                    <RbiCard @key="value.Id" Padding="RbiCardPadding.Compact">
-                        <dl class="custom-codebook-values__fields">
-                            @foreach (var column in _valueColumns)
-                            {
-                                <div><dt>@column.Name</dt><dd>@SlotText(value, column.Slot)</dd></div>
-                            }
-                        </dl>
-                        <div class="custom-codebook-values__actions">
-                            <Indicator Kind="@(value.IsActive ? "active" : "inactive")" Label="@T[value.IsActive ? "codes.active" : "codes.inactive"]" />
-                            @if (_canWrite) { @ValueActions(value) }
-                        </div>
-                    </RbiCard>
-                }
-            </div>
-        }
         else if (_error is null)
         {
             <p class="registry-help app-visually-hidden">@T["codes.history"]</p>
-            <RbiTable AccessibleLabel="@T["codes.title"]" Class="registry-table registry-codes-table"><caption>@_category</caption>
+            <RbiTable AccessibleLabel="@T["codes.title"]" Class="@(_customColumns ? "registry-table registry-codes-table registry-codes-table--custom" : "registry-table registry-codes-table")"><caption>@_category</caption>
                 <thead><tr>
-                @if (IsLanguagePack)
+                @if (!_customColumns && IsLanguagePack)
                 {
                     <th scope="col">@T["codes.language-code"]</th><th scope="col">@T["codes.resource-key"]</th><th scope="col">@T["codes.context-info"]</th><th scope="col">@T["codes.label-text"]</th><th scope="col">@T["codes.help-text"]</th><th scope="col">@T["codes.placeholder-text"]</th>
                 }
-                else
+                else if (!_customColumns)
                 {
                     <th scope="col">@T["codes.code"]</th><th scope="col">@T["codes.name"]</th><th scope="col">@T["codes.description"]</th>
                 }
@@ -119,11 +99,11 @@ else
                 <tbody>@foreach (var value in _values)
                 {
                     <tr @key="value.Id">
-                        @if (IsLanguagePack)
+                        @if (!_customColumns && IsLanguagePack)
                         {
                             <td>@value.Localization?.LanguageCode</td><td class="registry-strong">@value.Localization?.ResourceKey</td><td>@value.Localization?.ContextInfo</td><td>@value.Localization?.ResourceLabel</td><td>@value.Localization?.ResourceHelper</td><td>@value.Localization?.ResourcePlaceholder</td>
                         }
-                        else
+                        else if (!_customColumns)
                         {
                             <td>@value.Code</td><td class="registry-strong">@value.Value</td><td>@(string.IsNullOrWhiteSpace(value.Description) ? "—" : value.Description)</td>
                         }
@@ -164,7 +144,7 @@ else
     <RbiDialog Open Class="app-form-dialog app-form-dialog--md" Title="@T[_schemaExisting is null ? "codes.definition-create" : "codes.edit-schema"]"
                CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseSchema">
         <DialogBody><CodebookSchemaForm Existing="_schemaExisting" Columns="@(_schemaExisting is null ? [] : _valueColumns)"
-                                       Save="SaveSchemaAsync" Cancel="() => CloseSchema(false)" /></DialogBody>
+                                       HasValues="@(_values.Count > 0)" Save="SaveSchemaAsync" Cancel="() => CloseSchema(false)" /></DialogBody>
     </RbiDialog>
 }
 @if (_customEditorOpen)
@@ -187,19 +167,27 @@ else
 }
 @if (_preview is { } preview)
 {
-    <RbiDialog Open Class="registry-codes-dialog codebook-csv-preview" Title="@T["codes.preview"]" CloseLabel="@T["common.close"]" OpenChanged="ClosePreview">
+    <RbiDialog Open Class="registry-codes-dialog codebook-csv-preview" Title="@T["codes.csv.preview-title"]" CloseLabel="@T["common.close"]" OpenChanged="ClosePreview">
         <DialogBody>
             <p>@T.Format("codes.csv.summary", preview.TotalRows, preview.Ready, preview.Duplicates)</p>
             @if (preview.ExampleSkipped) { <p class="app-hint">@T["codes.csv.example-skipped"]</p> }
             @if (preview.Errors.Count > 0)
             {
+                @if (preview.TotalRows > preview.Ready + preview.Duplicates)
+                {
+                    <p>@T.Format("codes.csv.invalid-rows", preview.TotalRows - preview.Ready - preview.Duplicates)</p>
+                }
                 <ul class="codebook-csv-errors" aria-label="@T["codes.issues"]">
                     @foreach (var error in preview.Errors) { <li>@FormatIssue(error)</li> }
                 </ul>
             }
+            @if (preview.CanImport && preview.Errors.Count > 0)
+            {
+                <RbiAlert Tone="RbiAlertTone.Warning" Title="@T["codes.csv.partial-help"]" />
+            }
             <div class="registry-toolbar">
                 <RbiButton Disabled="_busy" OnClick="() => ClosePreview(false)" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton>
-                <RbiButton Disabled="@(_busy || preview.Ready == 0 || preview.Errors.Count > 0)" OnClick="ImportAsync">@T["codes.csv.confirm"]</RbiButton>
+                <RbiButton Disabled="@(_busy || !preview.CanImport)" OnClick="ImportAsync">@T[preview.CanImport && preview.Errors.Count > 0 ? "codes.csv.confirm-valid" : "codes.csv.confirm"]</RbiButton>
             </div>
         </DialogBody>
     </RbiDialog>
@@ -220,7 +208,10 @@ else
             {
                 System.Text.Json.JsonValueKind.True => T["common.yes"],
                 System.Text.Json.JsonValueKind.False => T["common.no"],
-                _ => slot is 9 or 10 ? value.ToString().Split('T')[0] : value.ToString()
+                System.Text.Json.JsonValueKind.String when slot is 9 or 10 => value.ToString().Split('T')[0],
+                System.Text.Json.JsonValueKind.String when slot == 11 && value.TryGetDateTime(out var timestamp) =>
+                    timestamp.ToString("yyyy-MM-dd HH:mm:ss.FFFFFFF", System.Globalization.CultureInfo.InvariantCulture),
+                _ => value.ToString()
             }
             : "—";
     private string _category = "", _pendingCategory = "", _fileName = "";
@@ -433,12 +424,14 @@ else
     private void ClosePreview(bool open) { if (!open && !_busy) { _preview = null; _fileBytes = null; } }
     private async Task ImportAsync()
     {
-        if (!_canWrite || _busy || _fileBytes is null || _preview is not { Ready: > 0, Errors.Count: 0 }) return; _busy = true;
+        if (!_canWrite || _busy || _fileBytes is null || _preview is not { CanImport: true } preview) return; _busy = true;
         try
         {
-            var result = await Api.ImportCsvAsync(_pendingCategory, new MemoryStream(_fileBytes, writable: false), _fileName, false, _token);
-            if (result.Errors.Count > 0) { _preview = result; return; }
-            _notice = T.Format("codes.csv.done", result.Imported, result.Duplicates);
+            var result = await Api.ImportCsvAsync(_pendingCategory, new MemoryStream(_fileBytes, writable: false), _fileName, false, _token, allowPartial: preview.Errors.Count > 0);
+            if (result.Imported == 0 && result.Errors.Count > 0) { _preview = result; return; }
+            _notice = result.Errors.Count == 0
+                ? T.Format("codes.csv.done", result.Imported, result.Duplicates)
+                : T.Format("codes.csv.partial-done", result.Imported, result.Duplicates);
             _preview = null;
             _fileBytes = null;
             if (IsLanguagePack || _category == "LANGUAGES") await Runtime.EnsureAsync(_token, force: true);

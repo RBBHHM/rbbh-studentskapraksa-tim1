@@ -4,7 +4,12 @@
 
 @if (Messages.Any())
 {
-    <div role="alert" tabindex="-1" @ref="_root" class="rbi-field__message">@foreach (var message in Messages) { <p>@message</p> }</div>
+    <div tabindex="-1" @ref="_root" class="app-form-summary">
+        @foreach (var message in Messages)
+        {
+            <RbiAlert Tone="RbiAlertTone.Danger" Title="@message" Announcement="RbiAlertAnnouncement.Assertive" />
+        }
+    </div>
 }
 
 @code {

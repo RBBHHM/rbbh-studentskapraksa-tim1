@@ -14,11 +14,9 @@ async function fillValue(page: Page, code: string, name: string) {
   await page.getByRole("button", { name: "Nova vrijednost", exact: true }).click(); const dialog = page.getByRole("dialog");
   await dialog.getByRole("textbox", { name: /^Naziv/ }).fill(name); await dialog.getByRole("textbox", { name: /^Kod/ }).fill(code); return dialog;
 }
-async function configureColumn(dialog: Locator, slot: string, name: string, position: string) {
-  await dialog.getByLabel("Kolona i tip podataka").selectOption(slot);
-  await dialog.getByRole("checkbox", { name: "Uključi kolonu" }).press("Space");
-  await dialog.getByLabel("Naziv kolone").fill(name);
-  await dialog.getByLabel("Redoslijed (1–20)").fill(position);
+async function addColumn(dialog: Locator, type: string, name: string) {
+  await dialog.getByRole("button", { name: `+ ${type}`, exact: true }).click();
+  await dialog.getByRole("textbox", { name: /Naziv kolone/ }).last().fill(name);
 }
 test.beforeEach(async ({ request }) => { expect((await request.post("/__fixtures/reset", { headers })).status()).toBe(204); });
 
@@ -39,8 +37,9 @@ test("custom definition controls create, edit, CSV headers and soft-delete", asy
   let dialog = page.getByRole("dialog");
   await dialog.getByRole("textbox", { name: /^Naziv definicije/ }).fill("NativeCodes");
   await dialog.getByRole("textbox", { name: "Poslovna svrha", exact: true }).fill("Native fixture purpose");
-  await configureColumn(dialog, "17", "Poruka", "1");
-  await configureColumn(dialog, "3", "Količina", "2");
+  await addColumn(dialog, "Cijeli broj", "Količina");
+  await addColumn(dialog, "Tekst", "Poruka");
+  await dialog.getByRole("button", { name: "Pomjeri kolonu gore", exact: true }).last().click();
   await dialog.getByRole("button", { name: "Kreiraj", exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "NATIVE_CODES" })).toBeVisible();
@@ -58,29 +57,41 @@ test("custom definition controls create, edit, CSV headers and soft-delete", asy
   await dialog.getByLabel("Količina").fill("42");
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
   await expect(dialog).toHaveCount(0);
-  const card = page.locator(".custom-codebook-values .rbi-card");
-  await expect(card).toContainText("Prva poruka");
-  await expect(card).toContainText("42");
+  const table = page.getByRole("table");
+  await expect(table.getByRole("columnheader", { name: "Poruka", exact: true })).toBeVisible();
+  const row = table.locator("tbody tr").first();
+  await expect(row).toContainText("Prva poruka");
+  await expect(row).toContainText("42");
 
-  await card.getByRole("button", { name: "Uredi vrijednost" }).click();
+  await row.getByRole("button", { name: "Uredi vrijednost" }).click();
   dialog = page.getByRole("dialog");
   await expect(dialog.getByLabel("Količina")).toHaveValue("42");
   await dialog.getByLabel("Poruka").fill("Druga poruka");
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
-  await expect(card).toContainText("Druga poruka");
+  await expect(row).toContainText("Druga poruka");
 
   await page.getByRole("button", { name: "Uredi kolone" }).click();
   dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Naziv kolone").fill("Napomena");
+  await dialog.getByRole("textbox", { name: /Naziv kolone.*Tekst/ }).fill("Napomena");
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
-  await expect(card).toContainText("Napomena");
-  await expect(card).toContainText("Druga poruka");
+  await expect(table.getByRole("columnheader", { name: "Napomena", exact: true })).toBeVisible();
+  await expect(row).toContainText("Druga poruka");
 
-  await card.getByRole("button", { name: "Obriši vrijednost" }).click();
+  await row.getByRole("button", { name: "Obriši vrijednost" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Obriši", exact: true }).click();
-  await expect(card).toContainText("Neaktivan");
+  await expect(row).toContainText("Neaktivan");
   const state = await (await request.get("/__fixtures/codes-state", { headers })).json();
   expect(state.values.find((item: any) => item.kategorija === "NATIVE_CODES")).toMatchObject({ aktivan: false });
+
+  await page.locator("#code-file").setInputFiles({
+    name: "typed.csv", mimeType: "text/csv", buffer: Buffer.from("Napomena,Količina\nIspravan red,17\nNeispravan red,abc"),
+  });
+  dialog = page.getByRole("dialog", { name: "Pregled CSV uvoza" });
+  await expect(dialog.getByText(/Spremno za uvoz: 1/)).toBeVisible();
+  await expect(dialog.getByText(/Red 3, kolona „Količina”/)).toBeVisible();
+  await dialog.getByRole("button", { name: "Uvezi ispravne redove", exact: true }).click();
+  await expect(table.getByRole("cell", { name: "Ispravan red", exact: true })).toBeVisible();
+  await expect(table.getByRole("cell", { name: "Neispravan red", exact: true })).toHaveCount(0);
 });
 
 test("changed reference value immediately reaches the actual business form dropdown", async ({ page }) => {
@@ -99,7 +110,7 @@ test("validation blocks requests and duplicate code remains an authoritative bac
   await dialog.getByRole("textbox", { name: /^Naziv/ }).fill("Duplicate attempt"); await dialog.getByRole("textbox", { name: /^Kod/ }).fill("ZOB-2-V-5");
   await page.keyboard.press("Tab");
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
-  await expect(dialog.getByText("Backend je odbio podatke. Provjerite unesena polja.", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("Ovaj kod već postoji u šifrarniku. Unesite drugi kod.", { exact: true })).toBeVisible();
   expect((await (await request.get("/__fixtures/codes-state", { headers })).json()).audit).toEqual([]);
 });
 test("referenced value and entire category deletion are rejected with no data/audit change", async ({ page, request }) => {
@@ -214,7 +225,7 @@ test("duplicate definition shows an alert and allows retry with a new name", asy
   const name = dialog.getByRole("textbox", { name: /^Naziv definicije/ });
   const submit = dialog.getByRole("button", { name: "Kreiraj", exact: true });
   await name.fill("osnov povezanosti");
-  await configureColumn(dialog, "17", "Napomena", "1");
+  await addColumn(dialog, "Tekst", "Napomena");
   await submit.click();
   await expect(dialog.getByText("Šifrarnik s tim nazivom već postoji.")).toBeVisible();
   await name.fill("testni sifrarnik");

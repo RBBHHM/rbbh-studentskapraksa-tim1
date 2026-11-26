@@ -3,7 +3,7 @@
 <form class="custom-codebook-form" @onsubmit="SubmitAsync" @onsubmit:preventDefault novalidate>
     @if (Error is not null)
     {
-        <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[Error]" Announcement="RbiAlertAnnouncement.Assertive" />
+        <RbiAlert Class="codebook-form-alert" Tone="RbiAlertTone.Danger" Title="@T[Error]" Announcement="RbiAlertAnnouncement.Assertive" />
     }
     <fieldset disabled="@_busy">
         <legend class="app-visually-hidden">@T["codes.column-structure"]</legend>
@@ -16,35 +16,48 @@
                 <label for="codebook-definition-purpose">@T["codes.purpose"]</label>
                 <RbiInput Id="codebook-definition-purpose" @bind-Value="_description" maxlength="500" />
             </div>
-            <div class="role-catalog-field app-span-2">
-                <label for="codebook-slot">@T["codes.storage-column"]</label>
-                <RbiSelect TValue="int" Id="codebook-slot" @bind-Value="_selectedSlot">
-                    @foreach (var slot in _slots)
-                    {
-                        <option value="@slot.Slot">@OptionLabel(slot)</option>
-                    }
-                </RbiSelect>
-            </div>
-            @{
-                var column = _slots[_selectedSlot - 1];
-            }
-            <RbiCheckbox @key="column.Slot" Class="app-span-2" Id="codebook-slot-enabled" @bind-Value="column.Enabled">@T["codes.column-enabled"]</RbiCheckbox>
-            @if (column.Enabled)
-            {
-                <div class="role-catalog-field">
-                    <label for="codebook-column-name">@T["codes.column-name"]</label>
-                    <RbiInput @key="column.Slot" Id="codebook-column-name" UpdateMode="RbiInputUpdateMode.Input" @bind-Value="column.Name" maxlength="128" Required />
-                </div>
-                <div class="role-catalog-field">
-                    <label for="codebook-column-position">@T["codes.column-position"]</label>
-                    <RbiInput @key="column.Slot" Id="codebook-column-position" Type="RbiInputType.Number" UpdateMode="RbiInputUpdateMode.Input" @bind-Value="column.Position" min="1" max="20" step="1" Required />
-                </div>
-                <div class="role-catalog-field app-span-2">
-                    <label for="codebook-column-description">@T["codes.description"]</label>
-                    <RbiTextArea @key="column.Slot" Id="codebook-column-description" @bind-Value="column.Description" Rows="2" maxlength="4000" />
-                </div>
-            }
         </div>
+        <section class="codebook-schema-columns" aria-labelledby="codebook-add-column">
+            <h3 id="codebook-add-column">@T["codes.schema-add-column"]</h3>
+            <div class="codebook-type-buttons" role="group" aria-labelledby="codebook-add-column">
+                @foreach (var group in SlotGroups)
+                {
+                    <RbiButton Variant="RbiButtonVariant.Secondary" Disabled="@(AvailableSlot(group) == 0)" OnClick="() => AddColumn(group)">
+                        + @T[CodebookField.TypeKey(group[0])]
+                    </RbiButton>
+                }
+            </div>
+            <ol class="codebook-schema-list">
+                @for (var index = 0; index < _columns.Count; index++)
+                {
+                    var column = _columns[index];
+                    var position = index;
+                    var inputId = $"codebook-column-name-{column.Slot}";
+                    <li @key="column.Slot">
+                        <div class="codebook-schema-row">
+                            <div class="role-catalog-field">
+                                <label for="@inputId">@T["codes.column-name"] <span class="app-hint">· @T[CodebookField.TypeKey(column.Slot)]</span></label>
+                                <RbiInput Id="@inputId" @bind-Value="column.Name" UpdateMode="RbiInputUpdateMode.Input" maxlength="128" Required />
+                            </div>
+                            <div class="codebook-type-buttons">
+                                <RbiButton Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly Disabled="@(position == 0)" AccessibleLabel="@T["codes.schema-move-up"]" title="@T["codes.schema-move-up"]" OnClick="() => Move(position, -1)">↑</RbiButton>
+                                <RbiButton Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly Disabled="@(position == _columns.Count - 1)" AccessibleLabel="@T["codes.schema-move-down"]" title="@T["codes.schema-move-down"]" OnClick="() => Move(position, 1)">↓</RbiButton>
+                                @if (!HasValues || !Columns.Any(saved => saved.Slot == column.Slot))
+                                {
+                                    <RbiButton Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["codes.schema-remove-column"]" title="@T["codes.schema-remove-column"]" OnClick="() => { _columns.Remove(column); }">
+                                        <RbiIcon Name="RbiIconName.Trash2" />
+                                    </RbiButton>
+                                }
+                            </div>
+                        </div>
+                        <details>
+                            <summary>@T["codes.description"]</summary>
+                            <RbiTextArea @bind-Value="column.Description" aria-label="@T["codes.description"]" Rows="2" maxlength="4000" />
+                        </details>
+                    </li>
+                }
+            </ol>
+        </section>
     </fieldset>
     <div class="registry-toolbar">
         <RbiButton Variant="RbiButtonVariant.Secondary" OnClick="Cancel" Disabled="_busy">@T["common.cancel"]</RbiButton>
@@ -55,45 +68,47 @@
 @code {
     [Parameter] public CodeListMeta? Existing { get; set; }
     [Parameter] public IReadOnlyList<CodebookColumn> Columns { get; set; } = [];
+    [Parameter] public bool HasValues { get; set; }
     [Parameter, EditorRequired] public Func<string, string?, IReadOnlyList<CodebookColumnInput>, Task<string?>> Save { get; set; } = null!;
     [Parameter] public EventCallback Cancel { get; set; }
 
-    private sealed class SlotDraft(int slot)
+    // Prefer unrestricted text slots and the boolean slot independent of row status.
+    private static readonly int[][] SlotGroups =
+    [
+        [17, 18, 16, 19, 20, 13, 14, 15, 12], [2, 1], [3, 4, 5], [6, 7, 8], [9, 10], [11]
+    ];
+
+    private sealed class ColumnDraft(int slot, string? name = null, string? description = null)
     {
         public int Slot { get; } = slot;
-        public bool Enabled { get; set; }
-        public string? Name { get; set; }
-        public string? Description { get; set; }
-        public string? Position { get; set; } = slot.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        public string? Name { get; set; } = name;
+        public string? Description { get; set; } = description;
     }
 
-    private readonly SlotDraft[] _slots = Enumerable.Range(1, 20).Select(slot => new SlotDraft(slot)).ToArray();
-    private int _selectedSlot = 1;
-    private string? _name, _description;
+    private readonly List<ColumnDraft> _columns = [];
+    private string? _name, _description, Error;
     private bool _busy;
-    private string? Error;
 
     protected override void OnInitialized()
     {
         _name = Existing?.Name;
         _description = Existing?.Description;
-        foreach (var column in Columns)
-        {
-            var draft = _slots[column.Slot - 1];
-            draft.Enabled = true;
-            draft.Name = column.Name;
-            draft.Description = column.Description;
-            draft.Position = (column.Position ?? column.Slot).ToString(System.Globalization.CultureInfo.InvariantCulture);
-        }
-        _selectedSlot = Columns.FirstOrDefault()?.Slot ?? 1;
+        _columns.AddRange(Columns.OrderBy(column => column.Position ?? column.Slot)
+            .Select(column => new ColumnDraft(column.Slot, column.Name, column.Description)));
     }
 
-    private string OptionLabel(SlotDraft slot)
+    private int AvailableSlot(int[] group) => group.FirstOrDefault(slot => _columns.All(column => column.Slot != slot));
+
+    private void AddColumn(int[] group)
     {
-        var type = T[CodebookField.TypeKey(slot.Slot)];
-        return slot.Enabled && !string.IsNullOrWhiteSpace(slot.Name)
-            ? $"ID{slot.Slot} · {type} · {slot.Name}"
-            : $"ID{slot.Slot} · {type}";
+        var slot = AvailableSlot(group);
+        if (slot != 0) _columns.Add(new ColumnDraft(slot));
+    }
+
+    private void Move(int position, int direction)
+    {
+        var target = position + direction;
+        (_columns[position], _columns[target]) = (_columns[target], _columns[position]);
     }
 
     private async Task SubmitAsync()
@@ -105,14 +120,18 @@
             Error = "codes.definition-range";
             return;
         }
-        var columns = _slots.Where(slot => slot.Enabled)
-            .Select(slot => new CodebookColumnInput(slot.Slot, slot.Name?.Trim() ?? "", slot.Description,
-                int.TryParse(slot.Position, out var position) ? position : 0)).ToArray();
-        if (columns.Length == 0 || columns.Any(column => column.Name.Length is < 1 or > 128 || column.Position is < 1 or > 20) ||
-            columns.Select(column => column.Position).Distinct().Count() != columns.Length ||
+        var columns = _columns.Select((column, index) =>
+            new CodebookColumnInput(column.Slot, column.Name?.Trim() ?? "", column.Description, index + 1)).ToArray();
+        if (columns.Length == 0)
+        {
+            Error = "codes.schema-empty";
+            return;
+        }
+        if (columns.Any(column => column.Name.Length is < 1 or > 128 ||
+                column.Name[0] is '=' or '+' or '-' or '@' || column.Name.Any(char.IsControl)) ||
             columns.Select(column => column.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count() != columns.Length)
         {
-            Error = "codes.schema-invalid";
+            Error = "codes.schema-name-invalid";
             return;
         }
         _busy = true;
