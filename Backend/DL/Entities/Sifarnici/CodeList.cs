@@ -12,37 +12,35 @@ public class CodeList
 {
     [Key]
     public int ID { get; set; }
-    public long? DefinitionId { get; set; }
+    public long DefinitionId { get; set; }
     public CodeListDefinition? Definition { get; set; }
     public CodeListLocalization? Localization { get; set; }
 
     /// <summary>
     /// Kategorija šifarnika, npr. "TIP_ROLA", "OSNOV_POVEZANOSTI", "VRSTE_LIMITA", "TIP_LICA", "TIP_DOKUMENTA"
     /// </summary>
-    [Required]
-    [StringLength(100)]
-    [Unicode(false)]
-    public string Kategorija { get; set; } = null!;
+    private string? category;
+    [NotMapped]
+    public string Kategorija { get => Definition?.Name ?? category ?? ""; set => category = value; }
 
     /// <summary>
     /// Interni kod vrijednosti (npr. "ADM", "VL", "KR")
     /// </summary>
     [Required]
-    [StringLength(50)]
-    [Unicode(false)]
+    [StringLength(100)]
     public string Kod { get; set; } = null!;
 
     /// <summary>
     /// Naziv koji se prikazuje u padajućim menijima
     /// </summary>
     [Required]
-    [StringLength(200)]
+    [StringLength(4000)]
     public string Naziv { get; set; } = null!;
 
     /// <summary>
     /// Opcionalni opis vrijednosti
     /// </summary>
-    [StringLength(500)]
+    [StringLength(4000)]
     public string? Opis { get; set; }
 
     /// <summary>

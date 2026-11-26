@@ -33,6 +33,19 @@ namespace Web.Blazor.BrowserHost;
 // control headers; production never registers or links this test-only class.
 internal static partial class BrowserHostProgram
 {
+    private static void SeedVerificationOrigin(ConnectedPartiesDbContext db, string table, long id)
+    {
+        var existing = db.AuditLogs.IgnoreQueryFilters().SingleOrDefault(row =>
+            row.TableName == table && row.Action == "VERIFICATION_ORIGIN" && row.NewValues == id.ToString());
+        if (existing is null)
+            db.AuditLogs.Add(new()
+            {
+                TableName = table, Action = "VERIFICATION_ORIGIN", NewValues = id.ToString(),
+                Username = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.Unicode.GetBytes("fixture-author-subject"))),
+                Timestamp = DateTime.UtcNow
+            });
+    }
+
     private sealed class FixtureReset(WebApplication backend, FixtureUser user, FixtureDatabase database) : IStartupFilter
     {
         public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => application =>
@@ -80,7 +93,7 @@ internal static partial class BrowserHostProgram
                         var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
                         await context.Response.WriteAsJsonAsync(new
                         {
-                            values = await db.CodeLists.IgnoreQueryFilters().OrderBy(item => item.ID).Select(item => new { item.ID, item.Kategorija, item.Kod, item.Naziv, item.Opis, item.Aktivan, item.IzmijenioKorisnik }).ToArrayAsync(),
+                            values = await db.CodeLists.IgnoreQueryFilters().OrderBy(item => item.ID).Select(item => new { item.ID, Kategorija = item.Definition!.Name, item.Kod, item.Naziv, item.Opis, item.Aktivan, item.IzmijenioKorisnik }).ToArrayAsync(),
                             definitions = await db.CodeListDefinitions.Select(item => new { item.Name, item.Description, item.IsActive }).ToArrayAsync(),
                             audit = await db.AuditLogs.OrderBy(item => item.Timestamp).Select(item => new { item.Action, item.Username, item.NewValues }).ToArrayAsync()
                         }); return;
@@ -444,7 +457,7 @@ internal static partial class BrowserHostProgram
                             await using (var scope = backend.Services.CreateAsyncScope())
                             {
                                 var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
-                                foreach (var type in await db.CodeLists.AsTracking().Where(item => item.Kategorija == "VRSTE_LIMITA").ToListAsync()) type.Aktivan = false;
+                                foreach (var type in await db.CodeLists.AsTracking().Where(item => item.Definition!.Name == "VRSTE_LIMITA").ToListAsync()) type.Aktivan = false;
                                 await db.SaveChangesAsync();
                             }
                             break;
@@ -470,7 +483,7 @@ internal static partial class BrowserHostProgram
                                     CreatedAt = new DateTime(2026, 1, 1).AddMinutes(index)
                                 });
                                 foreach (var seeded in db.ChangeTracker.Entries<RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntity>().ToArray())
-                                    seeded.Property("VerificationOriginFingerprint").CurrentValue = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.Unicode.GetBytes("fixture-author-subject")));
+                                    SeedVerificationOrigin(db, "LegalEntity", seeded.Entity.Id);
                                 await db.SaveChangesAsync();
                             }
                             break;
@@ -478,7 +491,7 @@ internal static partial class BrowserHostProgram
                             await using (var scope = backend.Services.CreateAsyncScope())
                             {
                                 var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
-                                foreach (var person in db.RelatedPersons.IgnoreQueryFilters()) { person.CreatedBy = "fixture-author"; var creator = db.Entry(person).Property("VerificationOriginFingerprint"); creator.CurrentValue = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.Unicode.GetBytes("fixture-author-subject"))); creator.OriginalValue = creator.CurrentValue; creator.IsModified = true; }
+                                foreach (var person in db.RelatedPersons.IgnoreQueryFilters()) { person.CreatedBy = "fixture-author"; SeedVerificationOrigin(db, "RelatedPerson", person.Id); }
                                 await db.SaveChangesAsync();
                             }
                             break;

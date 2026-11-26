@@ -78,7 +78,7 @@ public sealed class BusinessErrorResourcesSqlTests : RoleCatalogFixture
             await db.Database.MigrateAsync();
             foreach (var language in new[] { "BS", "EN", "DE" })
             {
-                var keys = await db.CodeLists.Where(row => row.Kategorija == "LANGUAGE_PACKS" && row.Localization!.LanguageCode == language).Select(row => row.Localization!.ResourceKey).ToArrayAsync();
+                var keys = await db.CodeLists.Where(row => row.Definition!.Name == "LANGUAGE_PACKS" && row.Localization!.LanguageCode == language).Select(row => row.Localization!.ResourceKey).ToArrayAsync();
                 Assert.Empty(BackendMessages.All.Keys.Except(keys!));
             }
             var translation = await db.CodeLists.SingleAsync(row => row.Localization!.LanguageCode == "DE"

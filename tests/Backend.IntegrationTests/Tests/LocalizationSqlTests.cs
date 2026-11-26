@@ -49,7 +49,7 @@ public sealed class LocalizationSqlTests : LocalizationFixture
             Assert.Equal(0, await db.Database.SqlQueryRaw<int>("""
                 SELECT COUNT(*) AS [Value] FROM dbo.CODELIST_VALUES AS value
                 LEFT JOIN dbo.CODELIST_DEFINITIONS AS definition ON definition.ID = value.DEFINITION_ID
-                WHERE value.CATEGORY IN ('LANGUAGES', 'LANGUAGE_PACKS') AND definition.ID IS NULL
+                WHERE definition.ID IS NULL
                 """).SingleAsync());
             Assert.Equal(0, await db.Database.SqlQueryRaw<int>("""
                 SELECT COUNT(*) AS [Value] FROM sys.tables WHERE name = 'CODE_LIST_LOCALIZATION'
@@ -88,7 +88,7 @@ public sealed class LocalizationSqlTests : LocalizationFixture
         await InDatabase(db => db.Database.ExecuteSqlRawAsync("CREATE TRIGGER FixtureRejectImportAudit ON AUDIT_LOGS AFTER INSERT AS BEGIN THROW 51000, 'fixture failure', 1; END"));
         using var form = new MultipartFormDataContent(); form.Add(new ByteArrayContent(bytes), "file", "values.xlsx");
         Assert.Equal(HttpStatusCode.InternalServerError, (await Client.PostAsync("/api/code-lists/ImportRollback/import?dryRun=false", form)).StatusCode);
-        await InDatabase(async db => { Assert.False(await db.CodeLists.AnyAsync(row => row.Kategorija == "ImportRollback")); Assert.False(await db.CodeListDefinitions.AnyAsync(row => row.Name == "ImportRollback")); Assert.Empty(db.AuditLogs); });
+        await InDatabase(async db => { Assert.False(await db.CodeLists.AnyAsync(row => row.Definition!.Name == "ImportRollback")); Assert.False(await db.CodeListDefinitions.AnyAsync(row => row.Name == "ImportRollback")); Assert.Empty(db.AuditLogs); });
     }
 
     [SqlServerFact]
@@ -98,7 +98,7 @@ public sealed class LocalizationSqlTests : LocalizationFixture
         var responses = await Task.WhenAll(Client.PostAsJsonAsync("/api/code-lists", body), Client.PostAsJsonAsync("/api/code-lists", body));
         Assert.Single(responses, row => row.StatusCode == HttpStatusCode.Created);
         Assert.All(responses.Where(row => row.StatusCode != HttpStatusCode.Created), row => Assert.Contains(row.StatusCode, new[] { HttpStatusCode.BadRequest, HttpStatusCode.Conflict }));
-        await InDatabase(async db => { Assert.Single(await db.CodeLists.Where(row => row.Kategorija == "Race").ToListAsync()); Assert.Single(await db.AuditLogs.ToListAsync()); });
+        await InDatabase(async db => { Assert.Single(await db.CodeLists.Where(row => row.Definition!.Name == "Race").ToListAsync()); Assert.Single(await db.AuditLogs.ToListAsync()); });
     }
     [SqlServerFact]
     public async Task PopulatedUpgradeRejectsDuplicateKeysWithoutDeletingLegacyValues()

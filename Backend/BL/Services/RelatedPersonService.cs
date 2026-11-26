@@ -105,7 +105,7 @@ public class RelatedPersonService(
         if (basisCodes.Length > 0)
         {
             var descriptions = await _dbContext.CodeLists.AsNoTracking()
-                .Where(row => row.Kategorija == "OSNOV_POSEBNOG_ODNOSA" &&
+                .Where(row => row.Definition!.Name == "OSNOV_POSEBNOG_ODNOSA" &&
                     basisCodes.Contains(row.Kod))
                 .Select(row => new { row.Kod, row.Naziv, row.Opis }).ToListAsync(ct);
             var lookup = descriptions.GroupBy(row => row.Kod, StringComparer.OrdinalIgnoreCase)
@@ -246,7 +246,6 @@ public class RelatedPersonService(
         entity.IsActive = true;
         entity.CreatedAt = DateTime.UtcNow;
         entity.CreatedBy = korisnik;
-        entity.VerificationOriginFingerprint = Helpers.RegistryVerification.OriginFingerprint(actor);
 
         // Normalizacija JMBG-a (uklanjanje praznina)
         if (!string.IsNullOrWhiteSpace(entity.JMBG))
@@ -255,6 +254,7 @@ public class RelatedPersonService(
         entity.PassportNumber = NormalizeIdentifier(entity.PassportNumber)?.ToUpperInvariant();
         entity.FBAId = NormalizeIdentifier(entity.FBAId);
         _dbContext.RelatedPersons.Add(entity);
+        Helpers.RegistryVerification.RecordCreator(_dbContext, "RelatedPerson", entity.Id, actor);
         _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("RelatedPerson", "INSERT", korisnik, actor,
             newValues: entity.Adapt<RelatedPersonResponseDTO>()));
         await _dbContext.SaveChangesAsync(actor?.HttpContext?.RequestAborted ?? default);
@@ -363,7 +363,7 @@ public class RelatedPersonService(
         if (entity.Status == RelatedPersonStatus.Verified)
             return Result<RelatedPersonResponseDTO>.ValidationError(BackendMessages.Message("validation.person.verified"));
 
-        Helpers.RegistryVerification.Authorize(entity.VerificationOriginFingerprint, actor);
+        await Helpers.RegistryVerification.Authorize(_dbContext, "RelatedPerson", entity.Id, actor);
         var before = new { status = entity.Status.ToString(), verifiedBy = entity.VerifiedBy, verifiedAt = entity.VerifiedAt };
         entity.Status = RelatedPersonStatus.Verified;
         entity.VerifiedBy = korisnik;
@@ -749,11 +749,11 @@ public class RelatedPersonService(
                     Status = RelatedPersonStatus.Draft,
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
-                    VerificationOriginFingerprint = Helpers.RegistryVerification.OriginFingerprint(actor),
                     CreatedBy = createdBy
                 };
 
                 _dbContext.RelatedPersons.Add(entity);
+                Helpers.RegistryVerification.RecordCreator(_dbContext, "RelatedPerson", entity.Id, actor);
                 if (dto.JMBG is not null) usedJmbgs.Add(dto.JMBG);
                 if (dto.PassportNumber is not null) usedPassports.Add(dto.PassportNumber);
                 if (dto.FBAId is not null) usedFbaIds.Add(dto.FBAId);

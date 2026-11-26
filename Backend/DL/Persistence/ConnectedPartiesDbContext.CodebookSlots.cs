@@ -25,10 +25,6 @@ public partial class ConnectedPartiesDbContext
             entity.Property<decimal?>($"Slot{number}").HasColumnName($"ID{number}").HasPrecision(number == 8 ? 19 : 18, number == 8 ? 6 : 2);
         for (var number = 9; number <= 11; number++)
             entity.Property<DateTime?>($"Slot{number}").HasColumnName($"ID{number}").HasColumnType(number == 11 ? "datetime2" : "date");
-        entity.Property<string>("Slot15").HasColumnName("ID15").HasMaxLength(100);
-        for (var number = 17; number <= 18; number++)
-            entity.Property<string>($"Slot{number}").HasColumnName($"ID{number}").HasMaxLength(4000);
-
         entity.OwnsOne(row => row.Localization, slots =>
         {
             slots.WithOwner().HasForeignKey("ID");
@@ -39,9 +35,6 @@ public partial class ConnectedPartiesDbContext
             slots.Property(item => item.ResourceLabel).HasColumnName("ID16");
             slots.Property(item => item.ResourceHelper).HasColumnName("ID19");
             slots.Property(item => item.ResourcePlaceholder).HasColumnName("ID20");
-            slots.HasIndex(item => new { item.LanguageCode, item.ResourceKey }).IsUnique()
-                .HasDatabaseName("IX_CODELIST_VALUES_LANGUAGE_RESOURCE")
-                .HasFilter("[CATEGORY] = 'LANGUAGE_PACKS' AND [ID12] IS NOT NULL AND [ID13] IS NOT NULL");
         });
     }
 }

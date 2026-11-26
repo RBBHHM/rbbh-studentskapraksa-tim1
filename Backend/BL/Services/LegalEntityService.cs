@@ -219,7 +219,7 @@ public partial class LegalEntityService : ILegalEntityService
         if (string.Equals(entity.Status, "Verified", StringComparison.OrdinalIgnoreCase))
             throw new ValidationException("status", BackendMessages.Message("validation.registry.legal.verified"));
 
-        Helpers.RegistryVerification.Authorize(_context.Entry(entity).Property<string?>("VerificationOriginFingerprint").CurrentValue, _actor);
+        await Helpers.RegistryVerification.Authorize(_context, "LegalEntity", entity.Id, _actor);
         var before = new { status = entity.Status.ToString(), verifiedBy = entity.VerifiedBy, verifiedAt = entity.VerifiedAt };
         entity.Status = "Verified";
         entity.VerifiedBy = verifiedBy;
@@ -408,8 +408,8 @@ public partial class LegalEntityService : ILegalEntityService
 
     private void AddNewEntity(LegalEntity entity)
     {
-        _context.LegalEntities.Add(entity).Property<string?>("VerificationOriginFingerprint").CurrentValue =
-            Helpers.RegistryVerification.OriginFingerprint(_actor);
+        _context.LegalEntities.Add(entity);
+        Helpers.RegistryVerification.RecordCreator(_context, "LegalEntity", entity.Id, _actor);
     }
 
     private async Task<LegalEntityDTO> WithConnectionDescription(LegalEntity entity)
@@ -425,7 +425,7 @@ public partial class LegalEntityService : ILegalEntityService
 
         // Exact codes win. An unambiguous legacy label remains readable, including archived codebook values.
         var options = await _context.CodeLists.IgnoreQueryFilters().AsNoTracking()
-            .Where(value => value.Kategorija.ToUpper() == "OSNOV_POVEZANOSTI")
+            .Where(value => value.Definition!.Name.ToUpper() == "OSNOV_POVEZANOSTI")
             .Select(value => new { value.Kod, value.Naziv, value.Opis }).ToListAsync(ct);
         var codes = options.ToDictionary(value => value.Kod.Trim(), StringComparer.OrdinalIgnoreCase);
         var legacyLabels = options.GroupBy(value => value.Naziv.Trim(), StringComparer.OrdinalIgnoreCase)

@@ -3,6 +3,9 @@ using System.Security.Cryptography;
 using System.Text;
 using RBBH.ConnectedParties.DL.Entities.Audit;
 using RBBH.ConnectedParties.Exceptions;
+using RBBH.ConnectedParties.DL.Persistence;
+using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 namespace RBBH.ConnectedParties.Helpers;
 
@@ -15,12 +18,30 @@ internal static class RegistryVerification
         return Convert.ToHexString(SHA256.HashData(Encoding.Unicode.GetBytes(AuthenticatedActor.RequireSubject(context.User))));
     }
 
-    internal static void Authorize(string? originFingerprint, IHttpContextAccessor? accessor)
+    internal const string CreationProof = "VERIFICATION_ORIGIN";
+
+    internal static void RecordCreator(ConnectedPartiesDbContext db, string table, long id, IHttpContextAccessor? accessor)
+    {
+        if (OriginFingerprint(accessor) is { } proof)
+            db.AuditLogs.Add(new AuditLog
+            {
+                TableName = table, Action = CreationProof, Username = proof,
+                NewValues = RecordKey(id), Timestamp = DateTime.UtcNow
+            });
+    }
+
+    private static string RecordKey(long id) => id.ToString(CultureInfo.InvariantCulture);
+
+    internal static async Task Authorize(ConnectedPartiesDbContext db, string table, long id, IHttpContextAccessor? accessor)
     {
         var actorFingerprint = OriginFingerprint(accessor) ?? throw new MissingActorIdentityException();
-        if (string.IsNullOrEmpty(originFingerprint))
+        var key = RecordKey(id);
+        var proofs = await db.AuditLogs.IgnoreQueryFilters().AsNoTracking()
+            .Where(row => row.TableName == table && row.Action == CreationProof && row.NewValues == key)
+            .Select(row => row.Username).Take(2).ToListAsync(accessor?.HttpContext?.RequestAborted ?? default);
+        if (proofs.Count != 1 || proofs[0].Length != 64 || !proofs[0].All(Uri.IsHexDigit))
             throw new BusinessRuleException(409, "verification.provenance_required");
-        if (string.Equals(originFingerprint, actorFingerprint, StringComparison.Ordinal))
+        if (string.Equals(proofs[0], actorFingerprint, StringComparison.OrdinalIgnoreCase))
             throw new BusinessRuleException(403, "verification.self_denied");
     }
 

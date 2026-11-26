@@ -20,17 +20,8 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
     /// <inheritdoc/>
     public async Task<Result<object>> GetCategoriesAsync()
     {
-        var valueCategories = await _dbContext.CodeLists
-            // Category navigation is administrative data too. Keep categories
-            // visible even when every value in one category is inactive.
-            .IgnoreQueryFilters()
-            .AsNoTracking()
-            .Select(x => x.Kategorija)
-            .Distinct()
-            .ToListAsync();
-        var definitions = await _dbContext.CodeListDefinitions.AsNoTracking()
-            .Select(item => item.Name).ToListAsync();
-        var categories = valueCategories.Concat(definitions).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(k => k).ToList();
+        var categories = await _dbContext.CodeListDefinitions.AsNoTracking()
+            .OrderBy(item => item.Name).Select(item => item.Name).ToListAsync();
 
         return Result<object>.Success(new { categories });
     }
@@ -42,7 +33,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
             return Result<List<CodeListDropdownDTO>>.ValidationError(BackendMessages.Message("validation.codelist.category.required"));
 
         var items = await _dbContext.CodeLists
-            .Where(x => x.Kategorija == kategorija && x.Aktivan && !_dbContext.CodeListDefinitions.Any(definition => definition.Name == x.Kategorija && !definition.IsActive))
+            .Where(x => x.Definition!.Name == kategorija && x.Aktivan && !_dbContext.CodeListDefinitions.Any(definition => definition.Name == x.Definition!.Name && !definition.IsActive))
             .OrderBy(x => x.Naziv).ThenBy(x => x.ID)
             .ProjectToType<CodeListDropdownDTO>()
             .ToListAsync();
@@ -60,12 +51,12 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
             // Administrators must be able to see the complete history, including
             // soft-deactivated values. Dropdowns intentionally use the filtered query above.
             .IgnoreQueryFilters()
-            .Where(x => x.Kategorija == kategorija)
+            .Where(x => x.Definition!.Name == kategorija)
             .OrderBy(x => x.Naziv).ThenBy(x => x.ID)
-            .ProjectToType<CodeListResponseDTO>()
+            .Include(row => row.Definition)
             .ToListAsync();
 
-        return Result<List<CodeListResponseDTO>>.Success(items);
+        return Result<List<CodeListResponseDTO>>.Success(items.Adapt<List<CodeListResponseDTO>>());
     }
 
     /// <inheritdoc/>
@@ -76,6 +67,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
 
         var item = await _dbContext.CodeLists
             .IgnoreQueryFilters()
+            .Include(row => row.Definition)
             .FirstOrDefaultAsync(x => x.ID == id);
 
         if (item is null)
@@ -95,10 +87,11 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
         // Provjera duplikata — isti Kod u istoj Kategoriji
         var category = dto.Kategorija.Trim();
         var normalizedCategory = category.ToUpperInvariant();
+        var definition = await _dbContext.CodeListDefinitions.SingleOrDefaultAsync(item => item.Name.ToUpper() == normalizedCategory);
         var code = dto.Kod.Trim().ToUpperInvariant();
         // Inactive values retain their stable key and must be reactivated, not duplicated.
         var postoji = await _dbContext.CodeLists.IgnoreQueryFilters().AnyAsync(x =>
-            x.Kategorija.Trim().ToUpper() == normalizedCategory && x.Kod.Trim().ToUpper() == code);
+            x.Definition!.Name.Trim().ToUpper() == normalizedCategory && x.Kod.Trim().ToUpper() == code);
 
         if (postoji)
             return Result<CodeListResponseDTO>.ValidationError(
@@ -115,8 +108,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
             KreiraoKorisnik   = korisnik,
         };
 
-        var definition = await _dbContext.CodeListDefinitions.SingleOrDefaultAsync(item => item.Name == category);
-        if (definition?.UsesCustomColumns == true)
+        if (definition is not null && !CodebookDefinitions.UsesReferenceFields(definition))
             return Result<CodeListResponseDTO>.ValidationError(BackendMessages.Message("validation.codelist.inactive"), code: "codes.schema_invalid");
         if (definition is { IsActive: false })
             return Result<CodeListResponseDTO>.ValidationError(BackendMessages.Message("validation.codelist.inactive"), code: "codes.value_inactive_category");
@@ -124,8 +116,10 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
         {
             definition = new CodeListDefinition { Name = category, CreatedBy = korisnik };
             _dbContext.CodeListDefinitions.Add(definition);
+            CodebookDefinitions.ConfigureReferenceFields(_dbContext, definition);
         }
         definition.ModifiedBy = korisnik;
+        entitet.Definition = definition;
         _dbContext.CodeLists.Add(entitet);
         AddAudit("CODELIST_ADD", korisnik, null, Snapshot(entitet));
         await _dbContext.SaveChangesAsync();
@@ -151,12 +145,13 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
         var entitet = await _dbContext.CodeLists
             .IgnoreQueryFilters()
             .AsTracking()
+            .Include(row => row.Definition)
             .FirstOrDefaultAsync(x => x.ID == id);
 
         if (entitet is null)
             return Result<CodeListResponseDTO>.NotFoundError(BackendMessages.Message("validation.codelist.value.missing", id));
 
-        if (await _dbContext.CodeListDefinitions.AnyAsync(definition => definition.Name == entitet.Kategorija && definition.UsesCustomColumns))
+        if (entitet.Definition is { } definition && !CodebookDefinitions.UsesReferenceFields(definition))
             return Result<CodeListResponseDTO>.ValidationError(BackendMessages.Message("validation.codelist.inactive"));
 
         // Updating Aktivan must enforce the same reference guard as Delete.
@@ -193,6 +188,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
         var entitet = await _dbContext.CodeLists
             .IgnoreQueryFilters()
             .AsTracking()
+            .Include(row => row.Definition)
             .FirstOrDefaultAsync(x => x.ID == id);
 
         if (entitet is null)
@@ -229,7 +225,8 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
         var values = await _dbContext.CodeLists
             .IgnoreQueryFilters()
             .AsTracking()
-            .Where(item => item.Kategorija == normalizedCategory)
+            .Include(row => row.Definition)
+            .Where(item => item.Definition!.Name == normalizedCategory)
             .ToListAsync();
 
         if (definition is null && values.Count == 0)
@@ -272,7 +269,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
     /// </summary>
     private async Task<bool> JeVrijednostUUpotrebi(string kategorija, string kod)
     {
-        if (await _dbContext.CodeLists.IgnoreQueryFilters().AnyAsync(row => row.Kategorija == LanguageBooks.Packs && row.Localization != null && row.Localization.LanguageCode == kod && row.Localization.ResourceKey != null)) return true;
+        if (await _dbContext.CodeLists.IgnoreQueryFilters().AnyAsync(row => row.Definition!.Name == LanguageBooks.Packs && row.Localization != null && row.Localization.LanguageCode == kod && row.Localization.ResourceKey != null)) return true;
         return kategorija switch
         {
             "OSNOV_POVEZANOSTI" =>

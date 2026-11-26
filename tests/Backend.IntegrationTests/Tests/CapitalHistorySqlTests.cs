@@ -65,8 +65,9 @@ public sealed class CapitalHistorySqlTests : CapitalHistoryFixture
             await db.Database.MigrateAsync();
             Assert.Equal(2, await db.Capitals.CountAsync());
             var labels = await db.Database.SqlQueryRaw<string>("""
-                SELECT ID16 AS [Value] FROM dbo.CODELIST_VALUES
-                WHERE CATEGORY = N'LANGUAGE_PACKS' AND ID13 = N'capital.create' ORDER BY ID12
+                SELECT v.ID16 AS [Value] FROM dbo.CODELIST_VALUES v
+                JOIN dbo.CODELIST_DEFINITIONS d ON d.ID = v.DEFINITION_ID
+                WHERE d.NAME = N'LANGUAGE_PACKS' AND v.ID13 = N'capital.create' ORDER BY ID12
                 """).ToListAsync();
             Assert.Equal(new[] { "Novi kapital", "Neues Kapital", "New capital" }, labels);
             var active = await db.Capitals.SingleAsync(row => row.IsActive);

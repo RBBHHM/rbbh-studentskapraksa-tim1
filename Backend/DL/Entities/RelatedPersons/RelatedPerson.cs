@@ -122,9 +122,6 @@ public class RelatedPerson
 
     public bool IsActive { get; set; } = true;
 
-    [StringLength(64)]
-    public string? VerificationOriginFingerprint { get; internal set; }
-
     internal void MarkModified(DateTime timestamp)
     {
         ModifiedAt = ModifiedAt is { } previous && previous >= timestamp

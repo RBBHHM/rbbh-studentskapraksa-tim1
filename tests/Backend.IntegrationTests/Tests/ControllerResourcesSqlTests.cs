@@ -106,7 +106,7 @@ public sealed class ControllerResourcesSqlTests : RoleCatalogFixture
         Assert.Equal(HttpStatusCode.BadRequest, import.StatusCode);
         var error = await import.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("Column A has an invalid header. Expected 'Vrijednost' or 'Value', found 'Unexpected'.", error.GetProperty("error").GetString());
-        await InDatabase(async db => { Assert.Empty(db.Capitals); Assert.Empty(db.AuditLogs); Assert.False(await db.CodeLists.AnyAsync(row => row.Kategorija == "Fixture")); });
+        await InDatabase(async db => { Assert.Empty(db.Capitals); Assert.Empty(db.AuditLogs); Assert.False(await db.CodeLists.AnyAsync(row => row.Definition!.Name == "Fixture")); });
     }
 
     [SqlServerFact]
@@ -168,7 +168,7 @@ public sealed class ControllerResourcesSqlTests : RoleCatalogFixture
         }
         await InDatabase(async db =>
         {
-            Assert.False(await db.CodeLists.AnyAsync(row => row.Kategorija == "FormulaFixture"));
+            Assert.False(await db.CodeLists.AnyAsync(row => row.Definition!.Name == "FormulaFixture"));
             Assert.False(await db.CodeListDefinitions.AnyAsync(row => row.Name == "FormulaFixture")); Assert.Empty(db.AuditLogs);
         });
     }

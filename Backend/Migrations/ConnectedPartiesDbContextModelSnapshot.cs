@@ -354,11 +354,6 @@ namespace RBBH.ConnectedParties.Migrations
                         .IsUnique()
                         .HasFilter("\"TAX_NUMBER\" IS NOT NULL");
 
-                    b.Property<string>("VerificationOriginFingerprint")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)")
-                        .HasColumnName("VERIFICATION_ORIGIN_FINGERPRINT");
-
                     b.ToTable("LEGAL_ENTITIES");
                 });
 
@@ -941,11 +936,6 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasColumnType("nvarchar(20)")
                         .HasColumnName("STATUS");
 
-                    b.Property<string>("VerificationOriginFingerprint")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)")
-                        .HasColumnName("VERIFICATION_ORIGIN_FINGERPRINT");
-
                     b.Property<DateTime?>("VerifiedAt")
                         .HasColumnType("datetime2")
                         .HasColumnName("VERIFIED_AT");
@@ -1305,7 +1295,7 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasColumnType("bit")
                         .HasColumnName("ID1");
 
-                    b.Property<long?>("DefinitionId")
+                    b.Property<long>("DefinitionId")
                         .HasColumnType("bigint")
                         .HasColumnName("DEFINITION_ID");
 
@@ -1319,20 +1309,11 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasColumnType("datetime2")
                         .HasColumnName("MODIFIED_AT");
 
-                    b.Property<string>("Kategorija")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(100)")
-                        .HasColumnName("CATEGORY")
-                        .UseCollation("Latin1_General_100_CI_AS");
-
                     b.Property<string>("Kod")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(50)")
-                        .HasColumnName("VALUE_KEY")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("ID15")
                         .UseCollation("Latin1_General_100_CI_AS");
 
                     b.Property<DateTime>("KreiranDatum")
@@ -1348,14 +1329,14 @@ namespace RBBH.ConnectedParties.Migrations
 
                     b.Property<string>("Naziv")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)")
-                        .HasColumnName("NAME");
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
+                        .HasColumnName("ID17");
 
                     b.Property<string>("Opis")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)")
-                        .HasColumnName("DESCRIPTION");
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
+                        .HasColumnName("ID18");
 
                     b.Property<DateTime?>("Slot10")
                         .HasColumnType("date")
@@ -1364,21 +1345,6 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<DateTime?>("Slot11")
                         .HasColumnType("datetime2")
                         .HasColumnName("ID11");
-
-                    b.Property<string>("Slot15")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("ID15");
-
-                    b.Property<string>("Slot17")
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)")
-                        .HasColumnName("ID17");
-
-                    b.Property<string>("Slot18")
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)")
-                        .HasColumnName("ID18");
 
                     b.Property<bool?>("Slot2")
                         .HasColumnType("bit")
@@ -1419,17 +1385,7 @@ namespace RBBH.ConnectedParties.Migrations
 
                     b.HasIndex("DefinitionId");
 
-                    b.HasIndex("Kategorija");
-
-                    b.HasIndex("Kategorija", "Kod")
-                        .IsUnique();
-
-                    b.ToTable("CODELIST_VALUES", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_CodeListValues_Category_Trimmed", "DATALENGTH([CATEGORY]) = DATALENGTH(LTRIM(RTRIM([CATEGORY])))");
-
-                            t.HasCheckConstraint("CK_CodeListValues_ValueKey_Trimmed", "DATALENGTH([VALUE_KEY]) = DATALENGTH(LTRIM(RTRIM([VALUE_KEY])))");
-                        });
+                    b.ToTable("CODELIST_VALUES");
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Sifarnici.CodeListDefinition", b =>
@@ -1767,10 +1723,6 @@ namespace RBBH.ConnectedParties.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.Property<bool>("UsesCustomColumns")
-                        .HasColumnType("bit")
-                        .HasColumnName("USES_CUSTOM_COLUMNS");
-
                     b.ToTable("CODELIST_DEFINITIONS", t =>
                         {
                             t.HasCheckConstraint("CK_CodeListDefinitions_Name_Trimmed", "DATALENGTH([NAME]) = DATALENGTH(LTRIM(RTRIM([NAME])))");
@@ -1994,7 +1946,8 @@ namespace RBBH.ConnectedParties.Migrations
                     b.HasOne("RBBH.ConnectedParties.DL.Entities.Sifarnici.CodeListDefinition", "Definition")
                         .WithMany()
                         .HasForeignKey("DefinitionId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.OwnsOne("RBBH.ConnectedParties.DL.Entities.Sifarnici.CodeListLocalization", "Localization", b1 =>
                         {
@@ -2035,11 +1988,6 @@ namespace RBBH.ConnectedParties.Migrations
                                 .HasColumnName("ID20");
 
                             b1.HasKey("ID");
-
-                            b1.HasIndex("LanguageCode", "ResourceKey")
-                                .IsUnique()
-                                .HasDatabaseName("IX_CODELIST_VALUES_LANGUAGE_RESOURCE")
-                                .HasFilter("[CATEGORY] = 'LANGUAGE_PACKS' AND [ID12] IS NOT NULL AND [ID13] IS NOT NULL");
 
                             b1.ToTable("CODELIST_VALUES");
 

@@ -24,7 +24,7 @@ public partial class CodeListController
     {
         var definition = await db.CodeListDefinitions.SingleOrDefaultAsync(item => item.Name == name, ct);
         if (definition is null) return NotFound();
-        if (!definition.UsesCustomColumns || !definition.IsActive || definition.ModifiedAt != request.ExpectedModifiedAt)
+        if (CodebookDefinitions.UsesReferenceFields(definition) || !definition.IsActive || definition.ModifiedAt != request.ExpectedModifiedAt)
             return Conflict(new { code = "codes.concurrent" });
 
         var columns = CodebookCsv.Columns(db, definition).ToDictionary(column => column.Slot);
@@ -51,8 +51,7 @@ public partial class CodeListController
         }
         else
         {
-            var key = Guid.NewGuid().ToString("N");
-            row = new CodeList { Definition = definition, Kategorija = definition.Name, Kod = key,
+            row = new CodeList { Definition = definition, Kategorija = definition.Name, Kod = "",
                 Naziv = "", KreiraoKorisnik = actor, KreiranDatum = DateTime.UtcNow };
             db.CodeLists.Add(row);
         }

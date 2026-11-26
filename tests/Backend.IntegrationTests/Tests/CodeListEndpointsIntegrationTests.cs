@@ -48,7 +48,7 @@ namespace IntegrationTests.Tests
             var result = await NewController().Create(dto);
 
             // Assert — HTTP 201 Created + normalizovan kod
-            var created = result.Result.Should().BeOfType<CreatedResult>().Subject;
+            var created = result.Result.Should().BeOfType<CreatedAtActionResult>().Subject;
             var dtoOut = created.Value.Should().BeOfType<CodeListResponseDTO>().Subject;
             dtoOut.Kod.Should().Be("VL");
 
@@ -97,7 +97,7 @@ namespace IntegrationTests.Tests
             // CREATE
             var createResult = await NewController().Create(
                 new CreateCodeListDTO { Kategorija = Kategorija, Kod = "KR", Naziv = "Kratkoročni" });
-            var id = ((CodeListResponseDTO)((CreatedResult)createResult.Result!).Value!).ID;
+            var id = ((CodeListResponseDTO)((CreatedAtActionResult)createResult.Result!).Value!).ID;
 
             // READ
             var getResult = await NewController().GetByID(id);
@@ -132,7 +132,7 @@ namespace IntegrationTests.Tests
 
             // Arrange
             await NewController().Create(new CreateCodeListDTO { Kategorija = Kategorija, Kod = "A", Naziv = "Aktivan" });
-            var bDto = ((CodeListResponseDTO)((CreatedResult)(await NewController()
+            var bDto = ((CodeListResponseDTO)((CreatedAtActionResult)(await NewController()
                 .Create(new CreateCodeListDTO { Kategorija = Kategorija, Kod = "B", Naziv = "Neaktivan" })).Result!).Value!);
             await NewController().Delete(bDto.ID); // soft-delete -> Aktivan = false
 

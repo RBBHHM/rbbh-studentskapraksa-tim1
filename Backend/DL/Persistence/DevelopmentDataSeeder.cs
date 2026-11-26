@@ -165,7 +165,7 @@ public static class DevelopmentDataSeeder
             Code("OSNOV_POSEBNOG_ODNOSA", "NKF", "Nosilac ključne funkcije", now), Code("OSNOV_POSEBNOG_ODNOSA", "PROKURISTA", "Prokurista banke", now),
             Code("OSNOV_POSEBNOG_ODNOSA", "B1", "B1", now), Code("OSNOV_POSEBNOG_ODNOSA", "UZA_PORODICA", "Član uže porodice povezanog lica", now)
         };
-        var existing = await db.CodeLists.IgnoreQueryFilters().Select(item => item.Kategorija + "|" + item.Kod).ToListAsync(ct);
+        var existing = await db.CodeLists.IgnoreQueryFilters().Select(item => item.Definition!.Name + "|" + item.Kod).ToListAsync(ct);
         db.CodeLists.AddRange(required.Where(item => !existing.Contains(item.Kategorija + "|" + item.Kod)));
         await db.SaveChangesAsync(ct);
     }

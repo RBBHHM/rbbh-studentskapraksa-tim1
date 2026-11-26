@@ -50,6 +50,9 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
     internal static object? ReadValue(ConnectedPartiesDbContext db, CodeList row, int slot) => slot switch
     {
         1 => row.Aktivan,
+        15 => string.IsNullOrEmpty(row.Kod) ? null : row.Kod,
+        17 => string.IsNullOrEmpty(row.Naziv) ? null : row.Naziv,
+        18 => row.Opis,
         12 => row.Localization?.LanguageCode,
         13 => row.Localization?.ResourceKey,
         14 => row.Localization?.ContextInfo,
@@ -63,7 +66,7 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
         await db.CodeListDefinitions.SingleOrDefaultAsync(row =>
             row.Name.ToUpper() == category.ToUpper() && row.IsActive, ct);
 
-    internal sealed record Field(string Header, int Slot, bool Required, string Example);
+    internal sealed record Field(string Header, int Slot, bool Required, string Example, int? MaxLength = null, bool IsCode = false);
     internal static Field Slot(int slot, string header, bool required = false) => new(header, slot, required,
         slot switch
         {
@@ -74,7 +77,7 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
     private Field[] Schema(CodeListDefinition definition, string exampleLanguage)
     {
         var columns = Columns(db, definition);
-        if (definition.UsesCustomColumns) return columns.Select(column => Slot(column.Slot, column.Name)).ToArray();
+        if (!CodebookDefinitions.UsesReferenceFields(definition)) return columns.Select(column => Slot(column.Slot, column.Name)).ToArray();
         if (definition.Name == LanguageBooks.Packs)
             return [Slot(1, "IS_ACTIVE"), new("LANGUAGE_CODE", 12, true, exampleLanguage), new("RESOURCE_KEY", 13, true, "example.field"),
                 Slot(14, "CONTEXT_INFO"), Slot(16, "LABEL_TEXT", true), Slot(19, "HELP_TEXT"), Slot(20, "PLACEHOLDER_TEXT"),
@@ -82,9 +85,9 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
         if (definition.Name == LanguageBooks.Languages)
             return [Slot(1, "IS_ACTIVE"), new("LANGUAGE_CODE", 12, true, "XX"), new("LANGUAGE_NAME", 13, true, "Example language"),
                 .. columns.Where(column => column.Slot is not (1 or 12 or 13)).Select(column => Slot(column.Slot, column.Name))];
-        return [new("VALUE_KEY", -1, true, "EXAMPLE_CODE"), new("NAME", -2, true, "Example value"),
-            new("DESCRIPTION", -3, false, "Example description"), Slot(1, columns.FirstOrDefault(column => column.Slot == 1)?.Name ?? "IS_ACTIVE"),
-            .. columns.Where(column => column.Slot != 1).Select(column => Slot(column.Slot, column.Name))];
+        return [new("VALUE_KEY", 15, true, "EXAMPLE_CODE", 50, IsCode: true), new("NAME", 17, true, "Example value", 200),
+            new("DESCRIPTION", 18, false, "Example description", 500), Slot(1, columns.FirstOrDefault(column => column.Slot == 1)?.Name ?? "IS_ACTIVE"),
+            .. columns.Where(column => column.Slot is not (1 or 15 or 17 or 18)).Select(column => Slot(column.Slot, column.Name))];
     }
 
     internal async Task<byte[]?> Template(CodeListDefinition definition, CancellationToken ct)
@@ -109,7 +112,7 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
 
     private async Task<HashSet<string>> Languages(CancellationToken ct)
     {
-        var values = await db.CodeLists.Where(row => row.Kategorija == LanguageBooks.Languages &&
+        var values = await db.CodeLists.Where(row => row.Definition!.Name == LanguageBooks.Languages &&
             db.CodeListDefinitions.Any(definition => definition.Name == LanguageBooks.Languages && definition.IsActive))
             .Select(row => row.Localization!.LanguageCode ?? row.Kod).ToListAsync(ct);
         return values.ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -150,9 +153,9 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
         if (missing is not null) return Failure("codes.csv.header-missing", missing.Header);
 
         var indices = schema.Select(field => byHeader[field.Header]).ToArray();
-        var rows = db.CodeLists.IgnoreQueryFilters().Where(row => row.Kategorija == definition.Name);
+        var rows = db.CodeLists.IgnoreQueryFilters().Where(row => row.Definition!.Name == definition.Name);
         HashSet<string> used;
-        if (definition.UsesCustomColumns)
+        if (!CodebookDefinitions.UsesReferenceFields(definition))
         {
             var existing = await rows.ToListAsync(ct);
             used = existing.Select(row => CellKey(schema.Select(field => ReadValue(db, row, field.Slot))))
@@ -199,7 +202,7 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
                 values.Add(field.Slot, value);
             }
             if (values.Count != schema.Length) continue;
-            if (definition.UsesCustomColumns)
+            if (!CodebookDefinitions.UsesReferenceFields(definition))
             {
                 var signature = CellKey(schema.Select(field => field.Slot == 1 ? values[field.Slot] ?? true : values[field.Slot]));
                 if (!seen.Add(signature))
@@ -215,7 +218,7 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
                 pending.Add(values);
                 continue;
             }
-            var code = (string)values[packs || languages ? 12 : -1]!;
+            var code = (string)values[packs || languages ? 12 : 15]!;
             string? resourceKey = packs ? (string?)values[13] : null;
             if (packs && !supported.Contains(code))
             {
@@ -241,7 +244,7 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
 
         if (total == 0) return Failure("codes.csv.data");
         var imported = 0;
-        if (!dryRun && pending.Count > 0 && (issues.Count == 0 || (allowPartial && definition.UsesCustomColumns)))
+        if (!dryRun && pending.Count > 0 && (issues.Count == 0 || (allowPartial && !CodebookDefinitions.UsesReferenceFields(definition))))
         {
             var now = DateTime.UtcNow;
             foreach (var values in pending) Add(definition, values, actor, now);
@@ -251,7 +254,7 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
             await db.SaveChangesAsync(ct);
             imported = pending.Count;
         }
-        return new(total - (exampleSkipped ? 1 : 0), pending.Count, duplicates, imported, exampleSkipped, issues, definition.UsesCustomColumns);
+        return new(total - (exampleSkipped ? 1 : 0), pending.Count, duplicates, imported, exampleSkipped, issues, !CodebookDefinitions.UsesReferenceFields(definition));
     }
 
     private static CsvPreview Failure(string key, params string[] parameters) => new(0, 0, 0, 0, false, [new(key, parameters)]);
@@ -345,9 +348,9 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
                 value = date;
                 return true;
             default:
-                var limit = field.Slot switch { -1 => 50, -2 or 13 => 200, -3 => 500, 12 => 10, 14 or 15 => 100, _ => 4000 };
-                if (trimmed.Length > limit || (field.Slot == -1 && !Code.IsMatch(trimmed))) return false;
-                value = field.Slot == -1 ? trimmed.ToUpperInvariant() : trimmed;
+                var limit = field.MaxLength ?? (field.Slot switch { 13 => 200, 12 => 10, 14 or 15 => 100, _ => 4000 });
+                if (trimmed.Length > limit || (field.IsCode && !Code.IsMatch(trimmed))) return false;
+                value = field.IsCode ? trimmed.ToUpperInvariant() : trimmed;
                 return true;
         }
     }
@@ -357,13 +360,13 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
         string? Text(int slot) => (string?)values.GetValueOrDefault(slot);
         var packs = definition.Name == LanguageBooks.Packs;
         var languages = definition.Name == LanguageBooks.Languages;
-        var code = packs || definition.UsesCustomColumns ? Guid.NewGuid().ToString("N") :
-            languages ? Text(12)!.ToUpperInvariant() : Text(-1)!;
+        var code = !CodebookDefinitions.UsesReferenceFields(definition) ? "" : packs ? Guid.NewGuid().ToString("N") :
+            languages ? Text(12)!.ToUpperInvariant() : Text(15)!;
         var row = new CodeList
         {
             Definition = definition, Kategorija = definition.Name, Kod = code,
-            Naziv = definition.UsesCustomColumns ? "" : packs || languages ? Text(13)! : Text(-2)!,
-            Opis = Text(-3), Aktivan = (bool?)values.GetValueOrDefault(1) ?? true,
+            Naziv = !CodebookDefinitions.UsesReferenceFields(definition) ? "" : packs || languages ? Text(13)! : Text(17)!,
+            Opis = Text(18), Aktivan = (bool?)values.GetValueOrDefault(1) ?? true,
             KreiraoKorisnik = actor, KreiranDatum = now
         };
         db.CodeLists.Add(row);
@@ -383,8 +386,11 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
             if (values.ContainsKey(19)) row.Localization.ResourceHelper = Text(19);
             if (values.ContainsKey(20)) row.Localization.ResourcePlaceholder = Text(20);
         }
+        if (values.ContainsKey(15)) row.Kod = Text(15) ?? "";
+        if (values.ContainsKey(17)) row.Naziv = Text(17) ?? "";
+        if (values.ContainsKey(18)) row.Opis = Text(18);
         var entry = db.Entry(row);
-        foreach (var slot in values.Keys.Where(slot => slot is (>= 2 and <= 11) or 15 or 17 or 18))
+        foreach (var slot in values.Keys.Where(slot => slot is >= 2 and <= 11))
             entry.Property($"Slot{slot}").CurrentValue = values[slot];
     }
 }

@@ -253,8 +253,14 @@ else
             if (!_categories.Contains(_category)) _category = "";
             var values = _category.Length == 0 ? null : await Api.ValuesAsync(_category, _token);
             _values = values?.Items ?? [];
-            _valueColumns = values?.Columns ?? [];
-            _customColumns = values?.UsesCustomColumns == true;
+            var columns = values?.Columns ?? [];
+            var referenceFields = columns.Any(column => column is { Slot: 15, Name: "VALUE_KEY" }) &&
+                columns.Any(column => column is { Slot: 17, Name: "NAME" }) &&
+                columns.Any(column => column is { Slot: 18, Name: "DESCRIPTION" });
+            _customColumns = values is not null && !referenceFields && !IsLanguagePack && _category != "LANGUAGES";
+            _valueColumns = _customColumns ? columns : columns.Where(column => column.Slot is not (1 or 15 or 17 or 18) &&
+                (!IsLanguagePack || column.Slot is not (12 or 13 or 14 or 16 or 19 or 20)) &&
+                (_category != "LANGUAGES" || column.Slot is not (12 or 13))).ToArray();
             _valueModifiedAt = values?.ModifiedAt;
             _loaded = true;
         }

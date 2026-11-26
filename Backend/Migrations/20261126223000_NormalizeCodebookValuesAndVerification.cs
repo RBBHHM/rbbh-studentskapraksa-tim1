@@ -1,0 +1,74 @@
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
+using RBBH.ConnectedParties.DL.Persistence;
+
+namespace RBBH.ConnectedParties.Api.Migrations;
+
+[DbContext(typeof(ConnectedPartiesDbContext))]
+[Migration("20261126223000_NormalizeCodebookValuesAndVerification")]
+public sealed class NormalizeCodebookValuesAndVerification : Migration
+{
+    protected override void Up(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.Sql("""
+            INSERT dbo.AUDIT_LOGS ([TABLE_NAME], [ACTION], [USER], [TIMESTAMP], [NEW_VALUES])
+            SELECT N'LegalEntity', N'VERIFICATION_ORIGIN', VERIFICATION_ORIGIN_FINGERPRINT, CREATED_AT, CONVERT(nvarchar(20), ID)
+            FROM dbo.LEGAL_ENTITIES WHERE VERIFICATION_ORIGIN_FINGERPRINT IS NOT NULL
+            UNION ALL
+            SELECT N'RelatedPerson', N'VERIFICATION_ORIGIN', VERIFICATION_ORIGIN_FINGERPRINT, CREATED_AT, CONVERT(nvarchar(20), ID)
+            FROM dbo.RELATED_PERSONS WHERE VERIFICATION_ORIGIN_FINGERPRINT IS NOT NULL;
+
+            INSERT dbo.CODELIST_DEFINITIONS (NAME, IS_ACTIVE, IS_SYSTEM_REQUIRED, USES_CUSTOM_COLUMNS, CREATED_BY, CREATED_AT)
+            SELECT v.CATEGORY, 1, 0, 0, N'migration', SYSUTCDATETIME()
+            FROM dbo.CODELIST_VALUES v
+            WHERE NOT EXISTS (SELECT 1 FROM dbo.CODELIST_DEFINITIONS d WHERE d.NAME = v.CATEGORY)
+            GROUP BY v.CATEGORY;
+
+            UPDATE v SET DEFINITION_ID = d.ID
+            FROM dbo.CODELIST_VALUES v JOIN dbo.CODELIST_DEFINITIONS d ON d.NAME = v.CATEGORY;
+
+            IF EXISTS (
+                SELECT 1 FROM dbo.CODELIST_DEFINITIONS
+                WHERE USES_CUSTOM_COLUMNS = 0 AND NAME NOT IN ('LANGUAGES', 'LANGUAGE_PACKS')
+                  AND (COLUMN_NAME_15 IS NOT NULL OR COLUMN_NAME_17 IS NOT NULL OR COLUMN_NAME_18 IS NOT NULL)
+            ) OR EXISTS (
+                SELECT 1 FROM dbo.CODELIST_VALUES v JOIN dbo.CODELIST_DEFINITIONS d ON d.ID = v.DEFINITION_ID
+                WHERE d.USES_CUSTOM_COLUMNS = 0
+                  AND (v.ID15 IS NOT NULL OR v.ID17 IS NOT NULL OR v.ID18 IS NOT NULL)
+            )
+                THROW 51000, 'Existing typed values overlap with reference fields. Resolve slot assignments before applying the migration.', 1;
+
+            UPDATE v SET ID15 = v.VALUE_KEY, ID17 = v.NAME, ID18 = v.DESCRIPTION
+            FROM dbo.CODELIST_VALUES v JOIN dbo.CODELIST_DEFINITIONS d ON d.ID = v.DEFINITION_ID
+            WHERE d.USES_CUSTOM_COLUMNS = 0;
+
+            UPDATE dbo.CODELIST_DEFINITIONS
+            SET COLUMN_NAME_15 = N'VALUE_KEY', COLUMN_NAME_17 = N'NAME', COLUMN_NAME_18 = N'DESCRIPTION',
+                COLUMN_POSITION_15 = 15, COLUMN_POSITION_17 = 17, COLUMN_POSITION_18 = 18
+            WHERE USES_CUSTOM_COLUMNS = 0 AND NAME NOT IN ('LANGUAGES', 'LANGUAGE_PACKS');
+
+            DROP INDEX IX_CODELIST_VALUES_LANGUAGE_RESOURCE ON dbo.CODELIST_VALUES;
+            DROP INDEX IX_CODELIST_VALUES_CATEGORY_VALUE_KEY ON dbo.CODELIST_VALUES;
+            DROP INDEX IX_CODELIST_VALUES_CATEGORY ON dbo.CODELIST_VALUES;
+            ALTER TABLE dbo.CODELIST_VALUES DROP CONSTRAINT CK_CodeListValues_Category_Trimmed, CK_CodeListValues_ValueKey_Trimmed;
+
+            UPDATE dbo.CODELIST_VALUES SET ID15 = N'' WHERE ID15 IS NULL;
+            UPDATE dbo.CODELIST_VALUES SET ID17 = N'' WHERE ID17 IS NULL;
+            ALTER TABLE dbo.CODELIST_VALUES ALTER COLUMN ID15 nvarchar(100) COLLATE Latin1_General_100_CI_AS NOT NULL;
+            ALTER TABLE dbo.CODELIST_VALUES ALTER COLUMN ID17 nvarchar(4000) NOT NULL;
+            ALTER TABLE dbo.CODELIST_VALUES DROP CONSTRAINT FK_CODELIST_VALUES_CODELIST_DEFINITIONS_DEFINITION_ID;
+            DROP INDEX IX_CODELIST_VALUES_DEFINITION_ID ON dbo.CODELIST_VALUES;
+            ALTER TABLE dbo.CODELIST_VALUES ALTER COLUMN DEFINITION_ID bigint NOT NULL;
+            CREATE INDEX IX_CODELIST_VALUES_DEFINITION_ID ON dbo.CODELIST_VALUES (DEFINITION_ID);
+            ALTER TABLE dbo.CODELIST_VALUES ADD CONSTRAINT FK_CODELIST_VALUES_CODELIST_DEFINITIONS_DEFINITION_ID
+                FOREIGN KEY (DEFINITION_ID) REFERENCES dbo.CODELIST_DEFINITIONS (ID);
+            ALTER TABLE dbo.CODELIST_VALUES DROP COLUMN CATEGORY, VALUE_KEY, NAME, DESCRIPTION;
+            """);
+        migrationBuilder.DropColumn("USES_CUSTOM_COLUMNS", "CODELIST_DEFINITIONS");
+        migrationBuilder.DropColumn("VERIFICATION_ORIGIN_FINGERPRINT", "LEGAL_ENTITIES");
+        migrationBuilder.DropColumn("VERIFICATION_ORIGIN_FINGERPRINT", "RELATED_PERSONS");
+    }
+
+    protected override void Down(MigrationBuilder migrationBuilder) =>
+        throw new NotSupportedException("Restore a database backup to reverse this data migration.");
+}

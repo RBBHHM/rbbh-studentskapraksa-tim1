@@ -30,7 +30,6 @@ public class LegalEntityConfiguration : IEntityTypeConfiguration<LegalEntity>
         builder.Property(e => e.TaxNumber).HasMaxLength(13);
         builder.Property(e => e.FbaId).HasMaxLength(50);
         builder.Property(e => e.BasisOfConnection).HasMaxLength(100).IsRequired();
-        builder.Property<string>("VerificationOriginFingerprint").HasMaxLength(64);
         builder.Property(e => e.Status).HasMaxLength(50).IsRequired();
         builder.Property(e => e.CreatedBy).HasMaxLength(100).IsRequired();
         builder.Property(e => e.ModifiedBy).HasMaxLength(100);

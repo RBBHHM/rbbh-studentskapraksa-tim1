@@ -44,7 +44,7 @@ public class RegistryVerificationHttpTests : AuthenticatedApiFixture
         Assert.Contains("verification.self_denied", await response.Content.ReadAsStringAsync());
         await InDatabase(async db =>
         {
-            var creator = legal ? db.Entry((await db.LegalEntities.FindAsync(id))!).Property<string>("VerificationOriginFingerprint").CurrentValue : (await db.RelatedPersons.FindAsync(id))!.VerificationOriginFingerprint;
+            var creator = (await db.AuditLogs.IgnoreQueryFilters().SingleAsync(row => row.Action == "VERIFICATION_ORIGIN")).Username;
             Assert.Equal(Fingerprint("creator"), creator);
             Assert.Empty(await db.AuditLogs.Where(row => row.Action == "VERIFY").ToListAsync());
         });
@@ -100,11 +100,11 @@ public class RegistryVerificationHttpTests : AuthenticatedApiFixture
         var id = await CreateRecord(true);
         await InDatabase(async db =>
         {
-            var row = (await db.LegalEntities.FindAsync(id))!;
-            db.Entry(row).Property("VerificationOriginFingerprint").CurrentValue = "forged";
+            var row = await db.AuditLogs.IgnoreQueryFilters().SingleAsync(log => log.Action == "VERIFICATION_ORIGIN");
+            row.Username = "forged";
             await Assert.ThrowsAsync<RBBH.ConnectedParties.Exceptions.BusinessRuleException>(() => db.SaveChangesAsync());
         });
-        await InDatabase(async db => Assert.Equal(Fingerprint("creator"), db.Entry((await db.LegalEntities.FindAsync(id))!).Property<string>("VerificationOriginFingerprint").CurrentValue));
+        await InDatabase(async db => Assert.Equal(Fingerprint("creator"), (await db.AuditLogs.IgnoreQueryFilters().SingleAsync(log => log.Action == "VERIFICATION_ORIGIN")).Username));
     }
 
     [Fact]
@@ -118,7 +118,7 @@ public class RegistryVerificationHttpTests : AuthenticatedApiFixture
         await InDatabase(async db =>
         {
             var row = (await db.RelatedPersons.FindAsync(id))!;
-            Assert.Equal(RelatedPersonStatus.Draft, row.Status); Assert.Equal(Fingerprint("creator"), row.VerificationOriginFingerprint);
+            Assert.Equal(RelatedPersonStatus.Draft, row.Status); Assert.Equal(Fingerprint("creator"), (await db.AuditLogs.IgnoreQueryFilters().SingleAsync(log => log.Action == "VERIFICATION_ORIGIN")).Username);
         });
     }
     private static string Fingerprint(string subject) =>

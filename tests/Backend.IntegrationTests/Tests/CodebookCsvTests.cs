@@ -23,7 +23,8 @@ public abstract class CodebookCsvFixture : LocalizationFixture
         {
             var definition = new CodeListDefinition { Name = "CSV_FIXTURE", CreatedBy = "fixture" };
             var entry = db.CodeListDefinitions.Add(definition);
-            foreach (var (slot, name) in new[] { (2, "FLAG"), (3, "COUNT"), (6, "AMOUNT"), (8, "PRECISE"), (9, "DAY"), (11, "INSTANT"), (17, "TEXT") })
+            RBBH.ConnectedParties.BL.Services.CodebookDefinitions.ConfigureReferenceFields(db, definition);
+            foreach (var (slot, name) in new[] { (2, "FLAG"), (3, "COUNT"), (6, "AMOUNT"), (8, "PRECISE"), (9, "DAY"), (11, "INSTANT"), (20, "TEXT") })
                 entry.Property($"ColumnName{slot}").CurrentValue = name;
             await db.SaveChangesAsync();
         });
@@ -53,13 +54,13 @@ public sealed class CodebookCsvTests : CodebookCsvFixture
         var preview = await Import("CSV_FIXTURE", template + Valid, true);
         Assert.True(preview.GetProperty("exampleSkipped").GetBoolean());
         Assert.Equal(1, preview.GetProperty("ready").GetInt32());
-        await InDatabase(async db => Assert.Empty(await db.CodeLists.Where(row => row.Kategorija == "CSV_FIXTURE").ToListAsync()));
+        await InDatabase(async db => Assert.Empty(await db.CodeLists.Where(row => row.Definition!.Name == "CSV_FIXTURE").ToListAsync()));
 
         var result = await Import("CSV_FIXTURE", template + Valid, false);
         Assert.Equal(1, result.GetProperty("imported").GetInt32());
         await InDatabase(async db =>
         {
-            var row = await db.CodeLists.SingleAsync(row => row.Kategorija == "CSV_FIXTURE");
+            var row = await db.CodeLists.SingleAsync(row => row.Definition!.Name == "CSV_FIXTURE");
             Assert.Equal("Naziv, test", row.Naziv);
             Assert.Contains("Drugi red", row.Opis);
             var entry = db.Entry(row);
@@ -67,7 +68,7 @@ public sealed class CodebookCsvTests : CodebookCsvFixture
             Assert.Equal(-42, entry.Property<int?>("Slot3").CurrentValue);
             Assert.Equal(1.25m, entry.Property<decimal?>("Slot6").CurrentValue);
             Assert.Equal(new DateTime(2024, 2, 29), entry.Property<DateTime?>("Slot9").CurrentValue);
-            Assert.Equal("Ž", entry.Property<string>("Slot17").CurrentValue);
+            Assert.Equal("Ž", row.Localization?.ResourcePlaceholder);
             Assert.Single(await db.AuditLogs.Where(log => log.Action == "IMPORT").ToListAsync());
         });
         var duplicate = await Import("CSV_FIXTURE", Header + Valid, false);
@@ -92,7 +93,7 @@ public sealed class CodebookCsvTests : CodebookCsvFixture
         var result = await Import("CSV_FIXTURE", data, false);
         Assert.Contains(result.GetProperty("errors").EnumerateArray(), issue => issue.GetProperty("key").GetString() == expected);
         Assert.Equal(0, result.GetProperty("imported").GetInt32());
-        await InDatabase(async db => Assert.Empty(await db.CodeLists.Where(row => row.Kategorija == "CSV_FIXTURE").ToListAsync()));
+        await InDatabase(async db => Assert.Empty(await db.CodeLists.Where(row => row.Definition!.Name == "CSV_FIXTURE").ToListAsync()));
     }
 
     [Fact]
@@ -231,7 +232,7 @@ public sealed class CodebookCsvSqlTests : CodebookCsvFixture
 
         var path = $"/api/code-lists/categories/{category}/values";
         var initial = await Client.GetFromJsonAsync<JsonElement>($"/api/code-lists/{category}");
-        Assert.True(initial.GetProperty("usesCustomColumns").GetBoolean());
+        Assert.False(initial.TryGetProperty("usesCustomColumns", out _));
         Assert.Equal(new[] { 8, 9, 17, 12, 2 }, initial.GetProperty("columns").EnumerateArray().Select(column => column.GetProperty("slot").GetInt32()));
         var modifiedAt = initial.GetProperty("modifiedAt").GetDateTime();
         var values = new Dictionary<int, string?> { [8] = "1.000001", [9] = "2026-11-26", [17] = "Prvi red", [12] = "Ž", [2] = "false" };
@@ -310,7 +311,7 @@ public sealed class CodebookCsvSqlTests : CodebookCsvFixture
             await db.Database.MigrateAsync();
 
             Assert.Equal("VRSTE_LIMITA", (await db.CodeListDefinitions.FindAsync(id))!.Name);
-            Assert.True(await db.CodeLists.AnyAsync(item => item.Kategorija == "VRSTE_LIMITA" && item.Kod == "MM"));
+            Assert.True(await db.CodeLists.AnyAsync(item => item.Definition!.Name == "VRSTE_LIMITA" && item.Kod == "MM"));
         });
     }
 
@@ -334,8 +335,10 @@ public sealed class CodebookCsvSqlTests : CodebookCsvFixture
                      AS seed(Book, Code, Label)
                 JOIN dbo.CODELIST_DEFINITIONS AS definition ON definition.NAME = seed.Book COLLATE Latin1_General_100_CI_AS;
                 """);
-            var originals = await db.CodeLists.AsNoTracking().Where(row => row.Kod == "MM" || row.Kod == "LEGACY_CODE" || row.Kod == "OTHER_CODE")
-                .ToDictionaryAsync(row => row.Naziv, row => row.ID);
+            var originals = await db.Database.SqlQueryRaw<LegacyValue>("""
+                SELECT NAME AS Name, ID AS Id FROM dbo.CODELIST_VALUES
+                WHERE VALUE_KEY IN ('MM', 'LEGACY_CODE', 'OTHER_CODE')
+                """).ToDictionaryAsync(row => row.Name, row => row.Id);
             var originalIds = originals.Values.ToArray();
             var canonicalId = await db.CodeListDefinitions.Where(row => row.Name == "VRSTE_LIMITA").Select(row => row.Id).SingleAsync();
 
@@ -371,12 +374,14 @@ public sealed class CodebookCsvSqlTests : CodebookCsvFixture
             await db.Database.MigrateAsync();
             Assert.Equal("VRSTE_LIMITA", (await db.CodeListDefinitions.FindAsync(id))!.Name);
             Assert.True(await db.CodeListDefinitions.AnyAsync(item => item.Name == "CUSTOM_CODE_BOOK"));
-            var row = await db.CodeLists.IgnoreQueryFilters().SingleAsync(item => item.Kategorija == "VRSTE_LIMITA" && item.Kod == "MM");
+            var row = await db.CodeLists.IgnoreQueryFilters().SingleAsync(item => item.Definition!.Name == "VRSTE_LIMITA" && item.Kod == "MM");
             Assert.Equal("Operator label", row.Naziv);
             Assert.False(row.Aktivan);
             Assert.Equal(id, row.DefinitionId);
         });
     }
+
+    private sealed record LegacyValue(string Name, int Id);
 
     private static async Task UpgradeDatabase(Func<ConnectedPartiesDbContext, Task> test)
     {
@@ -399,11 +404,11 @@ public sealed class CodebookCsvSqlTests : CodebookCsvFixture
         Assert.Equal(1, (await Import("CSV_FIXTURE", Header + Valid, false)).GetProperty("imported").GetInt32());
         await InDatabase(async db =>
         {
-            var row = await db.CodeLists.SingleAsync(item => item.Kategorija == "CSV_FIXTURE");
+            var row = await db.CodeLists.SingleAsync(item => item.Definition!.Name == "CSV_FIXTURE");
             Assert.Equal(1.000001m, db.Entry(row).Property<decimal?>("Slot8").CurrentValue);
-            Assert.NotNull(row.DefinitionId);
-            Assert.True(await db.CodeLists.AnyAsync(item => item.Kategorija == "VRSTE_LIMITA" && item.Kod == "MM"));
-            Assert.False(await db.CodeLists.IgnoreQueryFilters().AnyAsync(item => item.Kategorija == "VrstaLimita"));
+            Assert.True(row.DefinitionId > 0);
+            Assert.True(await db.CodeLists.AnyAsync(item => item.Definition!.Name == "VRSTE_LIMITA" && item.Kod == "MM"));
+            Assert.False(await db.CodeLists.IgnoreQueryFilters().AnyAsync(item => item.Definition!.Name == "VrstaLimita"));
         });
         Assert.Contains((await Pack("DE")).GetProperty("items").EnumerateArray(),
             item => item.GetProperty("resourceKey").GetString() == "codes.csv.template");

@@ -12,8 +12,8 @@ internal sealed class CodebookChoices
     {
         var names = categories.Select(category => category.ToUpperInvariant()).ToArray();
         var definitions = await db.CodeListDefinitions.AsNoTracking().Where(row => names.Contains(row.Name.Trim().ToUpper())).ToListAsync(ct);
-        var rows = await db.CodeLists.IgnoreQueryFilters().AsNoTracking().Where(row => names.Contains(row.Kategorija.Trim().ToUpper()))
-            .Select(row => new { row.Kategorija, row.Kod, row.Naziv, row.Aktivan }).ToListAsync(ct);
+        var rows = await db.CodeLists.IgnoreQueryFilters().AsNoTracking().Where(row => names.Contains(row.Definition!.Name.Trim().ToUpper()))
+            .Select(row => new { Kategorija = row.Definition!.Name, row.Kod, row.Naziv, row.Aktivan }).ToListAsync(ct);
         var result = new CodebookChoices();
         foreach (var category in categories)
         {

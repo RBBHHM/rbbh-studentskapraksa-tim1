@@ -6,6 +6,8 @@ using RBBH.ConnectedParties.DL.Entities.Users;
 using RBBH.ConnectedParties.DL.Entities.Audit;
 using RBBH.ConnectedParties.DL.Entities.Limiti;
 using Microsoft.EntityFrameworkCore;
+using RBBH.ConnectedParties.Helpers;
+using RBBH.ConnectedParties.BL.Services;
 
 namespace RBBH.ConnectedParties.DL.Persistence;
 
@@ -83,26 +85,18 @@ public partial class ConnectedPartiesDbContext(
         });
         modelBuilder.Entity<CodeList>(entity =>
         {
-            entity.Property(e => e.Kategorija).HasColumnName("Category").UseCollation("Latin1_General_100_CI_AS");
-            entity.Property(e => e.Kod).HasColumnName("ValueKey").UseCollation("Latin1_General_100_CI_AS");
-            entity.Property(e => e.Naziv).HasColumnName("Name");
-            entity.Property(e => e.Opis).HasColumnName("Description");
+            entity.Property(e => e.Kod).HasColumnName("ID15").UseCollation("Latin1_General_100_CI_AS");
+            entity.Property(e => e.Naziv).HasColumnName("ID17");
+            entity.Property(e => e.Opis).HasColumnName("ID18");
             entity.Property(e => e.Aktivan).HasColumnName("ID1");
             entity.Property(e => e.KreiranDatum).HasColumnName("CreatedAt");
             entity.Property(e => e.KreiraoKorisnik).HasColumnName("CreatedBy");
             entity.Property(e => e.IzmijenjenDatum).HasColumnName("ModifiedAt");
             entity.Property(e => e.IzmijenioKorisnik).HasColumnName("ModifiedBy");
             entity.HasKey(e => e.ID);
-            entity.HasIndex(e => e.Kategorija);
             entity.HasQueryFilter(e => e.Aktivan);
-            entity.HasIndex(e => new { e.Kategorija, e.Kod }).IsUnique();
-            entity.ToTable("CodeListValues", table =>
-            {
-                table.HasCheckConstraint("CK_CodeListValues_Category_Trimmed",
-                    "DATALENGTH([CATEGORY]) = DATALENGTH(LTRIM(RTRIM([CATEGORY])))");
-                table.HasCheckConstraint("CK_CodeListValues_ValueKey_Trimmed",
-                    "DATALENGTH([VALUE_KEY]) = DATALENGTH(LTRIM(RTRIM([VALUE_KEY])))");
-            });
+            entity.Navigation(e => e.Definition).AutoInclude();
+            entity.ToTable("CodeListValues");
             entity.HasOne(row => row.Definition).WithMany().HasForeignKey(row => row.DefinitionId).OnDelete(DeleteBehavior.Restrict);
             ConfigureCodeListSlots(entity);
 
@@ -136,11 +130,11 @@ public partial class ConnectedPartiesDbContext(
 
         modelBuilder.Entity<AuditLog>(entity =>
         {
+            entity.HasQueryFilter(row => row.Action != RegistryVerification.CreationProof);
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.Timestamp);
             entity.HasIndex(e => e.TableName);
             entity.HasIndex(e => e.Username);
-            // Audit logs are never soft-deleted — no HasQueryFilter
         });
 
         modelBuilder.Entity<RBBH.ConnectedParties.DL.Entities.Role.Role>(entity =>
@@ -196,13 +190,11 @@ public partial class ConnectedPartiesDbContext(
 
     private void ProtectCreatorIdentity()
     {
-        foreach (var entry in ChangeTracker.Entries().Where(entry => entry.State == EntityState.Modified &&
-                     entry.Entity is DL.Entities.RelatedPersons.RelatedPerson or DL.Entities.LegalEntity.LegalEntity))
-        {
-            var creator = entry.Property("VerificationOriginFingerprint");
-            if (!Equals(creator.OriginalValue, creator.CurrentValue))
-                throw new Exceptions.BusinessRuleException(409, "verification.creator_immutable");
-        }
+        if (ChangeTracker.Entries<AuditLog>().Any(entry =>
+            entry.State is EntityState.Modified or EntityState.Deleted &&
+            (entry.Entity.Action == RegistryVerification.CreationProof ||
+             entry.Property(row => row.Action).OriginalValue == RegistryVerification.CreationProof)))
+            throw new Exceptions.BusinessRuleException(409, "verification.creator_immutable");
     }
 
     private static readonly JsonSerializerOptions ReadableAuditJson = new() { WriteIndented = true };
@@ -304,7 +296,17 @@ public partial class ConnectedPartiesDbContext(
     {
         var knownDefinitions = CodeListDefinitions.Local.Where(row => categories.Contains(row.Name.ToUpperInvariant())).Concat(definitions)
             .Distinct().ToDictionary(row => row.Name, StringComparer.OrdinalIgnoreCase);
-        foreach (var entry in ChangeTracker.Entries<CodeList>().Where(item => item.State is EntityState.Added or EntityState.Modified))
+        foreach (var category in ChangeTracker.Entries<CodeList>().Where(entry => entry.State == EntityState.Added)
+                     .Select(entry => entry.Entity.Kategorija).Distinct(StringComparer.OrdinalIgnoreCase).ToArray())
+        {
+            if (!knownDefinitions.ContainsKey(category))
+            {
+                var definition = new CodeListDefinition { Name = category, CreatedBy = "system" };
+                CodeListDefinitions.Add(definition);
+                knownDefinitions.Add(category, definition);
+            }
+        }
+        foreach (var entry in ChangeTracker.Entries<CodeList>().Where(item => item.State is EntityState.Added or EntityState.Modified).ToArray())
         {
             var value = entry.Entity;
             if (entry.State == EntityState.Added && value.Definition is null &&
@@ -324,7 +326,11 @@ public partial class ConnectedPartiesDbContext(
         var now = DateTime.UtcNow;
         foreach (var definition in touched.Distinct())
         {
-            var previous = Entry(definition).Property(row => row.ModifiedAt).OriginalValue;
+            var entry = Entry(definition);
+            if (entry.State == EntityState.Added && Enumerable.Range(1, 20).All(slot =>
+                    entry.Property<string>($"ColumnName{slot}").CurrentValue is null))
+                CodebookDefinitions.ConfigureReferenceFields(this, definition);
+            var previous = entry.Property(row => row.ModifiedAt).OriginalValue;
             definition.ModifiedAt = previous is { } timestamp && timestamp >= now ? timestamp.AddTicks(1) : now;
         }
     }

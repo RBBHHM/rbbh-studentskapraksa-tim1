@@ -8,7 +8,7 @@ public sealed record CodeValue(int Id, string Category, string Code, string Valu
     bool IsActive, string? ModifiedBy, DateTime? ModifiedAt, CodeListResource? Localization = null, IReadOnlyDictionary<int, JsonElement>? SlotValues = null);
 public sealed record CodeListResource(string? LanguageCode, string? ResourceKey, string? ResourceLabel,
     string? ResourceHelper, string? ResourcePlaceholder, string? ContextInfo);
-public sealed record CodeValues(string Category, IReadOnlyList<CodeValue> Items, IReadOnlyList<CodebookColumn>? Columns = null, bool UsesCustomColumns = false, DateTime? ModifiedAt = null);
+public sealed record CodeValues(string Category, IReadOnlyList<CodeValue> Items, IReadOnlyList<CodebookColumn>? Columns = null, DateTime? ModifiedAt = null);
 public sealed record CreateCodeValue(string Kategorija, string Kod, string Naziv, string? Opis, bool Aktivan);
 public sealed record UpdateCodeValue(string Naziv, string? Opis, bool Aktivan);
 public sealed record CodeCsvIssue(string Key, string[] Arguments);

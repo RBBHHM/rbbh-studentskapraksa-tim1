@@ -35,6 +35,9 @@ public sealed class RegistryVerificationSqlTests : AuthenticatedApiFixture
         var sql = db.GetService<IMigrator>().GenerateScript("20261126201000_EnableCustomCodebookColumns");
         Assert.Contains("DROP TABLE [LEGAL_ENTITY_VERIFICATION_ORIGINS]", sql);
         Assert.Contains("SET VERIFICATION_ORIGIN_FINGERPRINT = origin.FINGERPRINT", sql);
+        Assert.Contains("DROP COLUMN CATEGORY, VALUE_KEY, NAME, DESCRIPTION", sql);
+        Assert.Contains("DROP COLUMN [USES_CUSTOM_COLUMNS]", sql);
+        Assert.Contains("DROP COLUMN [VERIFICATION_ORIGIN_FINGERPRINT]", sql);
     }
 
     [SqlServerFact]
@@ -90,7 +93,7 @@ public sealed class RegistryVerificationSqlTests : AuthenticatedApiFixture
 
             var known = await db.LegalEntities.SingleAsync(entity => entity.Name == "Known company");
             Assert.Equal(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.Unicode.GetBytes("opaque-subject"))),
-                db.Entry(known).Property<string>("VerificationOriginFingerprint").CurrentValue);
+                (await db.AuditLogs.IgnoreQueryFilters().SingleAsync(log => log.Action == "VERIFICATION_ORIGIN" && log.NewValues == known.Id.ToString())).Username);
             Assert.Equal(0, await db.Database.SqlQueryRaw<int>("""
                 SELECT COUNT(*) AS [Value] FROM sys.columns
                 WHERE object_id = OBJECT_ID(N'dbo.LEGAL_ENTITIES') AND name IN (N'CREATOR_SUBJECT', N'CONNECTION_DESCRIPTION', N'VERSION')
