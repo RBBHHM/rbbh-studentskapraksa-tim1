@@ -44,7 +44,7 @@ public class RegistryVerificationHttpTests : AuthenticatedApiFixture
         Assert.Contains("verification.self_denied", await response.Content.ReadAsStringAsync());
         await InDatabase(async db =>
         {
-            var creator = legal ? (await db.LegalEntityVerificationOrigins.FindAsync(id))!.Fingerprint : (await db.RelatedPersons.FindAsync(id))!.VerificationOriginFingerprint;
+            var creator = legal ? db.Entry((await db.LegalEntities.FindAsync(id))!).Property<string>("VerificationOriginFingerprint").CurrentValue : (await db.RelatedPersons.FindAsync(id))!.VerificationOriginFingerprint;
             Assert.Equal(Fingerprint("creator"), creator);
             Assert.Empty(await db.AuditLogs.Where(row => row.Action == "VERIFY").ToListAsync());
         });
@@ -100,11 +100,11 @@ public class RegistryVerificationHttpTests : AuthenticatedApiFixture
         var id = await CreateRecord(true);
         await InDatabase(async db =>
         {
-            var row = (await db.LegalEntityVerificationOrigins.FindAsync(id))!;
-            db.Entry(row).Property("Fingerprint").CurrentValue = "forged";
+            var row = (await db.LegalEntities.FindAsync(id))!;
+            db.Entry(row).Property("VerificationOriginFingerprint").CurrentValue = "forged";
             await Assert.ThrowsAsync<RBBH.ConnectedParties.Exceptions.BusinessRuleException>(() => db.SaveChangesAsync());
         });
-        await InDatabase(async db => Assert.Equal(Fingerprint("creator"), (await db.LegalEntityVerificationOrigins.FindAsync(id))!.Fingerprint));
+        await InDatabase(async db => Assert.Equal(Fingerprint("creator"), db.Entry((await db.LegalEntities.FindAsync(id))!).Property<string>("VerificationOriginFingerprint").CurrentValue));
     }
 
     [Fact]

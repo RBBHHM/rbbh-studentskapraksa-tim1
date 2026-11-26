@@ -102,5 +102,7 @@ public sealed class CreateCodeListDefinitionDTO
 }
 
 public sealed record CodebookColumnInput(int Slot, string? Name, string? Description, int Position);
-public sealed record UpdateCodeListDefinitionDTO(string? Description, int ExpectedVersion, CodebookColumnInput[]? Columns = null);
-public sealed record CodebookCellsRequest(int ExpectedVersion, Dictionary<int, string?>? Values, bool Active = true);
+public sealed record UpdateCodeListDefinitionDTO(string? Description, DateTime? ExpectedModifiedAt, CodebookColumnInput[]? Columns = null);
+public sealed record CodebookCellsRequest(DateTime? ExpectedModifiedAt, Dictionary<int, string?>? Values, bool Active = true);
+
+public sealed record CodebookStatusRequest(bool? IsActive, DateTime? ExpectedModifiedAt);

@@ -28,7 +28,7 @@ public abstract class LocalizationFixture : AuthenticatedApiFixture
             db.CodeListDefinitions.AddRange(languages, packs);
             foreach (var code in new[] { "BS", "EN", "DE" })
                 db.CodeLists.Add(new() { Kategorija = languages.Name, Kod = code, Naziv = code,
-                    KreiraoKorisnik = "fixture", IsSystemRequired = true });
+                    KreiraoKorisnik = "fixture" });
             await db.SaveChangesAsync();
         });
     }
@@ -137,13 +137,13 @@ public sealed class LocalizationHttpTests : LocalizationFixture
     }
 
     [Fact]
-    public async Task DefinitionMetadataUsesExpectedVersionAndAtomicAudit()
+    public async Task DefinitionMetadataUsesExpectedModifiedAtAndAtomicAudit()
     {
         await Seed(); var definitions = await Client.GetFromJsonAsync<JsonElement>("/api/code-lists/categories/definitions");
-        var version = definitions.GetProperty("items").EnumerateArray().Single(row => row.GetProperty("name").GetString() == "LANGUAGES").GetProperty("version").GetInt32();
-        var response = await Client.PutAsJsonAsync("/api/code-lists/categories/LANGUAGES", new { description = "Updated description", expectedVersion = version });
+        var modifiedAt = definitions.GetProperty("items").EnumerateArray().Single(row => row.GetProperty("name").GetString() == "LANGUAGES").GetProperty("modifiedAt").GetDateTime();
+        var response = await Client.PutAsJsonAsync("/api/code-lists/categories/LANGUAGES", new { description = "Updated description", expectedModifiedAt = modifiedAt });
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal(HttpStatusCode.Conflict, (await Client.PutAsJsonAsync("/api/code-lists/categories/LANGUAGES", new { description = "Stale", expectedVersion = version })).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await Client.PutAsJsonAsync("/api/code-lists/categories/LANGUAGES", new { description = "Stale", expectedModifiedAt = modifiedAt })).StatusCode);
         await InDatabase(async db => { Assert.Equal("Updated description", (await db.CodeListDefinitions.SingleAsync(row => row.Name == "LANGUAGES")).Description); Assert.Single(db.AuditLogs); });
     }
 

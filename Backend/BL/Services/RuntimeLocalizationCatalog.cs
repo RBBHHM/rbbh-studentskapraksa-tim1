@@ -51,8 +51,8 @@ public sealed class RuntimeLocalizationCatalog(ConnectedPartiesDbContext db, IOp
         if (language.Length > 10 || !await Supported(language, ct))
             throw new BusinessRuleException(404, "localization.language_unavailable");
         var versions = await db.CodeListDefinitions.AsNoTracking().Where(row => row.Name == Settings.LanguagesCodebook || row.Name == Settings.LanguagePacksCodebook)
-            .OrderBy(row => row.Name).Select(row => new { row.Id, row.Version, row.IsActive }).ToListAsync(ct);
-        var version = string.Join(':', versions.Select(row => $"{row.Id}.{row.Version}.{row.IsActive}"));
+            .OrderBy(row => row.Name).Select(row => new { row.Id, row.ModifiedAt, row.IsActive }).ToListAsync(ct);
+        var version = string.Join(':', versions.Select(row => $"{row.Id}.{row.ModifiedAt?.Ticks}.{row.IsActive}"));
         var cacheKey = $"pack:{Settings.LanguagesCodebook}:{Settings.LanguagePacksCodebook}:{language}:{DefaultLanguage}:{version}";
         if (cache.Values.TryGetValue(cacheKey, out RuntimeResourcePack? existing)) return existing!;
         var fallback = DefaultLanguage;
@@ -114,15 +114,14 @@ public sealed class RuntimeLocalizationCatalog(ConnectedPartiesDbContext db, IOp
             row.Localization != null && row.Localization.LanguageCode == language && row.Localization.ResourceKey != null && row.Localization.ResourceKey.ToUpper() == normalized, ct);
         if (row is null && !Regex.IsMatch(key, "^[a-z][a-z0-9]*(?:[.-][a-z][a-z0-9]*)+$", RegexOptions.CultureInvariant))
             throw new BusinessRuleException(400, "localization.invalid_key");
-        if (row?.IsSystemRequired == true && !input.IsActive)
-            throw new BusinessRuleException(409, "codelist.system_required");
         var definition = await db.CodeListDefinitions.SingleOrDefaultAsync(item => item.Name == Settings.LanguagePacksCodebook && item.IsActive, ct)
             ?? throw new BusinessRuleException(503, "localization.setup_required");
+        if (row is not null && definition.IsSystemRequired && !input.IsActive)
+            throw new BusinessRuleException(409, "codelist.system_required");
         var before = row is null ? null : Snapshot(row);
         var now = DateTime.UtcNow;
         definition.ModifiedBy = actor;
         definition.ModifiedAt = now;
-        definition.Version = checked(definition.Version + 1);
         if (row is null)
         {
             row = new CodeList { Kategorija = definition.Name, Kod = Guid.NewGuid().ToString("N"),

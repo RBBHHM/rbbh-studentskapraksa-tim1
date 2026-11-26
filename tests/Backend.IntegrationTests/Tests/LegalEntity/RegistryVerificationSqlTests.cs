@@ -26,6 +26,17 @@ public sealed class RegistryVerificationSqlTests : AuthenticatedApiFixture
         return (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetInt64();
     }
 
+    [Fact]
+    public void VerificationStorageUpgradeMatchesTheCurrentSqlModel()
+    {
+        using var db = new ConnectedPartiesDbContext(new DbContextOptionsBuilder<ConnectedPartiesDbContext>()
+            .UseSqlServer("Server=localhost;Database=MigrationScriptOnly;Integrated Security=true").Options);
+        Assert.False(db.Database.HasPendingModelChanges());
+        var sql = db.GetService<IMigrator>().GenerateScript("20261126201000_EnableCustomCodebookColumns");
+        Assert.Contains("DROP TABLE [LEGAL_ENTITY_VERIFICATION_ORIGINS]", sql);
+        Assert.Contains("SET VERIFICATION_ORIGIN_FINGERPRINT = origin.FINGERPRINT", sql);
+    }
+
     [SqlServerFact]
     public async Task SimultaneousVerificationsCommitExactlyOneAudit()
     {
@@ -77,12 +88,20 @@ public sealed class RegistryVerificationSqlTests : AuthenticatedApiFixture
             await db.Database.ExecuteSqlRawAsync("ALTER TABLE dbo.LegalEntities ADD [Version] rowversion;");
             await db.Database.MigrateAsync();
 
-            var origin = await db.LegalEntityVerificationOrigins.SingleAsync();
-            Assert.Equal((await db.LegalEntities.SingleAsync(entity => entity.Name == "Known company")).Id, origin.LegalEntityId);
-            Assert.Equal(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.Unicode.GetBytes("opaque-subject"))), origin.Fingerprint);
+            var known = await db.LegalEntities.SingleAsync(entity => entity.Name == "Known company");
+            Assert.Equal(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.Unicode.GetBytes("opaque-subject"))),
+                db.Entry(known).Property<string>("VerificationOriginFingerprint").CurrentValue);
             Assert.Equal(0, await db.Database.SqlQueryRaw<int>("""
                 SELECT COUNT(*) AS [Value] FROM sys.columns
                 WHERE object_id = OBJECT_ID(N'dbo.LEGAL_ENTITIES') AND name IN (N'CREATOR_SUBJECT', N'CONNECTION_DESCRIPTION', N'VERSION')
+                """).SingleAsync());
+            Assert.Equal(0, await db.Database.SqlQueryRaw<int>("""
+                SELECT CASE WHEN OBJECT_ID(N'dbo.LEGAL_ENTITY_VERIFICATION_ORIGINS', N'U') IS NULL THEN 0 ELSE 1 END AS [Value]
+                """).SingleAsync());
+            Assert.Equal(0, await db.Database.SqlQueryRaw<int>("""
+                SELECT COUNT(*) AS [Value] FROM sys.columns
+                WHERE (object_id = OBJECT_ID(N'dbo.CODELIST_DEFINITIONS') AND name IN (N'OWNER', N'VERSION'))
+                   OR (object_id = OBJECT_ID(N'dbo.CODELIST_VALUES') AND name = N'IS_SYSTEM_REQUIRED')
                 """).SingleAsync());
             var row = await db.LegalEntities.SingleAsync(entity => entity.Name == "Historical company");
             Assert.Equal("Historical company", row.Name);

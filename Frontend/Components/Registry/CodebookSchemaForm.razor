@@ -22,8 +22,8 @@
             <div class="codebook-type-buttons" role="group" aria-labelledby="codebook-add-column">
                 @foreach (var group in SlotGroups)
                 {
-                    <RbiButton Variant="RbiButtonVariant.Secondary" Disabled="@(AvailableSlot(group) == 0)" OnClick="() => AddColumn(group)">
-                        + @T[CodebookField.TypeKey(group[0])]
+                    <RbiButton Variant="RbiButtonVariant.Secondary" Disabled="@(AvailableSlot(group) == 0)" title="@TypeDetails(group[0])" OnClick="() => AddColumn(group)">
+                        + @TypeLabel(group[0])
                     </RbiButton>
                 }
             </div>
@@ -36,7 +36,8 @@
                     <li @key="column.Slot">
                         <div class="codebook-schema-row">
                             <div class="role-catalog-field">
-                                <label for="@inputId">@T["codes.column-name"] <span class="app-hint">· @T[CodebookField.TypeKey(column.Slot)]</span></label>
+                                <label for="@inputId">@T["codes.schema-name-limit"]</label>
+                                <span class="app-hint">@T[CodebookField.TypeKey(column.Slot)] · @TypeDetails(column.Slot)</span>
                                 <RbiInput Id="@inputId" @bind-Value="column.Name" UpdateMode="RbiInputUpdateMode.Input" maxlength="128" Required />
                             </div>
                             <div class="codebook-type-buttons">
@@ -50,10 +51,10 @@
                                 }
                             </div>
                         </div>
-                        <details>
-                            <summary>@T["codes.description"]</summary>
-                            <RbiTextArea @bind-Value="column.Description" aria-label="@T["codes.description"]" Rows="2" maxlength="4000" />
-                        </details>
+                        <div class="role-catalog-field codebook-schema-description">
+                            <label for="@($"codebook-description-{column.Slot}")">@T["codes.schema-description-limit"]</label>
+                            <RbiTextArea Id="@($"codebook-description-{column.Slot}")" @bind-Value="column.Description" Rows="1" maxlength="4000" />
+                        </div>
                     </li>
                 }
             </ol>
@@ -72,10 +73,9 @@
     [Parameter, EditorRequired] public Func<string, string?, IReadOnlyList<CodebookColumnInput>, Task<string?>> Save { get; set; } = null!;
     [Parameter] public EventCallback Cancel { get; set; }
 
-    // Prefer unrestricted text slots and the boolean slot independent of row status.
     private static readonly int[][] SlotGroups =
     [
-        [17, 18, 16, 19, 20, 13, 14, 15, 12], [2, 1], [3, 4, 5], [6, 7, 8], [9, 10], [11]
+        [17, 18, 16, 19, 20], [13], [14, 15], [12], [2], [1], [3, 4, 5], [6, 7], [8], [9, 10], [11]
     ];
 
     private sealed class ColumnDraft(int slot, string? name = null, string? description = null)
@@ -96,6 +96,31 @@
         _columns.AddRange(Columns.OrderBy(column => column.Position ?? column.Slot)
             .Select(column => new ColumnDraft(column.Slot, column.Name, column.Description)));
     }
+
+    private string TypeLabel(int slot)
+    {
+        var label = T[CodebookField.TypeKey(slot)];
+        return slot switch
+        {
+            >= 12 => $"{label} · {TypeDetails(slot)}",
+            6 or 7 => $"{label} (18,2)",
+            8 => $"{label} (19,6)",
+            1 => $"{label} · {T["codes.active"]}",
+            _ => label
+        };
+    }
+
+    private string TypeDetails(int slot) => slot switch
+    {
+        1 => T["codes.type-active-limit"],
+        2 => T["codes.type-boolean-limit"],
+        >= 3 and <= 5 => T["codes.type-integer-limit"],
+        6 or 7 => T.Format("codes.type-decimal-limit", 16, 2),
+        8 => T.Format("codes.type-decimal-limit", 13, 6),
+        9 or 10 => T["codes.type-date-limit"],
+        11 => T["codes.type-datetime-limit"],
+        _ => T.Format("codes.type-text-limit", CodebookField.TextLimit(slot))
+    };
 
     private int AvailableSlot(int[] group) => group.FirstOrDefault(slot => _columns.All(column => column.Slot != slot));
 

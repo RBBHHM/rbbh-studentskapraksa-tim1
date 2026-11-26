@@ -8,7 +8,7 @@ public sealed record CodeValue(int Id, string Category, string Code, string Valu
     bool IsActive, string? ModifiedBy, DateTime? ModifiedAt, CodeListResource? Localization = null, IReadOnlyDictionary<int, JsonElement>? SlotValues = null);
 public sealed record CodeListResource(string? LanguageCode, string? ResourceKey, string? ResourceLabel,
     string? ResourceHelper, string? ResourcePlaceholder, string? ContextInfo);
-public sealed record CodeValues(string Category, IReadOnlyList<CodeValue> Items, IReadOnlyList<CodebookColumn>? Columns = null, bool UsesCustomColumns = false, int? Version = null);
+public sealed record CodeValues(string Category, IReadOnlyList<CodeValue> Items, IReadOnlyList<CodebookColumn>? Columns = null, bool UsesCustomColumns = false, DateTime? ModifiedAt = null);
 public sealed record CreateCodeValue(string Kategorija, string Kod, string Naziv, string? Opis, bool Aktivan);
 public sealed record UpdateCodeValue(string Naziv, string? Opis, bool Aktivan);
 public sealed record CodeCsvIssue(string Key, string[] Arguments);
@@ -20,7 +20,7 @@ public sealed record CodeCsvPreview(int TotalRows, int Ready, int Duplicates, in
 public sealed record CodeImportPreview(int TotalRows, IReadOnlyList<string> ToImport, IReadOnlyList<string> Duplicates,
     IReadOnlyList<string> Errors, int Imported);
 /// <summary>Administrative metadata of a code list definition (who created it and who changed it last).</summary>
-public sealed record CodeListMeta(long Id, string Name, string? Description, bool IsActive, bool IsSystemRequired, int Version,
+public sealed record CodeListMeta(long Id, string Name, string? Description, bool IsActive, bool IsSystemRequired,
     DateTime? CreatedAt, string? CreatedBy, DateTime? ModifiedAt, string? ModifiedBy);
 public sealed record CodebookColumn(int Slot, string Name, string? Description, int? Position, string TypeKey = "codes.csv.type-text");
 public sealed record CodebookColumnInput(int Slot, string Name, string? Description, int Position);
@@ -34,8 +34,9 @@ public interface ICodeListsApi
     Task<CodeCategories> CategoriesAsync(CancellationToken token = default);
     Task<CodeValues> ValuesAsync(string category, CancellationToken token = default);
     Task<CodebookCreation> CreateCategoryAsync(string name, string? description, CancellationToken token = default, IReadOnlyList<CodebookColumnInput>? columns = null);
-    Task<string?> SaveDefinitionAsync(string name, string? description, int version, IReadOnlyList<CodebookColumnInput> columns, CancellationToken token);
-    Task<string?> SaveCellsAsync(string category, int? id, int version, Dictionary<int, string?> values, bool active, CancellationToken token);
+    Task<string?> SetDefinitionStatusAsync(string name, bool isActive, DateTime? modifiedAt, CancellationToken token);
+    Task<string?> SaveDefinitionAsync(string name, string? description, DateTime? modifiedAt, IReadOnlyList<CodebookColumnInput> columns, CancellationToken token);
+    Task<string?> SaveCellsAsync(string category, int? id, DateTime? modifiedAt, Dictionary<int, string?> values, bool active, CancellationToken token);
     Task<string?> SaveLegacyAsync(string category, string code, string name, string? description, bool active, int? id, CancellationToken token);
     Task DeleteCategoryAsync(string category, CancellationToken token = default);
     Task CreateAsync(CreateCodeValue request, CancellationToken token = default);
@@ -82,15 +83,19 @@ public sealed class CodeListsApi(IRbiApiFileTransport transport) : ICodeListsApi
             _ => "codes.definition-uncertain"
         });
     }
-    public Task<string?> SaveDefinitionAsync(string name, string? description, int version, IReadOnlyList<CodebookColumnInput> columns, CancellationToken token) =>
-        SaveOutcomeAsync(HttpMethod.Put, $"api/code-lists/categories/{Uri.EscapeDataString(name)}",
-            new { description, expectedVersion = version, columns }, token);
+    public Task<string?> SetDefinitionStatusAsync(string name, bool isActive, DateTime? modifiedAt, CancellationToken token) =>
+        SaveOutcomeAsync(HttpMethod.Put, $"api/code-lists/categories/{Uri.EscapeDataString(name)}/status",
+            new { isActive, expectedModifiedAt = modifiedAt }, token);
 
-    public Task<string?> SaveCellsAsync(string category, int? id, int version, Dictionary<int, string?> values, bool active, CancellationToken token)
+    public Task<string?> SaveDefinitionAsync(string name, string? description, DateTime? modifiedAt, IReadOnlyList<CodebookColumnInput> columns, CancellationToken token) =>
+        SaveOutcomeAsync(HttpMethod.Put, $"api/code-lists/categories/{Uri.EscapeDataString(name)}",
+            new { description, expectedModifiedAt = modifiedAt, columns }, token);
+
+    public Task<string?> SaveCellsAsync(string category, int? id, DateTime? modifiedAt, Dictionary<int, string?> values, bool active, CancellationToken token)
     {
         var path = $"api/code-lists/categories/{Uri.EscapeDataString(category)}/values";
         return SaveOutcomeAsync(id.HasValue ? HttpMethod.Put : HttpMethod.Post, id.HasValue ? $"{path}/{id}" : path,
-            new { expectedVersion = version, values, active }, token);
+            new { expectedModifiedAt = modifiedAt, values, active }, token);
     }
 
     public Task<string?> SaveLegacyAsync(string category, string code, string name, string? description, bool active, int? id, CancellationToken token) =>
@@ -107,6 +112,7 @@ public sealed class CodeListsApi(IRbiApiFileTransport transport) : ICodeListsApi
         return error?.Code switch
         {
             "codes.schema_invalid" => "codes.schema-invalid",
+            "codes.status_protected" => "codes.status-protected",
             "codes.schema_protected" => "codes.schema-protected",
             "codes.cell_invalid" => "codes.cell-invalid",
             "codes.cell_required" => "codes.cell-required",
@@ -154,6 +160,8 @@ public sealed class CodeListsApi(IRbiApiFileTransport transport) : ICodeListsApi
 }
 internal sealed class UnconfiguredCodeListsApi : ICodeListsApi
 {
+    public Task<string?> SetDefinitionStatusAsync(string name, bool isActive, DateTime? modifiedAt, CancellationToken token) =>
+        Task.FromResult<string?>("errors.unavailable");
     private static Task Unavailable() => Task.FromException(new RegistryApiException());
     public Task<CodeCategories> CategoriesAsync(CancellationToken token = default) => Task.FromException<CodeCategories>(new RegistryApiException());
     public Task<CodebookColumns> ColumnsAsync(string category, CancellationToken token = default) => Task.FromException<CodebookColumns>(new RegistryApiException());
@@ -161,9 +169,9 @@ internal sealed class UnconfiguredCodeListsApi : ICodeListsApi
     public Task<CodeValues> ValuesAsync(string category, CancellationToken token = default) => Task.FromException<CodeValues>(new RegistryApiException());
     public Task<CodebookCreation> CreateCategoryAsync(string name, string? description, CancellationToken token = default, IReadOnlyList<CodebookColumnInput>? columns = null) =>
         Task.FromResult(new CodebookCreation(null, "errors.unavailable"));
-    public Task<string?> SaveDefinitionAsync(string name, string? description, int version, IReadOnlyList<CodebookColumnInput> columns, CancellationToken token) =>
+    public Task<string?> SaveDefinitionAsync(string name, string? description, DateTime? modifiedAt, IReadOnlyList<CodebookColumnInput> columns, CancellationToken token) =>
         Task.FromResult<string?>("errors.unavailable");
-    public Task<string?> SaveCellsAsync(string category, int? id, int version, Dictionary<int, string?> values, bool active, CancellationToken token) =>
+    public Task<string?> SaveCellsAsync(string category, int? id, DateTime? modifiedAt, Dictionary<int, string?> values, bool active, CancellationToken token) =>
         Task.FromResult<string?>("errors.unavailable");
     public Task<string?> SaveLegacyAsync(string category, string code, string name, string? description, bool active, int? id, CancellationToken token) =>
         Task.FromResult<string?>("errors.unavailable");

@@ -21,7 +21,7 @@ public sealed class RegistryGccMigrationSqlTests
             await db.Database.ExecuteSqlRawAsync("INSERT LegalEntities (Id,IsResident,Name,BasisOfConnection,Status,CreatedBy,CreatedAt,IsActive) VALUES (NEWID(),0,N'Historical fixture','VL','Draft','original',SYSUTCDATETIME(),1)");
             await db.Database.MigrateAsync(); var row = await db.LegalEntities.SingleAsync();
             Assert.Equal("Historical fixture", row.Name); Assert.Equal("original", row.CreatedBy);
-            Assert.Null(row.GccNumber); Assert.Null(row.GccName); Assert.Null(row.IsLargeExposure); Assert.Empty(await db.LegalEntityVerificationOrigins.ToListAsync());
+            Assert.Null(row.GccNumber); Assert.Null(row.GccName); Assert.Null(row.IsLargeExposure); Assert.Null(db.Entry(row).Property<string>("VerificationOriginFingerprint").CurrentValue);
         }
         finally { await db.Database.EnsureDeletedAsync(); }
     }

@@ -194,16 +194,10 @@ public partial class ConnectedPartiesDbContext(
         ApplyDatabaseNames(modelBuilder);
     }
 
-    public DbSet<DL.Entities.LegalEntity.LegalEntityVerificationOrigin> LegalEntityVerificationOrigins =>
-        Set<DL.Entities.LegalEntity.LegalEntityVerificationOrigin>();
-
     private void ProtectCreatorIdentity()
     {
-        if (ChangeTracker.Entries<DL.Entities.LegalEntity.LegalEntityVerificationOrigin>()
-            .Any(entry => entry.State is EntityState.Modified or EntityState.Deleted))
-            throw new Exceptions.BusinessRuleException(409, "verification.creator_immutable");
         foreach (var entry in ChangeTracker.Entries().Where(entry => entry.State == EntityState.Modified &&
-                     entry.Entity is DL.Entities.RelatedPersons.RelatedPerson))
+                     entry.Entity is DL.Entities.RelatedPersons.RelatedPerson or DL.Entities.LegalEntity.LegalEntity))
         {
             var creator = entry.Property("VerificationOriginFingerprint");
             if (!Equals(creator.OriginalValue, creator.CurrentValue))
@@ -274,7 +268,7 @@ public partial class ConnectedPartiesDbContext(
         ProtectCreatorIdentity();
         ProtectCapitalHistory();
         FormatNewAuditSnapshots();
-        TouchCodebookVersions();
+        TouchCodebookDefinitions();
         return base.SaveChanges(acceptAllChangesOnSuccess);
     }
 
@@ -289,7 +283,7 @@ public partial class ConnectedPartiesDbContext(
         {
             List<CodeListDefinition> definitions = categories.Length == 0 ? [] :
                 await CodeListDefinitions.Where(row => categories.Contains(row.Name.ToUpper())).ToListAsync(cancellationToken);
-            TouchCodebookVersions(categories, definitions);
+            TouchCodebookDefinitions(categories, definitions);
         }
         return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
     }
@@ -298,15 +292,15 @@ public partial class ConnectedPartiesDbContext(
         .Where(entry => entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
         .Select(entry => entry.Entity.Kategorija?.ToUpperInvariant()).OfType<string>().Distinct().ToArray();
 
-    private void TouchCodebookVersions()
+    private void TouchCodebookDefinitions()
     {
         var categories = ChangedCodebookCategories();
         if (categories.Length == 0 && !ChangeTracker.Entries<CodeListDefinition>().Any(entry => entry.State is EntityState.Added or EntityState.Modified)) return;
-        TouchCodebookVersions(categories,
+        TouchCodebookDefinitions(categories,
             categories.Length == 0 ? [] : CodeListDefinitions.Where(row => categories.Contains(row.Name.ToUpper())).ToList());
     }
 
-    private void TouchCodebookVersions(string[] categories, List<CodeListDefinition> definitions)
+    private void TouchCodebookDefinitions(string[] categories, List<CodeListDefinition> definitions)
     {
         var knownDefinitions = CodeListDefinitions.Local.Where(row => categories.Contains(row.Name.ToUpperInvariant())).Concat(definitions)
             .Distinct().ToDictionary(row => row.Name, StringComparer.OrdinalIgnoreCase);
@@ -325,17 +319,13 @@ public partial class ConnectedPartiesDbContext(
             }
         }
 
-        foreach (var row in knownDefinitions.Values)
+        var touched = knownDefinitions.Values.Concat(ChangeTracker.Entries<CodeListDefinition>()
+            .Where(entry => entry.State is EntityState.Added or EntityState.Modified).Select(entry => entry.Entity));
+        var now = DateTime.UtcNow;
+        foreach (var definition in touched.Distinct())
         {
-            var entry = Entry(row);
-            if (entry.State == EntityState.Added) row.Version = Math.Max(1, row.Version);
-            else if (row.Version == entry.Property(item => item.Version).OriginalValue) row.Version++;
-            row.ModifiedAt = DateTime.UtcNow;
-        }
-        foreach (var entry in ChangeTracker.Entries<CodeListDefinition>().Where(entry => entry.State == EntityState.Modified))
-        {
-            if (entry.Entity.Version == entry.Property(item => item.Version).OriginalValue) entry.Entity.Version++;
-            entry.Entity.ModifiedAt = DateTime.UtcNow;
+            var previous = Entry(definition).Property(row => row.ModifiedAt).OriginalValue;
+            definition.ModifiedAt = previous is { } timestamp && timestamp >= now ? timestamp.AddTicks(1) : now;
         }
     }
 

@@ -24,7 +24,7 @@ public partial class CodeListController
     {
         var definition = await db.CodeListDefinitions.SingleOrDefaultAsync(item => item.Name == name, ct);
         if (definition is null) return NotFound();
-        if (!definition.UsesCustomColumns || !definition.IsActive || definition.Version != request.ExpectedVersion)
+        if (!definition.UsesCustomColumns || !definition.IsActive || definition.ModifiedAt != request.ExpectedModifiedAt)
             return Conflict(new { code = "codes.concurrent" });
 
         var columns = CodebookCsv.Columns(db, definition).ToDictionary(column => column.Slot);
@@ -57,11 +57,14 @@ public partial class CodeListController
             db.CodeLists.Add(row);
         }
 
+        var nextActive = (bool?)cells.GetValueOrDefault(1) ?? request.Active;
+        if (id.HasValue && row.Aktivan && !nextActive && definition.IsSystemRequired)
+            return Conflict(new { code = "codes.value_in_use" });
+
         var before = id.HasValue ? Snapshot() : null;
-        row.Aktivan = (bool?)cells.GetValueOrDefault(1) ?? request.Active;
+        row.Aktivan = nextActive;
         CodebookCsv.WriteSlots(db, row, cells);
         // Touch the definition even when only owned text slots change so concurrent schema edits cannot commit with the row.
-        definition.Version++;
         definition.ModifiedAt = DateTime.UtcNow;
         definition.ModifiedBy = actor;
         db.AuditLogs.Add(BusinessAudit.Create("CodeList", id.HasValue ? "CODELIST_UPDATE" : "CODELIST_ADD",

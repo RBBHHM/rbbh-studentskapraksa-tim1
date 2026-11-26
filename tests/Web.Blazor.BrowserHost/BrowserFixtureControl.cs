@@ -470,7 +470,7 @@ internal static partial class BrowserHostProgram
                                     CreatedAt = new DateTime(2026, 1, 1).AddMinutes(index)
                                 });
                                 foreach (var seeded in db.ChangeTracker.Entries<RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntity>().ToArray())
-                                    db.LegalEntityVerificationOrigins.Add(new() { LegalEntityId = seeded.Entity.Id, Fingerprint = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.Unicode.GetBytes("fixture-author-subject"))) });
+                                    seeded.Property("VerificationOriginFingerprint").CurrentValue = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.Unicode.GetBytes("fixture-author-subject")));
                                 await db.SaveChangesAsync();
                             }
                             break;

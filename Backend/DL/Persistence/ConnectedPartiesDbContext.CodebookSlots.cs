@@ -8,7 +8,6 @@ public partial class ConnectedPartiesDbContext
 {
     private static void ConfigureDefinitionSlots(EntityTypeBuilder<CodeListDefinition> entity)
     {
-        entity.Property<string>("Owner").HasColumnName("OWNER").HasMaxLength(100).IsRequired().HasDefaultValue("registry");
         for (var number = 1; number <= 20; number++)
         {
             entity.Property<string>($"ColumnName{number}").HasColumnName($"COLUMN_NAME_{number}").HasMaxLength(128);

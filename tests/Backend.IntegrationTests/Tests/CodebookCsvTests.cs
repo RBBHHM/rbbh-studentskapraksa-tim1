@@ -115,6 +115,37 @@ public sealed class CodebookCsvTests : CodebookCsvFixture
     }
 
     [Fact]
+    public async Task InactiveDefinitionCanBeReactivatedWithoutChangingRowStatus()
+    {
+        await InDatabase(async db =>
+        {
+            var definition = new CodeListDefinition { Name = "SRODSTVO", IsActive = false, CreatedBy = "fixture" };
+            db.CodeListDefinitions.Add(definition);
+            db.CodeLists.Add(new() { Definition = definition, Kategorija = definition.Name, Kod = "OLD",
+                Naziv = "Stara vrijednost", Aktivan = false, KreiraoKorisnik = "fixture" });
+            await db.SaveChangesAsync();
+        });
+        const string category = "/api/code-lists/SRODSTVO";
+        const string status = "/api/code-lists/categories/SRODSTVO/status";
+        var before = await Client.GetFromJsonAsync<JsonElement>(category);
+        var modifiedAt = before.GetProperty("modifiedAt").GetDateTime();
+        var value = new { kategorija = "SRODSTVO", kod = "TT", naziv = "Testno srodstvo" };
+        using var rejected = await Client.PostAsJsonAsync("/api/code-lists", value);
+        Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
+        using var activated = await Client.PutAsJsonAsync(status, new { isActive = true, expectedModifiedAt = modifiedAt });
+        Assert.Equal(HttpStatusCode.NoContent, activated.StatusCode);
+        using var stale = await Client.PutAsJsonAsync(status, new { isActive = false, expectedModifiedAt = modifiedAt });
+        Assert.Equal(HttpStatusCode.Conflict, stale.StatusCode);
+        using var accepted = await Client.PostAsJsonAsync("/api/code-lists", value);
+        Assert.Equal(HttpStatusCode.Created, accepted.StatusCode);
+        await InDatabase(async db =>
+        {
+            Assert.False((await db.CodeLists.IgnoreQueryFilters().SingleAsync(row => row.Kod == "OLD")).Aktivan);
+            Assert.True((await db.CodeListDefinitions.SingleAsync()).IsActive);
+        });
+    }
+
+    [Fact]
     public async Task CustomCsvPreviewsEveryInvalidCellAndImportsValidRowsAfterOptIn()
     {
         const string category = "EXCEL_DATES";
@@ -202,11 +233,11 @@ public sealed class CodebookCsvSqlTests : CodebookCsvFixture
         var initial = await Client.GetFromJsonAsync<JsonElement>($"/api/code-lists/{category}");
         Assert.True(initial.GetProperty("usesCustomColumns").GetBoolean());
         Assert.Equal(new[] { 8, 9, 17, 12, 2 }, initial.GetProperty("columns").EnumerateArray().Select(column => column.GetProperty("slot").GetInt32()));
-        var version = initial.GetProperty("version").GetInt32();
+        var modifiedAt = initial.GetProperty("modifiedAt").GetDateTime();
         var values = new Dictionary<int, string?> { [8] = "1.000001", [9] = "2026-11-26", [17] = "Prvi red", [12] = "Ž", [2] = "false" };
-        using var invalidValue = await Client.PostAsJsonAsync(path, new { expectedVersion = version, values = new Dictionary<int, string?> { [8] = "1.1234567" } });
+        using var invalidValue = await Client.PostAsJsonAsync(path, new { expectedModifiedAt = modifiedAt, values = new Dictionary<int, string?> { [8] = "1.1234567" } });
         Assert.Equal(HttpStatusCode.BadRequest, invalidValue.StatusCode);
-        using var insert = await Client.PostAsJsonAsync(path, new { expectedVersion = version, values });
+        using var insert = await Client.PostAsJsonAsync(path, new { expectedModifiedAt = modifiedAt, values });
         Assert.True(insert.StatusCode == HttpStatusCode.Created, await insert.Content.ReadAsStringAsync());
         var id = (await insert.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetInt32();
 
@@ -215,13 +246,13 @@ public sealed class CodebookCsvSqlTests : CodebookCsvFixture
         Assert.Equal(1.000001m, slots.GetProperty("8").GetDecimal());
         Assert.Equal("Ž", slots.GetProperty("12").GetString());
         Assert.False(slots.GetProperty("2").GetBoolean());
-        using var stale = await Client.PutAsJsonAsync($"{path}/{id}", new { expectedVersion = version, values });
+        using var stale = await Client.PutAsJsonAsync($"{path}/{id}", new { expectedModifiedAt = modifiedAt, values });
         Assert.Equal(HttpStatusCode.Conflict, stale.StatusCode);
-        version = updated.GetProperty("version").GetInt32();
-        using var removal = await Client.PutAsJsonAsync($"/api/code-lists/categories/{category}", new { expectedVersion = version, columns = options.Skip(1) });
+        modifiedAt = updated.GetProperty("modifiedAt").GetDateTime();
+        using var removal = await Client.PutAsJsonAsync($"/api/code-lists/categories/{category}", new { expectedModifiedAt = modifiedAt, columns = options.Skip(1) });
         Assert.Equal(HttpStatusCode.Conflict, removal.StatusCode);
         values[17] = "Drugi red";
-        using var edit = await Client.PutAsJsonAsync($"{path}/{id}", new { expectedVersion = version, values });
+        using var edit = await Client.PutAsJsonAsync($"{path}/{id}", new { expectedModifiedAt = modifiedAt, values });
         Assert.True(edit.StatusCode == HttpStatusCode.OK, await edit.Content.ReadAsStringAsync());
         var template = await Client.GetStringAsync($"/api/code-lists/{category}/csv-template");
         Assert.Contains("\"Precizno\",\"Datum\",\"Napomena\",\"Kratko\",\"Da ili ne\"", template);

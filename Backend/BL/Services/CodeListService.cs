@@ -29,7 +29,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
             .Distinct()
             .ToListAsync();
         var definitions = await _dbContext.CodeListDefinitions.AsNoTracking()
-            .Where(item => item.IsActive).Select(item => item.Name).ToListAsync();
+            .Select(item => item.Name).ToListAsync();
         var categories = valueCategories.Concat(definitions).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(k => k).ToList();
 
         return Result<object>.Success(new { categories });
@@ -160,7 +160,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
             return Result<CodeListResponseDTO>.ValidationError(BackendMessages.Message("validation.codelist.inactive"));
 
         // Updating Aktivan must enforce the same reference guard as Delete.
-        if (entitet.Aktivan && !dto.Aktivan && (entitet.IsSystemRequired || await JeVrijednostUUpotrebi(entitet.Kategorija, entitet.Kod)))
+        if (entitet.Aktivan && !dto.Aktivan && (await IsSystemRequiredAsync(entitet.Kategorija) || await JeVrijednostUUpotrebi(entitet.Kategorija, entitet.Kod)))
             return Result<CodeListResponseDTO>.ValidationError(BackendMessages.Message("validation.codelist.value.in.use"), code: "codes.value_in_use");
 
         // Ažuriramo dopuštena polja (Kategorija i Kod se ne mijenjaju)
@@ -199,7 +199,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
             return Result<bool>.NotFoundError(BackendMessages.Message("validation.codelist.value.missing", id));
 
         // PL-37 — provjera upotrebe
-        var uUpotrebi = entitet.IsSystemRequired || await JeVrijednostUUpotrebi(entitet.Kategorija, entitet.Kod);
+        var uUpotrebi = await IsSystemRequiredAsync(entitet.Kategorija) || await JeVrijednostUUpotrebi(entitet.Kategorija, entitet.Kod);
         if (uUpotrebi)
             return Result<bool>.ValidationError(
                 BackendMessages.Message("validation.codelist.value.delete.in.use", entitet.Naziv, entitet.Kod));
@@ -235,7 +235,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
         if (definition is null && values.Count == 0)
             return Result<bool>.NotFoundError(BackendMessages.Message("validation.codelist.definition.missing", normalizedCategory));
 
-        if (definition?.IsSystemRequired == true || values.Any(item => item.IsSystemRequired) || await JeKategorijaUUpotrebi(normalizedCategory, values.Select(item => item.Kod)))
+        if (definition?.IsSystemRequired == true || await JeKategorijaUUpotrebi(normalizedCategory, values.Select(item => item.Kod)))
             return Result<bool>.ValidationError(
                 BackendMessages.Message("validation.codelist.definition.delete.in.use", normalizedCategory));
 
@@ -260,6 +260,9 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
         await _dbContext.SaveChangesAsync();
         return Result<bool>.Success(true);
     }
+
+    private Task<bool> IsSystemRequiredAsync(string category) =>
+        _dbContext.CodeListDefinitions.AnyAsync(definition => definition.Name == category && definition.IsSystemRequired);
 
     // ─── Privatne metode ──────────────────────────────────────────────────────
 

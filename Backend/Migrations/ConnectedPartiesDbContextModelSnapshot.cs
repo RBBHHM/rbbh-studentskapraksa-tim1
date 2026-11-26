@@ -354,24 +354,12 @@ namespace RBBH.ConnectedParties.Migrations
                         .IsUnique()
                         .HasFilter("\"TAX_NUMBER\" IS NOT NULL");
 
-                    b.ToTable("LEGAL_ENTITIES");
-                });
-
-            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntityVerificationOrigin", b =>
-                {
-                    b.Property<long>("LegalEntityId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("LEGAL_ENTITY_ID");
-
-                    b.Property<string>("Fingerprint")
-                        .IsRequired()
+                    b.Property<string>("VerificationOriginFingerprint")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)")
-                        .HasColumnName("FINGERPRINT");
+                        .HasColumnName("VERIFICATION_ORIGIN_FINGERPRINT");
 
-                    b.HasKey("LegalEntityId");
-
-                    b.ToTable("LEGAL_ENTITY_VERIFICATION_ORIGINS");
+                    b.ToTable("LEGAL_ENTITIES");
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Limiti.Limit", b =>
@@ -1321,10 +1309,6 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("DEFINITION_ID");
 
-                    b.Property<bool>("IsSystemRequired")
-                        .HasColumnType("bit")
-                        .HasColumnName("IS_SYSTEM_REQUIRED");
-
                     b.Property<string>("IzmijenioKorisnik")
                         .HasMaxLength(100)
                         .IsUnicode(false)
@@ -1761,6 +1745,7 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasColumnName("IS_SYSTEM_REQUIRED");
 
                     b.Property<DateTime?>("ModifiedAt")
+                        .IsConcurrencyToken()
                         .HasColumnType("datetime2")
                         .HasColumnName("MODIFIED_AT");
 
@@ -1776,19 +1761,6 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasColumnType("varchar(100)")
                         .HasColumnName("NAME")
                         .UseCollation("Latin1_General_100_CI_AS");
-
-                    b.Property<string>("Owner")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasDefaultValue("registry")
-                        .HasColumnName("OWNER");
-
-                    b.Property<int>("Version")
-                        .IsConcurrencyToken()
-                        .HasColumnType("int")
-                        .HasColumnName("VERSION");
 
                     b.HasKey("Id");
 
@@ -1922,15 +1894,6 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Navigation("Request");
 
                     b.Navigation("Role");
-                });
-
-            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntityVerificationOrigin", b =>
-                {
-                    b.HasOne("RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntity", null)
-                        .WithOne()
-                        .HasForeignKey("RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntityVerificationOrigin", "LegalEntityId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Limiti.Limit", b =>

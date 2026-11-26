@@ -12,7 +12,6 @@ public class CodeList
 {
     [Key]
     public int ID { get; set; }
-    public bool IsSystemRequired { get; set; }
     public long? DefinitionId { get; set; }
     public CodeListDefinition? Definition { get; set; }
     public CodeListLocalization? Localization { get; set; }

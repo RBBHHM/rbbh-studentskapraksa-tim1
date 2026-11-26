@@ -15,8 +15,11 @@ async function fillValue(page: Page, code: string, name: string) {
   await dialog.getByRole("textbox", { name: /^Naziv/ }).fill(name); await dialog.getByRole("textbox", { name: /^Kod/ }).fill(code); return dialog;
 }
 async function addColumn(dialog: Locator, type: string, name: string) {
-  await dialog.getByRole("button", { name: `+ ${type}`, exact: true }).click();
-  await dialog.getByRole("textbox", { name: /Naziv kolone/ }).last().fill(name);
+  const columnNames = dialog.getByRole("textbox", { name: /Naziv kolone/ });
+  const before = await columnNames.count();
+  await dialog.getByRole("button", { name: type === "Tekst" ? "+ Tekst · Do 4000 znakova" : `+ ${type}`, exact: true }).click();
+  await expect(columnNames).toHaveCount(before + 1);
+  await columnNames.last().fill(name);
 }
 test.beforeEach(async ({ request }) => { expect((await request.post("/__fixtures/reset", { headers })).status()).toBe(204); });
 
@@ -72,7 +75,7 @@ test("custom definition controls create, edit, CSV headers and soft-delete", asy
 
   await page.getByRole("button", { name: "Uredi kolone" }).click();
   dialog = page.getByRole("dialog");
-  await dialog.getByRole("textbox", { name: /Naziv kolone.*Tekst/ }).fill("Napomena");
+  await dialog.getByRole("textbox", { name: /Naziv kolone/ }).first().fill("Napomena");
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
   await expect(table.getByRole("columnheader", { name: "Napomena", exact: true })).toBeVisible();
   await expect(row).toContainText("Druga poruka");
@@ -92,6 +95,27 @@ test("custom definition controls create, edit, CSV headers and soft-delete", asy
   await dialog.getByRole("button", { name: "Uvezi ispravne redove", exact: true }).click();
   await expect(table.getByRole("cell", { name: "Ispravan red", exact: true })).toBeVisible();
   await expect(table.getByRole("cell", { name: "Neispravan red", exact: true })).toHaveCount(0);
+});
+
+test("definition status is editable even when a codebook has no rows", async ({ page }) => {
+  await visit(page);
+  await page.getByRole("button", { name: "Novi šifrarnik", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("textbox", { name: /^Naziv definicije/ }).fill("Status fixture");
+  await addColumn(dialog, "Tekst", "Napomena");
+  await dialog.getByRole("button", { name: "Kreiraj", exact: true }).click();
+  await page.getByRole("button", { name: "Deaktiviraj šifrarnik", exact: true }).click();
+
+  await expect(page.getByText("Šifrarnik je neaktivan. U njega se ne mogu dodavati vrijednosti.")).toBeVisible();
+  const newValue = page.getByRole("button", { name: "Nova vrijednost", exact: true });
+  await expect(newValue).toBeDisabled();
+  await expect(page.locator("#code-file")).toBeDisabled();
+
+  await page.getByRole("button", { name: "Svi šifrarnici", exact: true }).click();
+  await page.getByRole("button", { name: "STATUS_FIXTURE", exact: true }).click();
+  await page.getByRole("button", { name: "Aktiviraj šifrarnik", exact: true }).click();
+  await expect(newValue).toBeEnabled();
+  await expect(page.locator("#code-file")).toBeEnabled();
 });
 
 test("changed reference value immediately reaches the actual business form dropdown", async ({ page }) => {

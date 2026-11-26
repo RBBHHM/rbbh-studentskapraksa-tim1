@@ -663,8 +663,7 @@ h1[tabindex="-1"]:focus, h1:focus-visible { outline: none; }
 .codebook-schema-list { padding-inline-start: 1.75rem; margin-block: var(--space-3) 0; }
 .codebook-schema-list li { padding: var(--space-3) 0; border-block-start: 1px solid var(--border-subtle); }
 .codebook-schema-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: var(--space-2); }
-.codebook-schema-list details { margin-block-start: var(--space-2); }
-.codebook-schema-list summary { cursor: pointer; font-size: var(--font-size-sm); }
+.codebook-schema-description { margin-block-start: var(--space-2); }
 .registry-codes-table { min-width: 37rem; table-layout: fixed; }
 .registry-codes-table th, .registry-codes-table td,
 .registry-codes-table td:not(:nth-child(3)) { white-space: normal; overflow-wrap: anywhere; vertical-align: top; }

@@ -219,10 +219,7 @@ public partial class LegalEntityService : ILegalEntityService
         if (string.Equals(entity.Status, "Verified", StringComparison.OrdinalIgnoreCase))
             throw new ValidationException("status", BackendMessages.Message("validation.registry.legal.verified"));
 
-        var subject = await _context.LegalEntityVerificationOrigins.AsNoTracking()
-            .Where(origin => origin.LegalEntityId == id).Select(origin => origin.Fingerprint)
-            .SingleOrDefaultAsync(_actor?.HttpContext?.RequestAborted ?? default);
-        Helpers.RegistryVerification.Authorize(subject, _actor);
+        Helpers.RegistryVerification.Authorize(_context.Entry(entity).Property<string?>("VerificationOriginFingerprint").CurrentValue, _actor);
         var before = new { status = entity.Status.ToString(), verifiedBy = entity.VerifiedBy, verifiedAt = entity.VerifiedAt };
         entity.Status = "Verified";
         entity.VerifiedBy = verifiedBy;
@@ -411,10 +408,8 @@ public partial class LegalEntityService : ILegalEntityService
 
     private void AddNewEntity(LegalEntity entity)
     {
-        var subject = Helpers.RegistryVerification.OriginFingerprint(_actor);
-        _context.LegalEntities.Add(entity);
-        if (subject is not null)
-            _context.LegalEntityVerificationOrigins.Add(new() { LegalEntityId = entity.Id, Fingerprint = subject });
+        _context.LegalEntities.Add(entity).Property<string?>("VerificationOriginFingerprint").CurrentValue =
+            Helpers.RegistryVerification.OriginFingerprint(_actor);
     }
 
     private async Task<LegalEntityDTO> WithConnectionDescription(LegalEntity entity)

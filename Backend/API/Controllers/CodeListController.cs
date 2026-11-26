@@ -77,8 +77,29 @@ public partial class CodeListController(ICodeListService codeListService, Connec
     public async Task<IActionResult> Definitions(CancellationToken ct) => Ok(new
     {
         items = await db.CodeListDefinitions.AsNoTracking().OrderBy(row => row.Name).Select(row => new
-        { row.Id, row.Name, row.Description, row.IsActive, row.IsSystemRequired, row.UsesCustomColumns, row.Version, row.CreatedAt, row.CreatedBy, row.ModifiedAt, row.ModifiedBy }).ToListAsync(ct)
+        { row.Id, row.Name, row.Description, row.IsActive, row.IsSystemRequired, row.UsesCustomColumns, row.CreatedAt, row.CreatedBy, row.ModifiedAt, row.ModifiedBy }).ToListAsync(ct)
     });
+
+    [HttpPut("categories/{name}/status"), Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
+    public async Task<IActionResult> SetDefinitionStatus(string name, CodebookStatusRequest input, CancellationToken ct)
+    {
+        if (input.IsActive is not { } isActive) return BadRequest();
+        var definition = await db.CodeListDefinitions.SingleOrDefaultAsync(row => row.Name == name, ct);
+        if (definition is null) return NotFound();
+        if (definition.ModifiedAt != input.ExpectedModifiedAt) return Conflict(new { code = "codes.concurrent" });
+        if (definition.IsActive == isActive) return NoContent();
+        if (!isActive && definition.IsSystemRequired) return Conflict(new { code = "codes.status_protected" });
+
+        var before = new { definition.Name, definition.IsActive };
+        var actor = GetKorisnik();
+        definition.IsActive = isActive;
+        definition.ModifiedBy = actor;
+        db.AuditLogs.Add(Helpers.BusinessAudit.Create("CodeList", "CODELIST_UPDATE", actor, null,
+            before, new { definition.Name, definition.IsActive }));
+        try { await db.SaveChangesAsync(ct); }
+        catch (DbUpdateConcurrencyException) { return Conflict(new { code = "codes.concurrent" }); }
+        return NoContent();
+    }
 
     [HttpGet("categories/{name}/columns")]
     public async Task<IActionResult> Columns(string name, CancellationToken ct)
@@ -127,7 +148,7 @@ public partial class CodeListController(ICodeListService codeListService, Connec
         if (input.Description?.Length > 500) return BadRequest(new ProblemDetails { Status = 400, Title = BackendMessages.Message("errors.codelist.description.length") });
         var definition = await db.CodeListDefinitions.SingleOrDefaultAsync(row => row.Name == name, ct);
         if (definition is null) return NotFound();
-        if (definition.Version != input.ExpectedVersion) return Conflict(new ProblemDetails { Status = 409, Title = BackendMessages.Message("errors.codelist.concurrent.change") });
+        if (definition.ModifiedAt != input.ExpectedModifiedAt) return Conflict(new ProblemDetails { Status = 409, Title = BackendMessages.Message("errors.codelist.concurrent.change") });
         var previousColumns = definition.UsesCustomColumns ? CodebookCsv.Columns(db, definition) : null;
         if (input.Columns is { } columns)
         {
@@ -146,7 +167,7 @@ public partial class CodeListController(ICodeListService codeListService, Connec
             before, new { definition.Description, Columns = previousColumns is null ? null : CodebookCsv.Columns(db, definition) }));
         try { await db.SaveChangesAsync(ct); }
         catch (DbUpdateConcurrencyException) { return Conflict(new { code = "codes.concurrent" }); }
-        return Ok(new { definition.Id, definition.Name, definition.Description, definition.Version, definition.ModifiedAt, definition.ModifiedBy });
+        return Ok(new { definition.Id, definition.Name, definition.Description, definition.ModifiedAt, definition.ModifiedBy });
     }
 
     /// <summary>
@@ -207,7 +228,7 @@ public partial class CodeListController(ICodeListService codeListService, Connec
             modifiedAt = x.IzmijenjenDatum ?? x.KreiranDatum
         }).ToList();
 
-        return Ok(new { category = kategorija, items, columns, usesCustomColumns = definition?.UsesCustomColumns == true, definition?.Version });
+        return Ok(new { category = kategorija, items, columns, usesCustomColumns = definition?.UsesCustomColumns == true, definition?.ModifiedAt });
     }
 
     /// <summary>

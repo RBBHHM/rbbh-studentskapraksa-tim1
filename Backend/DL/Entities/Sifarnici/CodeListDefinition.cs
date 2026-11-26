@@ -6,14 +6,12 @@ namespace RBBH.ConnectedParties.DL.Entities.Sifarnici;
 public sealed class CodeListDefinition
 {
     public long Id { get; set; }
-    public string Owner { get; set; } = "registry";
     [Required, StringLength(100), Unicode(false)] public string Name { get; set; } = string.Empty;
     [StringLength(500)] public string? Description { get; set; }
     public bool IsActive { get; set; } = true;
     public bool UsesCustomColumns { get; set; }
     public bool IsSystemRequired { get; set; }
-    [ConcurrencyCheck] public int Version { get; set; }
-    public DateTime? ModifiedAt { get; set; }
+    [ConcurrencyCheck] public DateTime? ModifiedAt { get; set; }
     [StringLength(100)] public string? ModifiedBy { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     [StringLength(100)] public string CreatedBy { get; set; } = string.Empty;
