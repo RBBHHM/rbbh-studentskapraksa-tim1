@@ -7,13 +7,17 @@ public sealed class CapitalDraft
     public decimal? RegulatoryCapital { get; set; }
     public decimal? CoreCapital { get; set; }
     public decimal? SupplementaryCapital { get; set; }
-    public DateTime? CapitalDate { get; set; }
+    public DateTime? ValidTill { get; set; }
+    public long? ExpectedId { get; init; }
+    public DateTime? ExpectedModifiedAt { get; init; }
     public static CapitalDraft From(CapitalRecord? record) => record is null ? new() : new()
     {
         RegulatoryCapital = record.RegulatoryCapital,
         CoreCapital = record.CoreCapital,
         SupplementaryCapital = record.SupplementaryCapital,
-        CapitalDate = record.CapitalDate
+        ValidTill = record.ValidTill,
+        ExpectedId = record.Id,
+        ExpectedModifiedAt = record.ModifiedAt
     };
     public Dictionary<string, string[]> Validate()
     {
@@ -23,12 +27,12 @@ public sealed class CapitalDraft
             if (value is null) errors[field] = ["validation.required"];
             else if (value < 0) errors[field] = ["limit.nonnegative"];
         }
-        if (CapitalDate is null) errors[nameof(CapitalDate)] = ["validation.date"];
+        if (ValidTill is null) errors[nameof(ValidTill)] = ["validation.date"];
         return errors;
     }
     public CapitalRequest ToRequest()
     {
         if (Validate().Count > 0) throw new InvalidOperationException("Resolve field validation before creating the request.");
-        return new(RegulatoryCapital!.Value, CoreCapital!.Value, SupplementaryCapital!.Value, CapitalDate!.Value);
+        return new(RegulatoryCapital!.Value, CoreCapital!.Value, SupplementaryCapital!.Value, ValidTill!.Value, ExpectedId, ExpectedModifiedAt);
     }
 }

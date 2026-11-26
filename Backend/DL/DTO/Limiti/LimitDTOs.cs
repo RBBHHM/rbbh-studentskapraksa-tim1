@@ -25,6 +25,7 @@ public class UpdateLimitDTO
 public class LimitResponseDTO
 {
     public int Id { get; set; }
+    public long? CapitalId { get; set; }
     public long LegalEntityId { get; set; }
     public string Naziv { get; set; } = string.Empty;
     public bool IsResident { get; set; }

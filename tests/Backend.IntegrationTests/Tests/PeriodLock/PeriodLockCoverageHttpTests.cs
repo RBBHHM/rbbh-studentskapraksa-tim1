@@ -80,19 +80,19 @@ public sealed class PeriodLockCoverageHttpTests : IAsyncLifetime
         await db.SaveChangesAsync();
     }
 
-    private static object Capital() => new { regulatoryCapital = 100m, coreCapital = 60m, supplementaryCapital = 40m, capitalDate = DateTime.UtcNow.Date };
+    private static object Capital() => new { regulatoryCapital = 100m, coreCapital = 60m, supplementaryCapital = 40m, validTill = DateTime.UtcNow.Date.AddMonths(1) };
 
     [Fact]
     public async Task CapitalMutationIsBlockedWhileLockedAndAllowedAfterUnlock()
     {
         await SetGlobalLockAsync(true);
-        var blocked = await _client.PutAsJsonAsync("/api/capital", Capital());
+        var blocked = await _client.PostAsJsonAsync("/api/capital", Capital());
         Assert.Equal(HttpStatusCode.Locked, blocked.StatusCode);
         await using (var scope = _app.Services.CreateAsyncScope())
             Assert.Empty(await scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>().Set<RBBH.ConnectedParties.DL.Entities.Report.Capital>().ToListAsync());
 
         await SetGlobalLockAsync(false);
-        Assert.Equal(HttpStatusCode.OK, (await _client.PutAsJsonAsync("/api/capital", Capital())).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await _client.PostAsJsonAsync("/api/capital", Capital())).StatusCode);
     }
 
     [Theory]
@@ -149,9 +149,9 @@ public sealed class PeriodLockCoverageHttpTests : IAsyncLifetime
     {
         _client.DefaultRequestHeaders.Add("X-Test-Username", username);
         await SetGlobalLockAsync(true);
-        Assert.Equal(HttpStatusCode.Locked, (await _client.PutAsJsonAsync("/api/capital", Capital())).StatusCode);
+        Assert.Equal(HttpStatusCode.Locked, (await _client.PostAsJsonAsync("/api/capital", Capital())).StatusCode);
         await SetGlobalLockAsync(false);
-        Assert.Equal(HttpStatusCode.OK, (await _client.PutAsJsonAsync("/api/capital", Capital())).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await _client.PostAsJsonAsync("/api/capital", Capital())).StatusCode);
     }
 
     public async Task DisposeAsync()

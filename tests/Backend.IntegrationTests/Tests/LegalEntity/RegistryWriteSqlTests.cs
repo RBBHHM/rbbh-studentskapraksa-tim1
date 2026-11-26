@@ -14,10 +14,10 @@ public sealed class RegistryWriteSqlTests : AuthenticatedApiFixture
     {
         var sql = action switch
         {
-            "INSERT" => "CREATE TRIGGER FixtureRegistryAuditFailure ON AuditLogs AFTER INSERT AS BEGIN IF EXISTS(SELECT 1 FROM inserted WHERE Action = 'INSERT') THROW 51000, 'fixture audit failure', 1; END",
-            "UPDATE" => "CREATE TRIGGER FixtureRegistryAuditFailure ON AuditLogs AFTER INSERT AS BEGIN IF EXISTS(SELECT 1 FROM inserted WHERE Action = 'UPDATE') THROW 51000, 'fixture audit failure', 1; END",
-            "DELETE" => "CREATE TRIGGER FixtureRegistryAuditFailure ON AuditLogs AFTER INSERT AS BEGIN IF EXISTS(SELECT 1 FROM inserted WHERE Action = 'DELETE') THROW 51000, 'fixture audit failure', 1; END",
-            "IMPORT" => "CREATE TRIGGER FixtureRegistryAuditFailure ON AuditLogs AFTER INSERT AS BEGIN IF EXISTS(SELECT 1 FROM inserted WHERE Action = 'IMPORT') THROW 51000, 'fixture audit failure', 1; END",
+            "INSERT" => "CREATE TRIGGER FixtureRegistryAuditFailure ON AUDIT_LOGS AFTER INSERT AS BEGIN IF EXISTS(SELECT 1 FROM inserted WHERE Action = 'INSERT') THROW 51000, 'fixture audit failure', 1; END",
+            "UPDATE" => "CREATE TRIGGER FixtureRegistryAuditFailure ON AUDIT_LOGS AFTER INSERT AS BEGIN IF EXISTS(SELECT 1 FROM inserted WHERE Action = 'UPDATE') THROW 51000, 'fixture audit failure', 1; END",
+            "DELETE" => "CREATE TRIGGER FixtureRegistryAuditFailure ON AUDIT_LOGS AFTER INSERT AS BEGIN IF EXISTS(SELECT 1 FROM inserted WHERE Action = 'DELETE') THROW 51000, 'fixture audit failure', 1; END",
+            "IMPORT" => "CREATE TRIGGER FixtureRegistryAuditFailure ON AUDIT_LOGS AFTER INSERT AS BEGIN IF EXISTS(SELECT 1 FROM inserted WHERE Action = 'IMPORT') THROW 51000, 'fixture audit failure', 1; END",
             _ => throw new ArgumentOutOfRangeException(nameof(action))
         };
         await InDatabase(db => db.Database.ExecuteSqlRawAsync(sql));

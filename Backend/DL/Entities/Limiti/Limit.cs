@@ -12,6 +12,10 @@ public class Limit
     [Key]
     public int Id { get; set; }
 
+    public const string LegacyExposureType = "LEGACY_CLIENT_LIMIT";
+    public long? CapitalId { get; set; }
+    public Report.Capital? Capital { get; set; }
+
     /// <summary>Pravno lice na koje se limit odnosi.</summary>
     [Required]
     public long LegalEntityId { get; set; }

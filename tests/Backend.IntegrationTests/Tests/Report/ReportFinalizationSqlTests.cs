@@ -41,9 +41,9 @@ public sealed class ReportFinalizationSqlTests : ReportFinalizationFixture
     public async Task SnapshotAndProvenanceRollbackWhenGenerationAuditFails()
     {
         await SeedExposure();
-        await InDatabase(db => db.Database.ExecuteSqlRawAsync("CREATE TRIGGER FixtureReportAuditFailure ON AuditLogs AFTER INSERT AS BEGIN IF EXISTS(SELECT 1 FROM inserted WHERE TableName = 'Report') THROW 51000, 'fixture failure', 1; END"));
+        await InDatabase(db => db.Database.ExecuteSqlRawAsync("CREATE TRIGGER FixtureReportAuditFailure ON AUDIT_LOGS AFTER INSERT AS BEGIN IF EXISTS(SELECT 1 FROM inserted WHERE TABLE_NAME = 'Report') THROW 51000, 'fixture failure', 1; END"));
         Assert.Equal(HttpStatusCode.InternalServerError, (await Client.PostAsync("/api/reports/daily", null)).StatusCode);
-        await InDatabase(async db => { Assert.Empty(db.Reports); Assert.Empty(db.AuditLogs); Assert.Single(db.ClientLimits); });
+        await InDatabase(async db => { Assert.Empty(db.Reports); Assert.Empty(db.AuditLogs); Assert.Single(db.Limiti); });
     }
     [SqlServerFact]
     public async Task PopulatedProvenanceMigrationPreservesHistoricalSnapshotWithoutInventingSource()

@@ -58,6 +58,9 @@ public class CapitalDTO
     public decimal CoreCapital { get; set; }
     public decimal SupplementaryCapital { get; set; }
     public DateTime CapitalDate { get; set; }
+    public DateTime ValidTill { get; set; }
+    public bool IsActive { get; set; }
+    public DateTime? ModifiedAt { get; set; }
 }
 
 /// <summary>Request za ažuriranje kapitala (Regulatorni/Osnovni/Dopunski + datum) — modul Kapital.</summary>
@@ -66,17 +69,18 @@ public class UpdateCapitalDTO
     public decimal? RegulatoryCapital { get; set; }
     public decimal? CoreCapital { get; set; }
     public decimal? SupplementaryCapital { get; set; }
-    public DateTime? CapitalDate { get; set; }
+    public DateTime? ValidTill { get; set; }
+    public long? ExpectedId { get; set; }
+    public DateTime? ExpectedModifiedAt { get; set; }
 }
 public sealed class CapitalHistoryDTO
 {
     public long Id { get; set; }
-    public long Revision { get; set; }
+    public DateTime ValidTill { get; set; }
     public DateTime EffectiveDate { get; set; }
     public decimal RegulatoryCapital { get; set; }
     public decimal CoreCapital { get; set; }
     public decimal SupplementaryCapital { get; set; }
     public DateTime RecordedAt { get; set; }
     public string RecordedBy { get; set; } = string.Empty;
-    public string Source { get; set; } = string.Empty;
 }

@@ -18,7 +18,6 @@ public partial class ConnectedPartiesDbContext
         modelBuilder.ApplyConfiguration(new LegalEntityConfiguration());
         modelBuilder.ApplyConfiguration(new LimitConfiguration());
         modelBuilder.ApplyConfiguration(new ReportConfiguration());
-modelBuilder.ApplyConfiguration(new ClientLimitConfiguration());
         modelBuilder.ApplyConfiguration(new CapitalConfiguration());
 
     }

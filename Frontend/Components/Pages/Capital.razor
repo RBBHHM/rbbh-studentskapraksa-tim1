@@ -15,7 +15,11 @@
         {
 
             <RbiButton Disabled="@(_busy || _refreshing)" OnClick="ExportAsync" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.Download" />@T["common.export"]</RbiButton>
-            @if (_canEdit) { <RbiButton Disabled="@(_busy || _refreshing || _periodLocked)" OnClick="Edit"><RbiIcon Name="RbiIconName.Pencil" />@T["capital.edit"]</RbiButton> }
+            @if (_canEdit)
+            {
+                <RbiButton Disabled="@(_busy || _refreshing || _periodLocked)" OnClick="Create">@T["capital.create"]</RbiButton>
+                @if (_record is not null) { <RbiButton Disabled="@(_busy || _refreshing || _periodLocked)" OnClick="Edit"><RbiIcon Name="RbiIconName.Pencil" />@T["capital.edit"]</RbiButton> }
+            }
         }
     </Actions>
 </HeroBar>
@@ -32,20 +36,20 @@ else
     @if (_notice) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@T["toast.capital"]" /></div> }
     <h2 class="capital-section">@T["capital.active"]</h2>
     <RbiTable AccessibleLabel="@T["capital.title"]" Class="registry-table registry-capital-table">
-        <thead><tr><th scope="col">@T["limit.core"]</th><th scope="col">@T["limit.regulatory"]</th><th scope="col">@T["capital.supplementary"]</th><th scope="col">@T["capital.date"]</th></tr></thead>
+        <thead><tr><th scope="col">@T["limit.core"]</th><th scope="col">@T["limit.regulatory"]</th><th scope="col">@T["capital.supplementary"]</th><th scope="col">@T["capital.valid-from"]</th><th scope="col">@T["capital.valid-to"]</th></tr></thead>
         <tbody>
-            @if (_record is { } record) { <tr><td>@Money(record.CoreCapital)</td><td>@Money(record.RegulatoryCapital)</td><td>@Money(record.SupplementaryCapital)</td><td>@CapitalDay(record.CapitalDate)</td></tr> }
-            else { <tr><td colspan="4" role="status">@T["capital.empty"]</td></tr> }
+            @if (_record is { } record) { <tr><td>@Money(record.CoreCapital)</td><td>@Money(record.RegulatoryCapital)</td><td>@Money(record.SupplementaryCapital)</td><td>@CapitalDay(record.CapitalDate)</td><td>@CapitalDay(record.ValidTill)</td></tr> }
+            else { <tr><td colspan="5" role="status">@T["capital.empty"]</td></tr> }
         </tbody>
     </RbiTable>
     <section class="capital-asof" aria-labelledby="capital-asof-title">
         <h2 id="capital-asof-title" class="capital-section">@T["capital.asof"]</h2>
         <div class="capital-asof__controls">
             <label class="app-label" for="capital-asof-date">@T["capital.asof-date"]</label>
-            <input id="capital-asof-date" class="rbi-input" type="date" @bind="_asOfDate" @bind:format="yyyy-MM-dd" />
+            <input id="capital-asof-date" class="rbi-control" type="date" @bind="_asOfDate" @bind:format="yyyy-MM-dd" />
             <RbiButton Variant="RbiButtonVariant.Secondary" Disabled="@(_asOfDate is null || _refreshing)" OnClick="AsOfAsync">@T["capital.asof-show"]</RbiButton>
         </div>
-        @if (_asOfShown) { <p role="status" class="capital-asof__result">@(_asOf is { } asOf ? T.Format("capital.asof-result", CapitalDay(_asOfDate!.Value), Money(asOf.CoreCapital), Money(asOf.RegulatoryCapital), Money(asOf.SupplementaryCapital), CapitalDay(asOf.CapitalDate)) : T.Format("capital.asof-none", CapitalDay(_asOfDate!.Value)))</p> }
+        @if (_asOfShown && _asOfDate is not null) { <p role="status" class="capital-asof__result">@(_asOf is { } asOf ? T.Format("capital.asof-result", CapitalDay(_asOfDate!.Value), Money(asOf.CoreCapital), Money(asOf.RegulatoryCapital), Money(asOf.SupplementaryCapital), CapitalDay(asOf.CapitalDate)) : T.Format("capital.asof-none", CapitalDay(_asOfDate!.Value)))</p> }
     </section>
     <section class="capital-history" aria-labelledby="capital-history-title">
         <h2 id="capital-history-title" class="capital-section">@T["capital.history"]</h2>
@@ -58,11 +62,11 @@ else
                 <tbody>
                 @foreach (var row in _history)
                 {
-                    <tr @key="(row.Version.Source, row.Version.Id)" data-state="@row.State">
-                        <td>@CapitalDay(row.Version.EffectiveDate)</td><td>@(row.ValidTo is { } to ? CapitalDay(to) : T["capital.open-ended"])</td>
-                        <td>@Money(row.Version.CoreCapital)</td><td>@Money(row.Version.RegulatoryCapital)</td><td>@Money(row.Version.SupplementaryCapital)</td>
-                        <td>@(string.IsNullOrEmpty(row.Version.RecordedBy) ? "—" : row.Version.RecordedBy)</td><td>@AppFormat.Timestamp(row.Version.RecordedAt)</td>
-                        <td><span class="capital-state capital-state--@row.State">@T["capital.state." + row.State]</span></td>
+                    <tr @key="row.Id" data-state="previous">
+                        <td>@CapitalDay(row.EffectiveDate)</td><td>@CapitalDay(row.ValidTill)</td>
+                        <td>@Money(row.CoreCapital)</td><td>@Money(row.RegulatoryCapital)</td><td>@Money(row.SupplementaryCapital)</td>
+                        <td>@(string.IsNullOrEmpty(row.RecordedBy) ? "—" : row.RecordedBy)</td><td>@AppFormat.Timestamp(row.RecordedAt)</td>
+                        <td><span class="capital-state capital-state--previous">@T["capital.state.previous"]</span></td>
                     </tr>
                 }
                 </tbody>
@@ -77,8 +81,8 @@ else
 }
 @if (_draft is { } draft)
 {
-    <RbiDialog Open Class="app-form-dialog app-form-dialog--sm" Title="@T["capital.edit"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseEditor">
-        <DialogBody><p class="app-hint">@T["capital.revision-help"]</p><CapitalForm MutationBlocked="_periodLocked" @key="draft" Model="draft" Save="SaveAsync" Cancel="() => CloseEditor(false)" /></DialogBody>
+    <RbiDialog Open Class="app-form-dialog app-form-dialog--sm" Title="@T[draft.ExpectedId is null ? "capital.create" : "capital.edit"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseEditor">
+        <DialogBody><CapitalForm MutationBlocked="_periodLocked" @key="draft" Model="draft" Save="SaveAsync" Cancel="() => CloseEditor(false)" /></DialogBody>
     </RbiDialog>
 }
 @code {
@@ -86,8 +90,7 @@ else
     private readonly CancellationToken _token;
     public Capital() => _token = _lifetime.Token;
     private CapitalRecord? _record, _asOf;
-    private sealed record HistoryRow(CapitalVersion Version, DateTime? ValidTo, string State);
-    private List<HistoryRow> _history = [];
+    private IReadOnlyList<CapitalVersion> _history = [];
     private DateTime? _asOfDate = DateTime.UtcNow.Date;
     private int _historyPage = 1, _historyTotal;
     private bool _asOfShown;
@@ -118,25 +121,16 @@ else
         catch (RegistryApiException exception) { _error = exception.MessageKey; }
         finally { _loading = false; _refreshing = false; }
     }
-    // Rows arrive newest effective date first. A row is valid until the day before the nearest later effective date;
-    // the first row of a later page needs the last row of the previous page for that boundary.
     private async Task LoadHistoryAsync()
     {
         var page = await Api.HistoryAsync(_historyPage, 100, _token);
-        DateTime? later = null;
-        if (_historyPage > 1) later = (await Api.HistoryAsync(_historyPage - 1, 100, _token)).Items.LastOrDefault()?.EffectiveDate;
-        var today = DateTime.UtcNow.Date; DateTime? activeDate = null; var rows = new List<HistoryRow>();
-        DateTime? previousDate = later;
-        foreach (var version in page.Items)
-        {
-            var date = version.EffectiveDate.Date;
-            if (previousDate is { } seen && date < seen) later = seen;
-            previousDate = date;
-            var state = date > today ? "future" : (_historyPage > 1 && activeDate is null) ? "previous" : activeDate is null ? "active" : activeDate == date ? "corrected" : "previous";
-            if (state == "active") activeDate = date;
-            rows.Add(new HistoryRow(version, later is { } next && next.Date > date ? next.Date.AddDays(-1) : null, state));
-        }
-        _history = rows; _historyTotal = page.Total;
+        _history = page.Items;
+        _historyTotal = page.Total;
+    }
+    private void Create()
+    {
+        if (!_authenticated || !_canEdit || _periodLocked || _busy || _refreshing) return;
+        _draft = new CapitalDraft();
     }
     private async Task ChangeHistoryPageAsync(int number) { if (_refreshing || number < 1 || number > HistoryPages) return; _historyPage = number; await LoadAsync(); }
     private async Task AsOfAsync()

@@ -14,5 +14,5 @@ public interface ICapitalService
     Task<BL.Services.ReferencePage<CapitalHistoryDTO>> History(int page, int pageSize, CancellationToken ct);
 
     /// <summary>Dodaje novu nepromjenjivu reviziju kapitala.</summary>
-    Task<Result<CapitalDTO>> Upsert(UpdateCapitalDTO dto, string korisnik);
+    Task<Result<CapitalDTO>> Upsert(UpdateCapitalDTO dto, string korisnik, bool create = false);
 }

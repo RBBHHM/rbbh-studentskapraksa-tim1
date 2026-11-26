@@ -38,15 +38,16 @@ namespace UnitTests.Services.ReportServiceTests
             CreatedBy = "seed"
         };
 
-        private static ClientLimit NewClientLimit(long legalEntityId, decimal currentExposure, bool breached = false) => new()
+        private static RBBH.ConnectedParties.DL.Entities.Limiti.Limit NewClientLimit(long legalEntityId, decimal currentExposure, bool breached = false) => new()
         {
             LegalEntityId = legalEntityId,
-            RegulatoryCapital = 5000m,
-            CoreCapital = 4000m,
-            ExposureLimit = 1000m,
-            CurrentExposure = currentExposure,
-            Currency = "BAM",
-            IsLimitBreached = breached,
+
+            Capital = new() { IsActive = false, RegulatoryCapital = 5000m, CoreCapital = 4000m },
+            TipLimita = "LEGACY_CLIENT_LIMIT",
+            OdobreniLimit = 1000m,
+            MaksimalnaOcekivanaUtilizacija = currentExposure,
+
+            Komentar = System.Text.Json.JsonSerializer.Serialize(new { IsLimitBreached = breached }),
             CreatedBy = "seed",
             CreatedAt = DateTime.UtcNow
         };
@@ -74,7 +75,7 @@ namespace UnitTests.Services.ReportServiceTests
             var acme = NewLegalEntity("ACME");
             var beta = NewLegalEntity("BETA");
             ctx.LegalEntities.AddRange(acme, beta);
-            ctx.ClientLimits.AddRange(
+            ctx.Limiti.AddRange(
                 NewClientLimit(acme.Id, currentExposure: 300m),
                 NewClientLimit(beta.Id, currentExposure: 300m, breached: true) // prekoračen
             );
@@ -118,7 +119,7 @@ namespace UnitTests.Services.ReportServiceTests
             var b = NewLegalEntity("B");
             var c = NewLegalEntity("C");
             ctx.LegalEntities.AddRange(a, b, c);
-            ctx.ClientLimits.AddRange(
+            ctx.Limiti.AddRange(
                 NewClientLimit(a.Id, 10m, breached: false),
                 NewClientLimit(b.Id, 10m, breached: true),
                 NewClientLimit(c.Id, 10m, breached: true)
@@ -142,7 +143,7 @@ namespace UnitTests.Services.ReportServiceTests
             var service = NewService(out var ctx);
             var acme = NewLegalEntity("ACME");
             ctx.LegalEntities.Add(acme);
-            ctx.ClientLimits.Add(NewClientLimit(acme.Id, 200m));
+            ctx.Limiti.Add(NewClientLimit(acme.Id, 200m));
             await ctx.SaveChangesAsync();
 
             // Act

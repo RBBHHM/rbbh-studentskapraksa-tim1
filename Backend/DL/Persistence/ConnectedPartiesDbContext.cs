@@ -47,7 +47,6 @@ public partial class ConnectedPartiesDbContext(
             UseNumericSequence<DL.Entities.LegalEntity.LegalEntity>(modelBuilder, "LegalEntities");
             UseNumericSequence<DL.Entities.RelatedPersons.RelatedPerson>(modelBuilder, "RelatedPersons");
             UseNumericSequence<DL.Entities.RelatedPersons.FamilyMember>(modelBuilder, "FamilyMembers");
-            UseNumericSequence<DL.Entities.Report.ClientLimit>(modelBuilder, "ClientLimits");
             UseNumericSequence<DL.Entities.Report.Report>(modelBuilder, "Reports");
         }
 
@@ -62,7 +61,7 @@ public partial class ConnectedPartiesDbContext(
         modelBuilder.Entity<DL.Entities.Authorization.RoleRequest>(entity =>
         {
             entity.HasIndex(row => new { row.RequesterSubject, row.ClientRequestId }).IsUnique();
-            entity.HasIndex(row => row.RequesterSubject).IsUnique().HasFilter("[Status] = N'pending'");
+            entity.HasIndex(row => row.RequesterSubject).IsUnique().HasFilter("[STATUS] = N'pending'");
             entity.HasIndex(row => new { row.Status, row.CreatedAt });
         });
         modelBuilder.Entity<DL.Entities.Authorization.RequestedRole>(entity =>
@@ -99,9 +98,9 @@ public partial class ConnectedPartiesDbContext(
             entity.ToTable("CodeListValues", table =>
             {
                 table.HasCheckConstraint("CK_CodeListValues_Category_Trimmed",
-                    "DATALENGTH([Category]) = DATALENGTH(LTRIM(RTRIM([Category])))");
+                    "DATALENGTH([CATEGORY]) = DATALENGTH(LTRIM(RTRIM([CATEGORY])))");
                 table.HasCheckConstraint("CK_CodeListValues_ValueKey_Trimmed",
-                    "DATALENGTH([ValueKey]) = DATALENGTH(LTRIM(RTRIM([ValueKey])))");
+                    "DATALENGTH([VALUE_KEY]) = DATALENGTH(LTRIM(RTRIM([VALUE_KEY])))");
             });
             entity.OwnsOne(e => e.Localization, localization =>
             {
@@ -109,7 +108,7 @@ public partial class ConnectedPartiesDbContext(
                 localization.Property(row => row.Category).UseCollation("Latin1_General_100_CI_AS");
                 localization.Property(row => row.ResourceKey).UseCollation("Latin1_General_100_CI_AS");
                 localization.HasIndex(row => new { row.Category, row.LanguageCode, row.ResourceKey })
-                    .IsUnique().HasFilter("[LanguageCode] IS NOT NULL AND [ResourceKey] IS NOT NULL");
+                    .IsUnique().HasFilter("[LANGUAGE_CODE] IS NOT NULL AND [RESOURCE_KEY] IS NOT NULL");
             });
         });
         modelBuilder.Entity<CodeListDefinition>(entity =>
@@ -118,7 +117,7 @@ public partial class ConnectedPartiesDbContext(
             entity.HasIndex(e => e.Name).IsUnique();
             entity.Property(e => e.Name).UseCollation("Latin1_General_100_CI_AS");
             entity.ToTable(table => table.HasCheckConstraint("CK_CodeListDefinitions_Name_Trimmed",
-                "DATALENGTH([Name]) = DATALENGTH(LTRIM(RTRIM([Name])))"));
+                "DATALENGTH([NAME]) = DATALENGTH(LTRIM(RTRIM([NAME])))"));
         });
 
         modelBuilder.Entity<AppUser>(entity =>
@@ -132,9 +131,9 @@ public partial class ConnectedPartiesDbContext(
             entity.ToTable(table =>
             {
                 table.HasCheckConstraint("CK_AppUsers_Email_Trimmed",
-                    "DATALENGTH([Email]) = DATALENGTH(LTRIM(RTRIM([Email])))");
+                    "DATALENGTH([EMAIL]) = DATALENGTH(LTRIM(RTRIM([EMAIL])))");
                 table.HasCheckConstraint("CK_AppUsers_Username_Trimmed",
-                    "DATALENGTH([Username]) = DATALENGTH(LTRIM(RTRIM([Username])))");
+                    "DATALENGTH([USERNAME]) = DATALENGTH(LTRIM(RTRIM([USERNAME])))");
             });
         });
 
@@ -153,7 +152,7 @@ public partial class ConnectedPartiesDbContext(
             entity.HasIndex(e => e.Name).IsUnique();
             entity.Property(e => e.Name).UseCollation("Latin1_General_100_CI_AS");
             entity.ToTable(table => table.HasCheckConstraint("CK_Roles_Name_Trimmed",
-                "DATALENGTH([Name]) = DATALENGTH(LTRIM(RTRIM([Name])))"));
+                "DATALENGTH([NAME]) = DATALENGTH(LTRIM(RTRIM([NAME])))"));
         });
 
         modelBuilder.Entity<UserRole>(entity =>
@@ -186,26 +185,16 @@ public partial class ConnectedPartiesDbContext(
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<DL.Entities.Report.CapitalRevision>(entity =>
+        modelBuilder.Entity<DL.Entities.Report.Capital>(entity =>
         {
-            entity.ToTable("CapitalRevisions", table => table.UseSqlOutputClause(false));
-            entity.HasKey(row => row.Id);
-            entity.Property(row => row.Id).UseIdentityColumn();
-            entity.Property(row => row.EffectiveDate).HasColumnType("date");
-            entity.Property(row => row.RegulatoryCapital).HasPrecision(18, 2);
-            entity.Property(row => row.CoreCapital).HasPrecision(18, 2);
-            entity.Property(row => row.SupplementaryCapital).HasPrecision(18, 2);
-            entity.HasIndex(row => new { row.EffectiveDate, row.Id });
+            entity.Property(row => row.CapitalDate).HasColumnType("date");
+            entity.Property(row => row.ValidTill).HasColumnType("date");
+            entity.HasIndex(row => row.IsActive).IsUnique().HasFilter("[IS_ACTIVE] = 1");
+            entity.HasIndex(row => new { row.CapitalDate, row.ValidTill });
         });
+        modelBuilder.Entity<Limit>().HasOne(row => row.Capital).WithMany().HasForeignKey(row => row.CapitalId).OnDelete(DeleteBehavior.Restrict);
         OnModelCreatingPartial(modelBuilder);
-    }
-
-    public DbSet<DL.Entities.Report.CapitalRevision> CapitalRevisions => Set<DL.Entities.Report.CapitalRevision>();
-
-    private void ProtectCapitalRevisions()
-    {
-        if (ChangeTracker.Entries<DL.Entities.Report.CapitalRevision>().Any(entry => entry.State is EntityState.Modified or EntityState.Deleted))
-            throw new Exceptions.BusinessRuleException(409, "capital.immutable_revision");
+        ApplyDatabaseNames(modelBuilder);
     }
 
     public DbSet<DL.Entities.LegalEntity.LegalEntityVerificationOrigin> LegalEntityVerificationOrigins =>
@@ -231,6 +220,7 @@ public partial class ConnectedPartiesDbContext(
     {
         foreach (var entry in ChangeTracker.Entries<AuditLog>().Where(entry => entry.State == EntityState.Added))
         {
+            entry.Entity.EmbedReference();
             entry.Entity.OldValues = FormatAuditSnapshot(entry.Entity.OldValues);
             entry.Entity.NewValues = FormatAuditSnapshot(entry.Entity.NewValues);
         }
@@ -250,10 +240,17 @@ public partial class ConnectedPartiesDbContext(
         }
     }
 
+    private void ProtectCapitalHistory()
+    {
+        if (ChangeTracker.Entries<DL.Entities.Report.Capital>().Any(entry => entry.State == EntityState.Deleted ||
+            entry.State == EntityState.Modified && !entry.OriginalValues.GetValue<bool>(nameof(DL.Entities.Report.Capital.IsActive))))
+            throw new Exceptions.BusinessRuleException(409, "capital.immutable_revision");
+    }
+
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
         ProtectCreatorIdentity();
-        ProtectCapitalRevisions();
+        ProtectCapitalHistory();
         FormatNewAuditSnapshots();
         TouchCodebookVersions();
         return base.SaveChanges(acceptAllChangesOnSuccess);
@@ -263,7 +260,7 @@ public partial class ConnectedPartiesDbContext(
     {
         cancellationToken.ThrowIfCancellationRequested();
         ProtectCreatorIdentity();
-        ProtectCapitalRevisions();
+        ProtectCapitalHistory();
         FormatNewAuditSnapshots();
         var categories = ChangedCodebookCategories();
         if (categories.Length > 0 || ChangeTracker.Entries<CodeListDefinition>().Any(entry => entry.State is EntityState.Added or EntityState.Modified))

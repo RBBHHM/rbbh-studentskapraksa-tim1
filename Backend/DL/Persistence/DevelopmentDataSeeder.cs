@@ -114,12 +114,13 @@ public static class DevelopmentDataSeeder
         db.Reports.AddRange(
             new Report { ReportType = "DAILY", ReportDate = now.Date, TotalClients = 4, ClientsWithBreachedLimit = 1, TotalExposure = 550000, CreatedBy = "seed" },
             new Report { ReportType = "MONTHLY", ReportDate = new DateTime(now.Year, now.Month, 1), TotalClients = 4, ClientsWithBreachedLimit = 1, TotalExposure = 550000, CreatedBy = "seed" });
-        db.ClientLimits.AddRange(
-            new ClientLimit { LegalEntityId = legalResident.Id, RegulatoryCapital = 5000000, CoreCapital = 4000000, SupplementaryCapital = 500000, CapitalDate = now.Date, ExposureLimit = 1000000, CurrentExposure = 425000, Currency = "BAM", CreatedBy = "seed" },
-            new ClientLimit { LegalEntityId = legalForeign.Id, RegulatoryCapital = 5000000, CoreCapital = 4000000, SupplementaryCapital = 500000, CapitalDate = now.Date, ExposureLimit = 100000, CurrentExposure = 125000, Currency = "EUR", IsLimitBreached = true, CreatedBy = "seed" });
-
-        db.Capitals.Add(
-            new Capital { RegulatoryCapital = 5000000, CoreCapital = 4000000, SupplementaryCapital = 500000, CapitalDate = now.Date, CreatedBy = "seed" });
+        var capital = new Capital
+        {
+            RegulatoryCapital = 5000000, CoreCapital = 4000000, SupplementaryCapital = 500000,
+            CapitalDate = now.Date, CreatedBy = "seed"
+        };
+        db.Capitals.Add(capital);
+        foreach (var limit in db.Limiti.Local) limit.Capital = capital;
 
         db.AuditLogs.AddRange(
             new AuditLog { TableName = "RelatedPerson", RecordId = resident.Id.ToString(), Action = "VERIFY", NewValues = "{\"status\":\"Verified\",\"verifiedBy\":\"demo.verifier\"}", Username = verifier.Username, Timestamp = now.AddHours(-2) },

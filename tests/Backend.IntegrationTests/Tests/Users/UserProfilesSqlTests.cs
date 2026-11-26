@@ -72,7 +72,7 @@ public sealed class UserProfilesSqlTests : AuthenticatedApiFixture
     public async Task UserCreationAuditFailureRollsBackTheNewIdentity()
     {
         await InDatabase(db => db.Database.ExecuteSqlRawAsync("""
-            CREATE TRIGGER FixtureRejectUserCreateAudit ON AuditLogs AFTER INSERT AS
+            CREATE TRIGGER FixtureRejectUserCreateAudit ON AUDIT_LOGS AFTER INSERT AS
             BEGIN IF EXISTS(SELECT 1 FROM inserted WHERE Action = 'CREATE') THROW 51000, 'fixture audit failure', 1; END
             """));
         var response = await Client.PostAsJsonAsync("/api/users", new
@@ -111,27 +111,34 @@ public sealed class UserProfilesSqlTests : AuthenticatedApiFixture
     [SqlServerFact]
     public async Task UpgradeRepairsMissingIndexesAndRejectsUsernameAndEmailDuplicatesIndependently()
     {
-        await InDatabase(async db =>
+        var connection = new SqlConnectionStringBuilder(Environment.GetEnvironmentVariable(SqlServerFactAttribute.Variable))
+        { InitialCatalog = "RBBH_USER_INDEX_UPGRADE_" + Guid.NewGuid().ToString("N") };
+        await using var db = new ConnectedPartiesDbContext(
+            new DbContextOptionsBuilder<ConnectedPartiesDbContext>().UseSqlServer(connection.ConnectionString).Options);
+        try
         {
             var migrator = db.GetService<IMigrator>();
             await migrator.MigrateAsync("20261121080233_SplitCodeListLocalization");
             await db.Database.ExecuteSqlRawAsync("""
+                INSERT dbo.AppUsers (Id, KeycloakId, KeycloakSubjectConfirmed, Username, FirstName, LastName, Email, IsActive, CreatedAt, CreatedBy)
+                VALUES (NEWID(), N'creator', 0, N'creator', N'Fixture', N'User', N'creator@example.test', 1, SYSUTCDATETIME(), N'fixture');
                 DROP INDEX IX_AppUsers_Username ON dbo.AppUsers;
                 DROP INDEX IX_AppUsers_Email ON dbo.AppUsers;
                 """);
             await migrator.MigrateAsync();
 
-            foreach (var (username, email) in new[] { ("CREATOR", "unique@example.test"), ("unique", "CREATOR@example.test") })
+            foreach (var (id, username, email) in new[] { (100L, "CREATOR", "unique@example.test"), (101L, "unique", "CREATOR@example.test") })
             {
                 var exception = await Assert.ThrowsAsync<SqlException>(() => db.Database.ExecuteSqlInterpolatedAsync($"""
-                    INSERT dbo.AppUsers (Id, KeycloakId, KeycloakSubjectConfirmed, Username, FirstName, LastName, Email, IsActive, CreatedAt, CreatedBy)
-                    VALUES ({Random.Shared.NextInt64(1L << 32, 1L << 50)}, {Guid.NewGuid().ToString()}, {false}, {username}, {"Fixture"}, {"User"}, {email}, {true}, {DateTime.UtcNow}, {"fixture"})
+                    INSERT dbo.APP_USERS (ID, KEYCLOAK_ID, LOGIN_CONFIRMED, USERNAME, FIRST_NAME, LAST_NAME, EMAIL, IS_ACTIVE, CREATED_AT, CREATED_BY)
+                    VALUES ({id}, {Guid.NewGuid().ToString()}, 0, {username}, N'Fixture', N'User', {email}, 1, SYSUTCDATETIME(), N'fixture')
                     """));
                 Assert.Equal(2601, exception.Number);
             }
 
-            Assert.Equal(3, await db.AppUsers.CountAsync());
-        });
+            Assert.Single(db.AppUsers);
+        }
+        finally { await db.Database.EnsureDeletedAsync(); }
     }
 
     [SqlServerFact]

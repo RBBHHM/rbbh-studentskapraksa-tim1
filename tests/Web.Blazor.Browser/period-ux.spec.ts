@@ -12,7 +12,7 @@ for (const fault of ["lock", "period-unavailable"]) test(`${area} disables mutat
       expect((await request.post(`/__fixtures/${fixture}`, { headers })).status()).toBe(204);
   await request.post(`/__fixtures/${fault}`, { headers });
   await page.goto(`/app/${area}`); await interactive(page);
-  const actions = area === "capital" ? ["Uredi kapital"]
+  const actions = area === "capital" ? ["Novi kapital"]
     : area === "physical-persons" ? ["Novi zapis", "Uvezi Excel"]
     : area === "legal-persons" ? ["Novi zapis", "Uvezi Excel", "Uredi", "Verificiraj", "Obriši"]
     : ["Novi zapis", "Uredi", "Obriši"];

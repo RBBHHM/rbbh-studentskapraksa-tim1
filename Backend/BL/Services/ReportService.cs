@@ -154,14 +154,30 @@ public class ReportService : IReportService
 
     private async Task<List<ExposureSnapshotRow>> BuildExposureSnapshotAsync(int? year = null, int? month = null)
     {
-        var rows = await (from capital in _context.ClientLimits.AsNoTracking()
-            join entity in _context.LegalEntities.AsNoTracking() on capital.LegalEntityId equals entity.Id
+        var financeEnabled = year.HasValue && month.HasValue && _finance?.Enabled == true;
+        var candidates = _context.Limiti.AsNoTracking();
+        if (!financeEnabled)
+            candidates = candidates.Where(row => row.TipLimita == DL.Entities.Limiti.Limit.LegacyExposureType);
+        var rowsWithLegacyPreference = candidates.Where(limit =>
+            limit.TipLimita == DL.Entities.Limiti.Limit.LegacyExposureType ||
+            !candidates.Any(other => other.LegalEntityId == limit.LegalEntityId &&
+                other.TipLimita == DL.Entities.Limiti.Limit.LegacyExposureType));
+        var selected = await (from limit in rowsWithLegacyPreference
+            join entity in _context.LegalEntities.AsNoTracking() on limit.LegalEntityId equals entity.Id
             orderby entity.Name, entity.Id
-            select new ExposureSnapshotRow { Naziv = entity.Name, Matbroj = entity.Matbroj,
+            select new { Metadata = limit.TipLimita == DL.Entities.Limiti.Limit.LegacyExposureType ? limit.Komentar : null,
+            Row = new ExposureSnapshotRow { Naziv = entity.Name, Matbroj = entity.Matbroj,
                 GccNumber = entity.GccNumber, GccName = entity.GccName, IsLargeExposure = entity.IsLargeExposure,
-                ExposureLimit = capital.ExposureLimit,
-                CurrentExposure = capital.CurrentExposure, Currency = capital.Currency, IsLimitBreached = capital.IsLimitBreached,
-                RegulatoryCapital = capital.RegulatoryCapital, CoreCapital = capital.CoreCapital, CreatedBy = capital.CreatedBy }).Take(20_001).ToListAsync(Cancellation);
+                ExposureLimit = limit.OdobreniLimit ?? 0,
+                CurrentExposure = limit.TipLimita == DL.Entities.Limiti.Limit.LegacyExposureType
+                    ? limit.MaksimalnaOcekivanaUtilizacija ?? 0 : 0,
+                Currency = "BAM",
+                IsLimitBreached = limit.TipLimita == DL.Entities.Limiti.Limit.LegacyExposureType &&
+                    (limit.MaksimalnaOcekivanaUtilizacija ?? 0) > (limit.OdobreniLimit ?? 0),
+                RegulatoryCapital = limit.Capital == null ? 0 : limit.Capital.RegulatoryCapital,
+                CoreCapital = limit.Capital == null ? 0 : limit.Capital.CoreCapital,
+                CreatedBy = limit.CreatedBy } }).Take(20_001).ToListAsync(Cancellation);
+        var rows = selected.Select(item => ApplyLegacyExposure(item.Row, item.Metadata)).OfType<ExposureSnapshotRow>().ToList();
         if (rows.Count > 20_000) throw new BusinessRuleException(503, "report.resource_limit");
         if (year.HasValue && month.HasValue && _finance?.Enabled == true)
         {
@@ -180,6 +196,25 @@ public class ReportService : IReportService
             }
         }
         return rows;
+    }
+
+    private sealed record LegacyExposure(string? Currency, bool? IsLimitBreached, decimal? RegulatoryCapital, decimal? CoreCapital, bool IsActive = true);
+
+    private static ExposureSnapshotRow? ApplyLegacyExposure(ExposureSnapshotRow row, string? metadata)
+    {
+        if (string.IsNullOrWhiteSpace(metadata)) return row;
+        try
+        {
+            var legacy = JsonSerializer.Deserialize<LegacyExposure>(metadata);
+            if (legacy is null) return row;
+            if (!legacy.IsActive) return null;
+            row.Currency = legacy.Currency ?? row.Currency;
+            row.IsLimitBreached = legacy.IsLimitBreached ?? row.IsLimitBreached;
+            row.RegulatoryCapital = legacy.RegulatoryCapital ?? row.RegulatoryCapital;
+            row.CoreCapital = legacy.CoreCapital ?? row.CoreCapital;
+            return row;
+        }
+        catch (JsonException) { return row; }
     }
 
     private static decimal SnapshotTotal(IReadOnlyList<ExposureSnapshotRow> rows)
@@ -205,9 +240,7 @@ public class ReportService : IReportService
         var baseQuery =
             from limit in _context.Limiti.AsNoTracking()
             join entity in _context.LegalEntities.AsNoTracking() on limit.LegalEntityId equals entity.Id
-            join capital in _context.ClientLimits.AsNoTracking() on limit.LegalEntityId equals capital.LegalEntityId into capitalGroup
-            from capital in capitalGroup.DefaultIfEmpty()
-            select new { limit, entity, capital };
+            select new { limit, entity, capital = limit.Capital };
 
         if (legalEntityId.HasValue)
             baseQuery = baseQuery.Where(x => x.limit.LegalEntityId == legalEntityId.Value);

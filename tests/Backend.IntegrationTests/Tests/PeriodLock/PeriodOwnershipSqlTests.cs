@@ -51,7 +51,7 @@ public sealed class PeriodOwnershipSqlTests : AuthenticatedApiFixture
     {
         var id = await Seed();
         await InDatabase(db => db.Database.ExecuteSqlRawAsync("""
-            CREATE TRIGGER FixtureRejectResponseAudit ON AuditLogs AFTER INSERT AS
+            CREATE TRIGGER FixtureRejectResponseAudit ON AUDIT_LOGS AFTER INSERT AS
             BEGIN IF EXISTS(SELECT 1 FROM inserted WHERE Action = 'UNLOCK_REQUEST') THROW 51000, 'fixture audit failure', 1; END
             """));
         Assert.Equal(HttpStatusCode.InternalServerError, (await Client.PostAsJsonAsync($"/api/period-lock/unlock-requests/{id}/respond", new { message = "Response with failed audit" })).StatusCode);

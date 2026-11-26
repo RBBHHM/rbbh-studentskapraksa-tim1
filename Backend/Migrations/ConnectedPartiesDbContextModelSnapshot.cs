@@ -24,8 +24,6 @@ namespace RBBH.ConnectedParties.Migrations
 
             modelBuilder.HasSequence("AppUsersIdSequence");
 
-            modelBuilder.HasSequence("ClientLimitsIdSequence");
-
             modelBuilder.HasSequence("FamilyMembersIdSequence");
 
             modelBuilder.HasSequence("LegalEntitiesIdSequence");
@@ -50,38 +48,47 @@ namespace RBBH.ConnectedParties.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("ID")
+                        .HasColumnOrder(0);
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
                     b.Property<string>("Action")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("ACTION")
+                        .HasColumnOrder(1);
 
                     b.Property<string>("NewValues")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("NEW_VALUES")
+                        .HasColumnOrder(5);
 
                     b.Property<string>("OldValues")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("RecordId")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("OLD_VALUES")
+                        .HasColumnOrder(4);
 
                     b.Property<string>("TableName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("TABLE_NAME")
+                        .HasColumnOrder(3);
 
                     b.Property<DateTime>("Timestamp")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("TIMESTAMP")
+                        .HasColumnOrder(6);
 
                     b.Property<string>("Username")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("USER")
+                        .HasColumnOrder(2);
 
                     b.HasKey("Id");
 
@@ -91,22 +98,25 @@ namespace RBBH.ConnectedParties.Migrations
 
                     b.HasIndex("Username");
 
-                    b.ToTable("AuditLogs");
+                    b.ToTable("AUDIT_LOGS");
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Authorization.RequestedRole", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("ID");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
                     b.Property<long>("RequestId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("REQUEST_ID");
 
                     b.Property<long>("RoleId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("ROLE_ID");
 
                     b.HasKey("Id");
 
@@ -115,190 +125,226 @@ namespace RBBH.ConnectedParties.Migrations
                     b.HasIndex("RequestId", "RoleId")
                         .IsUnique();
 
-                    b.ToTable("RequestedRole");
+                    b.ToTable("REQUESTED_ROLE");
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Authorization.RoleRequest", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("ID");
 
                     SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<long>("Id"), "RoleRequestsIdSequence");
 
                     b.Property<Guid>("ClientRequestId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("CLIENT_REQUEST_ID");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CREATED_AT");
 
                     b.Property<Guid?>("DecisionId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("DECISION_ID");
 
                     b.Property<string>("DecisionNote")
                         .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("DECISION_NOTE");
 
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("EMAIL");
 
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("FIRST_NAME");
 
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("LAST_NAME");
 
                     b.Property<string>("Note")
                         .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("NOTE");
 
                     b.Property<DateTime?>("ProcessedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("PROCESSED_AT");
 
                     b.Property<string>("ProcessedBy")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("PROCESSED_BY");
 
                     b.Property<string>("Purpose")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
+                        .HasColumnType("nvarchar(16)")
+                        .HasColumnName("PURPOSE");
 
                     b.Property<string>("RequesterSubject")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)")
+                        .HasColumnName("REQUESTER_SUBJECT")
                         .UseCollation("Latin1_General_100_BIN2");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
+                        .HasColumnType("nvarchar(16)")
+                        .HasColumnName("STATUS");
 
                     b.Property<string>("Username")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("USERNAME");
 
                     b.Property<int>("Version")
                         .IsConcurrencyToken()
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("VERSION");
 
                     b.HasKey("Id");
 
                     b.HasIndex("RequesterSubject")
                         .IsUnique()
-                        .HasFilter("[Status] = N'pending'");
+                        .HasFilter("[STATUS] = N'pending'");
 
                     b.HasIndex("RequesterSubject", "ClientRequestId")
                         .IsUnique();
 
                     b.HasIndex("Status", "CreatedAt");
 
-                    b.ToTable("RoleRequests");
+                    b.ToTable("ROLE_REQUESTS");
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntity", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("ID");
 
                     SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<long>("Id"), "LegalEntitiesIdSequence");
 
                     b.Property<string>("BasisOfConnection")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("BASIS_OF_CONNECTION");
 
                     b.Property<bool?>("ConnectedWithBank")
-                        .HasColumnType("bit");
+                        .HasColumnType("bit")
+                        .HasColumnName("CONNECTED_WITH_BANK");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CREATED_AT");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("CREATED_BY");
 
                     b.Property<DateTime?>("DateFrom")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("DATE_FROM");
 
                     b.Property<DateTime?>("DateTo")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("DATE_TO");
 
                     b.Property<string>("FbaId")
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("FBA_ID");
 
                     b.Property<string>("GccName")
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("GCC_NAME");
 
                     b.Property<string>("GccNumber")
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("GCC_NUMBER");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("bit")
+                        .HasColumnName("IS_ACTIVE");
 
                     b.Property<bool?>("IsLargeExposure")
-                        .HasColumnType("bit");
+                        .HasColumnType("bit")
+                        .HasColumnName("IS_LARGE_EXPOSURE");
 
                     b.Property<bool>("IsResident")
-                        .HasColumnType("bit");
+                        .HasColumnType("bit")
+                        .HasColumnName("IS_RESIDENT");
 
                     b.Property<string>("Matbroj")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)")
-                        .HasColumnName("BankCustomerNumber");
+                        .HasColumnName("BANK_CUSTOMER_NUMBER");
 
                     b.Property<string>("MaticniBroj")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)")
-                        .HasColumnName("RegistrationNumber");
+                        .HasColumnName("REGISTRATION_NUMBER");
 
                     b.Property<DateTime?>("ModifiedAt")
                         .IsConcurrencyToken()
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("MODIFIED_AT");
 
                     b.Property<string>("ModifiedBy")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("MODIFIED_BY");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("NAME");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("STATUS");
 
                     b.Property<string>("TaxNumber")
                         .HasMaxLength(13)
-                        .HasColumnType("nvarchar(13)");
+                        .HasColumnType("nvarchar(13)")
+                        .HasColumnName("TAX_NUMBER");
 
                     b.Property<DateTime?>("VerifiedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("VERIFIED_AT");
 
                     b.Property<string>("VerifiedBy")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("VERIFIED_BY");
 
                     b.HasKey("Id");
 
                     b.HasIndex("FbaId")
                         .IsUnique()
-                        .HasFilter("\"FbaId\" IS NOT NULL");
+                        .HasFilter("\"FBA_ID\" IS NOT NULL");
 
                     b.HasIndex("IsResident");
 
@@ -306,133 +352,169 @@ namespace RBBH.ConnectedParties.Migrations
 
                     b.HasIndex("TaxNumber")
                         .IsUnique()
-                        .HasFilter("\"TaxNumber\" IS NOT NULL");
+                        .HasFilter("\"TAX_NUMBER\" IS NOT NULL");
 
-                    b.ToTable("LegalEntities");
+                    b.ToTable("LEGAL_ENTITIES");
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntityVerificationOrigin", b =>
                 {
                     b.Property<long>("LegalEntityId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("LEGAL_ENTITY_ID");
 
                     b.Property<string>("Fingerprint")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("nvarchar(64)")
+                        .HasColumnName("FINGERPRINT");
 
                     b.HasKey("LegalEntityId");
 
-                    b.ToTable("LegalEntityVerificationOrigins");
+                    b.ToTable("LEGAL_ENTITY_VERIFICATION_ORIGINS");
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Limiti.Limit", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("ID")
+                        .HasColumnOrder(0);
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<long?>("CapitalId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("CAPITAL_ID")
+                        .HasColumnOrder(3);
+
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CREATED_AT")
+                        .HasColumnOrder(9);
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("CREATED_BY")
+                        .HasColumnOrder(8);
 
                     b.Property<string>("Komentar")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)")
-                        .HasColumnName("Comment");
+                        .HasColumnName("COMMENT")
+                        .HasColumnOrder(7);
 
                     b.Property<long>("LegalEntityId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("LEGAL_ENTITY_ID")
+                        .HasColumnOrder(4);
 
                     b.Property<decimal?>("MaksimalnaOcekivanaUtilizacija")
                         .HasColumnType("decimal(18,2)")
-                        .HasColumnName("MaximumExpectedUtilization");
+                        .HasColumnName("MAXIMUM_EXPECTED_UTILIZATION")
+                        .HasColumnOrder(6);
 
                     b.Property<DateTime?>("ModifiedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("MODIFIED_AT")
+                        .HasColumnOrder(11);
 
                     b.Property<string>("ModifiedBy")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("MODIFIED_BY")
+                        .HasColumnOrder(10);
 
                     b.Property<decimal?>("OdobreniLimit")
                         .HasColumnType("decimal(18,2)")
-                        .HasColumnName("ApprovedLimit");
+                        .HasColumnName("APPROVED_LIMIT")
+                        .HasColumnOrder(2);
 
                     b.Property<DateTime?>("RokOcekivaneUtilizacije")
                         .HasColumnType("datetime2")
-                        .HasColumnName("ExpectedUtilizationDate");
+                        .HasColumnName("EXPECTED_UTILIZATION_DATE")
+                        .HasColumnOrder(5);
 
                     b.Property<string>("TipLimita")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)")
-                        .HasColumnName("LimitType");
+                        .HasColumnName("LIMIT_TYPE")
+                        .HasColumnOrder(1);
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CapitalId");
 
                     b.HasIndex("LegalEntityId");
 
                     b.HasIndex("TipLimita");
 
-                    b.ToTable("Limits", (string)null);
+                    b.ToTable("LIMITS", (string)null);
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Notifications.ApplicationNotification", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("ID");
 
                     SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<long>("Id"), "NotificationsIdSequence");
 
                     b.Property<string>("BodyKey")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("BODY_KEY");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CREATED_AT");
 
                     b.Property<string>("EventKey")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("EVENT_KEY");
 
                     b.Property<string>("ParametersJson")
                         .IsRequired()
                         .HasMaxLength(32000)
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("PARAMETERS_JSON");
 
                     b.Property<DateTime?>("ReadAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("READ_AT");
 
                     b.Property<string>("RecipientEmail")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("RECIPIENT_EMAIL");
 
                     b.Property<string>("RecipientSubject")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)")
+                        .HasColumnName("RECIPIENT_SUBJECT")
                         .UseCollation("Latin1_General_100_BIN2");
 
                     b.Property<string>("Route")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("ROUTE");
 
                     b.Property<string>("TitleKey")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("TITLE_KEY");
 
                     b.HasKey("Id");
 
@@ -441,38 +523,46 @@ namespace RBBH.ConnectedParties.Migrations
                     b.HasIndex("RecipientSubject", "EventKey")
                         .IsUnique();
 
-                    b.ToTable("Notifications");
+                    b.ToTable("NOTIFICATIONS");
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Notifications.NotificationDelivery", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("ID");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
                     b.Property<int>("Attempts")
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("ATTEMPTS");
 
                     b.Property<DateTime?>("DeliveredAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("DELIVERED_AT");
 
                     b.Property<string>("FailureCode")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("FAILURE_CODE");
 
                     b.Property<Guid?>("LeaseId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("LEASE_ID");
 
                     b.Property<DateTime?>("LeaseUntil")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("LEASE_UNTIL");
 
                     b.Property<DateTime>("NextAttemptAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("NEXT_ATTEMPT_AT");
 
                     b.Property<long>("NotificationId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("NOTIFICATION_ID");
 
                     b.HasKey("Id");
 
@@ -481,144 +571,174 @@ namespace RBBH.ConnectedParties.Migrations
 
                     b.HasIndex("DeliveredAt", "NextAttemptAt");
 
-                    b.ToTable("NotificationDeliveries");
+                    b.ToTable("NOTIFICATION_DELIVERIES");
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.PeriodLock.PeriodLock", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("ID");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CREATED_AT");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("CREATED_BY");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("bit")
+                        .HasColumnName("IS_ACTIVE");
 
                     b.Property<bool>("IsLocked")
-                        .HasColumnType("bit");
+                        .HasColumnType("bit")
+                        .HasColumnName("IS_LOCKED");
 
                     b.Property<DateTime?>("LockedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("LOCKED_AT");
 
                     b.Property<string>("LockedBy")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("LOCKED_BY");
 
                     b.Property<DateTime?>("ModifiedAt")
                         .IsConcurrencyToken()
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("MODIFIED_AT");
 
                     b.Property<string>("ModifiedBy")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("MODIFIED_BY");
 
                     b.Property<int>("Month")
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("MONTH");
 
                     b.Property<DateTime?>("UnlockedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("UNLOCKED_AT");
 
                     b.Property<string>("UnlockedBy")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("UNLOCKED_BY");
 
                     b.Property<int>("Year")
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("YEAR");
 
                     b.HasKey("Id");
 
                     b.HasIndex("Year", "Month")
                         .IsUnique();
 
-                    b.ToTable("PeriodLocks");
+                    b.ToTable("PERIOD_LOCKS");
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.PeriodLock.UnlockRequest", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("ID");
 
                     SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<long>("Id"), "UnlockRequestsIdSequence");
 
                     b.Property<string>("AdminNote")
                         .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("ADMIN_NOTE");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CREATED_AT");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("CREATED_BY");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("bit")
+                        .HasColumnName("IS_ACTIVE");
 
                     b.Property<DateTime?>("ModifiedAt")
                         .IsConcurrencyToken()
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("MODIFIED_AT");
 
                     b.Property<string>("ModifiedBy")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("MODIFIED_BY");
 
                     b.Property<int>("Month")
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("MONTH");
 
                     b.Property<long?>("ParentRequestId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("PARENT_REQUEST_ID");
 
                     b.Property<DateTime?>("ProcessedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("PROCESSED_AT");
 
                     b.Property<string>("ProcessedBy")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("PROCESSED_BY");
 
                     b.Property<string>("Reason")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("REASON");
 
                     b.Property<string>("RequestedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("REQUESTED_BY");
 
                     b.Property<string>("RequestedByEmail")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("REQUESTED_BY_EMAIL");
 
                     b.Property<string>("RequestedBySubject")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)")
+                        .HasColumnName("REQUESTED_BY_SUBJECT")
                         .UseCollation("Latin1_General_100_BIN2");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("STATUS");
 
                     b.Property<int>("Year")
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("YEAR");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ParentRequestId")
                         .IsUnique()
-                        .HasFilter("[ParentRequestId] IS NOT NULL");
+                        .HasFilter("[PARENT_REQUEST_ID] IS NOT NULL");
 
                     b.HasIndex("RequestedBySubject");
 
@@ -626,67 +746,81 @@ namespace RBBH.ConnectedParties.Migrations
 
                     b.HasIndex("Year", "Month");
 
-                    b.ToTable("UnlockRequests");
+                    b.ToTable("UNLOCK_REQUESTS");
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.RelatedPersons.FamilyMember", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("ID");
 
                     SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<long>("Id"), "FamilyMembersIdSequence");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CREATED_AT");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("CREATED_BY");
 
                     b.Property<string>("FBAId")
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("FBA_ID");
 
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("FIRST_NAME");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("bit")
+                        .HasColumnName("IS_ACTIVE");
 
                     b.Property<string>("JMBG")
                         .HasMaxLength(13)
-                        .HasColumnType("nvarchar(13)");
+                        .HasColumnType("nvarchar(13)")
+                        .HasColumnName("JMBG");
 
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("LAST_NAME");
 
                     b.Property<DateTime?>("ModifiedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("MODIFIED_AT");
 
                     b.Property<string>("ModifiedBy")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("MODIFIED_BY");
 
                     b.Property<long?>("ParentFamilyMemberId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("PARENT_FAMILY_MEMBER_ID");
 
                     b.Property<string>("PassportNumber")
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("PASSPORT_NUMBER");
 
                     b.Property<long>("RelatedPersonId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("RELATED_PERSON_ID");
 
                     b.Property<string>("Residency")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("RESIDENCY");
 
                     b.HasKey("Id");
 
@@ -696,139 +830,166 @@ namespace RBBH.ConnectedParties.Migrations
 
                     b.HasIndex("RelatedPersonId");
 
-                    b.ToTable("FamilyMembers");
+                    b.ToTable("FAMILY_MEMBERS");
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.RelatedPersons.RelatedPerson", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("ID");
 
                     SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<long>("Id"), "RelatedPersonsIdSequence");
 
                     b.Property<bool>("ConnectedWithBank")
-                        .HasColumnType("bit");
+                        .HasColumnType("bit")
+                        .HasColumnName("CONNECTED_WITH_BANK");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CREATED_AT");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("CREATED_BY");
 
                     b.Property<DateTime?>("DateFrom")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("DATE_FROM");
 
                     b.Property<DateTime?>("DateTo")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("DATE_TO");
 
                     b.Property<bool>("DeclarationNoFamilyMembers")
-                        .HasColumnType("bit");
+                        .HasColumnType("bit")
+                        .HasColumnName("DECLARATION_NO_FAMILY_MEMBERS");
 
                     b.Property<string>("FBAId")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)")
+                        .HasColumnName("FBA_ID")
                         .UseCollation("Latin1_General_100_CI_AS");
 
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("FIRST_NAME");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("bit")
+                        .HasColumnName("IS_ACTIVE");
 
                     b.Property<bool>("IsIdentifiedStaff")
-                        .HasColumnType("bit");
+                        .HasColumnType("bit")
+                        .HasColumnName("IS_IDENTIFIED_STAFF");
 
                     b.Property<string>("JMBG")
                         .HasMaxLength(13)
-                        .HasColumnType("nvarchar(13)");
+                        .HasColumnType("nvarchar(13)")
+                        .HasColumnName("JMBG");
 
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("LAST_NAME");
 
                     b.Property<bool>("MalusClawback")
-                        .HasColumnType("bit");
+                        .HasColumnType("bit")
+                        .HasColumnName("MALUS_CLAWBACK");
 
                     b.Property<DateTime?>("ModifiedAt")
                         .IsConcurrencyToken()
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("MODIFIED_AT");
 
                     b.Property<string>("ModifiedBy")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("MODIFIED_BY");
 
                     b.Property<string>("PassportNumber")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)")
+                        .HasColumnName("PASSPORT_NUMBER")
                         .UseCollation("Latin1_General_100_CI_AS");
 
                     b.Property<long?>("RelatedToPersonId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("RELATED_TO_PERSON_ID");
 
                     b.Property<string>("RelationBasis")
                         .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("RELATION_BASIS");
 
                     b.Property<string>("Residency")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("RESIDENCY");
 
                     b.Property<bool>("SpecialContract")
-                        .HasColumnType("bit");
+                        .HasColumnType("bit")
+                        .HasColumnName("SPECIAL_CONTRACT");
 
                     b.Property<string>("SpecialRelationBasis")
                         .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("SPECIAL_RELATION_BASIS");
 
                     b.Property<bool>("SpecialRelationshipWithBank")
-                        .HasColumnType("bit");
+                        .HasColumnType("bit")
+                        .HasColumnName("SPECIAL_RELATIONSHIP_WITH_BANK");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("STATUS");
 
                     b.Property<string>("VerificationOriginFingerprint")
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("nvarchar(64)")
+                        .HasColumnName("VERIFICATION_ORIGIN_FINGERPRINT");
 
                     b.Property<DateTime?>("VerifiedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("VERIFIED_AT");
 
                     b.Property<string>("VerifiedBy")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("VERIFIED_BY");
 
                     b.HasKey("Id");
 
                     b.HasIndex("FBAId")
                         .IsUnique()
-                        .HasFilter("[IsActive] = 1 AND [FBAId] IS NOT NULL");
+                        .HasFilter("[IS_ACTIVE] = 1 AND [FBA_ID] IS NOT NULL");
 
                     b.HasIndex("JMBG")
                         .IsUnique()
-                        .HasFilter("[IsActive] = 1 AND [JMBG] IS NOT NULL");
+                        .HasFilter("[IS_ACTIVE] = 1 AND [JMBG] IS NOT NULL");
 
                     b.HasIndex("PassportNumber")
                         .IsUnique()
-                        .HasFilter("[IsActive] = 1 AND [PassportNumber] IS NOT NULL");
+                        .HasFilter("[IS_ACTIVE] = 1 AND [PASSPORT_NUMBER] IS NOT NULL");
 
                     b.HasIndex("RelatedToPersonId");
 
                     b.HasIndex("Status");
 
-                    b.ToTable("RelatedPersons", t =>
+                    b.ToTable("RELATED_PERSONS", t =>
                         {
-                            t.HasCheckConstraint("CK_RelatedPersons_FBAId_Trimmed", "DATALENGTH([FBAId]) = DATALENGTH(LTRIM(RTRIM([FBAId])))");
+                            t.HasCheckConstraint("CK_RelatedPersons_FBAId_Trimmed", "DATALENGTH([FBA_ID]) = DATALENGTH(LTRIM(RTRIM([FBA_ID])))");
 
-                            t.HasCheckConstraint("CK_RelatedPersons_PassportNumber_Trimmed", "DATALENGTH([PassportNumber]) = DATALENGTH(LTRIM(RTRIM([PassportNumber])))");
+                            t.HasCheckConstraint("CK_RelatedPersons_PassportNumber_Trimmed", "DATALENGTH([PASSPORT_NUMBER]) = DATALENGTH(LTRIM(RTRIM([PASSPORT_NUMBER])))");
                         });
                 });
 
@@ -836,205 +997,133 @@ namespace RBBH.ConnectedParties.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("ID")
+                        .HasColumnOrder(0);
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
                     b.Property<DateTime>("CapitalDate")
-                        .HasColumnType("date");
+                        .HasColumnType("date")
+                        .HasColumnName("VALID_FROM")
+                        .HasColumnOrder(10);
 
                     b.Property<decimal>("CoreCapital")
                         .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("CORE_CAPITAL")
+                        .HasColumnOrder(4);
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CREATED_AT")
+                        .HasColumnOrder(7);
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("CREATED_BY")
+                        .HasColumnOrder(6);
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("bit")
+                        .HasColumnName("IS_ACTIVE")
+                        .HasColumnOrder(1);
 
                     b.Property<DateTime?>("ModifiedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("MODIFIED_AT")
+                        .HasColumnOrder(9);
 
                     b.Property<string>("ModifiedBy")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("MODIFIED_BY")
+                        .HasColumnOrder(8);
 
                     b.Property<decimal>("RegulatoryCapital")
                         .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("REGULATORY_CAPITAL")
+                        .HasColumnOrder(3);
 
                     b.Property<decimal>("SupplementaryCapital")
                         .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("SUPPLEMENTARY_CAPITAL")
+                        .HasColumnOrder(5);
+
+                    b.Property<DateTime>("ValidTill")
+                        .HasColumnType("date")
+                        .HasColumnName("VALID_TILL")
+                        .HasColumnOrder(2);
 
                     b.HasKey("Id");
 
-                    b.ToTable("Capitals");
-                });
+                    b.HasIndex("IsActive")
+                        .IsUnique()
+                        .HasFilter("[IS_ACTIVE] = 1");
 
-            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Report.CapitalRevision", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
+                    b.HasIndex("CapitalDate", "ValidTill");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<string>("ActorSubject")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<decimal>("CoreCapital")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("EffectiveDate")
-                        .HasColumnType("date");
-
-                    b.Property<DateTime>("RecordedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("RecordedBy")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<decimal>("RegulatoryCapital")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("SupplementaryCapital")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EffectiveDate", "Id");
-
-                    b.ToTable("CapitalRevisions", (string)null);
-
-                    b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
-                });
-
-            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Report.ClientLimit", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<long>("Id"), "ClientLimitsIdSequence");
-
-                    b.Property<DateTime>("CapitalDate")
-                        .HasColumnType("date");
-
-                    b.Property<decimal>("CoreCapital")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .HasMaxLength(3)
-                        .HasColumnType("nvarchar(3)");
-
-                    b.Property<decimal>("CurrentExposure")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("ExposureLimit")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsLimitBreached")
-                        .HasColumnType("bit");
-
-                    b.Property<long>("LegalEntityId")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime?>("ModifiedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ModifiedBy")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<decimal>("RegulatoryCapital")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("SupplementaryCapital")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("IsLimitBreached");
-
-                    b.HasIndex("LegalEntityId")
-                        .IsUnique();
-
-                    b.ToTable("ClientLimits");
+                    b.ToTable("CAPITALS");
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Report.Report", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("ID");
 
                     SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<long>("Id"), "ReportsIdSequence");
 
                     b.Property<int>("ClientsWithBreachedLimit")
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("CLIENTS_WITH_BREACHED_LIMIT");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CREATED_AT");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("CREATED_BY");
 
                     b.Property<string>("DataSnapshot")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("DATA_SNAPSHOT");
 
                     b.Property<string>("DataSource")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("DATA_SOURCE");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("bit")
+                        .HasColumnName("IS_ACTIVE");
 
                     b.Property<DateTime>("ReportDate")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("REPORT_DATE");
 
                     b.Property<string>("ReportType")
                         .IsRequired()
                         .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
+                        .HasColumnType("nvarchar(10)")
+                        .HasColumnName("REPORT_TYPE");
 
                     b.Property<int>("TotalClients")
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("TOTAL_CLIENTS");
 
                     b.Property<decimal>("TotalExposure")
                         .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("TOTAL_EXPOSURE");
 
                     b.HasKey("Id");
 
@@ -1044,75 +1133,88 @@ namespace RBBH.ConnectedParties.Migrations
 
                     b.HasIndex("ReportType", "ReportDate");
 
-                    b.ToTable("Reports");
+                    b.ToTable("REPORTS");
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Role.Permission", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("ID");
 
                     SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<long>("Id"), "PermissionsIdSequence");
 
                     b.Property<string>("Code")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("CODE");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("bit")
+                        .HasColumnName("IS_ACTIVE");
 
                     b.Property<string>("Module")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("MODULE");
 
                     b.HasKey("Id");
 
                     b.HasIndex("Code")
                         .IsUnique();
 
-                    b.ToTable("Permissions");
+                    b.ToTable("PERMISSIONS");
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Role.Role", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("ID");
 
                     SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<long>("Id"), "RolesIdSequence");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CREATED_AT");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("CREATED_BY");
 
                     b.Property<string>("Description")
                         .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("DESCRIPTION");
 
                     b.Property<string>("DisplayName")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("DISPLAY_NAME");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("bit")
+                        .HasColumnName("IS_ACTIVE");
 
                     b.Property<DateTime?>("ModifiedAt")
                         .IsConcurrencyToken()
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("MODIFIED_AT");
 
                     b.Property<string>("ModifiedBy")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("MODIFIED_BY");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)")
+                        .HasColumnName("NAME")
                         .UseCollation("Latin1_General_100_CI_AS");
 
                     b.HasKey("Id");
@@ -1120,9 +1222,9 @@ namespace RBBH.ConnectedParties.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("Roles", t =>
+                    b.ToTable("ROLES", t =>
                         {
-                            t.HasCheckConstraint("CK_Roles_Name_Trimmed", "DATALENGTH([Name]) = DATALENGTH(LTRIM(RTRIM([Name])))");
+                            t.HasCheckConstraint("CK_Roles_Name_Trimmed", "DATALENGTH([NAME]) = DATALENGTH(LTRIM(RTRIM([NAME])))");
                         });
                 });
 
@@ -1130,15 +1232,18 @@ namespace RBBH.ConnectedParties.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("ID");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
                     b.Property<long>("PermissionId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("PERMISSION_ID");
 
                     b.Property<long>("RoleId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("ROLE_ID");
 
                     b.HasKey("Id");
 
@@ -1147,39 +1252,47 @@ namespace RBBH.ConnectedParties.Migrations
                     b.HasIndex("RoleId", "PermissionId")
                         .IsUnique();
 
-                    b.ToTable("RolePermissions");
+                    b.ToTable("ROLE_PERMISSIONS");
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Role.UserRole", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("ID");
 
                     SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<long>("Id"), "UserRolesIdSequence");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CREATED_AT");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("CREATED_BY");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("bit")
+                        .HasColumnName("IS_ACTIVE");
 
                     b.Property<DateTime?>("ModifiedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("MODIFIED_AT");
 
                     b.Property<string>("ModifiedBy")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("MODIFIED_BY");
 
                     b.Property<long>("RoleId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("ROLE_ID");
 
                     b.Property<long>("UserId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("USER_ID");
 
                     b.HasKey("Id");
 
@@ -1188,40 +1301,42 @@ namespace RBBH.ConnectedParties.Migrations
                     b.HasIndex("UserId", "RoleId")
                         .IsUnique();
 
-                    b.ToTable("UserRoles");
+                    b.ToTable("USER_ROLES");
                 });
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Sifarnici.CodeList", b =>
                 {
                     b.Property<int>("ID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("ID");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
 
                     b.Property<bool>("Aktivan")
                         .HasColumnType("bit")
-                        .HasColumnName("IsActive");
+                        .HasColumnName("IS_ACTIVE");
 
                     b.Property<bool>("IsSystemRequired")
-                        .HasColumnType("bit");
+                        .HasColumnType("bit")
+                        .HasColumnName("IS_SYSTEM_REQUIRED");
 
                     b.Property<string>("IzmijenioKorisnik")
                         .HasMaxLength(100)
                         .IsUnicode(false)
                         .HasColumnType("varchar(100)")
-                        .HasColumnName("ModifiedBy");
+                        .HasColumnName("MODIFIED_BY");
 
                     b.Property<DateTime?>("IzmijenjenDatum")
                         .HasColumnType("datetime2")
-                        .HasColumnName("ModifiedAt");
+                        .HasColumnName("MODIFIED_AT");
 
                     b.Property<string>("Kategorija")
                         .IsRequired()
                         .HasMaxLength(100)
                         .IsUnicode(false)
                         .HasColumnType("varchar(100)")
-                        .HasColumnName("Category")
+                        .HasColumnName("CATEGORY")
                         .UseCollation("Latin1_General_100_CI_AS");
 
                     b.Property<string>("Kod")
@@ -1229,30 +1344,30 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasMaxLength(50)
                         .IsUnicode(false)
                         .HasColumnType("varchar(50)")
-                        .HasColumnName("ValueKey")
+                        .HasColumnName("VALUE_KEY")
                         .UseCollation("Latin1_General_100_CI_AS");
 
                     b.Property<DateTime>("KreiranDatum")
                         .HasColumnType("datetime2")
-                        .HasColumnName("CreatedAt");
+                        .HasColumnName("CREATED_AT");
 
                     b.Property<string>("KreiraoKorisnik")
                         .IsRequired()
                         .HasMaxLength(100)
                         .IsUnicode(false)
                         .HasColumnType("varchar(100)")
-                        .HasColumnName("CreatedBy");
+                        .HasColumnName("CREATED_BY");
 
                     b.Property<string>("Naziv")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)")
-                        .HasColumnName("Name");
+                        .HasColumnName("NAME");
 
                     b.Property<string>("Opis")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)")
-                        .HasColumnName("Description");
+                        .HasColumnName("DESCRIPTION");
 
                     b.HasKey("ID");
 
@@ -1261,11 +1376,11 @@ namespace RBBH.ConnectedParties.Migrations
                     b.HasIndex("Kategorija", "Kod")
                         .IsUnique();
 
-                    b.ToTable("CodeListValues", null, t =>
+                    b.ToTable("CODE_LIST_VALUES", null, t =>
                         {
-                            t.HasCheckConstraint("CK_CodeListValues_Category_Trimmed", "DATALENGTH([Category]) = DATALENGTH(LTRIM(RTRIM([Category])))");
+                            t.HasCheckConstraint("CK_CodeListValues_Category_Trimmed", "DATALENGTH([CATEGORY]) = DATALENGTH(LTRIM(RTRIM([CATEGORY])))");
 
-                            t.HasCheckConstraint("CK_CodeListValues_ValueKey_Trimmed", "DATALENGTH([ValueKey]) = DATALENGTH(LTRIM(RTRIM([ValueKey])))");
+                            t.HasCheckConstraint("CK_CodeListValues_ValueKey_Trimmed", "DATALENGTH([VALUE_KEY]) = DATALENGTH(LTRIM(RTRIM([VALUE_KEY])))");
                         });
                 });
 
@@ -1273,54 +1388,64 @@ namespace RBBH.ConnectedParties.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("ID");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CREATED_AT");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("CREATED_BY");
 
                     b.Property<string>("Description")
                         .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("DESCRIPTION");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("bit")
+                        .HasColumnName("IS_ACTIVE");
 
                     b.Property<bool>("IsSystemRequired")
-                        .HasColumnType("bit");
+                        .HasColumnType("bit")
+                        .HasColumnName("IS_SYSTEM_REQUIRED");
 
                     b.Property<DateTime?>("ModifiedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("MODIFIED_AT");
 
                     b.Property<string>("ModifiedBy")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("MODIFIED_BY");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
                         .IsUnicode(false)
                         .HasColumnType("varchar(100)")
+                        .HasColumnName("NAME")
                         .UseCollation("Latin1_General_100_CI_AS");
 
                     b.Property<int>("Version")
                         .IsConcurrencyToken()
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasColumnName("VERSION");
 
                     b.HasKey("Id");
 
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("CodeListDefinitions", t =>
+                    b.ToTable("CODELIST_DEFINITIONS", t =>
                         {
-                            t.HasCheckConstraint("CK_CodeListDefinitions_Name_Trimmed", "DATALENGTH([Name]) = DATALENGTH(LTRIM(RTRIM([Name])))");
+                            t.HasCheckConstraint("CK_CodeListDefinitions_Name_Trimmed", "DATALENGTH([NAME]) = DATALENGTH(LTRIM(RTRIM([NAME])))");
                         });
                 });
 
@@ -1328,57 +1453,81 @@ namespace RBBH.ConnectedParties.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("ID")
+                        .HasColumnOrder(0);
 
                     SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<long>("Id"), "AppUsersIdSequence");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("CREATED_AT")
+                        .HasColumnOrder(8);
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("CREATED_BY")
+                        .HasColumnOrder(9);
 
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)")
+                        .HasColumnName("EMAIL")
+                        .HasColumnOrder(5)
                         .UseCollation("Latin1_General_100_CI_AS");
 
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("FIRST_NAME")
+                        .HasColumnOrder(3);
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("bit")
+                        .HasColumnName("IS_ACTIVE")
+                        .HasColumnOrder(6);
 
                     b.Property<string>("KeycloakId")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)")
+                        .HasColumnName("KEYCLOAK_ID")
+                        .HasColumnOrder(1)
                         .UseCollation("Latin1_General_100_BIN2");
 
                     b.Property<bool>("KeycloakSubjectConfirmed")
-                        .HasColumnType("bit");
+                        .HasColumnType("bit")
+                        .HasColumnName("LOGIN_CONFIRMED")
+                        .HasColumnOrder(7);
 
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("LAST_NAME")
+                        .HasColumnOrder(4);
 
                     b.Property<DateTime?>("ModifiedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("MODIFIED_AT")
+                        .HasColumnOrder(10);
 
                     b.Property<string>("ModifiedBy")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("MODIFIED_BY")
+                        .HasColumnOrder(11);
 
                     b.Property<string>("Username")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)")
+                        .HasColumnName("USERNAME")
+                        .HasColumnOrder(2)
                         .UseCollation("Latin1_General_100_CI_AS");
 
                     b.HasKey("Id");
@@ -1392,11 +1541,11 @@ namespace RBBH.ConnectedParties.Migrations
                     b.HasIndex("Username")
                         .IsUnique();
 
-                    b.ToTable("AppUsers", t =>
+                    b.ToTable("APP_USERS", t =>
                         {
-                            t.HasCheckConstraint("CK_AppUsers_Email_Trimmed", "DATALENGTH([Email]) = DATALENGTH(LTRIM(RTRIM([Email])))");
+                            t.HasCheckConstraint("CK_AppUsers_Email_Trimmed", "DATALENGTH([EMAIL]) = DATALENGTH(LTRIM(RTRIM([EMAIL])))");
 
-                            t.HasCheckConstraint("CK_AppUsers_Username_Trimmed", "DATALENGTH([Username]) = DATALENGTH(LTRIM(RTRIM([Username])))");
+                            t.HasCheckConstraint("CK_AppUsers_Username_Trimmed", "DATALENGTH([USERNAME]) = DATALENGTH(LTRIM(RTRIM([USERNAME])))");
                         });
                 });
 
@@ -1430,11 +1579,18 @@ namespace RBBH.ConnectedParties.Migrations
 
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Limiti.Limit", b =>
                 {
+                    b.HasOne("RBBH.ConnectedParties.DL.Entities.Report.Capital", "Capital")
+                        .WithMany()
+                        .HasForeignKey("CapitalId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntity", "LegalEntity")
                         .WithMany()
                         .HasForeignKey("LegalEntityId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Capital");
 
                     b.Navigation("LegalEntity");
                 });
@@ -1478,17 +1634,6 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Navigation("RelatedToPerson");
                 });
 
-            modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Report.ClientLimit", b =>
-                {
-                    b.HasOne("RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntity", "LegalEntity")
-                        .WithMany()
-                        .HasForeignKey("LegalEntityId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("LegalEntity");
-                });
-
             modelBuilder.Entity("RBBH.ConnectedParties.DL.Entities.Role.RolePermission", b =>
                 {
                     b.HasOne("RBBH.ConnectedParties.DL.Entities.Role.Permission", "Permission")
@@ -1530,43 +1675,50 @@ namespace RBBH.ConnectedParties.Migrations
                     b.OwnsOne("RBBH.ConnectedParties.DL.Entities.Sifarnici.CodeListLocalization", "Localization", b1 =>
                         {
                             b1.Property<int>("CodeListID")
-                                .HasColumnType("int");
+                                .HasColumnType("int")
+                                .HasColumnName("CODE_LIST_ID");
 
                             b1.Property<string>("Category")
                                 .IsRequired()
                                 .HasMaxLength(100)
                                 .IsUnicode(false)
                                 .HasColumnType("varchar(100)")
+                                .HasColumnName("CATEGORY")
                                 .UseCollation("Latin1_General_100_CI_AS");
 
                             b1.Property<string>("LanguageCode")
                                 .HasMaxLength(10)
-                                .HasColumnType("nvarchar(10)");
+                                .HasColumnType("nvarchar(10)")
+                                .HasColumnName("LANGUAGE_CODE");
 
                             b1.Property<string>("ResourceHelper")
                                 .HasMaxLength(4000)
-                                .HasColumnType("nvarchar(4000)");
+                                .HasColumnType("nvarchar(4000)")
+                                .HasColumnName("RESOURCE_HELPER");
 
                             b1.Property<string>("ResourceKey")
                                 .HasMaxLength(200)
                                 .HasColumnType("nvarchar(200)")
+                                .HasColumnName("RESOURCE_KEY")
                                 .UseCollation("Latin1_General_100_CI_AS");
 
                             b1.Property<string>("ResourceLabel")
                                 .HasMaxLength(4000)
-                                .HasColumnType("nvarchar(4000)");
+                                .HasColumnType("nvarchar(4000)")
+                                .HasColumnName("RESOURCE_LABEL");
 
                             b1.Property<string>("ResourcePlaceholder")
                                 .HasMaxLength(500)
-                                .HasColumnType("nvarchar(500)");
+                                .HasColumnType("nvarchar(500)")
+                                .HasColumnName("RESOURCE_PLACEHOLDER");
 
                             b1.HasKey("CodeListID");
 
                             b1.HasIndex("Category", "LanguageCode", "ResourceKey")
                                 .IsUnique()
-                                .HasFilter("[LanguageCode] IS NOT NULL AND [ResourceKey] IS NOT NULL");
+                                .HasFilter("[LANGUAGE_CODE] IS NOT NULL AND [RESOURCE_KEY] IS NOT NULL");
 
-                            b1.ToTable("CodeListLocalization", (string)null);
+                            b1.ToTable("CODE_LIST_LOCALIZATION", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("CodeListID");

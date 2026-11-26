@@ -45,7 +45,7 @@ public sealed class RegistryVerificationSqlTests : AuthenticatedApiFixture
     {
         var id = await CreateLegal();
         await InDatabase(db => db.Database.ExecuteSqlRawAsync("""
-            CREATE TRIGGER FixtureRejectVerificationAudit ON AuditLogs AFTER INSERT AS
+            CREATE TRIGGER FixtureRejectVerificationAudit ON AUDIT_LOGS AFTER INSERT AS
             BEGIN IF EXISTS(SELECT 1 FROM inserted WHERE Action = 'VERIFY') THROW 51000, 'fixture audit failure', 1; END
             """));
         using var reviewer = NewClient("reviewer");
@@ -82,7 +82,7 @@ public sealed class RegistryVerificationSqlTests : AuthenticatedApiFixture
             Assert.Equal(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.Unicode.GetBytes("opaque-subject"))), origin.Fingerprint);
             Assert.Equal(0, await db.Database.SqlQueryRaw<int>("""
                 SELECT COUNT(*) AS [Value] FROM sys.columns
-                WHERE object_id = OBJECT_ID(N'dbo.LegalEntities') AND name IN (N'CreatorSubject', N'ConnectionDescription', N'Version')
+                WHERE object_id = OBJECT_ID(N'dbo.LEGAL_ENTITIES') AND name IN (N'CREATOR_SUBJECT', N'CONNECTION_DESCRIPTION', N'VERSION')
                 """).SingleAsync());
             var row = await db.LegalEntities.SingleAsync(entity => entity.Name == "Historical company");
             Assert.Equal("Historical company", row.Name);

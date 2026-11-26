@@ -18,6 +18,5 @@ public class CapitalConfiguration : IEntityTypeConfiguration<Capital>
         builder.Property(e => e.CreatedBy).HasMaxLength(100).IsRequired();
         builder.Property(e => e.ModifiedBy).HasMaxLength(100);
 
-        builder.HasQueryFilter(e => e.IsActive);
     }
 }

@@ -17,7 +17,7 @@ public sealed class PeriodAtomicSqlTests : PeriodAtomicFixture
     [SqlServerFact]
     public async Task LockAuditFailureRollsBackStateAndAllBroadcastDeliveries()
     {
-        await InDatabase(db => db.Database.ExecuteSqlRawAsync("CREATE TRIGGER FixturePeriodAuditFailure ON AuditLogs AFTER INSERT AS BEGIN IF EXISTS(SELECT 1 FROM inserted WHERE Action = 'PERIOD_LOCK') THROW 51000, 'fixture failure', 1; END"));
+        await InDatabase(db => db.Database.ExecuteSqlRawAsync("CREATE TRIGGER FixturePeriodAuditFailure ON AUDIT_LOGS AFTER INSERT AS BEGIN IF EXISTS(SELECT 1 FROM inserted WHERE Action = 'PERIOD_LOCK') THROW 51000, 'fixture failure', 1; END"));
         Assert.Equal(HttpStatusCode.InternalServerError, (await Client.PostAsJsonAsync("/api/period-lock/lock", new { year = DateTime.UtcNow.Year, month = DateTime.UtcNow.Month })).StatusCode);
         await InDatabase(async db => { Assert.False((await db.PeriodLocks.SingleAsync()).IsLocked); Assert.Empty(db.AuditLogs); Assert.Empty(db.Notifications); Assert.Empty(db.NotificationDeliveries); });
         await InDatabase(db => db.Database.ExecuteSqlRawAsync("DROP TRIGGER FixturePeriodAuditFailure"));
@@ -28,14 +28,14 @@ public sealed class PeriodAtomicSqlTests : PeriodAtomicFixture
     public async Task UnlockAuditFailureRetainsLockPendingRequestsAndExistingOutbox()
     {
         await Client.PostAsJsonAsync("/api/period-lock/lock", new { year = 2026, month = 10 }); await Request();
-        await InDatabase(db => db.Database.ExecuteSqlRawAsync("CREATE TRIGGER FixturePeriodAuditFailure ON AuditLogs AFTER INSERT AS BEGIN IF EXISTS(SELECT 1 FROM inserted WHERE Action = 'PERIOD_UNLOCK') THROW 51000, 'fixture failure', 1; END"));
+        await InDatabase(db => db.Database.ExecuteSqlRawAsync("CREATE TRIGGER FixturePeriodAuditFailure ON AUDIT_LOGS AFTER INSERT AS BEGIN IF EXISTS(SELECT 1 FROM inserted WHERE Action = 'PERIOD_UNLOCK') THROW 51000, 'fixture failure', 1; END"));
         Assert.Equal(HttpStatusCode.InternalServerError, (await Client.PostAsJsonAsync("/api/period-lock/unlock", new { year = 2026, month = 10 })).StatusCode);
         await InDatabase(async db => { Assert.True((await db.PeriodLocks.SingleAsync(row => row.Year == 2026 && row.Month == 10)).IsLocked); Assert.Equal("PENDING", (await db.UnlockRequests.SingleAsync()).Status); Assert.Equal(2, await db.AuditLogs.CountAsync()); Assert.Equal(4, await db.Notifications.CountAsync()); });
     }
     [SqlServerFact]
     public async Task RequestAuditFailureDoesNotLeaveARequestOrEmailQueued()
     {
-        await InDatabase(db => db.Database.ExecuteSqlRawAsync("CREATE TRIGGER FixturePeriodAuditFailure ON AuditLogs AFTER INSERT AS BEGIN IF EXISTS(SELECT 1 FROM inserted WHERE Action = 'UNLOCK_REQUEST') THROW 51000, 'fixture failure', 1; END"));
+        await InDatabase(db => db.Database.ExecuteSqlRawAsync("CREATE TRIGGER FixturePeriodAuditFailure ON AUDIT_LOGS AFTER INSERT AS BEGIN IF EXISTS(SELECT 1 FROM inserted WHERE Action = 'UNLOCK_REQUEST') THROW 51000, 'fixture failure', 1; END"));
         Assert.Equal(HttpStatusCode.InternalServerError, (await Client.PostAsJsonAsync("/api/period-lock/request-unlock", new { year = 2026, month = 10, reason = "Complete request reason" })).StatusCode);
         await InDatabase(async db => { Assert.Empty(db.UnlockRequests); Assert.Empty(db.AuditLogs); Assert.Empty(db.Notifications); });
     }

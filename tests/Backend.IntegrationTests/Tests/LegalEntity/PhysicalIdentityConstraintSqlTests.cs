@@ -24,14 +24,24 @@ public sealed class PhysicalIdentityConstraintSqlTests
         await db.GetService<IMigrator>().MigrateAsync(db.Database.GetMigrations().Single(name => name.EndsWith("_AddRegistryGccAndExposure")));
         return db;
     }
-    private static Task Insert(ConnectedPartiesDbContext db, string passport, bool active, bool numeric = false) => db.Database.ExecuteSqlInterpolatedAsync($"INSERT RelatedPersons (Id,FirstName,LastName,Residency,Status,CreatedAt,CreatedBy,IsActive,IsIdentifiedStaff,DeclarationNoFamilyMembers,ConnectedWithBank,SpecialRelationshipWithBank,SpecialContract,MalusClawback,PassportNumber) VALUES ({(numeric ? (object)(active ? 100L : 101L) : Guid.NewGuid())},{"Fixture"},{"Person"},{"NonResident"},{"Draft"},{DateTime.UtcNow},{"fixture"},{active},{true},{false},{false},{false},{false},{false},{passport})");
+    private static Task InsertLegacy(ConnectedPartiesDbContext db, string passport) =>
+        db.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT dbo.RelatedPersons (Id,FirstName,LastName,Residency,Status,CreatedAt,CreatedBy,IsActive,IsIdentifiedStaff,DeclarationNoFamilyMembers,ConnectedWithBank,SpecialRelationshipWithBank,SpecialContract,MalusClawback,PassportNumber)
+            VALUES ({Guid.NewGuid()},'Fixture','Person','NonResident','Draft',SYSUTCDATETIME(),'fixture',1,1,0,0,0,0,0,{passport})
+            """);
+
+    private static Task InsertCurrent(ConnectedPartiesDbContext db, long id, string passport, bool active) =>
+        db.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT dbo.RELATED_PERSONS (ID,FIRST_NAME,LAST_NAME,RESIDENCY,STATUS,CREATED_AT,CREATED_BY,IS_ACTIVE,IS_IDENTIFIED_STAFF,DECLARATION_NO_FAMILY_MEMBERS,CONNECTED_WITH_BANK,SPECIAL_RELATIONSHIP_WITH_BANK,SPECIAL_CONTRACT,MALUS_CLAWBACK,PASSPORT_NUMBER)
+            VALUES ({id},'Fixture','Person','NonResident','Draft',SYSUTCDATETIME(),'fixture',{active},1,0,0,0,0,0,{passport})
+            """);
     [SqlServerFact]
     public async Task PopulatedPreflightRejectsCaseDuplicatesWithoutDeletingEitherRow()
     {
         await using var db = await Database();
         try
         {
-            await Insert(db, "ab12345", true); await Insert(db, "AB12345", true);
+            await InsertLegacy(db, "ab12345"); await InsertLegacy(db, "AB12345");
             var error = await Assert.ThrowsAsync<SqlException>(() => db.Database.MigrateAsync()); Assert.Equal(51006, error.Number);
             await using var connection = new SqlConnection(db.Database.GetConnectionString()); await connection.OpenAsync();
             await using var command = connection.CreateCommand(); command.CommandText = "SELECT COUNT(*) FROM RelatedPersons";
@@ -47,7 +57,7 @@ public sealed class PhysicalIdentityConstraintSqlTests
         {
             await db.Database.ExecuteSqlRawAsync("INSERT CodeListDefinitions (Id,Name,IsActive,CreatedAt,CreatedBy,IsSystemRequired,Version) VALUES (NEWID(),'languages',1,SYSUTCDATETIME(),'fixture',0,0)");
             var error = await Assert.ThrowsAsync<SqlException>(() => db.Database.MigrateAsync()); Assert.Equal(51005, error.Number);
-            Assert.Equal(2, await db.CodeListDefinitions.CountAsync(row => row.Name.ToUpper() == "LANGUAGES"));
+            Assert.Equal(2, await db.Database.SqlQueryRaw<int>("SELECT COUNT(*) AS [Value] FROM dbo.CodeListDefinitions WHERE UPPER(Name) = N'LANGUAGES'").SingleAsync());
         }
         finally { await db.Database.EnsureDeletedAsync(); }
     }
@@ -57,10 +67,10 @@ public sealed class PhysicalIdentityConstraintSqlTests
         await using var db = await Database();
         try
         {
-            await Insert(db, "AB12345", true); await Insert(db, "CD12345", true);
+            await InsertLegacy(db, "AB12345"); await InsertLegacy(db, "CD12345");
             await db.Database.ExecuteSqlRawAsync("UPDATE RelatedPersons SET FBAId = CASE WHEN PassportNumber = 'AB12345' THEN '12345' ELSE ' 12345' END");
             var error = await Assert.ThrowsAsync<SqlException>(() => db.Database.MigrateAsync()); Assert.Equal(51007, error.Number);
-            Assert.Equal(2, await db.RelatedPersons.CountAsync());
+            Assert.Equal(2, await db.Database.SqlQueryRaw<int>("SELECT COUNT(*) AS [Value] FROM dbo.RelatedPersons").SingleAsync());
         }
         finally { await db.Database.EnsureDeletedAsync(); }
     }
@@ -71,9 +81,9 @@ public sealed class PhysicalIdentityConstraintSqlTests
         await using var db = await Database();
         try
         {
-            await Insert(db, "ab12345", true); await db.Database.MigrateAsync();
-            var error = await Assert.ThrowsAsync<SqlException>(() => Insert(db, "AB12345", true, numeric: true)); Assert.Contains(error.Number, new[] { 2601, 2627 });
-            await Insert(db, "AB12345", false, numeric: true);
+            await InsertLegacy(db, "ab12345"); await db.Database.MigrateAsync();
+            var error = await Assert.ThrowsAsync<SqlException>(() => InsertCurrent(db, 100L, "AB12345", true)); Assert.Contains(error.Number, new[] { 2601, 2627 });
+            await InsertCurrent(db, 101L, "AB12345", false);
             Assert.Equal(2, await db.RelatedPersons.IgnoreQueryFilters().CountAsync()); Assert.Single(db.RelatedPersons);
         }
         finally { await db.Database.EnsureDeletedAsync(); }

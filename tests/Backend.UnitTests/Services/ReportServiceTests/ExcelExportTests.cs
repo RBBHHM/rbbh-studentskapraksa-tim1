@@ -68,18 +68,6 @@ namespace UnitTests.Services.ReportServiceTests
             CreatedAt = DateTime.UtcNow
         };
 
-        private static ClientLimit NewClientLimit(long legalEntityId, decimal regulatoryCapital = 5000m, decimal coreCapital = 4000m) => new()
-        {
-            LegalEntityId = legalEntityId,
-            RegulatoryCapital = regulatoryCapital,
-            CoreCapital = coreCapital,
-            ExposureLimit = 1000m,
-            CurrentExposure = 0m,
-            Currency = "BAM",
-            CreatedBy = "seed",
-            CreatedAt = DateTime.UtcNow
-        };
-
         private static IXLWorksheet OpenSheet(byte[] bytes)
         {
             using var ms = new MemoryStream(bytes);
@@ -325,8 +313,9 @@ namespace UnitTests.Services.ReportServiceTests
             var service = NewService(out var ctx);
             var entity = NewEntity("ACME", tax: "1111111111111");
             ctx.LegalEntities.Add(entity);
-            ctx.Limiti.Add(NewLimit(entity.Id, tip: "SATAFXs", odobreniLimit: 1500.50m, maksUtil: 750.25m, komentar: "Test komentar"));
-            ctx.ClientLimits.Add(NewClientLimit(entity.Id, regulatoryCapital: 5000m, coreCapital: 4000m));
+            var limit = NewLimit(entity.Id, tip: "SATAFXs", odobreniLimit: 1500.50m, maksUtil: 750.25m, komentar: "Test komentar");
+            limit.Capital = new() { IsActive = false, RegulatoryCapital = 5000m, CoreCapital = 4000m };
+            ctx.Limiti.Add(limit);
             await ctx.SaveChangesAsync();
 
             var ws = OpenSheet(await service.ExportAllClientsWithLimitsAsync());

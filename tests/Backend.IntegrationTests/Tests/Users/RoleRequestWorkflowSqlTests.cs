@@ -25,7 +25,7 @@ public sealed class RoleRequestWorkflowSqlTests : RoleRequestFixture
         await InDatabase(async db =>
         {
             await db.Database.ExecuteSqlRawAsync("""
-                ALTER TABLE dbo.Roles ALTER COLUMN DisplayName nvarchar(100) COLLATE SQL_Latin1_General_CP1_CI_AS NULL;
+                ALTER TABLE dbo.ROLES ALTER COLUMN DISPLAY_NAME nvarchar(100) COLLATE SQL_Latin1_General_CP1_CI_AS NULL;
                 """);
             db.Roles.AddRange(
                 new Role { Name = "fixture-label", DisplayName = "Član tima", CreatedBy = "fixture" },
@@ -92,7 +92,7 @@ public sealed class RoleRequestWorkflowSqlTests : RoleRequestFixture
     {
         using var guest = NewClient("new-user"); var row = await Submit(guest); var id = row.GetProperty("id").GetInt64();
         await InDatabase(db => db.Database.ExecuteSqlRawAsync("""
-            CREATE TRIGGER FixtureRejectRoleAudit ON AuditLogs AFTER INSERT AS
+            CREATE TRIGGER FixtureRejectRoleAudit ON AUDIT_LOGS AFTER INSERT AS
             BEGIN IF EXISTS(SELECT 1 FROM inserted WHERE Action = 'ROLE_REQUEST_APPROVED') THROW 51000, 'fixture audit failure', 1; END
             """));
         Assert.Equal(HttpStatusCode.InternalServerError, (await Client.PostAsJsonAsync($"/api/role-requests/{id}/approve", new { decisionId = Guid.NewGuid(), expectedVersion = 1 })).StatusCode);

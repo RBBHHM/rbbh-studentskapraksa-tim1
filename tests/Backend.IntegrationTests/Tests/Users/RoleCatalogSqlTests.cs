@@ -34,7 +34,7 @@ public sealed class RoleCatalogSqlTests : RoleCatalogFixture
     {
         var role = await CreateCatalog();
         await InDatabase(db => db.Database.ExecuteSqlRawAsync("""
-            CREATE TRIGGER FixtureRejectCatalogAudit ON AuditLogs AFTER INSERT AS
+            CREATE TRIGGER FixtureRejectCatalogAudit ON AUDIT_LOGS AFTER INSERT AS
             BEGIN IF EXISTS(SELECT 1 FROM inserted WHERE Action = 'ROLE_CATALOG_UPDATE') THROW 51000, 'fixture audit failure', 1; END
             """));
         Assert.Equal(HttpStatusCode.InternalServerError, (await Client.PutAsJsonAsync($"/api/role-catalog/{role.Id}", new UpdateRoleCatalogDTO("Changed", null, false, role.Version, []))).StatusCode);

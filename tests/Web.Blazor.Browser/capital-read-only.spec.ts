@@ -6,6 +6,7 @@ test("ordinary authenticated user reads empty/existing capital and downloads but
   await page.goto("/app/capital"); await interactive(page);
   await expect(page.getByText("Kapital nije postavljen.", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Uredi kapital", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Novi kapital", exact: true })).toHaveCount(0);
   await expect(page.getByRole("dialog", { includeHidden: true })).toHaveCount(0);
   await request.post("/__fixtures/limit-reference", { headers }); await page.reload(); await interactive(page);
   // The amount is shown twice by design: current capital and its history revision.

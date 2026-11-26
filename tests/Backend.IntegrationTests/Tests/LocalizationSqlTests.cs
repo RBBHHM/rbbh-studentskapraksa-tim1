@@ -59,7 +59,7 @@ public sealed class LocalizationSqlTests : LocalizationFixture
     public async Task ResourceAndVersionRollbackWhenAuditFails()
     {
         var before = await Pack("BS");
-        await InDatabase(db => db.Database.ExecuteSqlRawAsync("CREATE TRIGGER FixtureRejectResourceAudit ON AuditLogs AFTER INSERT AS BEGIN THROW 51000, 'fixture failure', 1; END"));
+        await InDatabase(db => db.Database.ExecuteSqlRawAsync("CREATE TRIGGER FixtureRejectResourceAudit ON AUDIT_LOGS AFTER INSERT AS BEGIN THROW 51000, 'fixture failure', 1; END"));
         Assert.Equal(HttpStatusCode.InternalServerError, (await Client.PutAsJsonAsync("/api/localization/resources/BS/rollback.resource", new { label = "No" })).StatusCode);
         var after = await Pack("BS"); Assert.Equal(before.GetProperty("version").GetString(), after.GetProperty("version").GetString());
         await InDatabase(async db => { Assert.False(await db.CodeLists.AnyAsync(row => row.Localization != null && row.Localization.ResourceKey == "rollback.resource")); Assert.Empty(db.AuditLogs); });
@@ -74,7 +74,7 @@ public sealed class LocalizationSqlTests : LocalizationFixture
             sheet.Cell(2, 1).Value = "One"; sheet.Cell(3, 1).Value = "Two";
             using var stream = new MemoryStream(); workbook.SaveAs(stream); bytes = stream.ToArray();
         }
-        await InDatabase(db => db.Database.ExecuteSqlRawAsync("CREATE TRIGGER FixtureRejectImportAudit ON AuditLogs AFTER INSERT AS BEGIN THROW 51000, 'fixture failure', 1; END"));
+        await InDatabase(db => db.Database.ExecuteSqlRawAsync("CREATE TRIGGER FixtureRejectImportAudit ON AUDIT_LOGS AFTER INSERT AS BEGIN THROW 51000, 'fixture failure', 1; END"));
         using var form = new MultipartFormDataContent(); form.Add(new ByteArrayContent(bytes), "file", "values.xlsx");
         Assert.Equal(HttpStatusCode.InternalServerError, (await Client.PostAsync("/api/code-lists/ImportRollback/import?dryRun=false", form)).StatusCode);
         await InDatabase(async db => { Assert.False(await db.CodeLists.AnyAsync(row => row.Kategorija == "ImportRollback")); Assert.False(await db.CodeListDefinitions.AnyAsync(row => row.Name == "ImportRollback")); Assert.Empty(db.AuditLogs); });

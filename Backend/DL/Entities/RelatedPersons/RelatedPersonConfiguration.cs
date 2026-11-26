@@ -34,15 +34,15 @@ public class RelatedPersonConfiguration : IEntityTypeConfiguration<RelatedPerson
 
         // Identifikatori su jedinstveni među aktivnim zapisima. Soft-delete omogućava
         // ponovni unos tek nakon deaktivacije starog zapisa.
-        builder.HasIndex(e => e.JMBG).IsUnique().HasFilter("[IsActive] = 1 AND [JMBG] IS NOT NULL");
-        builder.HasIndex(e => e.FBAId).IsUnique().HasFilter("[IsActive] = 1 AND [FBAId] IS NOT NULL");
-        builder.HasIndex(e => e.PassportNumber).IsUnique().HasFilter("[IsActive] = 1 AND [PassportNumber] IS NOT NULL");
+        builder.HasIndex(e => e.JMBG).IsUnique().HasFilter("[IS_ACTIVE] = 1 AND [JMBG] IS NOT NULL");
+        builder.HasIndex(e => e.FBAId).IsUnique().HasFilter("[IS_ACTIVE] = 1 AND [FBA_ID] IS NOT NULL");
+        builder.HasIndex(e => e.PassportNumber).IsUnique().HasFilter("[IS_ACTIVE] = 1 AND [PASSPORT_NUMBER] IS NOT NULL");
         builder.ToTable(table =>
         {
             table.HasCheckConstraint("CK_RelatedPersons_PassportNumber_Trimmed",
-                "DATALENGTH([PassportNumber]) = DATALENGTH(LTRIM(RTRIM([PassportNumber])))");
+                "DATALENGTH([PASSPORT_NUMBER]) = DATALENGTH(LTRIM(RTRIM([PASSPORT_NUMBER])))");
             table.HasCheckConstraint("CK_RelatedPersons_FBAId_Trimmed",
-                "DATALENGTH([FBAId]) = DATALENGTH(LTRIM(RTRIM([FBAId])))");
+                "DATALENGTH([FBA_ID]) = DATALENGTH(LTRIM(RTRIM([FBA_ID])))");
         });
         builder.HasIndex(e => e.Status);
         builder.HasIndex(e => e.RelatedToPersonId);

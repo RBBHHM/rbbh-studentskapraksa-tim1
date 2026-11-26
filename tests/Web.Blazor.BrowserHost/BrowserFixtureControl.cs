@@ -118,7 +118,7 @@ internal static partial class BrowserHostProgram
                             using var response = await client.PostAsJsonAsync(path, body);
                             results[key] = (int)response.StatusCode;
                         }
-                        using var capital = await client.PutAsJsonAsync("/api/capital", new { regulatoryCapital = -1, coreCapital = -1, supplementaryCapital = -1, capitalDate = "2026-01-01" });
+                        using var capital = await client.PostAsJsonAsync("/api/capital", new { regulatoryCapital = -1, coreCapital = -1, supplementaryCapital = -1, validTill = "2099-12-31" });
                         results["capital"] = (int)capital.StatusCode;
                         foreach (var (key, path) in new[] { ("reportRead", "/api/reports/daily"), ("periodRead", "/api/period-lock/current"), ("codesRead", "/api/code-lists"), ("usersRead", "/api/users"), ("auditRead", "/api/audit-logs") })
                         {
@@ -193,7 +193,7 @@ internal static partial class BrowserHostProgram
                     {
                         await using var scope = backend.Services.CreateAsyncScope();
                         var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
-                        await context.Response.WriteAsJsonAsync((await db.CapitalRevisions.AsNoTracking().OrderBy(item => item.Id).ToArrayAsync()).Select(item => new { item.Id, Revision = item.Id, item.RegulatoryCapital, item.CoreCapital, item.SupplementaryCapital, CapitalDate = item.EffectiveDate }).ToArray());
+                        await context.Response.WriteAsJsonAsync((await db.Capitals.AsNoTracking().OrderBy(item => item.Id).ToArrayAsync()).Select(item => new { item.Id, item.RegulatoryCapital, item.CoreCapital, item.SupplementaryCapital, item.CapitalDate, item.ValidTill, item.IsActive }).ToArray());
                         return;
                     }
                     if (context.Request.Path == "/__fixtures/reports" && HttpMethods.IsGet(context.Request.Method))
@@ -384,19 +384,19 @@ internal static partial class BrowserHostProgram
                             {
                                 var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
                                 var entity = await db.LegalEntities.FirstAsync();
-                                db.ClientLimits.Add(new RBBH.ConnectedParties.DL.Entities.Report.ClientLimit
+                                var capital = new RBBH.ConnectedParties.DL.Entities.Report.Capital { IsActive = false, RegulatoryCapital = 1000m, CoreCapital = 500m };
+                                db.Limiti.Add(new RBBH.ConnectedParties.DL.Entities.Limiti.Limit
                                 {
                                     LegalEntityId = entity.Id,
-                                    CurrentExposure = 125.5m,
-                                    ExposureLimit = 100m,
-                                    IsLimitBreached = true,
-                                    RegulatoryCapital = 1000m,
-                                    CoreCapital = 500m,
+                                    MaksimalnaOcekivanaUtilizacija = 125.5m,
+                                    OdobreniLimit = 100m,
+                                    TipLimita = "LEGACY_CLIENT_LIMIT",
+                                    Capital = capital,
                                     CreatedBy = "fixture"
                                 });
                                 // Separate current export contract uses Limiti, as in
                                 // the unchanged backend. Do not replace its dataset.
-                                db.Limiti.Add(new RBBH.ConnectedParties.DL.Entities.Limiti.Limit { LegalEntityId = entity.Id, TipLimita = "REG", OdobreniLimit = 100m, CreatedBy = "fixture" });
+                                db.Limiti.Add(new RBBH.ConnectedParties.DL.Entities.Limiti.Limit { LegalEntityId = entity.Id, TipLimita = "REG", Capital = capital, OdobreniLimit = 100m, CreatedBy = "fixture" });
                                 await db.SaveChangesAsync();
                             }
                             break;

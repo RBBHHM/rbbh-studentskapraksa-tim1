@@ -73,13 +73,15 @@ public sealed class AuditQuerySqlTests : AuthenticatedApiFixture
             await db.GetService<IMigrator>().MigrateAsync("20261124140633_MoveLegalEntityVerificationOrigin");
             await db.Database.ExecuteSqlRawAsync("""
                 INSERT INTO dbo.AuditLogs (Id, TableName, RecordId, Action, Username, Timestamp, IpAddress, OldValues)
-                VALUES (NEWID(), N'AuditQueryFixture', N'legacy', N'UPDATE', N'creator', SYSUTCDATETIME(), N'192.0.2.15', N'{"old":true}');
+                VALUES (NEWID(), N'AuditQueryFixture', N'legacy', N'UPDATE', N'creator', SYSUTCDATETIME(), N'192.0.2.15', N'{{"old":true}}');
                 """);
 
             await db.Database.MigrateAsync();
-            var historical = await db.AuditLogs.SingleAsync(row => row.RecordId == "legacy");
+            var historical = await db.AuditLogs.SingleAsync();
             Assert.True(historical.Id > 0);
-            Assert.Equal("{\"old\":true}", historical.OldValues);
+            Assert.Equal("legacy", historical.RecordId);
+            using var snapshot = System.Text.Json.JsonDocument.Parse(historical.OldValues!);
+            Assert.True(snapshot.RootElement.GetProperty("old").GetBoolean());
 
             var next = new AuditLog { TableName = Area, RecordId = "fresh", Action = "INSERT", Username = "creator" };
             db.AuditLogs.Add(next);
@@ -87,8 +89,8 @@ public sealed class AuditQuerySqlTests : AuthenticatedApiFixture
             Assert.True(next.Id > historical.Id);
             Assert.Equal(0, await db.Database.SqlQueryRaw<int>("""
                 SELECT COUNT(*) AS [Value] FROM sys.columns
-                WHERE (object_id = OBJECT_ID(N'dbo.AuditLogs') AND name = N'IpAddress')
-                   OR (object_id = OBJECT_ID(N'dbo.Permissions') AND name = N'Label')
+                WHERE (object_id = OBJECT_ID(N'dbo.AUDIT_LOGS') AND name IN (N'IP_ADDRESS', N'RECORD_ID'))
+                   OR (object_id = OBJECT_ID(N'dbo.PERMISSIONS') AND name = N'LABEL')
                 """).SingleAsync());
         }
         finally { await db.Database.EnsureDeletedAsync(); }

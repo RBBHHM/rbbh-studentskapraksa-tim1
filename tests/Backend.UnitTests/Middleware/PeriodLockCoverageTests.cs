@@ -38,6 +38,7 @@ public sealed class PeriodLockCoverageTests
         ["PUT api/limiti/{id}"] = (Locked, "edits limit"),
         ["DELETE api/limiti/{id}"] = (Locked, "removes limit"),
         ["PUT api/capital"] = (Locked, "changes regulatory/core/supplementary capital that reports are computed from"),
+        ["POST api/capital"] = (Locked, "changes regulatory/core/supplementary capital that reports are computed from"),
         ["POST api/verification/physical-person/{id}"] = (Locked, "changes verification state of reportable person"),
         ["POST api/verification/legal-person/{id}"] = (Locked, "changes verification state of reportable legal person"),
 

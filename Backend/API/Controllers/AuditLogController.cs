@@ -1,4 +1,5 @@
 using RBBH.ConnectedParties.DL.Persistence;
+using RBBH.ConnectedParties.DL.Entities.Audit;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RBBH.ConnectedParties.Helpers.Constants;
@@ -76,7 +77,7 @@ public class AuditLogController(ConnectedPartiesDbContext db) : ControllerBase
             var term = search.Trim();
             query = db.Database.IsRelational()
                 ? query.Where(l => EF.Functions.Like(l.Username, $"%{term}%")
-                    || EF.Functions.Like(l.RecordId, $"%{term}%"))
+                    || (l.Id.ToString() == term || EF.Functions.Like(l.NewValues ?? "", $"%{term}%") || EF.Functions.Like(l.OldValues ?? "", $"%{term}%")))
                 : query.Where(l => l.Username.ToLower().Contains(term.ToLower())
                     || l.RecordId.ToLower().Contains(term.ToLower()));
         }
@@ -94,7 +95,11 @@ public class AuditLogController(ConnectedPartiesDbContext db) : ControllerBase
             .Skip((int)Math.Min((long)(page - 1) * pageSize, int.MaxValue))
             .Take(pageSize)
             .ToListAsync();
-        var logs = logEntities.Select(l => new
+        var logs = logEntities.Select(l =>
+        {
+            var oldValues = AuditLog.SnapshotWithoutReference(l.OldValues);
+            var newValues = AuditLog.SnapshotWithoutReference(l.NewValues);
+            return new
             {
                 id            = l.Id,
                 tableName     = l.TableName,
@@ -102,12 +107,13 @@ public class AuditLogController(ConnectedPartiesDbContext db) : ControllerBase
                 action        = l.Action,
                 actionDisplay = ActionDisplayName(l.Action, english),
                 areaDisplay   = AreaDisplayName(l.TableName, english),
-                changeSummary = BuildChangeSummary(l.OldValues, l.NewValues, english),
-                oldValues     = l.OldValues,
-                newValues     = l.NewValues,
+                changeSummary = BuildChangeSummary(oldValues, newValues, english),
+                oldValues,
+                newValues,
                 username      = l.Username,
                 timestamp     = l.Timestamp
-            }).ToList();
+            };
+        }).ToList();
 
         return Ok(new { logs, total, page, pageSize });
     }

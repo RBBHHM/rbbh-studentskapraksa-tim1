@@ -106,7 +106,7 @@ public sealed class ControllerResourcesSqlTests : RoleCatalogFixture
         Assert.Equal(HttpStatusCode.BadRequest, import.StatusCode);
         var error = await import.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("Column A has an invalid header. Expected 'Vrijednost' or 'Value', found 'Unexpected'.", error.GetProperty("error").GetString());
-        await InDatabase(async db => { Assert.Empty(db.CapitalRevisions); Assert.Empty(db.AuditLogs); Assert.False(await db.CodeLists.AnyAsync(row => row.Kategorija == "Fixture")); });
+        await InDatabase(async db => { Assert.Empty(db.Capitals); Assert.Empty(db.AuditLogs); Assert.False(await db.CodeLists.AnyAsync(row => row.Kategorija == "Fixture")); });
     }
 
     [SqlServerFact]
@@ -120,7 +120,7 @@ public sealed class ControllerResourcesSqlTests : RoleCatalogFixture
         var error = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal(JsonValueKind.Null, error.GetProperty("errors")[0].GetProperty("field").ValueKind);
         Assert.Equal("Die Dateneingabe ist für diesen Zeitraum gesperrt.", error.GetProperty("errors")[0].GetProperty("message").GetString());
-        await InDatabase(async db => { Assert.Empty(db.CapitalRevisions); Assert.Empty(db.AuditLogs); });
+        await InDatabase(async db => { Assert.Empty(db.Capitals); Assert.Empty(db.AuditLogs); });
     }
 
     [SqlServerFact]

@@ -6,7 +6,7 @@ public sealed record LimitRecord(int Id, long LegalEntityId, string Naziv, bool 
     string? TaxNumber, string? MaticniBroj, string? Matbroj, string TipLimita, decimal? OdobreniLimit,
     decimal? MaksimalnaOcekivanaUtilizacija, DateTime? RokOcekivaneUtilizacije, string? Komentar,
     decimal? RegulatorniKapital, decimal? OsnovniKapital, DateTime? DatumKapitala,
-    DateTime CreatedAt, string CreatedBy, DateTime? ModifiedAt, string? ModifiedBy)
+    DateTime CreatedAt, string CreatedBy, DateTime? ModifiedAt, string? ModifiedBy, long? CapitalId = null)
 {
     public bool Matches(string? search)
     {

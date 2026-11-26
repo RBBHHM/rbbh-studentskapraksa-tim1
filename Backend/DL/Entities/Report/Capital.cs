@@ -26,6 +26,8 @@ public class Capital
     /// <summary>Datum na koji se odnose iznosi kapitala.</summary>
     public DateTime CapitalDate { get; set; }
 
+    public DateTime ValidTill { get; set; } = DateTime.MaxValue.Date;
+
     // ── Audit polja ───────────────────────────────────────────────────────────
 
     [Required]

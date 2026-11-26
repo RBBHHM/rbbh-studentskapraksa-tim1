@@ -50,7 +50,7 @@ public sealed class RoleCatalogHttpTests : RoleCatalogFixture
         {
             Assert.False(await db.Roles.AnyAsync(row => row.Id == role.Id));
             Assert.False(await db.RolePermissions.AnyAsync(row => row.RoleId == role.Id));
-            Assert.True(await db.AuditLogs.AnyAsync(row => row.RecordId == role.Id.ToString() && row.Action == "ROLE_CATALOG_DELETE"));
+            Assert.Contains(await db.AuditLogs.Where(row => row.Action == "ROLE_CATALOG_DELETE").ToListAsync(), row => row.RecordId == role.Id.ToString());
         });
     }
 

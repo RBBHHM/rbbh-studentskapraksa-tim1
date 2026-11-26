@@ -16,12 +16,12 @@ public class LegalEntityConfiguration : IEntityTypeConfiguration<LegalEntity>
         // Porezni broj mora biti jedinstven kada je postavljen (rezidenti)
         builder.HasIndex(e => e.TaxNumber)
                .IsUnique()
-               .HasFilter("\"TaxNumber\" IS NOT NULL");
+               .HasFilter("\"TAX_NUMBER\" IS NOT NULL");
 
         // FBA ID mora biti jedinstven kada je postavljen (nerezidenti)
         builder.HasIndex(e => e.FbaId)
                .IsUnique()
-               .HasFilter("\"FbaId\" IS NOT NULL");
+               .HasFilter("\"FBA_ID\" IS NOT NULL");
 
         builder.HasIndex(e => e.Status);
         builder.HasIndex(e => e.IsResident);

@@ -5,12 +5,12 @@ using RBI.ApiCore;
 namespace RBBH.RelatedPartiesRegister.Web.Api;
 
 public sealed record CapitalRecord(long Id, decimal RegulatoryCapital, decimal CoreCapital,
-    decimal SupplementaryCapital, DateTime CapitalDate);
+    decimal SupplementaryCapital, DateTime CapitalDate, DateTime ValidTill = default, DateTime? ModifiedAt = null);
 public sealed record CapitalRequest(decimal RegulatoryCapital, decimal CoreCapital,
-    decimal SupplementaryCapital, DateTime CapitalDate);
+    decimal SupplementaryCapital, DateTime ValidTill, long? ExpectedId = null, DateTime? ExpectedModifiedAt = null);
 /// <summary>One immutable effective-date observation (source "revision", or "legacy" for the pre-history row).</summary>
-public sealed record CapitalVersion(long Id, long Revision, DateTime EffectiveDate, decimal RegulatoryCapital, decimal CoreCapital,
-    decimal SupplementaryCapital, DateTime RecordedAt, string RecordedBy, string Source);
+public sealed record CapitalVersion(long Id, DateTime ValidTill, DateTime EffectiveDate, decimal RegulatoryCapital, decimal CoreCapital,
+    decimal SupplementaryCapital, DateTime RecordedAt, string RecordedBy);
 public sealed record CapitalHistoryPage(IReadOnlyList<CapitalVersion> Items, int Total, int Page, int PageSize);
 public interface ICapitalApi
 {
@@ -60,7 +60,7 @@ public sealed class CapitalApi(IRbiApiFileTransport transport) : ICapitalApi
     }
     public async Task<CapitalRecord> SaveAsync(CapitalRequest request, CancellationToken token = default)
     {
-        var result = await transport.SendAsync<CapitalRecord>(HttpMethod.Put, "api/capital", request, token);
+        var result = await transport.SendAsync<CapitalRecord>(request.ExpectedId is null ? HttpMethod.Post : HttpMethod.Put, "api/capital", request, token);
         token.ThrowIfCancellationRequested();
         if (!result.IsSuccess) throw new RegistryApiException(result.Error?.StatusCode);
         return result.Value;

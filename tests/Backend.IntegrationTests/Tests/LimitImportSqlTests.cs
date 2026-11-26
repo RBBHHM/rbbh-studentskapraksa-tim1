@@ -17,7 +17,7 @@ public sealed class LimitImportSqlTests : LimitImportFixture
     public async Task CreationAndImportRollbackGeneratedRowsWhenAuditFails()
     {
         await Seed(); await Create(); var bytes = await File(200);
-        await InDatabase(db => db.Database.ExecuteSqlRawAsync("CREATE TRIGGER FixtureLimitAuditFailure ON AuditLogs AFTER INSERT AS BEGIN IF EXISTS(SELECT 1 FROM inserted WHERE TableName = 'Limit') THROW 51000, 'fixture failure', 1; END"));
+        await InDatabase(db => db.Database.ExecuteSqlRawAsync("CREATE TRIGGER FixtureLimitAuditFailure ON AUDIT_LOGS AFTER INSERT AS BEGIN IF EXISTS(SELECT 1 FROM inserted WHERE TABLE_NAME = 'Limit') THROW 51000, 'fixture failure', 1; END"));
         Assert.Equal(HttpStatusCode.InternalServerError, (await Client.PostAsJsonAsync("/api/limiti", Body(300))).StatusCode);
         Assert.Equal(HttpStatusCode.InternalServerError, (await Import(bytes)).StatusCode);
         await InDatabase(async db => { Assert.Single(db.Limiti); Assert.Single(db.AuditLogs); Assert.Equal(100.50m, (await db.Limiti.SingleAsync()).OdobreniLimit); });
@@ -26,7 +26,7 @@ public sealed class LimitImportSqlTests : LimitImportFixture
     public async Task UpdateAndDeleteRetainOriginalDataIfAuditCannotBeWritten()
     {
         await Seed(); var id = await Create();
-        await InDatabase(db => db.Database.ExecuteSqlRawAsync("CREATE TRIGGER FixtureLimitAuditFailure ON AuditLogs AFTER INSERT AS BEGIN IF EXISTS(SELECT 1 FROM inserted WHERE Action IN ('UPDATE','DELETE')) THROW 51000, 'fixture failure', 1; END"));
+        await InDatabase(db => db.Database.ExecuteSqlRawAsync("CREATE TRIGGER FixtureLimitAuditFailure ON AUDIT_LOGS AFTER INSERT AS BEGIN IF EXISTS(SELECT 1 FROM inserted WHERE Action IN ('UPDATE','DELETE')) THROW 51000, 'fixture failure', 1; END"));
         Assert.Equal(HttpStatusCode.InternalServerError, (await Client.PutAsJsonAsync($"/api/limiti/{id}", Body(200))).StatusCode);
         Assert.Equal(HttpStatusCode.InternalServerError, (await Client.DeleteAsync($"/api/limiti/{id}")).StatusCode);
         await InDatabase(async db => { Assert.Equal(100.50m, (await db.Limiti.SingleAsync()).OdobreniLimit); Assert.Single(db.AuditLogs); });

@@ -15,10 +15,9 @@ namespace RBBH.ConnectedParties.API.Controllers;
 [ApiController]
 [Route("api/capital")]
 [Authorize]
-public class CapitalController(ICapitalService capitalService, IAuditService auditService) : BaseResuItController
+public class CapitalController(ICapitalService capitalService) : BaseResuItController
 {
     private readonly ICapitalService _capitalService = capitalService;
-    private readonly IAuditService _auditService = auditService;
 
     /// <summary>Vraća poznati kapital koji važi danas, ili nema sadržaja ako nije poznat.</summary>
     [HttpGet]
@@ -50,10 +49,10 @@ public class CapitalController(ICapitalService capitalService, IAuditService aud
         if (!result.IsSuccessful) return HTTPExceptiontFromResult(result).Result!;
         var rows = result.Value is null
             ? []
-            : new[] { (IReadOnlyList<object?>)[result.Value.CoreCapital, result.Value.RegulatoryCapital, result.Value.SupplementaryCapital, result.Value.CapitalDate] };
+            : new[] { (IReadOnlyList<object?>)[result.Value.CoreCapital, result.Value.RegulatoryCapital, result.Value.SupplementaryCapital, result.Value.CapitalDate, result.Value.ValidTill] };
         var bytes = RegistryExcelExporter.Create(
             "Kapital",
-            ["Osnovni kapital", "Regulatorni kapital", "Dopunski kapital", "Datum kapitala"],
+            ["Osnovni kapital", "Regulatorni kapital", "Dopunski kapital", "Vrijedi od", "Vrijedi do"],
             rows);
         return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"kapital-{DateTime.UtcNow:yyyyMMdd-HHmm}.xlsx");
     }
@@ -69,6 +68,11 @@ public class CapitalController(ICapitalService capitalService, IAuditService aud
         var result = await _capitalService.Upsert(dto, korisnik);
         return HandleResult(result);
     }
+
+    [HttpPost]
+    [Authorize(Policy = ApplicationPolicies.CapitalEdit)]
+    public async Task<ActionResult<CapitalDTO>> Create([FromBody] UpdateCapitalDTO dto) =>
+        HandleResult(await _capitalService.Upsert(dto, GetKorisnik(), create: true));
 
     // ─── Helper ─────────────────────────────────────────────────────────────
 

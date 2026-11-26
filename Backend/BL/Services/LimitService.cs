@@ -43,11 +43,11 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
 
         IQueryable<LimitJoinRow> ordered = query.OrderBy(x => x.Entity.Name).ThenBy(x => x.Limit.Id);
         if (maximum.HasValue) ordered = ordered.Take(maximum.Value + 1);
-        var items = await ordered.Select(x => ToResponseDto(x.Limit, x.Entity)).ToListAsync(ct);
+        var items = await ordered.Select(x => ToResponseDto(x.Limit, x.Entity, x.Capital)).ToListAsync(ct);
         if (maximum.HasValue && items.Count > maximum.Value)
             return Result<List<LimitResponseDTO>>.ValidationError(BackendMessages.Message("errors.workbook.export.limit"));
         foreach (var item in items)
-            ApplyCapital(item, capital);
+            if (item.CapitalId is null || DateTime.UtcNow.Date != asOf.Date) ApplyCapital(item, capital);
 
         return Result<List<LimitResponseDTO>>.Success(items);
     }
@@ -64,8 +64,8 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
         }
         var total = await query.CountAsync(ct);
         var items = await query.OrderBy(row => row.Entity.Name).ThenBy(row => row.Limit.Id).Skip((page - 1) * pageSize).Take(pageSize)
-            .Select(row => ToResponseDto(row.Limit, row.Entity)).ToListAsync(ct);
-        var capital = await GetGlobalCapitalAsync(asOf, ct); foreach (var item in items) ApplyCapital(item, capital);
+            .Select(row => ToResponseDto(row.Limit, row.Entity, row.Capital)).ToListAsync(ct);
+        var capital = await GetGlobalCapitalAsync(asOf, ct); foreach (var item in items) if (asOf.HasValue || item.CapitalId is null) ApplyCapital(item, capital);
         return new(items, total, page, pageSize);
     }
 
@@ -77,13 +77,13 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
 
         var item = await BaseQuery()
             .Where(x => x.Limit.Id == id)
-            .Select(x => ToResponseDto(x.Limit, x.Entity))
+            .Select(x => ToResponseDto(x.Limit, x.Entity, x.Capital))
             .FirstOrDefaultAsync();
 
         if (item is null)
             return Result<LimitResponseDTO>.NotFoundError(BackendMessages.Message("validation.limits.id.missing", id));
 
-        ApplyCapital(item, await GetGlobalCapitalAsync());
+        if (item.CapitalId is null) ApplyCapital(item, await GetGlobalCapitalAsync());
 
         return Result<LimitResponseDTO>.Success(item);
     }
@@ -134,6 +134,7 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
 
         var before = Snapshot(entitet);
         entitet.LegalEntityId = dto.LegalEntityId;
+        entitet.CapitalId ??= (await GetGlobalCapitalAsync())?.Id;
         entitet.TipLimita = dto.TipLimita.Trim().ToUpper();
         entitet.OdobreniLimit = dto.OdobreniLimit;
         entitet.MaksimalnaOcekivanaUtilizacija = dto.MaksimalnaOcekivanaUtilizacija;
@@ -242,7 +243,7 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
         throw new RBBH.ConnectedParties.Exceptions.ValidationException(field, "Unesite ispravan iznos bez separatora hiljada.");
     }
 
-    private static object Snapshot(Limit row) => new { row.LegalEntityId, row.TipLimita, row.OdobreniLimit, row.MaksimalnaOcekivanaUtilizacija, row.RokOcekivaneUtilizacije, row.Komentar };
+    private static object Snapshot(Limit row) => new { row.CapitalId, row.LegalEntityId, row.TipLimita, row.OdobreniLimit, row.MaksimalnaOcekivanaUtilizacija, row.RokOcekivaneUtilizacije, row.Komentar };
     private static string? ValidateFields(string? type, decimal? approved, decimal? utilization, string? comment)
     {
         const decimal maximum = 9_999_999_999_999_999.99m;
@@ -294,6 +295,8 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
                         throw new Exceptions.BusinessRuleException(409, "request.concurrent_change", BackendMessages.Message("validation.limits.import.existing"));
                 }
 
+                var capital = await GetGlobalCapitalAsync(ct: ct);
+                foreach (var row in rows) row.CapitalId = capital?.Id;
                 _dbContext.Limiti.AddRange(rows);
                 if (_dbContext.Database.IsRelational()) await _dbContext.SaveChangesAsync(ct);
                 var ids = rows.Select(row => row.Id).ToArray();
@@ -320,12 +323,13 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
     {
         public required Limit Limit { get; init; }
         public required LegalEntity Entity { get; init; }
+        public DL.Entities.Report.Capital? Capital { get; init; }
     }
 
     private IQueryable<LimitJoinRow> BaseQuery() =>
         from limit in _dbContext.Limiti.AsNoTracking()
         join entity in _dbContext.LegalEntities.AsNoTracking() on limit.LegalEntityId equals entity.Id
-        select new LimitJoinRow { Limit = limit, Entity = entity };
+        select new LimitJoinRow { Limit = limit, Entity = entity, Capital = limit.Capital };
 
     /// <summary>Kapital je jedan globalni zapis — čita se odvojeno i primjenjuje na svaki Limit red.</summary>
     private Task<DL.DTO.Report.CapitalDTO?> GetGlobalCapitalAsync(DateTime? asOf = null, CancellationToken ct = default) =>
@@ -338,10 +342,14 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
         dto.DatumKapitala = capital?.CapitalDate;
     }
 
-    private static LimitResponseDTO ToResponseDto(Limit limit, LegalEntity entity) => new()
+    private static LimitResponseDTO ToResponseDto(Limit limit, LegalEntity entity, DL.Entities.Report.Capital? capital) => new()
     {
         Id = limit.Id,
+        CapitalId = limit.CapitalId,
         LegalEntityId = limit.LegalEntityId,
+        RegulatorniKapital = capital?.RegulatoryCapital,
+        OsnovniKapital = capital?.CoreCapital,
+        DatumKapitala = capital?.CapitalDate,
         Naziv = entity.Name,
         IsResident = entity.IsResident,
         FbaId = entity.FbaId,

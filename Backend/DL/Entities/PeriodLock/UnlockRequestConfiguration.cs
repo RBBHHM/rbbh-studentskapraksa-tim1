@@ -9,7 +9,7 @@ public class UnlockRequestConfiguration : IEntityTypeConfiguration<UnlockRequest
     {
         builder.HasKey(e => e.Id);
         builder.HasIndex(e => e.RequestedBySubject);
-        builder.HasIndex(e => e.ParentRequestId).IsUnique().HasFilter("[ParentRequestId] IS NOT NULL");
+        builder.HasIndex(e => e.ParentRequestId).IsUnique().HasFilter("[PARENT_REQUEST_ID] IS NOT NULL");
 
         // Pretraga po statusu i periodu
         builder.HasIndex(e => e.Status);
