@@ -578,3 +578,35 @@ h1[tabindex="-1"]:focus, h1:focus-visible { outline: none; }
 @media (forced-colors: active) {
     .role-request-dialog textarea.role-request-note:focus-visible { outline: 2px solid Highlight; }
 }
+
+.capital-current {
+    background: var(--surface-brand-subtle);
+    border: 1px solid var(--border-subtle);
+    border-inline-start: .25rem solid var(--border-brand);
+    border-radius: .75rem;
+    padding: .75rem 1rem 1rem;
+}
+.capital-current .capital-section { margin-block-start: 0; }
+.capital-asof__controls { display: grid; grid-template-columns: minmax(0, 10.5rem) minmax(0, 1fr); }
+.capital-asof__controls input { width: 100%; min-width: 0; }
+.capital-asof__result { margin: 0; }
+@media (max-width: 420px) {
+    .capital-asof__controls { grid-template-columns: minmax(0, 1fr); }
+    .capital-asof__controls input { max-width: 10.5rem; }
+}
+
+.codes-cards { grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr)); gap: .75rem; }
+.codes-card { min-height: 3.75rem; border-color: var(--border-subtle); }
+.codebook-detail { margin-block-end: 1rem; }
+.codebook-detail__actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.codebook-detail__delete { margin-inline-start: auto; }
+.codebook-detail__meta { display: flex; flex-wrap: wrap; justify-content: center; gap: .75rem 1.5rem; margin-block-start: .75rem; font-size: var(--font-size-sm); color: var(--text-secondary); }
+.registry-codes-table { min-width: 37rem; table-layout: fixed; }
+.registry-codes-table th, .registry-codes-table td,
+.registry-codes-table td:not(:nth-child(3)) { white-space: normal; overflow-wrap: anywhere; vertical-align: top; }
+.registry-codes-table:has(th:nth-child(7)) { min-width: 67rem; }
+.codebook-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr)); gap: .75rem; margin: 0; }
+.codebook-column { border: 1px solid var(--border-subtle); border-radius: .5rem; padding: .75rem; overflow-wrap: anywhere; }
+.codebook-column dt { display: flex; gap: .5rem; align-items: baseline; justify-content: space-between; }
+.codebook-column dd { margin: .35rem 0 0; color: var(--text-secondary); }
+.codebook-csv-errors { max-height: 38vh; overflow: auto; padding-inline-start: 1.25rem; }

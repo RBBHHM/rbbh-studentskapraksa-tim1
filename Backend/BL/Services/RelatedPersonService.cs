@@ -105,7 +105,7 @@ public class RelatedPersonService(
         if (basisCodes.Length > 0)
         {
             var descriptions = await _dbContext.CodeLists.AsNoTracking()
-                .Where(row => row.Kategorija == "OsnovPosebnogOdnosa" &&
+                .Where(row => row.Kategorija == "OSNOV_POSEBNOG_ODNOSA" &&
                     basisCodes.Contains(row.Kod))
                 .Select(row => new { row.Kod, row.Naziv, row.Opis }).ToListAsync(ct);
             var lookup = descriptions.GroupBy(row => row.Kod, StringComparer.OrdinalIgnoreCase)
@@ -230,9 +230,9 @@ public class RelatedPersonService(
         if (validationError is not null)
             return Result<RelatedPersonResponseDTO>.ValidationError(validationError);
 
-        var choices = await Helpers.CodebookChoices.Load(_dbContext, actor?.HttpContext?.RequestAborted ?? default, "OsnovPovezanosti", "OsnovPosebnogOdnosa");
-        choices.Check("OsnovPovezanosti", dto.RelationBasis, "relationBasis");
-        choices.Check("OsnovPosebnogOdnosa", dto.SpecialRelationBasis, "specialRelationBasis");
+        var choices = await Helpers.CodebookChoices.Load(_dbContext, actor?.HttpContext?.RequestAborted ?? default, "OSNOV_POVEZANOSTI", "OSNOV_POSEBNOG_ODNOSA");
+        choices.Check("OSNOV_POVEZANOSTI", dto.RelationBasis, "relationBasis");
+        choices.Check("OSNOV_POSEBNOG_ODNOSA", dto.SpecialRelationBasis, "specialRelationBasis");
         var duplicate = await CheckDuplicateIdentity(dto.JMBG, dto.PassportNumber, dto.FBAId);
         if (duplicate.Exists)
             return Result<RelatedPersonResponseDTO>.ValidationError(duplicate.Message!);
@@ -274,9 +274,9 @@ public class RelatedPersonService(
         if (validationError is not null)
             return Result<RelatedPersonResponseDTO>.ValidationError(validationError);
 
-        var choices = await Helpers.CodebookChoices.Load(_dbContext, actor?.HttpContext?.RequestAborted ?? default, "OsnovPovezanosti", "OsnovPosebnogOdnosa");
-        choices.Check("OsnovPovezanosti", dto.RelationBasis, "relationBasis");
-        choices.Check("OsnovPosebnogOdnosa", dto.SpecialRelationBasis, "specialRelationBasis");
+        var choices = await Helpers.CodebookChoices.Load(_dbContext, actor?.HttpContext?.RequestAborted ?? default, "OSNOV_POVEZANOSTI", "OSNOV_POSEBNOG_ODNOSA");
+        choices.Check("OSNOV_POVEZANOSTI", dto.RelationBasis, "relationBasis");
+        choices.Check("OSNOV_POSEBNOG_ODNOSA", dto.SpecialRelationBasis, "specialRelationBasis");
         var duplicate = await CheckDuplicateIdentity(dto.JMBG, dto.PassportNumber, dto.FBAId, id);
         if (duplicate.Exists)
             return Result<RelatedPersonResponseDTO>.ValidationError(duplicate.Message!);
@@ -629,7 +629,7 @@ public class RelatedPersonService(
             result.Errors.AddRange(schemaErrors);
             return result;
         }
-        var choices = await Helpers.CodebookChoices.Load(_dbContext, actor?.HttpContext?.RequestAborted ?? default, "OsnovPovezanosti", "OsnovPosebnogOdnosa");
+        var choices = await Helpers.CodebookChoices.Load(_dbContext, actor?.HttpContext?.RequestAborted ?? default, "OSNOV_POVEZANOSTI", "OSNOV_POSEBNOG_ODNOSA");
         var existing = await _dbContext.RelatedPersons.AsNoTracking().Select(person => new { person.Id, person.JMBG, person.PassportNumber, person.FBAId }).ToListAsync(actor?.HttpContext?.RequestAborted ?? default);
         var usedJmbgs = existing.Where(person => person.JMBG != null).Select(person => person.JMBG!).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var usedPassports = existing.Where(person => person.PassportNumber != null).Select(person => person.PassportNumber!).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -716,8 +716,8 @@ public class RelatedPersonService(
                     }
                 }
                 ImmediateFamilyPolicy.Apply(dto);
-                choices.Check("OsnovPovezanosti", dto.RelationBasis, "relationBasis");
-                choices.Check("OsnovPosebnogOdnosa", dto.SpecialRelationBasis, "specialRelationBasis");
+                choices.Check("OSNOV_POVEZANOSTI", dto.RelationBasis, "relationBasis");
+                choices.Check("OSNOV_POSEBNOG_ODNOSA", dto.SpecialRelationBasis, "specialRelationBasis");
                 var validationError = RelatedPersonValidator.Validate(dto);
                 if (validationError is not null) throw new RBBH.ConnectedParties.Exceptions.ValidationException(validationError);
                 if (!string.IsNullOrWhiteSpace(dto.JMBG) && usedJmbgs.Contains(dto.JMBG))

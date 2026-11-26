@@ -1,8 +1,8 @@
+import { readFile } from "node:fs/promises";
 import { expect, test, type Page, type Locator } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { interactive, chooseLanguage } from "./readiness";
 const headers = { "X-Fixture-Control": "true" };
-const fixtures = "../../artifacts/migration-browser-fixtures/";
 async function openCategory(page: Page, category: string) { await page.getByRole("button", { name: category, exact: true }).click(); await expect(page.locator("caption, .registry-category").first()).toBeVisible(); await expect(page.locator("#code-file")).toBeEnabled(); }
 async function openFirst(page: Page) { await page.locator(".codes-card").first().click(); await expect(page.getByRole("button", { name: "Svi šifrarnici", exact: true })).toBeVisible(); }
 async function visit(page: Page, category?: string) { await page.goto("/app/admin/code-lists"); await interactive(page); if (category) await openCategory(page, category); }
@@ -40,13 +40,13 @@ test("create definition, value, immutable code edit and soft-delete preserve act
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).toHaveCount(0); await expect(row).toContainText("Edited value");
   await row.getByRole("button", { name: "Obriši vrijednost", exact: true }).click(); await page.getByRole("alertdialog").getByRole("button", { name: "Odustani", exact: true }).click(); await expect(row).toContainText("Aktivan");
   await row.getByRole("button", { name: "Obriši vrijednost", exact: true }).click(); await page.getByRole("alertdialog").getByRole("button", { name: "Obriši", exact: true }).click(); await expect(row).toContainText("Neaktivan");
-  await page.reload(); await interactive(page); await openCategory(page, "NativeCodes"); await expect(row).toContainText("Neaktivan");
+  await page.reload(); await interactive(page); await openCategory(page, "NATIVE_CODES"); await expect(row).toContainText("Neaktivan");
   const state = await (await request.get("/__fixtures/codes-state", { headers })).json();
-  expect(state.values.find((item: any) => item.kod === "CODE_1")).toMatchObject({ kategorija: "NativeCodes", naziv: "Edited value", aktivan: false, izmijenioKorisnik: "admin@fixture.test" });
+  expect(state.values.find((item: any) => item.kod === "CODE_1")).toMatchObject({ kategorija: "NATIVE_CODES", naziv: "Edited value", aktivan: false, izmijenioKorisnik: "admin@fixture.test" });
   expect(state.audit.map((item: any) => item.action)).toEqual(["CODELIST_ADD", "CODELIST_ADD", "CODELIST_UPDATE", "CODELIST_DELETE"]); expect(state.audit.every((item: any) => item.username === "admin@fixture.test")).toBe(true);
 });
 test("changed reference value immediately reaches the actual business form dropdown", async ({ page }) => {
-  await visit(page, "OsnovPovezanosti"); await page.getByRole("button", { name: "Uredi vrijednost", exact: true }).click(); const dialog = page.getByRole("dialog");
+  await visit(page, "OSNOV_POVEZANOSTI"); await page.getByRole("button", { name: "Uredi vrijednost", exact: true }).click(); const dialog = page.getByRole("dialog");
   await dialog.getByRole("textbox", { name: /^Naziv/ }).fill("Updated relationship basis"); await dialog.getByRole("textbox", { name: "Opis", exact: true }).fill("Updated reference description");
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).toHaveCount(0);
   await page.goto("/app/legal-persons"); await interactive(page); await page.getByRole("button", { name: "Novi zapis", exact: true }).click();
@@ -55,7 +55,7 @@ test("changed reference value immediately reaches the actual business form dropd
   await expect(business.getByLabel("Opis povezanosti", { exact: false })).toHaveValue("Updated reference description");
 });
 test("validation blocks requests and duplicate code remains an authoritative backend rejection", async ({ page, request }) => {
-  await visit(page, "OsnovPovezanosti"); await page.getByRole("button", { name: "Nova vrijednost", exact: true }).click(); let dialog = page.getByRole("dialog");
+  await visit(page, "OSNOV_POVEZANOSTI"); await page.getByRole("button", { name: "Nova vrijednost", exact: true }).click(); let dialog = page.getByRole("dialog");
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog.getByText("Naziv je obavezan").first()).toBeVisible();
   expect((await (await request.get("/__fixtures/counts", { headers })).json()).mutations).toBe(0);
   await dialog.getByRole("textbox", { name: /^Naziv/ }).fill("Duplicate attempt"); await dialog.getByRole("textbox", { name: /^Kod/ }).fill("ZOB-2-V-5");
@@ -65,7 +65,7 @@ test("validation blocks requests and duplicate code remains an authoritative bac
   expect((await (await request.get("/__fixtures/codes-state", { headers })).json()).audit).toEqual([]);
 });
 test("referenced value and entire category deletion are rejected with no data/audit change", async ({ page, request }) => {
-  await request.post("/__fixtures/legal-existing", { headers }); await visit(page, "OsnovPovezanosti");
+  await request.post("/__fixtures/legal-existing", { headers }); await visit(page, "OSNOV_POVEZANOSTI");
   const before = await (await request.get("/__fixtures/codes-state", { headers })).json();
   await page.getByRole("button", { name: "Obriši vrijednost", exact: true }).click(); await page.getByRole("alertdialog").getByRole("button", { name: "Obriši", exact: true }).click();
   await expect(page.getByText(/Brisanje je odbijeno:/)).toBeVisible(); await page.getByRole("button", { name: "Pokušaj ponovo", exact: true }).click();
@@ -79,27 +79,49 @@ test("category soft-delete keeps inactive administrative history instead of pret
   const state = await (await request.get("/__fixtures/codes-state", { headers })).json(); expect(state.definitions).toEqual([{ name: "MigrationCodes", description: "Fixture purpose", isActive: false }]);
   expect(state.values.filter((item: any) => item.kategorija === "MigrationCodes").every((item: any) => !item.aktivan)).toBe(true); expect(state.audit.map((item: any) => item.action)).toEqual(["CODELIST_DELETE"]);
 });
-test("real XLSX preview does not persist; confirmed valid-row import preserves duplicate/error/code-collision behavior", async ({ page, request }) => {
-  await request.post("/__fixtures/codes-reference", { headers }); await visit(page, "MigrationCodes");
-  const before = await (await request.get("/__fixtures/codes-state", { headers })).json(); await page.locator("#code-file").setInputFiles(fixtures + "code-values.xlsx"); let dialog = page.getByRole("dialog"); await settled(dialog);
-  await expect(dialog.getByText("Provjereno je 4 redova: 2 spremno za uvoz, 1 postojećih vrijednosti koje će biti preskočene.", { exact: true })).toBeVisible();
-  await expect(dialog.getByText("Red 5: naziv smije imati najviše 200 znakova.", { exact: true })).toBeVisible(); await expect(dialog.getByText("Redovi 3, 4: vrijednost 'New imported' je ponovljena u datoteci.", { exact: true })).toBeVisible();
-  expect(await (await request.get("/__fixtures/codes-state", { headers })).json()).toEqual(before);
-  expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
-  await dialog.getByRole("button", { name: "Odustani", exact: true }).click(); expect(await (await request.get("/__fixtures/codes-state", { headers })).json()).toEqual(before);
-  await page.locator("#code-file").setInputFiles(fixtures + "code-values.xlsx"); dialog = page.getByRole("dialog"); await expect(dialog.getByRole("button", { name: "Uvezi ispravne redove", exact: true })).toBeEnabled();
-  await dialog.getByRole("button", { name: "Uvezi ispravne redove", exact: true }).click(); await expect(dialog).toHaveCount(0); await expect(page.getByText("Uvezeno: 1 od 2 kandidata; postojećih: 1; upozorenja: 3. Provjerite osvježenu listu.", { exact: true })).toBeVisible();
-  const state = await (await request.get("/__fixtures/codes-state", { headers })).json(); expect(state.values).toHaveLength(before.values.length + 1);
-  expect(state.values.find((item: any) => item.kod === "NEW_IMPORTED")).toMatchObject({ naziv: "New imported", aktivan: true });
-  expect(state.values.filter((item: any) => item.kod === "A_B")).toHaveLength(1); expect(state.audit.map((item: any) => item.action)).toEqual(["IMPORT"]); expect(JSON.parse(state.audit[0].newValues)).toMatchObject({ imported: 1, failed: 3 }); expect(state.audit[0].recordId).toBe("MigrationCodes");
+test("CSV template, preview and confirmation use the selected codebook", async ({ page, request }) => {
+  await request.post("/__fixtures/codes-reference", { headers });
+  await visit(page, "MigrationCodes");
+  const pending = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Preuzmi CSV predložak", exact: true }).click();
+  const download = await pending;
+  expect(download.suggestedFilename()).toBe("codebook-template.csv");
+  const template = await readFile((await download.path())!, "utf8");
+  expect(template).toContain('"VALUE_KEY","NAME","DESCRIPTION","IS_ACTIVE"');
+  expect(template).toContain('"EXAMPLE_CODE"');
+
+  const state = async () => (await request.get("/__fixtures/codes-state", { headers })).json();
+  const before = await state();
+  await page.locator("#code-file").setInputFiles({
+    name: "valid.csv", mimeType: "text/csv",
+    buffer: Buffer.from(template + 'NOVI_KOD,"Novi unos, s opisom","Tekst",true\r\n'),
+  });
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByText("Primjer iz predloška je preskočen.", { exact: true })).toBeVisible();
+  await expect(dialog.getByText(/Spremno za uvoz: 1/)).toBeVisible();
+  expect(await state()).toEqual(before);
+  await dialog.getByRole("button", { name: "Uvezi vrijednosti", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole("row").filter({ hasText: "NOVI_KOD" })).toContainText("Novi unos, s opisom");
+  expect((await state()).audit.map((item: any) => item.action)).toEqual(["IMPORT"]);
 });
-test("invalid extension, corrupt workbook and invalid header remain safe and create no records", async ({ page, request }) => {
-  await visit(page); await openFirst(page); const before = await (await request.get("/__fixtures/codes-state", { headers })).json();
-  await page.locator("#code-file").setInputFiles({ name: "wrong.txt", mimeType: "text/plain", buffer: Buffer.from("private-marker") }); await expect(page.getByText("Odaberite nepraznu .xlsx datoteku do 10 MB.", { exact: true })).toBeVisible();
-  expect((await (await request.get("/__fixtures/counts", { headers })).json()).mutations).toBe(0);
-  await page.locator("#code-file").setInputFiles({ name: "bad.xlsx", mimeType: "application/octet-stream", buffer: Buffer.from("private-marker") }); await expect(page.getByText(/Datoteka nije prihvaćena/)).toBeVisible();
-  await page.locator("#code-file").setInputFiles(fixtures + "invalid-codes.xlsx"); await expect(page.getByText(/Datoteka nije prihvaćena/)).toBeVisible();
-  expect(await (await request.get("/__fixtures/codes-state", { headers })).json()).toEqual(before); await expect(page.getByRole("dialog")).toHaveCount(0); await expect(page.getByText(/private-marker/)).toHaveCount(0);
+test("invalid CSV shows a header or cell error and cannot write values", async ({ page, request }) => {
+  await request.post("/__fixtures/codes-reference", { headers });
+  await visit(page, "MigrationCodes");
+  const input = page.locator("#code-file");
+  const state = async () => (await request.get("/__fixtures/codes-state", { headers })).json();
+  const before = await state();
+  await input.setInputFiles({ name: "wrong.txt", mimeType: "text/plain", buffer: Buffer.from("wrong") });
+  await expect(page.getByText("Odaberite nepraznu .csv datoteku do 10 MB.", { exact: true })).toBeVisible();
+  await input.setInputFiles({ name: "header.csv", mimeType: "text/csv", buffer: Buffer.from("BAD\nfoo") });
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByText("Zaglavlje sadrži neočekivanu kolonu „BAD”.", { exact: true })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Uvezi vrijednosti", exact: true })).toBeDisabled();
+  await dialog.getByRole("button", { name: "Odustani", exact: true }).click();
+  await input.setInputFiles({ name: "cell.csv", mimeType: "text/csv", buffer: Buffer.from("VALUE_KEY,NAME,DESCRIPTION,IS_ACTIVE\nCODE,Label,Description,sometimes") });
+  await expect(dialog.getByText(/Red 2, kolona „IS_ACTIVE”/)).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Uvezi vrijednosti", exact: true })).toBeDisabled();
+  expect(await state()).toEqual(before);
 });
 test("outage recovers honestly without an invented empty list", async ({ page, request }) => {
   await request.post("/__fixtures/unavailable", { headers }); await visit(page); await expect(page.getByText("Servis trenutno nije dostupan. Pokušajte ponovo.", { exact: true }).first()).toBeVisible(); await expect(page.getByText(/Nema definisanih/)).toHaveCount(0); await expect(page.getByText(/private-fixture/)).toHaveCount(0);
@@ -114,13 +136,15 @@ test("375px editor, focus return and English resources remain usable", async ({ 
   await chooseLanguage(nav, "en");
   await expect(page.getByRole("heading", { name: "Code lists", exact: true })).toBeVisible(); await page.locator(".codes-card").first().click(); await page.getByRole("button", { name: "New value", exact: true }).click(); await expect(page.getByRole("dialog").getByRole("textbox", { name: /^Name/ })).toBeVisible();
 });
-test("category cards show who created the list, without changing the button's accessible name", async ({ page, request }) => {
+test("category cards show names and leave audit details inside the selected codebook", async ({ page, request }) => {
   await request.post("/__fixtures/codes-reference", { headers });
   await visit(page);
   const card = page.getByRole("button", { name: "MigrationCodes", exact: true });
   await expect(card).toBeVisible();
-  await expect(page.locator(".codes-card__meta").filter({ hasText: "Kreirao: fixture" }).first()).toBeVisible();
-  await expect(card).toHaveAccessibleDescription(/Kreirao: fixture/);
+  await expect(page.getByText("Nema definisanih šifrarnika.", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Kreirao: fixture", { exact: true })).toHaveCount(0);
+  await card.click();
+  await expect(page.getByText("Kreirao: fixture", { exact: true })).toBeVisible();
 });
 
 test("LANGUAGE_PACKS exposes translation fields and saves changes by resource key", async ({ page, request }) => {

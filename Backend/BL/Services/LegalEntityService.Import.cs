@@ -54,7 +54,7 @@ public partial class LegalEntityService
             result.Errors.AddRange(schemaErrors);
             return result;
         }
-        var choices = await Helpers.CodebookChoices.Load(_context, _actor?.HttpContext?.RequestAborted ?? default, "OsnovPovezanosti");
+        var choices = await Helpers.CodebookChoices.Load(_context, _actor?.HttpContext?.RequestAborted ?? default, "OSNOV_POVEZANOSTI");
         // Stream just the identifiers in one SQL query instead of materializing
         // two complete lists with two round-trips. Keep inactive rows included
         // so historical identifiers cannot be silently reused.
@@ -127,7 +127,7 @@ public partial class LegalEntityService
                     IsLargeExposure = isV2 ? ParseExposure(ExcelImportSchema.CellText(ws.Cell(row, 14))) : null
                 };
                 ValidateCreateDto(dto);
-                choices.Check("OsnovPovezanosti", dto.BasisOfConnection, "basisOfConnection");
+                choices.Check("OSNOV_POVEZANOSTI", dto.BasisOfConnection, "basisOfConnection");
                 var gcc = await ResolveGcc(dto.GccNumber);
                 if (dto.ConnectedWithBank is null)
                     throw new ValidationException(BackendMessages.Message("validation.registry.bank.relation.import"));

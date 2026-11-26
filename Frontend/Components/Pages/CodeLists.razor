@@ -7,6 +7,7 @@
 @inject ICodeListsApi Api
 @inject ILocalizationApi Localization
 @inject RuntimeResources Runtime
+@inject FileDelivery Files
 
 <PageTitle>@T["codes.title"]</PageTitle>
 <HeroBar Title="@T["codes.title"]" Description="@T["codes.subtitle"]">
@@ -17,7 +18,11 @@
             @if (_canWrite)
             {
                 <RbiButton Disabled="@(_busy || _refreshing)" OnClick="NewDefinition" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.Plus" />@T["codes.definition-create"]</RbiButton>
-                @if (_category.Length > 0 && !IsLanguagePack) { <label class="registry-file-button"><RbiIcon Name="RbiIconName.FileUp" /><span>@T["codes.import"]</span><InputFile @key="_fileKey" id="code-file" accept=".xlsx" OnChange="PreviewAsync" disabled="@(_busy || _refreshing)" /></label> }
+                @if (_category.Length > 0)
+                {
+                    <RbiButton Disabled="@(_busy || _refreshing)" OnClick="DownloadTemplateAsync" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.Download" />@T["codes.csv.template"]</RbiButton>
+                    <label class="registry-file-button"><RbiIcon Name="RbiIconName.FileUp" /><span>@T["codes.csv.import"]</span><InputFile @key="_fileKey" id="code-file" aria-label="@T["codes.csv.import"]" accept=".csv,text/csv" OnChange="PreviewAsync" disabled="@(_busy || _refreshing)" /></label>
+                }
                 <RbiButton Disabled="@(_busy || _refreshing || _category.Length == 0)" OnClick="NewValue"><RbiIcon Name="RbiIconName.Plus" />@T["codes.create"]</RbiButton>
             }
         }
@@ -42,26 +47,33 @@ else
                 <ul class="codes-cards" aria-label="@T["codes.title"]">
                     @foreach (var category in FilteredCategories)
                     {
-                        <li><button type="button" class="codes-card" disabled="@(_busy || _refreshing)" aria-describedby="@(Meta(category).Length > 0 ? MetaId(category) : null)" @onclick="() => OpenCategoryAsync(category)"><AppIcon Name="AppIconName.BookOpen" /><span class="codes-card__name">@category</span></button>@if (Meta(category) is { Length: > 0 } meta) { <p class="codes-card__meta" id="@MetaId(category)">@meta</p> }</li>
+                        <li><button type="button" class="codes-card" disabled="@(_busy || _refreshing)" @onclick="() => OpenCategoryAsync(category)"><AppIcon Name="AppIconName.BookOpen" /><span class="codes-card__name">@category</span></button></li>
                     }
                 </ul>
             }
         }
         else
         {
-            <div class="registry-category">
-                <RbiButton Disabled="@(_busy || _refreshing)" OnClick="BackToOverviewAsync" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.ArrowLeft" />@T["codes.all"]</RbiButton>
-                <RbiButton Disabled="@(_busy || _refreshing)" OnClick="OpenColumnsAsync" Variant="RbiButtonVariant.Secondary">@T["codes.column-structure"]</RbiButton>
-                @if (Meta(_category) is { Length: > 0 } openMeta) { <p class="codes-meta" role="status">@openMeta</p> }
-                @if (_canWrite)
+            <header class="codebook-detail">
+                <div class="codebook-detail__actions">
+                    <RbiButton Disabled="@(_busy || _refreshing)" OnClick="BackToOverviewAsync" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.ArrowLeft" />@T["codes.all"]</RbiButton>
+                    <RbiButton Disabled="@(_busy || _refreshing)" OnClick="OpenColumnsAsync" Variant="RbiButtonVariant.Secondary">@T["codes.column-structure"]</RbiButton>
+                    @if (_canWrite)
+                    {
+                        <div class="codebook-detail__delete"><RbiButton Disabled="@(_busy || _refreshing)" OnClick="() => _deleteCategory = _category" Variant="RbiButtonVariant.Destructive"><RbiIcon Name="RbiIconName.Trash2" />@T["codes.delete-category"]</RbiButton></div>
+                    }
+                </div>
+                @if (_definitions.TryGetValue(_category, out var definition))
                 {
-                    <RbiButton Disabled="@(_busy || _refreshing)" OnClick="() => _deleteCategory = _category" Variant="RbiButtonVariant.Destructive"><RbiIcon Name="RbiIconName.Trash2" />@T["codes.delete-category"]</RbiButton>
+                    <div class="codebook-detail__meta">
+                        @if (definition.CreatedBy is { Length: > 0 } created) { <span>@T.Format("codes.created-by", created)</span> }
+                        @if (definition.ModifiedBy is { Length: > 0 } modified) { <span>@T.Format("codes.modified-by", modified, definition.ModifiedAt is { } at ? AppFormat.Timestamp(at) : "—")</span> }
+                    </div>
                 }
-            </div>
+            </header>
         }
-        @if (_canWrite && _category.Length > 0) { <p class="registry-help app-visually-hidden">@T["codes.import-help"]</p> }
         @if (_refreshing) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
-        else if (_category.Length == 0) { <div class="registry-surface"><RegistryEmpty Body="@T["codes.no-categories"]" /></div> }
+        else if (_category.Length == 0) { }
         else if (_values.Count == 0 && _error is null) { <div class="registry-surface"><RegistryEmpty Body="@T["codes.empty"]" /></div> }
         else if (_error is null)
         {
@@ -76,6 +88,7 @@ else
                 {
                     <th scope="col">@T["codes.code"]</th><th scope="col">@T["codes.name"]</th><th scope="col">@T["codes.description"]</th>
                 }
+                @foreach (var column in _valueColumns) { <th scope="col">@column.Name</th> }
                 <th scope="col" class="registry-center">@T["codes.active"]</th>@if (_canWrite) { <th scope="col" class="registry-center registry-actions-cell">@T["users.actions"]</th> }</tr></thead>
                 <tbody>@foreach (var value in _values)
                 {
@@ -88,6 +101,7 @@ else
                         {
                             <td>@value.Code</td><td class="registry-strong">@value.Value</td><td>@(string.IsNullOrWhiteSpace(value.Description) ? "—" : value.Description)</td>
                         }
+                        @foreach (var column in _valueColumns) { <td>@SlotText(value, column.Slot)</td> }
                         <td class="registry-center"><Indicator Kind="@(value.IsActive ? "active" : "inactive")" Label="@T[value.IsActive ? "codes.active" : "codes.inactive"]" /></td>
                         @if (_canWrite) { <td class="registry-actions-cell"><div class="registry-row-actions"><RbiButton Disabled="@(_busy || _refreshing)" OnClick="() => Edit(value)" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["codes.edit"]" title="@T["codes.edit"]"><RbiIcon Name="RbiIconName.Pencil" /></RbiButton><RbiButton Disabled="@(_busy || _refreshing)" OnClick="() => _deleteValue = value" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["codes.delete-value"]" title="@T["codes.delete-value"]" Class="registry-danger-icon"><RbiIcon Name="RbiIconName.Trash2" /></RbiButton></div></td> }
                     </tr>
@@ -105,11 +119,14 @@ else
             else if (_columns.Count == 0) { <RbiText>@T["codes.no-column-structure"]</RbiText> }
             else
             {
-                <dl>
+                <dl class="codebook-columns">
                     @foreach (var column in _columns)
                     {
-                        <dt><strong>@column.Name</strong> <small>ID@(column.Slot)</small></dt>
-                        @if (column.Description is not null) { <dd>@column.Description</dd> }
+                        <div class="codebook-column">
+                            <dt><strong>@column.Name</strong> <small>ID@(column.Slot)</small></dt>
+                            <dd>@T[column.TypeKey]</dd>
+                            @if (column.Description is not null) { <dd>@column.Description</dd> }
+                        </div>
                     }
                 </dl>
             }
@@ -128,13 +145,20 @@ else
 }
 @if (_preview is { } preview)
 {
-    <RbiDialog Open Class="registry-codes-dialog registry-codes-confirm" Title="@T["codes.preview"]" CloseLabel="@T["common.close"]" Dismissible="false" OpenChanged="ClosePreview">
-        <DialogBody><p class="app-visually-hidden">@_pendingCategory — @_fileName</p><p class="registry-codes-confirm__summary">@T.Format("codes.preview-summary", preview.TotalRows, preview.ToImport.Count, preview.Duplicates.Count)</p>
-            @if (preview.ToImport.Count > 0) { <h2 class="app-visually-hidden">@T["codes.ready"]</h2><ul class="app-visually-hidden">@foreach (var value in preview.ToImport) { <li>@value</li> }</ul> }
-            @if (preview.Duplicates.Count > 0) { <h2 class="app-visually-hidden">@T["codes.duplicates"]</h2><ul class="app-visually-hidden">@foreach (var value in preview.Duplicates) { <li>@value</li> }</ul> }
-            @if (preview.Errors.Count > 0) { <h2 class="registry-codes-confirm__issues">@T["codes.issues"]</h2><ul class="registry-codes-confirm__errors">@foreach (var error in preview.Errors) { <li>@ImportError(error)</li> }</ul> }
-            <p class="app-visually-hidden">@T["codes.partial-help"]</p>
-            <div class="registry-toolbar"><RbiButton Disabled="_busy" OnClick="() => ClosePreview(false)" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton><RbiButton Disabled="@(_busy || preview.ToImport.Count == 0)" OnClick="ImportAsync">@T["codes.import-valid"]</RbiButton></div>
+    <RbiDialog Open Class="registry-codes-dialog codebook-csv-preview" Title="@T["codes.preview"]" CloseLabel="@T["common.close"]" OpenChanged="ClosePreview">
+        <DialogBody>
+            <p>@T.Format("codes.csv.summary", preview.TotalRows, preview.Ready, preview.Duplicates)</p>
+            @if (preview.ExampleSkipped) { <p class="app-hint">@T["codes.csv.example-skipped"]</p> }
+            @if (preview.Errors.Count > 0)
+            {
+                <ul class="codebook-csv-errors" aria-label="@T["codes.issues"]">
+                    @foreach (var error in preview.Errors) { <li>@FormatIssue(error)</li> }
+                </ul>
+            }
+            <div class="registry-toolbar">
+                <RbiButton Disabled="_busy" OnClick="() => ClosePreview(false)" Variant="RbiButtonVariant.Secondary">@T["common.cancel"]</RbiButton>
+                <RbiButton Disabled="@(_busy || preview.Ready == 0 || preview.Errors.Count > 0)" OnClick="ImportAsync">@T["codes.csv.confirm"]</RbiButton>
+            </div>
         </DialogBody>
     </RbiDialog>
 }
@@ -145,20 +169,17 @@ else
     private bool _disposed, _authenticated, _canRead, _canWrite, _busy, _loading = true, _refreshing, _loaded;
     private IReadOnlyList<string> _categories = [];
     private Dictionary<string, CodeListMeta> _definitions = new(StringComparer.OrdinalIgnoreCase);
-    private static string MetaId(string category) => "codes-meta-" + Convert.ToHexString(System.Text.Encoding.UTF8.GetBytes(category));
-    private string Meta(string category)
-    {
-        if (!_definitions.TryGetValue(category, out var definition)) return "";
-        var created = string.IsNullOrEmpty(definition.CreatedBy) ? "" : T.Format("codes.created-by", definition.CreatedBy);
-        var modified = string.IsNullOrEmpty(definition.ModifiedBy) ? "" : T.Format("codes.modified-by", definition.ModifiedBy, definition.ModifiedAt is { } at ? AppFormat.Timestamp(at) : "—");
-        return string.Join(" · ", new[] { created, modified }.Where(part => part.Length > 0));
-    }
     private IReadOnlyList<CodeValue> _values = [];
+    private IReadOnlyList<CodebookColumn> _valueColumns = [];
+    private static string SlotText(CodeValue row, int slot) =>
+        row.SlotValues?.GetValueOrDefault(slot) is { } value && value.ValueKind != System.Text.Json.JsonValueKind.Null
+            ? slot is 9 or 10 ? value.ToString().Split('T')[0] : value.ToString()
+            : "—";
     private string _category = "", _pendingCategory = "", _fileName = "";
     private string? _error, _notice, _toastError, _deleteCategory;
     private CodeValue? _deleteValue;
     private CodeListDraft? _draft;
-    private CodeImportPreview? _preview;
+    private CodeCsvPreview? _preview;
     private byte[]? _fileBytes;
     private int _fileKey;
     protected override Task OnInitializedAsync() => LoadAsync();
@@ -178,7 +199,9 @@ else
             try { _definitions = (await Api.DefinitionsAsync(_token)).Items.ToDictionary(item => item.Name, StringComparer.OrdinalIgnoreCase); }
             catch (RegistryApiException) { _definitions = new(StringComparer.OrdinalIgnoreCase); }
             if (!_categories.Contains(_category)) _category = "";
-            _values = _category.Length == 0 ? [] : (await Api.ValuesAsync(_category, _token)).Items;
+            var values = _category.Length == 0 ? null : await Api.ValuesAsync(_category, _token);
+            _values = values?.Items ?? [];
+            _valueColumns = values?.Columns ?? [];
             _loaded = true;
         }
         catch (RegistryApiException exception) { _error = exception.MessageKey; }
@@ -213,7 +236,7 @@ else
         if (_busy) return; _busy = true;
         try
         {
-            if (draft.Definition) { await Api.CreateCategoryAsync(draft.Name.Trim(), draft.NullDescription, _token); _category = draft.Name.Trim(); }
+            if (draft.Definition) { await Api.CreateCategoryAsync(draft.DefinitionName, draft.NullDescription, _token); _category = draft.DefinitionName; }
             else if (draft.IsLanguagePack)
             {
                 draft.SaveError = await Localization.SaveAsync(draft.LanguageCode.Trim(), draft.ResourceKey.Trim(),
@@ -250,37 +273,45 @@ else
         try
         {
             var file = args.File;
-            if (file.Size is <= 0 or > 10 * 1024 * 1024 || !file.Name.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase)) { _toastError = "codes.file-invalid"; return; }
+            if (file.Size is <= 0 or > 10 * 1024 * 1024 || !file.Name.EndsWith(".csv", StringComparison.OrdinalIgnoreCase)) { _toastError = "codes.csv.file"; return; }
             _pendingCategory = _category; _fileName = Path.GetFileName(file.Name);
             await using var stream = file.OpenReadStream(10 * 1024 * 1024, _token); using var buffer = new MemoryStream();
             await stream.CopyToAsync(buffer, _token); _fileBytes = buffer.ToArray();
-            _preview = await Api.ImportAsync(_pendingCategory, new MemoryStream(_fileBytes, writable: false), _fileName, true, _token);
+            _preview = await Api.ImportCsvAsync(_pendingCategory, new MemoryStream(_fileBytes, writable: false), _fileName, true, _token);
         }
-        catch (RegistryApiException exception) { if ((int?)exception.StatusCode == 400) _toastError = "codes.workbook-invalid"; else _error = exception.MessageKey; _fileBytes = null; }
-        catch (IOException) { _toastError = "codes.file-invalid"; _fileBytes = null; }
+        catch (RegistryApiException exception) { if ((int?)exception.StatusCode is 400 or 413 or 415) _toastError = "codes.csv.file"; else _error = exception.MessageKey; _fileBytes = null; }
+        catch (IOException) { _toastError = "codes.csv.file"; _fileBytes = null; }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         finally { _fileKey++; _busy = false; }
     }
     private void ClosePreview(bool open) { if (!open && !_busy) { _preview = null; _fileBytes = null; } }
     private async Task ImportAsync()
     {
-        if (!_canWrite || _busy || _fileBytes is null || _preview is not { ToImport.Count: > 0 }) return; _busy = true;
+        if (!_canWrite || _busy || _fileBytes is null || _preview is not { Ready: > 0, Errors.Count: 0 }) return; _busy = true;
         try
         {
-            var result = await Api.ImportAsync(_pendingCategory, new MemoryStream(_fileBytes, writable: false), _fileName, false, _token);
-            _notice = T.Format("codes.import-result", result.Imported, result.ToImport.Count, result.Duplicates.Count, result.Errors.Count);
+            var result = await Api.ImportCsvAsync(_pendingCategory, new MemoryStream(_fileBytes, writable: false), _fileName, false, _token);
+            if (result.Errors.Count > 0) { _preview = result; return; }
+            _notice = T.Format("codes.csv.done", result.Imported, result.Duplicates);
+            _preview = null;
+            _fileBytes = null;
+            if (IsLanguagePack || _category == "LANGUAGES") await Runtime.EnsureAsync(_token, force: true);
             await LoadAsync();
         }
         catch (RegistryApiException exception) { _error = MutationError(exception); }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
-        finally { _preview = null; _fileBytes = null; _busy = false; }
+        finally { _busy = false; }
     }
-    private string ImportError(string error)
+    private string FormatIssue(CodeCsvIssue issue) => T.Format(issue.Key, issue.Arguments.Cast<object?>().ToArray());
+    private async Task DownloadTemplateAsync()
     {
-        var length = System.Text.RegularExpressions.Regex.Match(error, @"^Red (\d+): naziv smije imati najviše 200 znakova\.$");
-        if (length.Success) return T.Format("codes.row-length", length.Groups[1].Value);
-        var duplicate = System.Text.RegularExpressions.Regex.Match(error, @"^Redovi ([\d, ]+): vrijednost '(.*)' je ponovljena u datoteci\.$");
-        return duplicate.Success ? T.Format("codes.row-duplicate", duplicate.Groups[1].Value, duplicate.Groups[2].Value) : T["codes.row-invalid"];
+        if (_busy || _category.Length == 0) return;
+        _busy = true;
+        _toastError = null;
+        try { await Files.DownloadAsync(await Api.CsvTemplateAsync(_category, _token), _token); }
+        catch (RegistryApiException exception) { _toastError = (int?)exception.StatusCode == 409 ? "codes.csv.schema" : exception.MessageKey; }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally { _busy = false; }
     }
     private static string MutationError(RegistryApiException exception) => exception.StatusCode is null || (int)exception.StatusCode >= 500 ? "period.uncertain" : exception.MessageKey;
     public void Dispose() { _disposed = true; _lifetime.Cancel(); _lifetime.Dispose(); _fileBytes = null; }

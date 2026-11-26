@@ -46,9 +46,9 @@ namespace UnitTests.Mocks.DB.Limiti
             _dbContext.LegalEntities.AddRange(legalEntity1, legalEntity2);
 
             _dbContext.CodeLists.AddRange(
-                new CodeList { Kategorija = "VrstaLimita", Kod = ValidTipLimita, Naziv = "MM", Aktivan = true, KreiraoKorisnik = "test.user" },
-                new CodeList { Kategorija = "VrstaLimita", Kod = ValidTipLimita2, Naziv = "SATA FX spot", Aktivan = true, KreiraoKorisnik = "test.user" },
-                new CodeList { Kategorija = "VrstaLimita", Kod = InactiveTipLimita, Naziv = "Neaktivan tip", Aktivan = false, KreiraoKorisnik = "test.user" });
+                new CodeList { Kategorija = "VRSTE_LIMITA", Kod = ValidTipLimita, Naziv = "MM", Aktivan = true, KreiraoKorisnik = "test.user" },
+                new CodeList { Kategorija = "VRSTE_LIMITA", Kod = ValidTipLimita2, Naziv = "SATA FX spot", Aktivan = true, KreiraoKorisnik = "test.user" },
+                new CodeList { Kategorija = "VRSTE_LIMITA", Kod = InactiveTipLimita, Naziv = "Neaktivan tip", Aktivan = false, KreiraoKorisnik = "test.user" });
 
             _dbContext.SaveChanges();
 

@@ -17,7 +17,7 @@ namespace IntegrationTests.Tests
     [Collection(DatabaseCollection.Name)]
     public class CodeListEndpointsIntegrationTests
     {
-        private const string Kategorija = "VrstaLimita";
+        private const string Kategorija = "VRSTE_LIMITA";
         private readonly DatabaseFixture _fixture;
 
         public CodeListEndpointsIntegrationTests(DatabaseFixture fixture) => _fixture = fixture;

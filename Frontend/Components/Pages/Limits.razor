@@ -135,7 +135,7 @@ else
         try
         {
             if (record is not null) record = await Api.GetAsync(record.Id, _token);
-            _types = await References.OptionsAsync("VrstaLimita", _token);
+            _types = await References.OptionsAsync("VRSTE_LIMITA", _token);
             _editingId = record?.Id; _draft = record is null ? new() : LimitDraft.From(record);
         }
         catch (RegistryApiException exception) { _error = exception.MessageKey; }

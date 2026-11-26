@@ -84,10 +84,10 @@ public sealed class LegalEntityHttpValidationTests : IAsyncLifetime
     {
         await using var scope = _app.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
-        db.CodeListDefinitions.Add(new() { Name = "OsnovPovezanosti", CreatedBy = "fixture" });
+        db.CodeListDefinitions.Add(new() { Name = "OSNOV_POVEZANOSTI", CreatedBy = "fixture" });
         var basis = new RBBH.ConnectedParties.DL.Entities.Sifarnici.CodeList
         {
-            Kategorija = "OsnovPovezanosti", Kod = "ZOB-2-V-5", Naziv = "Fixture label",
+            Kategorija = "OSNOV_POVEZANOSTI", Kod = "ZOB-2-V-5", Naziv = "Fixture label",
             Opis = "Original codebook description", KreiraoKorisnik = "fixture"
         };
         db.CodeLists.Add(basis);

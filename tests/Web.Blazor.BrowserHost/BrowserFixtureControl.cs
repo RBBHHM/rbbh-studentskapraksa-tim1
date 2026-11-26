@@ -93,7 +93,7 @@ internal static partial class BrowserHostProgram
                         using var create = await client.PostAsJsonAsync("/api/code-lists", new { kategorija = "MigrationCodes", kod = "FORBIDDEN", naziv = "Forbidden" });
                         using var update = await client.PutAsJsonAsync("/api/code-lists/1", new { naziv = "Forbidden", aktivan = false });
                         using var delete = await client.DeleteAsync("/api/code-lists/1");
-                        using var deleteCategory = await client.DeleteAsync("/api/code-lists/categories/OsnovPovezanosti");
+                        using var deleteCategory = await client.DeleteAsync("/api/code-lists/categories/OSNOV_POVEZANOSTI");
                         using var form = new MultipartFormDataContent(); form.Add(new ByteArrayContent([1, 2, 3]), "file", "invalid.xlsx");
                         using var import = await client.PostAsync("/api/code-lists/MigrationCodes/import?dryRun=false", form);
                         await context.Response.WriteAsJsonAsync(new { read = (int)read.StatusCode, writes = new[] { (int)category.StatusCode, (int)create.StatusCode, (int)update.StatusCode, (int)delete.StatusCode, (int)deleteCategory.StatusCode, (int)import.StatusCode } }); return;
@@ -424,7 +424,7 @@ internal static partial class BrowserHostProgram
                             await using (var scope = backend.Services.CreateAsyncScope())
                             {
                                 var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
-                                db.CodeLists.Add(new CodeList { Kategorija = "VrstaLimita", Kod = "REG", Naziv = "Regulatorni / Regulatory", KreiraoKorisnik = "fixture" });
+                                db.CodeLists.Add(new CodeList { Kategorija = "VRSTE_LIMITA", Kod = "REG", Naziv = "Regulatorni / Regulatory", KreiraoKorisnik = "fixture" });
                                 db.Capitals.Add(new RBBH.ConnectedParties.DL.Entities.Report.Capital { RegulatoryCapital = 1234567.89m, CoreCapital = 765432.10m, CapitalDate = new(2026, 1, 1), CreatedBy = "fixture" });
                                 await db.SaveChangesAsync();
                             }
@@ -442,7 +442,7 @@ internal static partial class BrowserHostProgram
                             await using (var scope = backend.Services.CreateAsyncScope())
                             {
                                 var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
-                                foreach (var type in await db.CodeLists.AsTracking().Where(item => item.Kategorija == "VrstaLimita").ToListAsync()) type.Aktivan = false;
+                                foreach (var type in await db.CodeLists.AsTracking().Where(item => item.Kategorija == "VRSTE_LIMITA").ToListAsync()) type.Aktivan = false;
                                 await db.SaveChangesAsync();
                             }
                             break;

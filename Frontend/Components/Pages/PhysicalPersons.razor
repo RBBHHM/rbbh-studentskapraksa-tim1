@@ -183,8 +183,8 @@ else
             _bases = PhysicalPersonOptions.Bases(T); _special = PhysicalPersonOptions.Special(T); _fallback = false;
             try
             {
-                var bases = await Api.OptionsAsync("OsnovPovezanosti", _token);
-                var special = await Api.OptionsAsync("OsnovPosebnogOdnosa", _token);
+                var bases = await Api.OptionsAsync("OSNOV_POVEZANOSTI", _token);
+                var special = await Api.OptionsAsync("OSNOV_POSEBNOG_ODNOSA", _token);
                 if (bases.Count > 0) _bases = bases.Select(item => item with { Opis = item.Opis ?? _bases.FirstOrDefault(fallback => fallback.Kod == item.Kod)?.Opis }).ToArray(); else _fallback = true;
                 if (special.Count > 0) _special = special; else _fallback = true;
             }

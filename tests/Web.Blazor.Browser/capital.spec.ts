@@ -87,13 +87,10 @@ test("create and edit the active capital, then keep the previous capital in read
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
 
   const activeFrom = records[1].capitalDate.slice(0, 10);
-  const lookup = page.getByLabel("Datum", { exact: true });
-  const show = page.getByRole("button", { name: "Prikaži", exact: true });
+  const lookup = page.locator("#capital-asof-date");
   await lookup.fill(activeFrom);
-  await show.click();
   await expect(page.getByRole("status").filter({ hasText: `Na dan ${activeFrom}` })).toContainText("BAM 200.00");
   await lookup.fill("2100-01-01");
-  await show.click();
   await expect(page.getByText("Za datum 2100-01-01 nema evidentiranog kapitala.", { exact: true })).toBeVisible();
 });
 test("an expired end date is explained on the form without touching active capital", async ({ page, request }) => {

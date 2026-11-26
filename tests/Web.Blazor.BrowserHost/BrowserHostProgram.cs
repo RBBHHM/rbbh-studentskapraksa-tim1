@@ -162,9 +162,9 @@ internal static partial class BrowserHostProgram
         db.AppUsers.Add(dbUser);
         db.UserRoles.Add(new UserRole { UserId = dbUser.Id, RoleId = (await db.Roles.SingleAsync(item => item.Name == user.Role)).Id });
         db.CodeLists.AddRange(
-            new CodeList { Kategorija = "OsnovPovezanosti", Kod = "ZOB-2-V-5", Naziv = "Uprava / Management", Opis = "Fixture relationship description", KreiraoKorisnik = "fixture" },
-            new CodeList { Kategorija = "OsnovPosebnogOdnosa", Kod = "UPRAVA", Naziv = "Uprava / Management", KreiraoKorisnik = "fixture" },
-            new CodeList { Kategorija = "OsnovPosebnogOdnosa", Kod = "UZA_PORODICA", Naziv = "Uža porodica / Immediate family", KreiraoKorisnik = "fixture" });
+            new CodeList { Kategorija = "OSNOV_POVEZANOSTI", Kod = "ZOB-2-V-5", Naziv = "Uprava / Management", Opis = "Fixture relationship description", KreiraoKorisnik = "fixture" },
+            new CodeList { Kategorija = "OSNOV_POSEBNOG_ODNOSA", Kod = "UPRAVA", Naziv = "Uprava / Management", KreiraoKorisnik = "fixture" },
+            new CodeList { Kategorija = "OSNOV_POSEBNOG_ODNOSA", Kod = "UZA_PORODICA", Naziv = "Uža porodica / Immediate family", KreiraoKorisnik = "fixture" });
         if (user.Role == ApplicationAccessRoles.Guest)
             db.RelatedPersons.Add(new RBBH.ConnectedParties.DL.Entities.RelatedPersons.RelatedPerson
             {

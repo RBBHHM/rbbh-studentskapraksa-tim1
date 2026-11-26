@@ -39,7 +39,7 @@ public sealed class PhysicalImportValidationTests
         await using var db = InMemoryContextFactory.Create();
         db.CodeLists.Add(new CodeList
         {
-            Kategorija = "OsnovPosebnogOdnosa",
+            Kategorija = "OSNOV_POSEBNOG_ODNOSA",
             Kod = "UPRAVA",
             Naziv = "Mitglied des Vorstands",
             Opis = "Approved codebook explanation",

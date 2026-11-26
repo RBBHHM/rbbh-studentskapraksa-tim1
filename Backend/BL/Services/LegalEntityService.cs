@@ -97,8 +97,8 @@ public partial class LegalEntityService : ILegalEntityService
     public async Task<LegalEntityDTO> CreateAsync(CreateLegalEntityDTO dto, string createdBy)
     {
         ValidateCreateDto(dto);
-        (await Helpers.CodebookChoices.Load(_context, _actor?.HttpContext?.RequestAborted ?? default, "OsnovPovezanosti"))
-            .Check("OsnovPovezanosti", dto.BasisOfConnection, "basisOfConnection");
+        (await Helpers.CodebookChoices.Load(_context, _actor?.HttpContext?.RequestAborted ?? default, "OSNOV_POVEZANOSTI"))
+            .Check("OSNOV_POVEZANOSTI", dto.BasisOfConnection, "basisOfConnection");
         var gcc = await ResolveGcc(dto.GccNumber);
         await ValidateUniqueIdentifierAsync(dto.IsResident, dto.TaxNumber, dto.FbaId);
 
@@ -147,8 +147,8 @@ public partial class LegalEntityService : ILegalEntityService
             throw new ValidationException("id", BackendMessages.Message("validation.registry.legal.id.missing", id));
 
         ValidateUpdateDto(dto);
-        (await Helpers.CodebookChoices.Load(_context, _actor?.HttpContext?.RequestAborted ?? default, "OsnovPovezanosti"))
-            .Check("OsnovPovezanosti", dto.BasisOfConnection, "basisOfConnection");
+        (await Helpers.CodebookChoices.Load(_context, _actor?.HttpContext?.RequestAborted ?? default, "OSNOV_POVEZANOSTI"))
+            .Check("OSNOV_POVEZANOSTI", dto.BasisOfConnection, "basisOfConnection");
         // Omitted additive fields preserve previous source-backed values during rollout.
         var gcc = dto.GccNumber is null && entity.GccNumber is not null ? null : await ResolveGcc(dto.GccNumber);
         await ValidateUniqueIdentifierAsync(dto.IsResident, dto.TaxNumber, dto.FbaId, id);
@@ -430,7 +430,7 @@ public partial class LegalEntityService : ILegalEntityService
 
         // Exact codes win. An unambiguous legacy label remains readable, including archived codebook values.
         var options = await _context.CodeLists.IgnoreQueryFilters().AsNoTracking()
-            .Where(value => value.Kategorija.ToUpper() == "OSNOVPOVEZANOSTI")
+            .Where(value => value.Kategorija.ToUpper() == "OSNOV_POVEZANOSTI")
             .Select(value => new { value.Kod, value.Naziv, value.Opis }).ToListAsync(ct);
         var codes = options.ToDictionary(value => value.Kod.Trim(), StringComparer.OrdinalIgnoreCase);
         var legacyLabels = options.GroupBy(value => value.Naziv.Trim(), StringComparer.OrdinalIgnoreCase)

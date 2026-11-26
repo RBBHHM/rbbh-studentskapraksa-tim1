@@ -74,6 +74,7 @@ public sealed class PeriodLockCoverageTests
         ["PUT api/code-lists/{id}"] = (Open, "configuration data, not period data"),
         ["DELETE api/code-lists/{id}"] = (Open, "configuration data, not period data"),
         ["POST api/code-lists/{kategorija}/import"] = (Open, "configuration data, not period data"),
+        ["POST api/code-lists/{category}/csv-import"] = (Open, "configuration CSV data"),
     };
 
     private static readonly string[] MutatingVerbs = ["POST", "PUT", "DELETE", "PATCH"];

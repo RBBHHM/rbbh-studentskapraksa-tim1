@@ -1,4 +1,6 @@
 using ClosedXML.Excel;
+using RBBH.ConnectedParties.BL.Services;
+using Microsoft.Data.SqlClient;
 using RBBH.ConnectedParties.API.Controllers.BaseController;
 using RBBH.ConnectedParties.BL.ServiceInterfaces;
 using RBBH.ConnectedParties.DL.DTO.Sifarnici;
@@ -43,7 +45,7 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
     [Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
     public async Task<ActionResult<object>> CreateCategory([FromBody] CreateCodeListDefinitionDTO dto)
     {
-        var name = dto.Name?.Trim() ?? string.Empty;
+        var name = CodebookName.Canonical(dto.Name ?? "");
         if (name.Length < 2 || name.Length > 100 || dto.Description?.Length > 500)
             return BadRequest(new ProblemDetails { Title = BackendMessages.Message("errors.codelist.name.invalid.title"), Detail = BackendMessages.Message("errors.codelist.name.length") });
         if (await db.CodeListDefinitions.AnyAsync(item => item.Name.Trim().ToUpper() == name.ToUpper()) || await db.CodeLists.IgnoreQueryFilters().AnyAsync(item => item.Kategorija.Trim().ToUpper() == name.ToUpper()))
@@ -72,16 +74,40 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
     {
         var definition = await db.CodeListDefinitions.SingleOrDefaultAsync(row => row.Name == name, ct);
         if (definition is null) return NotFound();
-        var entry = db.Entry(definition);
-        var items = Enumerable.Range(1, 20).Select(slot => new
+        return Ok(new { items = CodebookCsv.Columns(db, definition) });
+    }
+
+    [HttpGet("{category}/csv-template")]
+    public async Task<IActionResult> CsvTemplate(string category, CancellationToken ct)
+    {
+        var csv = new CodebookCsv(db);
+        var definition = await csv.Find(category, ct);
+        if (definition is null) return NotFound();
+        var bytes = await csv.Template(definition, ct);
+        if (bytes is null) return Conflict();
+        return File(bytes, "text/csv; charset=utf-8", "codebook-template.csv");
+    }
+
+    [HttpPost("{category}/csv-import")]
+    [Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(CodebookCsv.MaximumBytes + 64 * 1024)]
+    public async Task<IActionResult> ImportCsv(string category, IFormFile? file, CancellationToken ct, [FromQuery] bool dryRun = true)
+    {
+        if (file is null || file.Length is <= 0 or > CodebookCsv.MaximumBytes ||
+            !Path.GetExtension(file.FileName).Equals(".csv", StringComparison.OrdinalIgnoreCase))
+            return Ok(new CsvPreview(0, 0, 0, 0, false, [new("codes.csv.file")]));
+        var csv = new CodebookCsv(db);
+        var definition = await csv.Find(category, ct);
+        if (definition is null) return NotFound();
+
+        await using var stream = file.OpenReadStream();
+        try { return Ok(await csv.Import(definition, stream, dryRun, GetKorisnik(), ct)); }
+        catch (DbUpdateException exception) when (exception is DbUpdateConcurrencyException ||
+            exception.GetBaseException() is SqlException { Number: 2601 or 2627 })
         {
-            slot,
-            name = entry.Property<string>($"ColumnName{slot}").CurrentValue,
-            description = entry.Property<string>($"ColumnDescription{slot}").CurrentValue,
-            position = entry.Property<int?>($"ColumnPosition{slot}").CurrentValue
-        }).Where(column => !string.IsNullOrWhiteSpace(column.name))
-            .OrderBy(column => column.position ?? column.slot).ThenBy(column => column.slot);
-        return Ok(new { items });
+            return Conflict(new ProblemDetails { Status = 409, Title = BackendMessages.Message("errors.codelist.concurrent.change") });
+        }
     }
 
     [HttpPut("categories/{name}"), Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
@@ -130,6 +156,18 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
         var result = await _codeListService.GetAllByKategorija(kategorija);
         if (!result.IsSuccessful) return HandleResult(result);
 
+        var definition = await db.CodeListDefinitions.SingleOrDefaultAsync(row => row.Name == kategorija, HttpContext.RequestAborted);
+        var columns = definition is null ? [] : CodebookCsv.Columns(db, definition)
+            .Where(column => column.Slot != 1 && (definition.Name != LanguageBooks.Packs || column.Slot is not (12 or 13 or 14 or 16 or 19 or 20))
+                && (definition.Name != LanguageBooks.Languages || column.Slot is not (12 or 13))).ToArray();
+        var slots = new Dictionary<int, Dictionary<int, object?>>();
+        if (columns.Length > 0)
+        {
+            var rows = await db.CodeLists.IgnoreQueryFilters().Where(row => row.Kategorija == kategorija).ToListAsync(HttpContext.RequestAborted);
+            foreach (var row in rows)
+                slots[row.ID] = columns.ToDictionary(column => column.Slot, column => CodebookCsv.ReadValue(db, row, column.Slot));
+        }
+
         // Map to API contract format (English field names)
         var items = result.Value.Select(x => new
         {
@@ -140,11 +178,12 @@ public class CodeListController(ICodeListService codeListService, ConnectedParti
             description = x.Opis,
             isActive = x.Aktivan,
             localization = x.Localization,
+            slotValues = slots.GetValueOrDefault(x.ID),
             modifiedBy = x.IzmijenioKorisnik ?? x.KreiraoKorisnik,
             modifiedAt = x.IzmijenjenDatum ?? x.KreiranDatum
         }).ToList();
 
-        return Ok(new { category = kategorija, items });
+        return Ok(new { category = kategorija, items, columns });
     }
 
     /// <summary>

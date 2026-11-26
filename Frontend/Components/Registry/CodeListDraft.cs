@@ -19,6 +19,15 @@ public sealed class CodeListDraft
     public string ContextInfo { get; set; } = "";
     public string Helper { get; set; } = "";
     public string Placeholder { get; set; } = "";
+    public string DefinitionName
+    {
+        get
+        {
+            var acronym = Regex.Replace(Name, "([A-Z])([A-Z][a-z])", "$1_$2");
+            var words = Regex.Replace(acronym, "([a-z0-9])([A-Z])", "$1_$2");
+            return Regex.Replace(words, "[^A-Za-z0-9]+", "_").Trim('_').ToUpperInvariant();
+        }
+    }
     public Dictionary<string, string[]> Validate()
     {
         var errors = new Dictionary<string, string[]>();
@@ -29,7 +38,7 @@ public sealed class CodeListDraft
             if (string.IsNullOrWhiteSpace(ResourceKey)) errors[nameof(ResourceKey)] = ["validation.required"];
             return errors;
         }
-        if (string.IsNullOrWhiteSpace(Name) || Name.Length > (Definition ? 100 : 200) || (Definition && Name.Trim().Length < 2)) errors[nameof(Name)] = [Definition ? "codes.definition-range" : "codes.name-range"];
+        if (string.IsNullOrWhiteSpace(Name) || Name.Length > (Definition ? 100 : 200) || (Definition && DefinitionName.Length is < 2 or > 100)) errors[nameof(Name)] = [Definition ? "codes.definition-range" : "codes.name-range"];
         if (Description.Length > 500) errors[nameof(Description)] = ["codes.description-range"];
         if (!Definition)
         {

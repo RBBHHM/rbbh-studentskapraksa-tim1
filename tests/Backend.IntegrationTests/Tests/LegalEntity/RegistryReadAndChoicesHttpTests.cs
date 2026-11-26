@@ -42,7 +42,7 @@ public sealed class RegistryReadAndChoicesHttpTests : AuthenticatedApiFixture
     {
         await InDatabase(async db =>
         {
-            var definition = new CodeListDefinition { Name = "OsnovPovezanosti", CreatedBy = "fixture" }; db.CodeListDefinitions.Add(definition);
+            var definition = new CodeListDefinition { Name = "OSNOV_POVEZANOSTI", CreatedBy = "fixture" }; db.CodeListDefinitions.Add(definition);
             db.CodeLists.Add(new() { Kategorija = definition.Name, Kod = "VL", Naziv = "Legacy ownership", Aktivan = false, KreiraoKorisnik = "fixture" }); await db.SaveChangesAsync();
         });
         Assert.Equal(HttpStatusCode.BadRequest, (await Client.PostAsJsonAsync(legal ? "/api/legal-entities" : "/api/related-persons", legal ? RegistryVerificationHttpTests.Legal() : RegistryVerificationHttpTests.Physical())).StatusCode);
@@ -53,7 +53,7 @@ public sealed class RegistryReadAndChoicesHttpTests : AuthenticatedApiFixture
     {
         await InDatabase(async db =>
         {
-            var definition = new CodeListDefinition { Name = "OsnovPovezanosti", CreatedBy = "fixture" }; db.CodeListDefinitions.Add(definition);
+            var definition = new CodeListDefinition { Name = "OSNOV_POVEZANOSTI", CreatedBy = "fixture" }; db.CodeListDefinitions.Add(definition);
             db.CodeLists.Add(new() { Kategorija = definition.Name, Kod = "CODE", Naziv = "VL", KreiraoKorisnik = "fixture" }); await db.SaveChangesAsync();
         });
         Assert.Equal(HttpStatusCode.Created, (await Client.PostAsJsonAsync("/api/legal-entities", RegistryVerificationHttpTests.Legal())).StatusCode);

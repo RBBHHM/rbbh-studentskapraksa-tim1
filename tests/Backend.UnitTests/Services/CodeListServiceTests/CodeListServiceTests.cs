@@ -11,8 +11,8 @@ namespace UnitTests.Services.CodeListServiceTests
 {
     /// <summary>
     /// Testovi za <see cref="CodeListService"/> (PL-36 / PL-37).
-    /// Napomena: za Delete koristimo kategoriju različitu od "TipRola" jer
-    /// "TipRola" grana poziva ExecuteSqlRaw koju EF InMemory provider ne podržava
+    /// Napomena: za Delete koristimo kategoriju različitu od "TIP_ROLA" jer
+    /// "TIP_ROLA" grana poziva ExecuteSqlRaw koju EF InMemory provider ne podržava
     /// (to je integraciona, a ne unit putanja).
     /// </summary>
     public class CodeListServiceTests
@@ -27,7 +27,7 @@ namespace UnitTests.Services.CodeListServiceTests
             await db.SaveChangesAsync();
             var result = await new CodeListService(db).Create(new CreateCodeListDTO
             {
-                Kategorija = " vrstalimita ", Kod = " vl ", Naziv = "Duplicate"
+                Kategorija = " vrste_limita ", Kod = " vl ", Naziv = "Duplicate"
             }, "fixture");
             Assert.True(result.IsValidationError);
             Assert.Single(db.CodeLists.IgnoreQueryFilters());
@@ -51,7 +51,7 @@ namespace UnitTests.Services.CodeListServiceTests
             if (referenced) Assert.Null(value.IzmijenjenDatum);
         }
 
-        private const string Kategorija = "VrstaLimita";
+        private const string Kategorija = "VRSTE_LIMITA";
 
         private static CodeList NewEntity(string kod, string naziv, bool aktivan = true) => new()
         {

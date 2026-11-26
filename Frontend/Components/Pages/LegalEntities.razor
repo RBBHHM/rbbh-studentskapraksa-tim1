@@ -159,7 +159,7 @@ else
             _editingId = entity?.Id; _bases = PhysicalPersonOptions.Bases(T).Select(option => option with { Opis = null }).ToArray(); _fallback = false;
             try
             {
-                var bases = await References.OptionsAsync("OsnovPovezanosti", _token);
+                var bases = await References.OptionsAsync("OSNOV_POVEZANOSTI", _token);
                 if (bases.Count > 0) _bases = bases; else _fallback = true;
             }
             catch (RegistryApiException) { _fallback = true; }

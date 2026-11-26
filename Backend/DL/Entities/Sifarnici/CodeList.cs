@@ -18,7 +18,7 @@ public class CodeList
     public CodeListLocalization? Localization { get; set; }
 
     /// <summary>
-    /// Kategorija šifarnika, npr. "TipRola", "OsnovPovezanosti", "VrstaLimita", "TipLica", "TipDokumenta"
+    /// Kategorija šifarnika, npr. "TIP_ROLA", "OSNOV_POVEZANOSTI", "VRSTE_LIMITA", "TIP_LICA", "TIP_DOKUMENTA"
     /// </summary>
     [Required]
     [StringLength(100)]

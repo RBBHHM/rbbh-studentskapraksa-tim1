@@ -267,12 +267,12 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
         if (await _dbContext.CodeLists.IgnoreQueryFilters().AnyAsync(row => row.Kategorija == LanguageBooks.Packs && row.Localization != null && row.Localization.LanguageCode == kod && row.Localization.ResourceKey != null)) return true;
         return kategorija switch
         {
-            "OsnovPovezanosti" =>
+            "OSNOV_POVEZANOSTI" =>
                 await _dbContext.LegalEntities.AsNoTracking().AnyAsync(entity => entity.BasisOfConnection == kod) ||
                 await _dbContext.RelatedPersons.AsNoTracking().AnyAsync(person => person.RelationBasis == kod),
-            "OsnovPosebnogOdnosa" =>
+            "OSNOV_POSEBNOG_ODNOSA" =>
                 await _dbContext.RelatedPersons.AsNoTracking().AnyAsync(person => person.SpecialRelationBasis == kod),
-            "VrstaLimita" =>
+            "VRSTE_LIMITA" =>
                 await _dbContext.Limiti.AsNoTracking().AnyAsync(limit => limit.TipLimita == kod),
             _ => false
         };
@@ -288,15 +288,15 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
 
         return kategorija switch
         {
-            "OsnovPovezanosti" =>
+            "OSNOV_POVEZANOSTI" =>
                 await _dbContext.LegalEntities.AsNoTracking().AnyAsync(entity =>
                     entity.BasisOfConnection != null && codes.Contains(entity.BasisOfConnection)) ||
                 await _dbContext.RelatedPersons.AsNoTracking().AnyAsync(person =>
                     person.RelationBasis != null && codes.Contains(person.RelationBasis)),
-            "OsnovPosebnogOdnosa" =>
+            "OSNOV_POSEBNOG_ODNOSA" =>
                 await _dbContext.RelatedPersons.AsNoTracking().AnyAsync(person =>
                     person.SpecialRelationBasis != null && codes.Contains(person.SpecialRelationBasis)),
-            "VrstaLimita" =>
+            "VRSTE_LIMITA" =>
                 await _dbContext.Limiti.AsNoTracking().AnyAsync(limit => codes.Contains(limit.TipLimita)),
             _ => false
         };

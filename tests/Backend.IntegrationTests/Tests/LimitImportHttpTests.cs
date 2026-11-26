@@ -20,7 +20,7 @@ public abstract class LimitImportFixture : AuthenticatedApiFixture
         {
             var party = new RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntity { Name = "Fixture company", FbaId = "12345", Matbroj = "00123", CreatedBy = "fixture" };
             db.LegalEntities.Add(party); Party = party.Id;
-            db.CodeLists.Add(new() { Kategorija = "VrstaLimita", Kod = "TYPE", Naziv = "Fixture type", KreiraoKorisnik = "fixture" }); await db.SaveChangesAsync();
+            db.CodeLists.Add(new() { Kategorija = "VRSTE_LIMITA", Kod = "TYPE", Naziv = "Fixture type", KreiraoKorisnik = "fixture" }); await db.SaveChangesAsync();
         });
     }
     protected object Body(decimal approved = 100.50m, string comment = "Original") => new { legalEntityId = Party, tipLimita = "TYPE", odobreniLimit = approved,
