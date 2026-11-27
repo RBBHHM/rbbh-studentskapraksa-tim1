@@ -52,7 +52,7 @@ jobs:
           test -n "$SQL_PASSWORD"
           echo "::add-mask::$SQL_PASSWORD"
       - run: dotnet restore RelatedPartiesRegister.slnx --configfile NuGet.config
-      - run: dotnet build RelatedPartiesRegister.slnx -c Release --no-restore -p:RunAnalyzers=true
+      - run: dotnet build RelatedPartiesRegister.slnx -c Release --no-restore -m:1 -p:RunAnalyzers=true
       - run: dotnet test RelatedPartiesRegister.slnx -c Release --no-build --no-restore --logger trx --results-directory artifacts/ci-tests
       - name: Reject skipped tests
         run: |
