@@ -52,8 +52,14 @@ jobs:
           test -n "$SQL_PASSWORD"
           echo "::add-mask::$SQL_PASSWORD"
       - run: dotnet restore RelatedPartiesRegister.slnx --configfile NuGet.config
+        env:
+          UseDistinctBrowserHostAssemblyName: "true"
       - run: dotnet build RelatedPartiesRegister.slnx -c Release --no-restore -m:1 -p:RunAnalyzers=true
+        env:
+          UseDistinctBrowserHostAssemblyName: "true"
       - run: dotnet test RelatedPartiesRegister.slnx -c Release --no-build --no-restore --logger trx --results-directory artifacts/ci-tests
+        env:
+          UseDistinctBrowserHostAssemblyName: "true"
       - name: Reject skipped tests
         run: |
           python3 - <<'PY'
