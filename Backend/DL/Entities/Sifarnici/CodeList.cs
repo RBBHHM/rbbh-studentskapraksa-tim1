@@ -26,16 +26,16 @@ public class CodeList
     /// <summary>
     /// Interni kod vrijednosti (npr. "ADM", "VL", "KR")
     /// </summary>
-    [Required]
+    private string? _kod;
     [StringLength(100)]
-    public string Kod { get; set; } = null!;
+    public string Kod { get => _kod ?? ""; set => _kod = string.IsNullOrEmpty(value) ? null : value; }
 
     /// <summary>
     /// Naziv koji se prikazuje u padajućim menijima
     /// </summary>
-    [Required]
+    private string? _naziv;
     [StringLength(4000)]
-    public string Naziv { get; set; } = null!;
+    public string Naziv { get => _naziv ?? ""; set => _naziv = string.IsNullOrEmpty(value) ? null : value; }
 
     /// <summary>
     /// Opcionalni opis vrijednosti

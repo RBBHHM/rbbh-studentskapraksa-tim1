@@ -85,10 +85,10 @@ public partial class ConnectedPartiesDbContext(
         });
         modelBuilder.Entity<CodeList>(entity =>
         {
-            entity.Property(e => e.Kod).HasColumnName("ID15").UseCollation("Latin1_General_100_CI_AS");
-            entity.Property(e => e.Naziv).HasColumnName("ID17");
+            entity.Property(e => e.Kod).IsRequired(false).HasColumnName("ID15").UseCollation("Latin1_General_100_CI_AS");
+            entity.Property(e => e.Naziv).IsRequired(false).HasColumnName("ID17");
             entity.Property(e => e.Opis).HasColumnName("ID18");
-            entity.Property(e => e.Aktivan).HasColumnName("ID1");
+            entity.Property(e => e.Aktivan).HasColumnName("IS_ACTIVE");
             entity.Property(e => e.KreiranDatum).HasColumnName("CreatedAt");
             entity.Property(e => e.KreiraoKorisnik).HasColumnName("CreatedBy");
             entity.Property(e => e.IzmijenjenDatum).HasColumnName("ModifiedAt");
@@ -324,7 +324,7 @@ public partial class ConnectedPartiesDbContext(
         var touched = knownDefinitions.Values.Concat(ChangeTracker.Entries<CodeListDefinition>()
             .Where(entry => entry.State is EntityState.Added or EntityState.Modified).Select(entry => entry.Entity));
         var now = DateTime.UtcNow;
-        foreach (var definition in touched.Distinct())
+        foreach (var definition in touched.Distinct().Where(row => Entry(row).State != EntityState.Deleted))
         {
             var entry = Entry(definition);
             if (entry.State == EntityState.Added && Enumerable.Range(1, 20).All(slot =>

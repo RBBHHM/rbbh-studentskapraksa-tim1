@@ -228,7 +228,8 @@ public static class DevelopmentDataSeeder
         await db.SaveChangesAsync(ct);
 
         var permissions = await db.Permissions.AsTracking().ToListAsync(ct);
-        foreach (var code in ApplicationPermissions.All)
+        foreach (var code in ApplicationPermissions.All.OrderBy(code => code[..code.LastIndexOf('_')], StringComparer.Ordinal)
+                     .ThenBy(code => code, StringComparer.Ordinal))
         {
             var permission = permissions.FirstOrDefault(item =>
                 item.Code.Equals(code, StringComparison.OrdinalIgnoreCase));

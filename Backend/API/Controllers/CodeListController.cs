@@ -172,7 +172,7 @@ public partial class CodeListController(ICodeListService codeListService, Connec
     }
 
     /// <summary>
-    /// Briše cijelu definiciju šifrarnika i sve njene vrijednosti metodom soft-delete.
+    /// Briše cijelu definiciju šifrarnika i sve njene vrijednosti trajno.
     /// </summary>
     [HttpDelete("categories/{name}")]
     [Authorize(Policy = ApplicationPolicies.AdministrationWrite)]

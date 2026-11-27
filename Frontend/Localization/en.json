@@ -526,6 +526,7 @@
     "codes.delete-category": "Delete code list",
     "codes.delete-value": "Delete value",
     "codes.delete-label": "Delete",
+    "codes.delete-category-permanently": "The codebook and all its values will be permanently deleted.",
     "codes.delete-help": "The selected value or entire selected code list will be deactivated. The backend rejects deletion of values that are in use.",
     "codes.deleted": "Deletion completed. Inactive values remain in administrative history.",
     "codes.delete-rejected": "Deletion was rejected: this value or a value in the code list is in use. It was not deleted.",

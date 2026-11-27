@@ -52,10 +52,7 @@
                            PreviousAccessibleLabel="@T["legal.previous"]" NextAccessibleLabel="@T["legal.next"]"
                            PageAccessibleLabel="@(number => T.Format("legal.page", number))" />
         }
-        @if (!Columns.Any(column => column.Slot == 1))
-        {
-            <RbiCheckbox @bind-Value="_active">@T["codes.active"]</RbiCheckbox>
-        }
+        <RbiCheckbox @bind-Value="_active">@T["codes.active"]</RbiCheckbox>
     </fieldset>
     <div class="registry-toolbar">
         <RbiButton Variant="RbiButtonVariant.Secondary" OnClick="Cancel" Disabled="_busy">@T["common.cancel"]</RbiButton>

@@ -47,7 +47,10 @@ else
                 <ul class="codes-cards" aria-label="@T["codes.title"]">
                     @foreach (var category in FilteredCategories)
                     {
-                        <li><button type="button" class="codes-card" disabled="@(_busy || _refreshing)" @onclick="() => OpenCategoryAsync(category)"><AppIcon Name="AppIconName.BookOpen" /><span class="codes-card__name">@category</span></button></li>
+                        <li><button type="button" class="codes-card" aria-label="@category" aria-describedby="@($"codebook-status-{category}")" disabled="@(_busy || _refreshing)" @onclick="() => OpenCategoryAsync(category)"><AppIcon Name="AppIconName.BookOpen" /><span class="codes-card__name">@category</span>@if (_definitions.TryGetValue(category, out var cardDefinition))
+                            {
+                                <span id="@($"codebook-status-{category}")" class="codebook-status @(cardDefinition.IsActive ? "codebook-status--active" : "codebook-status--inactive")">@T[cardDefinition.IsActive ? "codes.active" : "codes.inactive"]</span>
+                            }</button></li>
                     }
                 </ul>
             }
@@ -72,8 +75,8 @@ else
                     {
                         @if (_canWrite && (!definition.IsSystemRequired || !definition.IsActive))
                         {
-                            <RbiButton Disabled="@(_busy || _refreshing)" Variant="RbiButtonVariant.Secondary"
-                                       OnClick="() => SetCategoryStatusAsync(definition)">@T[definition.IsActive ? "codes.deactivate-category" : "codes.activate-category"]</RbiButton>
+                            <RbiSwitch Disabled="@(_busy || _refreshing)" Value="definition.IsActive" ValueExpression="@(() => definition.IsActive)"
+                                       ValueChanged="@((bool _) => SetCategoryStatusAsync(definition))">@T["codes.active"]</RbiSwitch>
                         }
                         <div class="codebook-detail__meta">
                             @if (definition.CreatedBy is { Length: > 0 } created) { <span>@T.Format("codes.created-by", created)</span> }
@@ -172,7 +175,7 @@ else
 }
 @if (_deleteValue is not null || _deleteCategory is not null)
 {
-    <RbiAlertDialog Open Class="registry-codes-dialog" Title="@T[_deleteValue is null ? "codes.delete-category" : "codes.delete-value"]" Description="@T["codes.delete-help"]" CancelLabel="@T["common.cancel"]" ConfirmLabel="@T["codes.delete-label"]" OnCancel="CancelDelete" OnConfirm="DeleteAsync" Confirming="_busy" ConfirmLoadingLabel="@T["state.loading"]" OpenChanged="CloseDelete" />
+    <RbiAlertDialog Open Class="registry-codes-dialog" Title="@T[_deleteValue is null ? "codes.delete-category" : "codes.delete-value"]" Description="@T[_deleteValue is null ? "codes.delete-category-permanently" : "codes.delete-help"]" CancelLabel="@T["common.cancel"]" ConfirmLabel="@T["codes.delete-label"]" OnCancel="CancelDelete" OnConfirm="DeleteAsync" Confirming="_busy" ConfirmLoadingLabel="@T["state.loading"]" OpenChanged="CloseDelete" />
 }
 @if (_preview is { } preview)
 {

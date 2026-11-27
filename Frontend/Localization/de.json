@@ -526,6 +526,7 @@
     "codes.delete-category": "Schlüsselverzeichnis löschen",
     "codes.delete-value": "Wert löschen",
     "codes.delete-label": "Löschen",
+    "codes.delete-category-permanently": "Die Schlüsselliste und alle ihre Werte werden dauerhaft gelöscht.",
     "codes.delete-help": "Der ausgewählte Wert oder das gesamte Schlüsselverzeichnis wird deaktiviert. Das Backend verhindert das Löschen verwendeter Werte.",
     "codes.deleted": "Löschen abgeschlossen. Inaktive Werte bleiben in der Verwaltungshistorie erhalten.",
     "codes.delete-rejected": "Löschen abgelehnt: Dieser Wert oder ein Wert des Schlüsselverzeichnisses wird verwendet. Er wurde nicht gelöscht.",

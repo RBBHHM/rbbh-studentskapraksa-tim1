@@ -248,7 +248,7 @@ namespace UnitTests.Services.CodeListServiceTests
         }
 
         [Fact]
-        public async Task DeleteCategory_WhenValuesAreNotInUse_SoftDeletesDefinitionAndValues()
+        public async Task DeleteCategory_WhenValuesAreNotInUse_RemovesDefinitionAndValues()
         {
             using var ctx = InMemoryContextFactory.Create();
             var definition = new CodeListDefinition { Name = Kategorija, CreatedBy = "seed" };
@@ -261,10 +261,9 @@ namespace UnitTests.Services.CodeListServiceTests
             var result = await new CodeListService(ctx).DeleteCategory(Kategorija, "remover");
 
             result.IsSuccessful.Should().BeTrue();
-            definition.IsActive.Should().BeFalse();
-            first.Aktivan.Should().BeFalse();
-            second.Aktivan.Should().BeFalse();
-            first.IzmijenioKorisnik.Should().Be("remover");
+            ctx.CodeListDefinitions.Should().BeEmpty();
+            ctx.CodeLists.IgnoreQueryFilters().Should().BeEmpty();
+            ctx.AuditLogs.Should().ContainSingle(row => row.Action == "CODELIST_DELETE");
         }
 
         [Fact]

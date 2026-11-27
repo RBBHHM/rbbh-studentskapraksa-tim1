@@ -56,7 +56,7 @@ public partial class CodeListController
             db.CodeLists.Add(row);
         }
 
-        var nextActive = (bool?)cells.GetValueOrDefault(1) ?? request.Active;
+        var nextActive = request.Active;
         if (id.HasValue && row.Aktivan && !nextActive && definition.IsSystemRequired)
             return Conflict(new { code = "codes.value_in_use" });
 

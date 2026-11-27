@@ -18,6 +18,7 @@ public partial class ConnectedPartiesDbContext
 
     private static void ConfigureCodeListSlots(EntityTypeBuilder<CodeList> entity)
     {
+        entity.Property<bool?>("Slot1").HasColumnName("ID1");
         entity.Property<bool?>("Slot2").HasColumnName("ID2");
         for (var number = 3; number <= 5; number++)
             entity.Property<int?>($"Slot{number}").HasColumnName($"ID{number}");

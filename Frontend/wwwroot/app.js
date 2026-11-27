@@ -24,6 +24,10 @@ document.addEventListener("keydown", function (event) {
 
 // Focus management after a failed submit: first field the form marked invalid.
 window.appFocus = {
+    invalidOrSummary: function (formId, summaryId) {
+        const field = document.getElementById(formId)?.querySelector("[aria-invalid=true]");
+        (field || document.getElementById(summaryId))?.focus();
+    },
     firstInvalid: function () {
         var dialog = document.querySelector("[role=dialog][open], dialog[open], [role=dialog]");
         var root = dialog || document;

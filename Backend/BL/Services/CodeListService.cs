@@ -229,31 +229,21 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
             .Where(item => item.Definition!.Name == normalizedCategory)
             .ToListAsync();
 
-        if (definition is null && values.Count == 0)
+        if (definition is null)
             return Result<bool>.NotFoundError(BackendMessages.Message("validation.codelist.definition.missing", normalizedCategory));
 
-        if (definition?.IsSystemRequired == true || await JeKategorijaUUpotrebi(normalizedCategory, values.Select(item => item.Kod)))
+        if (definition.IsSystemRequired || await JeKategorijaUUpotrebi(normalizedCategory, values.Select(item => item.Kod)))
             return Result<bool>.ValidationError(
                 BackendMessages.Message("validation.codelist.definition.delete.in.use", normalizedCategory));
 
-        object CategoryState() => new
+        var before = new
         {
-            Definition = definition is null ? null : new { definition.Name, definition.Description, definition.IsActive },
+            Definition = new { definition!.Name, definition.Description, definition.IsActive },
             Values = values.OrderBy(value => value.Kod).Select(Snapshot).ToArray()
         };
-        var before = CategoryState();
-        var changedAt = DateTime.UtcNow;
-        foreach (var value in values)
-        {
-            value.Aktivan = false;
-            value.IzmijenjenDatum = changedAt;
-            value.IzmijenioKorisnik = korisnik;
-        }
-
-        if (definition is not null)
-            { definition.IsActive = false; definition.ModifiedBy = korisnik; }
-
-        AddAudit("CODELIST_DELETE", korisnik, before, CategoryState());
+        _dbContext.CodeLists.RemoveRange(values);
+        _dbContext.CodeListDefinitions.Remove(definition);
+        AddAudit("CODELIST_DELETE", korisnik, before, null);
         await _dbContext.SaveChangesAsync();
         return Result<bool>.Success(true);
     }
@@ -312,7 +302,7 @@ public class CodeListService(ConnectedPartiesDbContext dbContext, IHttpContextAc
         value.Kategorija, value.Kod, value.Naziv, value.Opis, value.Aktivan
     };
 
-    private void AddAudit(string action, string actor, object? before, object after) =>
+    private void AddAudit(string action, string actor, object? before, object? after) =>
         _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("CodeList",
             action, actor, accessor, before, after));
 

@@ -526,6 +526,7 @@
     "codes.delete-category": "Obriši šifrarnik",
     "codes.delete-value": "Obriši vrijednost",
     "codes.delete-label": "Obriši",
+    "codes.delete-category-permanently": "Šifrarnik i sve njegove vrijednosti bit će trajno obrisani.",
     "codes.delete-help": "Odabrana vrijednost ili cijeli odabrani šifrarnik bit će deaktivirani. Backend odbija brisanje vrijednosti koje su u upotrebi.",
     "codes.deleted": "Brisanje je završeno. Neaktivne vrijednosti ostaju u administrativnoj historiji.",
     "codes.delete-rejected": "Brisanje je odbijeno: vrijednost ili neka vrijednost šifrarnika je u upotrebi. Nije obrisana.",

@@ -678,3 +678,7 @@ h1[tabindex="-1"]:focus, h1:focus-visible { outline: none; }
 .registry-codes-table--custom th { min-width: 7rem; }
 .registry-codes-table--custom th.registry-center { min-width: 0; width: 1%; white-space: nowrap; }
 .registry-codes-table--custom th, .registry-codes-table--custom td { padding: .35rem .65rem; vertical-align: middle; }
+
+.codebook-status { margin-inline-start: auto; border-radius: 999px; padding: .2rem .55rem; font-size: .75rem; font-weight: 600; }
+.codebook-status--active { background: #dcfce7; color: #14532d; }
+.codebook-status--inactive { background: #fee2e2; color: #7f1d1d; }

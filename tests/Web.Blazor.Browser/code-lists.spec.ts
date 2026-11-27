@@ -97,6 +97,20 @@ test("custom definition controls create, edit, CSV headers and soft-delete", asy
   await expect(table.getByRole("cell", { name: "Neispravan red", exact: true })).toHaveCount(0);
 });
 
+test("invalid schema focuses and highlights the first duplicate column", async ({ page }) => {
+  await visit(page);
+  await page.getByRole("button", { name: "Novi šifrarnik", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("textbox", { name: /^Naziv definicije/ }).fill("Duplicate fields");
+  await addColumn(dialog, "Tekst", "Isti naziv");
+  await addColumn(dialog, "Tekst", "Isti naziv");
+  await dialog.getByRole("button", { name: "Kreiraj", exact: true }).click();
+  const inputs = dialog.getByRole("textbox", { name: /Naziv kolone/ });
+  await expect(inputs.first()).toBeFocused();
+  await expect(inputs.first()).toHaveAttribute("aria-invalid", "true");
+  await expect(inputs.last()).toHaveAttribute("aria-invalid", "true");
+});
+
 test("definition status is editable even when a codebook has no rows", async ({ page }) => {
   await visit(page);
   await page.getByRole("button", { name: "Novi šifrarnik", exact: true }).click();
@@ -104,7 +118,7 @@ test("definition status is editable even when a codebook has no rows", async ({ 
   await dialog.getByRole("textbox", { name: /^Naziv definicije/ }).fill("Status fixture");
   await addColumn(dialog, "Tekst", "Napomena");
   await dialog.getByRole("button", { name: "Kreiraj", exact: true }).click();
-  await page.getByRole("button", { name: "Deaktiviraj šifrarnik", exact: true }).click();
+  await page.getByRole("switch", { name: "Aktivan", exact: true }).click();
 
   await expect(page.getByText("Šifrarnik je neaktivan. U njega se ne mogu dodavati vrijednosti.")).toBeVisible();
   const newValue = page.getByRole("button", { name: "Nova vrijednost", exact: true });
@@ -113,7 +127,7 @@ test("definition status is editable even when a codebook has no rows", async ({ 
 
   await page.getByRole("button", { name: "Svi šifrarnici", exact: true }).click();
   await page.getByRole("button", { name: "STATUS_FIXTURE", exact: true }).click();
-  await page.getByRole("button", { name: "Aktiviraj šifrarnik", exact: true }).click();
+  await page.getByRole("switch", { name: "Aktivan", exact: true }).click();
   await expect(newValue).toBeEnabled();
   await expect(page.locator("#code-file")).toBeEnabled();
 });
@@ -145,12 +159,12 @@ test("referenced value and entire category deletion are rejected with no data/au
   await page.getByRole("button", { name: "Obriši šifrarnik", exact: true }).click(); await page.getByRole("alertdialog").getByRole("button", { name: "Obriši", exact: true }).click(); await expect(page.getByText(/Brisanje je odbijeno:/)).toBeVisible();
   expect(await (await request.get("/__fixtures/codes-state", { headers })).json()).toEqual(before);
 });
-test("category soft-delete keeps inactive administrative history instead of pretending physical removal", async ({ page, request }) => {
+test("category deletion removes its definition and all values", async ({ page, request }) => {
   await request.post("/__fixtures/codes-reference", { headers }); await visit(page, "MigrationCodes");
   await page.getByRole("button", { name: "Obriši šifrarnik", exact: true }).click(); await page.getByRole("alertdialog").getByRole("button", { name: "Obriši", exact: true }).click(); await expect(page.getByText("Šifrarnik i njegove vrijednosti su obrisani.", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Svi šifrarnici", exact: true })).toBeVisible(); expect(await page.getByRole("cell", { name: "Neaktivan", exact: true }).count()).toBe(2);
-  const state = await (await request.get("/__fixtures/codes-state", { headers })).json(); expect(state.definitions.find((item: any) => item.name === "MigrationCodes")).toEqual({ name: "MigrationCodes", description: "Fixture purpose", isActive: false });
-  expect(state.values.filter((item: any) => item.kategorija === "MigrationCodes").every((item: any) => !item.aktivan)).toBe(true); expect(state.audit.map((item: any) => item.action)).toEqual(["CODELIST_DELETE"]);
+  await expect(page.getByRole("button", { name: "MigrationCodes", exact: true })).toHaveCount(0);
+  const state = await (await request.get("/__fixtures/codes-state", { headers })).json(); expect(state.definitions.find((item: any) => item.name === "MigrationCodes")).toBeUndefined();
+  expect(state.values.filter((item: any) => item.kategorija === "MigrationCodes")).toHaveLength(0); expect(state.audit.map((item: any) => item.action)).toEqual(["CODELIST_DELETE"]);
 });
 test("CSV template, preview and confirmation use the selected codebook", async ({ page, request }) => {
   await request.post("/__fixtures/codes-reference", { headers });

@@ -27,6 +27,7 @@ public sealed record CsvPreview(int TotalRows, int Ready, int Duplicates, int Im
 
 internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
 {
+    private const int RowStatus = -1;
     internal const int MaximumBytes = 10 * 1024 * 1024;
     private const int MaximumRows = 5000;
     private static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
@@ -49,7 +50,6 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
 
     internal static object? ReadValue(ConnectedPartiesDbContext db, CodeList row, int slot) => slot switch
     {
-        1 => row.Aktivan,
         15 => string.IsNullOrEmpty(row.Kod) ? null : row.Kod,
         17 => string.IsNullOrEmpty(row.Naziv) ? null : row.Naziv,
         18 => row.Opis,
@@ -70,7 +70,7 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
     internal static Field Slot(int slot, string header, bool required = false) => new(header, slot, required,
         slot switch
         {
-            1 or 2 => "true", >= 3 and <= 5 => "42", >= 6 and <= 8 => "123.45",
+            RowStatus or 1 or 2 => "true", >= 3 and <= 5 => "42", >= 6 and <= 8 => "123.45",
             9 or 10 => "2026-12-31", 11 => "2026-12-31T13:45:00", _ => "Example"
         });
 
@@ -79,14 +79,14 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
         var columns = Columns(db, definition);
         if (!CodebookDefinitions.UsesReferenceFields(definition)) return columns.Select(column => Slot(column.Slot, column.Name)).ToArray();
         if (definition.Name == LanguageBooks.Packs)
-            return [Slot(1, "IS_ACTIVE"), new("LANGUAGE_CODE", 12, true, exampleLanguage), new("RESOURCE_KEY", 13, true, "example.field"),
+            return [Slot(RowStatus, "IS_ACTIVE"), new("LANGUAGE_CODE", 12, true, exampleLanguage), new("RESOURCE_KEY", 13, true, "example.field"),
                 Slot(14, "CONTEXT_INFO"), Slot(16, "LABEL_TEXT", true), Slot(19, "HELP_TEXT"), Slot(20, "PLACEHOLDER_TEXT"),
                 .. columns.Where(column => column.Slot is not (1 or 12 or 13 or 14 or 16 or 19 or 20)).Select(column => Slot(column.Slot, column.Name))];
         if (definition.Name == LanguageBooks.Languages)
-            return [Slot(1, "IS_ACTIVE"), new("LANGUAGE_CODE", 12, true, "XX"), new("LANGUAGE_NAME", 13, true, "Example language"),
+            return [Slot(RowStatus, "IS_ACTIVE"), new("LANGUAGE_CODE", 12, true, "XX"), new("LANGUAGE_NAME", 13, true, "Example language"),
                 .. columns.Where(column => column.Slot is not (1 or 12 or 13)).Select(column => Slot(column.Slot, column.Name))];
         return [new("VALUE_KEY", 15, true, "EXAMPLE_CODE", 50, IsCode: true), new("NAME", 17, true, "Example value", 200),
-            new("DESCRIPTION", 18, false, "Example description", 500), Slot(1, columns.FirstOrDefault(column => column.Slot == 1)?.Name ?? "IS_ACTIVE"),
+            new("DESCRIPTION", 18, false, "Example description", 500), Slot(RowStatus, columns.FirstOrDefault(column => column.Slot == 1)?.Name ?? "IS_ACTIVE"),
             .. columns.Where(column => column.Slot is not (1 or 15 or 17 or 18)).Select(column => Slot(column.Slot, column.Name))];
     }
 
@@ -204,7 +204,7 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
             if (values.Count != schema.Length) continue;
             if (!CodebookDefinitions.UsesReferenceFields(definition))
             {
-                var signature = CellKey(schema.Select(field => field.Slot == 1 ? values[field.Slot] ?? true : values[field.Slot]));
+                var signature = CellKey(schema.Select(field => values[field.Slot]));
                 if (!seen.Add(signature))
                 {
                     issues.Add(new("codes.csv.row-duplicate", line));
@@ -325,7 +325,7 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
         if (trimmed.Length == 0) return !field.Required;
         switch (field.Slot)
         {
-            case 1 or 2:
+            case RowStatus or 1 or 2:
                 if (trimmed is "0" or "1") { value = trimmed == "1"; return true; }
                 if (!bool.TryParse(trimmed, out var flag)) return false;
                 value = flag;
@@ -366,7 +366,7 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
         {
             Definition = definition, Kategorija = definition.Name, Kod = code,
             Naziv = !CodebookDefinitions.UsesReferenceFields(definition) ? "" : packs || languages ? Text(13)! : Text(17)!,
-            Opis = Text(18), Aktivan = (bool?)values.GetValueOrDefault(1) ?? true,
+            Opis = Text(18), Aktivan = (bool?)values.GetValueOrDefault(RowStatus) ?? true,
             KreiraoKorisnik = actor, KreiranDatum = now
         };
         db.CodeLists.Add(row);
@@ -390,7 +390,7 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
         if (values.ContainsKey(17)) row.Naziv = Text(17) ?? "";
         if (values.ContainsKey(18)) row.Opis = Text(18);
         var entry = db.Entry(row);
-        foreach (var slot in values.Keys.Where(slot => slot is >= 2 and <= 11))
+        foreach (var slot in values.Keys.Where(slot => slot is >= 1 and <= 11))
             entry.Property($"Slot{slot}").CurrentValue = values[slot];
     }
 }

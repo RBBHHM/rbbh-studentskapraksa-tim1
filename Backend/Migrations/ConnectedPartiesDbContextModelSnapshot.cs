@@ -1293,6 +1293,10 @@ namespace RBBH.ConnectedParties.Migrations
 
                     b.Property<bool>("Aktivan")
                         .HasColumnType("bit")
+                        .HasColumnName("IS_ACTIVE");
+
+                    b.Property<bool?>("Slot1")
+                        .HasColumnType("bit")
                         .HasColumnName("ID1");
 
                     b.Property<long>("DefinitionId")
@@ -1310,7 +1314,6 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasColumnName("MODIFIED_AT");
 
                     b.Property<string>("Kod")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)")
                         .HasColumnName("ID15")
@@ -1328,7 +1331,6 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasColumnName("CREATED_BY");
 
                     b.Property<string>("Naziv")
-                        .IsRequired()
                         .HasMaxLength(4000)
                         .HasColumnType("nvarchar(4000)")
                         .HasColumnName("ID17");

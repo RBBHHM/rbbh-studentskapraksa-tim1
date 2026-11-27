@@ -147,6 +147,31 @@ public sealed class CodebookCsvTests : CodebookCsvFixture
     }
 
     [Fact]
+    public async Task FirstBooleanColumnIsOptionalAndIndependentOfRowStatus()
+    {
+        const string category = "BOOLEAN_SLOTS";
+        using var definition = await Client.PostAsJsonAsync("/api/code-lists/categories", new
+        {
+            name = category,
+            columns = new[] { new { slot = 1, name = "Flag", position = 1 }, new { slot = 17, name = "Note", position = 2 } }
+        });
+        Assert.Equal(HttpStatusCode.Created, definition.StatusCode);
+        var initial = await Client.GetFromJsonAsync<JsonElement>($"/api/code-lists/{category}");
+        using var created = await Client.PostAsJsonAsync($"/api/code-lists/categories/{category}/values", new
+        {
+            expectedModifiedAt = initial.GetProperty("modifiedAt").GetDateTime(),
+            active = true,
+            values = new Dictionary<int, string?> { [1] = "false" }
+        });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var result = await Client.GetFromJsonAsync<JsonElement>($"/api/code-lists/{category}");
+        var item = result.GetProperty("items")[0];
+        Assert.True(item.GetProperty("isActive").GetBoolean());
+        Assert.False(item.GetProperty("slotValues").GetProperty("1").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, item.GetProperty("slotValues").GetProperty("17").ValueKind);
+    }
+
+    [Fact]
     public async Task CustomCsvPreviewsEveryInvalidCellAndImportsValidRowsAfterOptIn()
     {
         const string category = "EXCEL_DATES";

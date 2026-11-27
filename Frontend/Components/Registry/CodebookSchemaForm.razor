@@ -1,16 +1,18 @@
 @using RBI.DesignSystem.Components.Forms
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
 
-<form class="custom-codebook-form" @onsubmit="SubmitAsync" @onsubmit:preventDefault novalidate>
+<form id="codebook-schema-form" class="custom-codebook-form" @onsubmit="SubmitAsync" @onsubmit:preventDefault novalidate>
     @if (Error is not null)
     {
-        <RbiAlert Class="codebook-form-alert" Tone="RbiAlertTone.Danger" Title="@T[Error]" Announcement="RbiAlertAnnouncement.Assertive" />
+        <div id="codebook-schema-error" tabindex="-1"><RbiAlert Class="codebook-form-alert" Tone="RbiAlertTone.Danger" Title="@T[Error]" Announcement="RbiAlertAnnouncement.Assertive" /></div>
     }
     <fieldset disabled="@_busy">
         <legend class="app-visually-hidden">@T["codes.column-structure"]</legend>
         <div class="registry-form-grid">
             <div class="role-catalog-field">
                 <label for="codebook-definition-name">@T["codes.definition-name"]</label>
-                <RbiInput Id="codebook-definition-name" @bind-Value="_name" ReadOnly="@(Existing is not null)" maxlength="100" Required />
+                <RbiInput Id="codebook-definition-name" Invalid="@(Error == "codes.definition-range")" @bind-Value="_name" ReadOnly="@(Existing is not null)" maxlength="100" Required />
             </div>
             <div class="role-catalog-field">
                 <label for="codebook-definition-purpose">@T["codes.purpose"]</label>
@@ -38,7 +40,7 @@
                             <div class="role-catalog-field">
                                 <label for="@inputId">@T["codes.schema-name-limit"]</label>
                                 <span class="app-hint">@T[CodebookField.TypeKey(column.Slot)] · @TypeDetails(column.Slot)</span>
-                                <RbiInput Id="@inputId" @bind-Value="column.Name" UpdateMode="RbiInputUpdateMode.Input" maxlength="128" Required />
+                                <RbiInput Id="@inputId" Invalid="@(_invalidSlots.Contains(column.Slot))" @bind-Value="column.Name" UpdateMode="RbiInputUpdateMode.Input" maxlength="128" Required />
                             </div>
                             <div class="codebook-type-buttons">
                                 <RbiButton Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly Disabled="@(position == 0)" AccessibleLabel="@T["codes.schema-move-up"]" title="@T["codes.schema-move-up"]" OnClick="() => Move(position, -1)">↑</RbiButton>
@@ -75,7 +77,7 @@
 
     private static readonly int[][] SlotGroups =
     [
-        [17, 18, 16, 19, 20], [13], [14, 15], [12], [2], [1], [3, 4, 5], [6, 7], [8], [9, 10], [11]
+        [12], [14, 15], [13], [16, 17, 18, 19, 20], [2, 1], [3, 4, 5], [6, 7], [8], [9, 10], [11]
     ];
 
     private sealed class ColumnDraft(int slot, string? name = null, string? description = null)
@@ -87,7 +89,15 @@
 
     private readonly List<ColumnDraft> _columns = [];
     private string? _name, _description, Error;
-    private bool _busy;
+    private bool _busy, _focusError;
+    private readonly HashSet<int> _invalidSlots = [];
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_focusError) return;
+        _focusError = false;
+        await JS.InvokeVoidAsync("appFocus.invalidOrSummary", "codebook-schema-form", "codebook-schema-error");
+    }
 
     protected override void OnInitialized()
     {
@@ -105,15 +115,13 @@
             >= 12 => $"{label} · {TypeDetails(slot)}",
             6 or 7 => $"{label} (18,2)",
             8 => $"{label} (19,6)",
-            1 => $"{label} · {T["codes.active"]}",
             _ => label
         };
     }
 
     private string TypeDetails(int slot) => slot switch
     {
-        1 => T["codes.type-active-limit"],
-        2 => T["codes.type-boolean-limit"],
+        1 or 2 => T["codes.type-boolean-limit"],
         >= 3 and <= 5 => T["codes.type-integer-limit"],
         6 or 7 => T.Format("codes.type-decimal-limit", 16, 2),
         8 => T.Format("codes.type-decimal-limit", 13, 6),
@@ -140,9 +148,11 @@
     {
         if (_busy) return;
         Error = null;
+        _invalidSlots.Clear();
         if (_name?.Trim() is not { Length: >= 2 and <= 100 } name)
         {
             Error = "codes.definition-range";
+            _focusError = true;
             return;
         }
         var columns = _columns.Select((column, index) =>
@@ -150,17 +160,22 @@
         if (columns.Length == 0)
         {
             Error = "codes.schema-empty";
+            _focusError = true;
             return;
         }
-        if (columns.Any(column => column.Name.Length is < 1 or > 128 ||
-                column.Name[0] is '=' or '+' or '-' or '@' || column.Name.Any(char.IsControl)) ||
-            columns.Select(column => column.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count() != columns.Length)
+        foreach (var column in columns.Where(column => column.Name.Length is < 1 or > 128 ||
+                     column.Name[0] is '=' or '+' or '-' or '@' || column.Name.Any(char.IsControl)))
+            _invalidSlots.Add(column.Slot);
+        foreach (var group in columns.GroupBy(column => column.Name, StringComparer.OrdinalIgnoreCase).Where(group => group.Count() > 1))
+            _invalidSlots.UnionWith(group.Select(column => column.Slot));
+        if (_invalidSlots.Count > 0)
         {
             Error = "codes.schema-name-invalid";
+            _focusError = true;
             return;
         }
         _busy = true;
-        try { Error = await Save(name, _description, columns); }
+        try { Error = await Save(name, _description, columns); _focusError = Error is not null; }
         finally { _busy = false; }
     }
 }
