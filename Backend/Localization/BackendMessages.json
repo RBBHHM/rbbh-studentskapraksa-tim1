@@ -1,4 +1,7 @@
 {
+  "errors.registry.bank.customer.not.found": "Matični broj klijenta nije pronađen u evidenciji banke.",
+  "errors.registry.bank.tax.mismatch": "Porezni broj ne odgovara odabranom klijentu banke.",
+  "errors.registry.bank.name.mismatch": "Naziv ne odgovara klijentu banke.",
   "errors.authorization.admin.required": "Za ovu radnju su potrebne administratorske dozvole.",
   "errors.bank.reference.ambiguous": "Referentni podatak zahtijeva provjeru izvora.",
   "errors.bank.reference.invalid.record": "Bankovni referentni podatak zahtijeva provjeru izvora.",

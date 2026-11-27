@@ -26,6 +26,7 @@ public interface IBankReferenceSource
 {
     bool IsConfigured { get; }
     Task<ReferencePage<BankCustomer>> Customers(string? search, int page, int pageSize, CancellationToken ct);
+    Task<BankCustomer?> Customer(string identifier, bool byMatbroj, CancellationToken ct);
     Task<ReferencePage<BankGroup>> Groups(string? search, int page, int pageSize, CancellationToken ct);
     Task<BankGroup?> Group(string number, CancellationToken ct);
 }
@@ -77,6 +78,17 @@ public sealed class SqlBankReferenceSource(IOptions<BankReferenceOptions> option
     public Task<ReferencePage<BankCustomer>> Customers(string? search, int page, int pageSize, CancellationToken ct) =>
         Read(Settings.CustomerTable, [Settings.CustomerTaxColumn, Settings.CustomerMatbrojColumn, Settings.CustomerNameColumn], search, page, pageSize, false,
             reader => new BankCustomer(Text(reader, 0), Text(reader, 1), Text(reader, 2)), ct);
+    public async Task<BankCustomer?> Customer(string identifier, bool byMatbroj, CancellationToken ct)
+    {
+        var columns = byMatbroj
+            ? new[] { Settings.CustomerMatbrojColumn, Settings.CustomerTaxColumn, Settings.CustomerNameColumn }
+            : [Settings.CustomerTaxColumn, Settings.CustomerMatbrojColumn, Settings.CustomerNameColumn];
+        var result = await Read(Settings.CustomerTable, columns, identifier, 1, 2, true,
+            reader => new BankCustomer(Text(reader, byMatbroj ? 1 : 0), Text(reader, byMatbroj ? 0 : 1), Text(reader, 2)), ct);
+        if (result.Total > 1) throw new BusinessRuleException(409, "bank_reference.ambiguous");
+        return result.Items.SingleOrDefault();
+    }
+
     public Task<ReferencePage<BankGroup>> Groups(string? search, int page, int pageSize, CancellationToken ct) =>
         Read(Settings.GccTable, [Settings.GccNumberColumn, Settings.GccNameColumn], search, page, pageSize, false,
             reader => new BankGroup(Text(reader, 0), Text(reader, 1)), ct);

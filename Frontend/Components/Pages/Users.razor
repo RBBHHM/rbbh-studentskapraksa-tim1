@@ -142,7 +142,8 @@ else
             while (_refreshing || _busy) await Task.Delay(50, request.Token);
             request.Token.ThrowIfCancellationRequested();
             _page = 1;
-            await LoadAsync(request.Token);
+            // Supersede the debounce. Once the read starts, finish it before applying the next filter.
+            await LoadAsync(_token);
         }
         catch (OperationCanceledException) when (request.IsCancellationRequested) { }
         finally { if (ReferenceEquals(_filterRequest, request)) _filterRequest = null; }

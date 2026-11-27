@@ -101,6 +101,7 @@ public partial class LegalEntityService : ILegalEntityService
         ValidateCreateDto(dto);
         (await Helpers.CodebookChoices.Load(_context, _actor?.HttpContext?.RequestAborted ?? default, "OSNOV_POVEZANOSTI"))
             .Check("OSNOV_POVEZANOSTI", dto.BasisOfConnection, "basisOfConnection");
+        var matbroj = await ValidateBankCustomer(dto.IsResident, dto.TaxNumber, dto.Matbroj, dto.Name);
         var gcc = await ResolveGcc(dto.GccNumber);
         await ValidateUniqueIdentifierAsync(dto.IsResident, dto.TaxNumber, dto.FbaId);
 
@@ -117,7 +118,7 @@ public partial class LegalEntityService : ILegalEntityService
             GccNumber = gcc?.Number,
             GccName = gcc?.Name,
             IsLargeExposure = dto.IsLargeExposure ?? false,
-            Matbroj = string.IsNullOrWhiteSpace(dto.Matbroj) ? null : dto.Matbroj.Trim(),
+            Matbroj = matbroj,
             BasisOfConnection = dto.BasisOfConnection.Trim(),
             ConnectedWithBank = dto.ConnectedWithBank,
             DateFrom = dto.DateFrom,
@@ -152,6 +153,7 @@ public partial class LegalEntityService : ILegalEntityService
         (await Helpers.CodebookChoices.Load(_context, _actor?.HttpContext?.RequestAborted ?? default, "OSNOV_POVEZANOSTI"))
             .Check("OSNOV_POVEZANOSTI", dto.BasisOfConnection, "basisOfConnection");
         // Omitted additive fields preserve previous source-backed values during rollout.
+        var matbroj = await ValidateBankCustomer(dto.IsResident, dto.TaxNumber, dto.Matbroj, dto.Name);
         var gcc = dto.GccNumber is null && entity.GccNumber is not null ? null : await ResolveGcc(dto.GccNumber);
         await ValidateUniqueIdentifierAsync(dto.IsResident, dto.TaxNumber, dto.FbaId, id);
 
@@ -170,7 +172,7 @@ public partial class LegalEntityService : ILegalEntityService
         entity.FbaId = dto.IsResident ? null : dto.FbaId?.Trim();
         entity.Name = dto.Name.Trim();
         entity.MaticniBroj = string.IsNullOrWhiteSpace(dto.MaticniBroj) ? null : dto.MaticniBroj.Trim();
-        entity.Matbroj = string.IsNullOrWhiteSpace(dto.Matbroj) ? null : dto.Matbroj.Trim();
+        entity.Matbroj = matbroj;
         entity.BasisOfConnection = dto.BasisOfConnection.Trim();
         entity.ConnectedWithBank = dto.ConnectedWithBank;
         entity.DateFrom = dto.DateFrom;
@@ -287,6 +289,27 @@ public partial class LegalEntityService : ILegalEntityService
     }
 
     // ── Privatni pomoćni metodi ───────────────────────────────────────────────
+
+    private async Task<string?> ValidateBankCustomer(bool isResident, string? taxNumber, string? matbroj, string name)
+    {
+        var bankNumber = string.IsNullOrWhiteSpace(matbroj) ? null : matbroj.Trim();
+        var tax = isResident ? taxNumber?.Trim() : null;
+        var identifier = bankNumber ?? tax;
+        if (_bank?.IsConfigured != true || string.IsNullOrEmpty(identifier)) return bankNumber;
+
+        var customer = await _bank.Customer(identifier, bankNumber is not null, _actor?.HttpContext?.RequestAborted ?? default);
+        if (customer is null)
+        {
+            if (bankNumber is not null) throw new BusinessRuleException(400, "registry.bank_customer_not_found");
+            return null; // A company can be registered before it becomes a customer of the bank.
+        }
+        if (tax is not null && !string.Equals(tax, customer.TaxNumber.Trim(), StringComparison.Ordinal))
+            throw new BusinessRuleException(400, "registry.bank_tax_mismatch");
+        if (!string.Equals(name.Trim(), customer.Name.Trim(), StringComparison.OrdinalIgnoreCase))
+            throw new BusinessRuleException(400, "registry.bank_name_mismatch");
+
+        return string.IsNullOrWhiteSpace(customer.Matbroj) ? bankNumber : customer.Matbroj.Trim();
+    }
 
     private async Task<BankGroup?> ResolveGcc(string? number)
     {

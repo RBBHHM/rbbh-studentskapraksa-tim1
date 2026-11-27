@@ -23,7 +23,7 @@ public sealed class LegalEntityDraft
     public bool? IsLargeExposure { get; set; }
     // This is NOT MaticniBroj. It is not an editable field in the source UI.
     // Retain the latest server value on update rather than clearing it silently.
-    public string? PreservedMatbroj { get; private set; }
+    public string? BankCustomerNumber { get; set; }
     public static LegalEntityDraft From(LegalEntity entity) => new()
     {
         Name = entity.Name,
@@ -39,14 +39,14 @@ public sealed class LegalEntityDraft
         GccNumber = entity.GccNumber,
         GccName = entity.GccName,
         IsLargeExposure = entity.IsLargeExposure,
-        PreservedMatbroj = entity.Matbroj
+        BankCustomerNumber = entity.Matbroj
     };
     /// <summary>Copies only fields supplied by the bank reference; the separate application registration number stays untouched.</summary>
     public void ApplyBankCustomer(BankCustomerOption customer)
     {
         Name = customer.Name;
         if (IsResident != false && !string.IsNullOrWhiteSpace(customer.TaxNumber)) TaxNumber = customer.TaxNumber;
-        PreservedMatbroj = customer.Matbroj;
+        BankCustomerNumber = customer.Matbroj;
     }
     public void ResidencyChanged()
     {
@@ -74,7 +74,7 @@ public sealed class LegalEntityDraft
         if (Validate().Count > 0) throw new InvalidOperationException("Resolve field validation before creating the request.");
         static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
         return new(IsResident!.Value, IsResident == true ? Clean(TaxNumber) : null, Clean(MaticniBroj),
-            IsResident == false ? Clean(FbaId) : null, Name!.Trim(), PreservedMatbroj, BasisOfConnection!,
+            IsResident == false ? Clean(FbaId) : null, Name!.Trim(), Clean(BankCustomerNumber), BasisOfConnection!,
             ConnectedWithBank, DateFrom, DateTo, Clean(GccNumber), IsLargeExposure);
     }
     public static bool ValidTaxNumber(string? value)

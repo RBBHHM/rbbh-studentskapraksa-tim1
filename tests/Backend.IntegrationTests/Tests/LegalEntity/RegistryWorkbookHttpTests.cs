@@ -32,7 +32,11 @@ public sealed class RegistryWorkbookHttpTests : AuthenticatedApiFixture
             basisOfConnection = "VL", connectionDescription = "Real description", connectedWithBank = true, dateFrom = "2026-03-11", dateTo = "2026-12-05", isLargeExposure = true };
         Assert.Equal(HttpStatusCode.Created, (await Client.PostAsJsonAsync("/api/legal-entities", request)).StatusCode);
         using var original = new MemoryStream(await Export(true)); using var workbook = new XLWorkbook(original); var sheet = workbook.Worksheet(1);
-        Assert.Equal(19, sheet.LastColumnUsed()!.ColumnNumber()); sheet.Cell(2, 13).Value = "Forged GCC name";
+        Assert.Equal(19, sheet.LastColumnUsed()!.ColumnNumber());
+        Assert.Equal(new[] { "Datum od", "Datum do" }, Enumerable.Range(9, 2).Select(column => sheet.Cell(1, column).GetString()));
+        Assert.Equal(new[] { "Kreirao", "Kreirano", "Izmijenio", "Izmijenjeno" }, Enumerable.Range(16, 4).Select(column => sheet.Cell(1, column).GetString()));
+        Assert.Equal("creator", sheet.Cell(2, 16).GetString());
+        sheet.Cell(2, 13).Value = "Forged GCC name";
         sheet.Cell(2, 15).Value = "Verified"; sheet.Cell(2, 16).Value = "Forged creator"; sheet.Cell(2, 17).Value = new DateTime(2000, 1, 1);
         using var edited = new MemoryStream(); workbook.SaveAs(edited);
         var target = new RegistryWorkbookHttpTests(); await target.InitializeAsync();

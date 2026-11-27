@@ -54,6 +54,11 @@ public sealed class RegistryApiException : Exception
         (System.Net.HttpStatusCode.Conflict, "roles.in_use") => "rolecatalog.delete-in-use",
         (System.Net.HttpStatusCode.Conflict, "roles.duplicate_name") => "errors.roles.duplicate.name",
         (System.Net.HttpStatusCode.Conflict, "verification.provenance_required") => "errors.verification-provenance-required",
+        (System.Net.HttpStatusCode.BadRequest, "registry.bank_customer_not_found") => "legal.bank-customer-not-found",
+        (System.Net.HttpStatusCode.BadRequest, "registry.bank_tax_mismatch") => "legal.bank-tax-mismatch",
+        (System.Net.HttpStatusCode.BadRequest, "registry.bank_name_mismatch") => "legal.bank-name-mismatch",
+        (System.Net.HttpStatusCode.ServiceUnavailable, "bank_reference.unavailable") => "legal.bank-unavailable",
+        (System.Net.HttpStatusCode.Conflict, "bank_reference.ambiguous") => "legal.bank-ambiguous",
         _ => (int?)StatusCode switch
     {
         401 => "errors.unauthorized",

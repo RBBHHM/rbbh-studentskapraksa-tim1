@@ -30,8 +30,15 @@ public class UsersController(IAppUserService appUserService)
         [FromQuery] string? search = null,
         [FromQuery] string? role = null)
     {
-        var result = await _appUserService.GetUsersAsync(page, pageSize, search, role);
-        return HandleResult(result);
+        try
+        {
+            var result = await _appUserService.GetUsersAsync(page, pageSize, search, role);
+            return HandleResult(result);
+        }
+        catch (OperationCanceledException) when (HttpContext.RequestAborted.IsCancellationRequested)
+        {
+            return StatusCode(StatusCodes.Status499ClientClosedRequest);
+        }
     }
 
     /// <summary>

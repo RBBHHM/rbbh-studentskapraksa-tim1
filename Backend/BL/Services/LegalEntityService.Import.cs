@@ -128,6 +128,7 @@ public partial class LegalEntityService
                 };
                 ValidateCreateDto(dto);
                 choices.Check("OSNOV_POVEZANOSTI", dto.BasisOfConnection, "basisOfConnection");
+                var verifiedMatbroj = await ValidateBankCustomer(dto.IsResident, dto.TaxNumber, dto.Matbroj, dto.Name);
                 var gcc = await ResolveGcc(dto.GccNumber);
                 if (dto.ConnectedWithBank is null)
                     throw new ValidationException(BackendMessages.Message("validation.registry.bank.relation.import"));
@@ -144,7 +145,7 @@ public partial class LegalEntityService
                     TaxNumber = dto.IsResident ? dto.TaxNumber : null,
                     FbaId = dto.IsResident ? null : dto.FbaId,
                     Name = dto.Name,
-                    Matbroj = dto.Matbroj,
+                    Matbroj = verifiedMatbroj,
                     MaticniBroj = dto.MaticniBroj,
                     GccNumber = gcc?.Number, GccName = gcc?.Name, IsLargeExposure = dto.IsLargeExposure ?? false,
                     BasisOfConnection = dto.BasisOfConnection,
@@ -169,7 +170,14 @@ public partial class LegalEntityService
             catch (BusinessRuleException exception) when (exception.Status < 500)
             {
                 result.Failed++; result.Errors.Add(BackendMessages.Message("workbook.row.error", row, exception.Message));
-                result.Details.Add(new(row, "gccNumber", exception.Code, exception.Message));
+                var field = exception.Code switch
+                {
+                    "registry.bank_customer_not_found" => "matbroj",
+                    "registry.bank_tax_mismatch" => "taxNumber",
+                    "registry.bank_name_mismatch" => "name",
+                    _ => "gccNumber"
+                };
+                result.Details.Add(new(row, field, exception.Code, exception.Message));
             }
             catch (Exception exception) when (exception is not OperationCanceledException and not OutOfMemoryException and not BusinessRuleException)
             {

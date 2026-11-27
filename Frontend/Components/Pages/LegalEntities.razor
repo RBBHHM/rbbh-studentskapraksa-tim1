@@ -3,6 +3,7 @@
 @using RBI.DesignSystem.Components.Forms
 @using Microsoft.JSInterop
 @implements IDisposable
+@inject RuntimeResources Runtime
 @inject AuthenticationStateProvider AuthenticationState
 @inject IProfileApi Profile
 @inject ILegalEntitiesApi Api
@@ -69,7 +70,7 @@ else
 {
     <RbiDialog Open Class="app-form-dialog" Title="@T[_editingId.HasValue ? "common.edit" : "common.new"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseEditor">
         <DialogBody>
-            @if (_fallback) { <RbiAlert Title="@T["person.fallback"]" /> }
+            @if (_fallback) { <RbiAlert Title="@T["legal.bases-unavailable"]" /> }
             <LegalEntityForm MutationBlocked="_periodLocked" @key="draft" Model="draft" Bases="_bases" Save="SaveAsync" Cancel="() => CloseEditor(false)" />
         </DialogBody>
     </RbiDialog>
@@ -170,21 +171,35 @@ else
         {
             // Fetch the current detail to preserve server-only Matbroj on update.
             if (entity is not null) entity = await Api.GetAsync(entity.Id, _token);
-            _editingId = entity?.Id; _bases = PhysicalPersonOptions.Bases(T).Select(option => option with { Opis = null }).ToArray(); _fallback = false;
+            _editingId = entity?.Id;
+            _bases = [];
+            _fallback = false;
             try
             {
                 var bases = await References.OptionsAsync("OSNOV_POVEZANOSTI", _token);
-                if (bases.Count > 0) _bases = bases; else _fallback = true;
+                _fallback = bases.Count == 0;
+                _bases = bases.Select(LocalizeBasis).ToArray();
             }
             catch (RegistryApiException) { _fallback = true; }
             if (entity is not null && !_bases.Any(option => option.Kod == entity.BasisOfConnection))
                 _bases = [.. _bases, new(entity.BasisOfConnection, entity.BasisOfConnection, entity.ConnectionDescription)];
             _draft = entity is null ? new() : LegalEntityDraft.From(entity);
+            if (entity is not null && _bases.FirstOrDefault(option => option.Kod == entity.BasisOfConnection) is { } selected)
+                _draft.ConnectionDescription = selected.Opis;
         }
         catch (RegistryApiException exception) { _error = exception.MessageKey; }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         finally { _openingEditor = false; }
     }
+    private ReferenceOption LocalizeBasis(ReferenceOption option)
+    {
+        if (System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "bs") return option;
+        var key = "legal.basis." + option.Kod.ToLowerInvariant();
+        return Runtime.TryGet(key, out var label)
+            ? option with { Naziv = label, Opis = Runtime.Helper(key) ?? option.Opis }
+            : option;
+    }
+
     private void CloseEditor(bool open) { if (!open && !_busy) _draft = null; }
     private async Task SaveAsync(LegalEntityRequest request)
     {

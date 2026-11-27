@@ -217,5 +217,6 @@ test("bank customer lookup never invents data and can fill the legal form from a
   await dialog.getByRole("listbox", { name: "Rezultati pretrage klijenata" }).getByRole("option").first().click();
   await expect(dialog.getByLabel("Naziv", { exact: false })).toHaveValue("Fixture Bank Customer");
   await expect(dialog.getByLabel("Porezni broj", { exact: false })).toHaveValue("1234567890125");
+  await expect(dialog.getByLabel("Broj klijenta banke (Matbroj)", { exact: true })).toHaveValue("789456123");
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
 });

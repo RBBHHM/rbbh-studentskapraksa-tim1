@@ -316,6 +316,11 @@ internal static partial class BrowserHostProgram
                 item.Matbroj.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase)).ToArray();
             return Task.FromResult(new ReferencePage<BankCustomer>(matches.Skip(Math.Max(0, page - 1) * pageSize).Take(pageSize).ToArray(), matches.Length, page, pageSize));
         }
+        public Task<BankCustomer?> Customer(string identifier, bool byMatbroj, CancellationToken ct)
+        {
+            Require();
+            return Task.FromResult(KnownCustomers.SingleOrDefault(item => (byMatbroj ? item.Matbroj : item.TaxNumber) == identifier));
+        }
         public Task<ReferencePage<BankGroup>> Groups(string? search, int page, int pageSize, CancellationToken ct)
         {
             Require();
