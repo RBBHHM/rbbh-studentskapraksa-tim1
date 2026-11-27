@@ -26,7 +26,12 @@ document.addEventListener("keydown", function (event) {
 window.appFocus = {
     invalidOrSummary: function (formId, summaryId) {
         const field = document.getElementById(formId)?.querySelector("[aria-invalid=true]");
-        (field || document.getElementById(summaryId))?.focus();
+        if (field) {
+            field.scrollIntoView({ block: "center", inline: "nearest" });
+            field.focus({ preventScroll: true });
+        } else {
+            document.getElementById(summaryId)?.focus();
+        }
     },
     firstInvalid: function () {
         var dialog = document.querySelector("[role=dialog][open], dialog[open], [role=dialog]");

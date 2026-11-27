@@ -27,14 +27,13 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
 
     public async Task<object> Options(CancellationToken ct)
     {
-        // Existing databases can use different SQL Server collations for Name and DisplayName.
         var roles = await db.Roles.AsNoTracking()
             .Where(role => role.IsActive && role.Name != ApplicationAccessRoles.Guest)
             .OrderBy(role => role.Name)
-            .Select(role => new { role.Id, role.Name, role.DisplayName })
+            .Select(role => new { role.Id, role.Name })
             .ToListAsync(ct);
 
-        return new { items = roles.Select(role => new { role.Id, role.Name, displayName = role.DisplayName ?? role.Name }).ToArray() };
+        return new { items = roles.Select(role => new { role.Id, role.Name, displayName = role.Name }).ToArray() };
     }
 
     public async Task<RoleRequestResult> Submit(CreateRoleRequestDTO input, CancellationToken ct)

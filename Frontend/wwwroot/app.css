@@ -679,6 +679,14 @@ h1[tabindex="-1"]:focus, h1:focus-visible { outline: none; }
 .registry-codes-table--custom th.registry-center { min-width: 0; width: 1%; white-space: nowrap; }
 .registry-codes-table--custom th, .registry-codes-table--custom td { padding: .35rem .65rem; vertical-align: middle; }
 
-.codebook-status { margin-inline-start: auto; border-radius: 999px; padding: .2rem .55rem; font-size: .75rem; font-weight: 600; }
-.codebook-status--active { background: #dcfce7; color: #14532d; }
-.codebook-status--inactive { background: #fee2e2; color: #7f1d1d; }
+.codebook-status { margin-inline-start: auto; border-radius: 50%; width: .625rem; height: .625rem; flex: none; }
+.codebook-status--active { background: #15803d; }
+.codebook-status--inactive { background: #dc2626; }
+
+.codebook-schema-list li { padding-block: var(--space-2); }
+.codebook-schema-footer { position: sticky; bottom: 0; z-index: 1; background: var(--surface-default); padding-block: var(--space-2); }
+.custom-codebook-form .codebook-schema-footer .registry-toolbar { margin-block-start: var(--space-2); }
+@media (min-width: 800px) {
+    .codebook-schema-list li { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: end; gap: var(--space-3); }
+    .codebook-schema-description { margin-block-start: 0; }
+}

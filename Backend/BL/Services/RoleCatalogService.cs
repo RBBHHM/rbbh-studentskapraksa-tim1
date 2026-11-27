@@ -25,7 +25,7 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
         if (!string.IsNullOrWhiteSpace(search))
         {
             var term = search.Trim().ToUpperInvariant();
-            query = query.Where(row => row.Name.ToUpper().Contains(term) || row.DisplayName != null && row.DisplayName.ToUpper().Contains(term));
+            query = query.Where(row => row.Name.ToUpper().Contains(term));
         }
         var total = await query.CountAsync(ct);
         var rows = await query.Include(row => row.RolePermissions).OrderBy(row => row.Name).ThenBy(row => row.Id)
@@ -52,24 +52,24 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
         var name = input.Name?.Trim() ?? "";
         if (name.Length is < 1 or > 100 || !name.All(character => char.IsAsciiLetterOrDigit(character) || character is '_' or '-' or '.') || Protected(name))
             throw Invalid();
-        Validate(input.DisplayName, input.Description, input.PermissionIds);
+        Validate(input.PermissionIds);
         var normalized = name.ToUpperInvariant();
         if (await db.Roles.AnyAsync(row => row.Name.Trim().ToUpper() == normalized, ct))
             return null;
         await ValidatePermissions(input.PermissionIds, ct);
-        var row = new Role { Name = name, DisplayName = input.DisplayName?.Trim(), Description = input.Description?.Trim(),
+        var row = new Role { Name = name,
             CreatedBy = AuthenticatedActor.Username(Actor) };
         foreach (var id in input.PermissionIds) row.RolePermissions.Add(new RolePermission { RoleId = row.Id, PermissionId = id });
         db.Roles.Add(row);
         db.AuditLogs.Add(BusinessAudit.Create("Role", "ROLE_CATALOG_CREATE", AuthenticatedActor.Username(Actor), accessor, null,
-            new { row.Name, row.DisplayName, row.Description, row.IsActive, PermissionIds = input.PermissionIds }));
+            new { row.Name, row.IsActive, PermissionIds = input.PermissionIds }));
         await db.SaveChangesAsync(ct); return Map(row);
     }, ct);
 
     public Task<RoleCatalogDTO> Update(long id, UpdateRoleCatalogDTO input, CancellationToken ct) => Locked<RoleCatalogDTO>(async () =>
     {
         await EnsureAdmin(ct);
-        Validate(input.DisplayName, input.Description, input.PermissionIds);
+        Validate(input.PermissionIds);
         var row = await db.Roles.Include(row => row.RolePermissions).SingleOrDefaultAsync(row => row.Id == id, ct)
             ?? throw new BusinessRuleException(404, "roles.not_found");
         if (Protected(row.Name)) throw new BusinessRuleException(409, "roles.protected");
@@ -79,22 +79,21 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
             throw new BusinessRuleException(403, "roles.self_management_denied");
         if (input.ExpectedVersion != VersionOf(row)) throw new BusinessRuleException(409, "request.concurrent_change");
         await ValidatePermissions(input.PermissionIds, ct);
-        var before = new { row.Name, row.DisplayName, row.Description, row.IsActive, PermissionIds = row.RolePermissions.Select(grant => grant.PermissionId).ToArray() };
+        var before = new { row.Name, row.IsActive, PermissionIds = row.RolePermissions.Select(grant => grant.PermissionId).ToArray() };
         var targets = input.PermissionIds.ToHashSet();
         db.RolePermissions.RemoveRange(row.RolePermissions.Where(grant => !targets.Contains(grant.PermissionId)));
         foreach (var permissionId in targets.Except(row.RolePermissions.Select(grant => grant.PermissionId)))
             row.RolePermissions.Add(new RolePermission { RoleId = row.Id, PermissionId = permissionId });
-        if (input.DisplayName is not null) row.DisplayName = input.DisplayName.Trim();
-        row.Description = input.Description?.Trim(); row.IsActive = input.IsActive;
+        row.IsActive = input.IsActive;
         var previous = VersionOf(row);
         var now = DateTime.UtcNow;
         row.ModifiedAt = now > previous ? now : previous.AddTicks(1);
         row.ModifiedBy = AuthenticatedActor.Username(Actor);
         db.AuditLogs.Add(BusinessAudit.Create("Role", "ROLE_CATALOG_UPDATE", AuthenticatedActor.Username(Actor), accessor, before,
-            new { row.Name, row.DisplayName, row.Description, row.IsActive, PermissionIds = input.PermissionIds }));
+            new { row.Name, row.IsActive, PermissionIds = input.PermissionIds }));
         await db.SaveChangesAsync(ct);
         // Removed tracked children need not remain in the returned grant set.
-        return new(row.Id, row.Name, row.DisplayName ?? row.Name, row.Description, row.IsActive, VersionOf(row), input.PermissionIds.Order().ToArray(), false);
+        return new(row.Id, row.Name, row.Name, null, row.IsActive, VersionOf(row), input.PermissionIds.Order().ToArray(), false);
     }, ct);
 
     public Task<RoleDeletionResult> Delete(long id, DateTime expectedVersion, CancellationToken ct) => Locked(async () =>
@@ -110,7 +109,7 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
 
         db.AuditLogs.Add(BusinessAudit.Create("Role", "ROLE_CATALOG_DELETE",
             AuthenticatedActor.Username(Actor), accessor,
-            new { row.Name, row.DisplayName, row.Description, row.IsActive, PermissionIds = row.RolePermissions.Select(grant => grant.PermissionId).ToArray() }, null));
+            new { row.Name, row.IsActive, PermissionIds = row.RolePermissions.Select(grant => grant.PermissionId).ToArray() }, null));
         db.Roles.Remove(row);
         await db.SaveChangesAsync(ct);
         return RoleDeletionResult.Deleted;
@@ -127,9 +126,9 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
                     grant.Permission.IsActive && grant.Permission.Code == ApplicationPermissions.AdministrationManage)), ct))
             throw new BusinessRuleException(403, "authorization.admin_required");
     }
-    private static void Validate(string? display, string? description, long[]? ids)
+    private static void Validate(long[]? ids)
     {
-        if (display is not null && (string.IsNullOrWhiteSpace(display) || display.Length > 100) || description?.Length > 500 || ids is null || ids.Length > 200 ||
+        if (ids is null || ids.Length > 200 ||
             ids.Any(id => id == 0) || ids.Distinct().Count() != ids.Length) throw Invalid();
     }
     private async Task ValidatePermissions(long[] ids, CancellationToken ct)
@@ -140,6 +139,6 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
     private Task<T> Locked<T>(Func<Task<T>> mutation, CancellationToken ct) => UsersMutationBoundary.ExecuteAsync(db, mutation,
         () => throw new BusinessRuleException(409, "request.busy"), ct);
     private static BusinessRuleException Invalid() => new(400, "roles.invalid_definition");
-    private static RoleCatalogDTO Map(Role row) => new(row.Id, row.Name, row.DisplayName ?? row.Name, row.Description,
+    private static RoleCatalogDTO Map(Role row) => new(row.Id, row.Name, row.Name, null,
         row.IsActive, VersionOf(row), row.RolePermissions.Select(grant => grant.PermissionId).Order().ToArray(), Protected(row.Name));
 }

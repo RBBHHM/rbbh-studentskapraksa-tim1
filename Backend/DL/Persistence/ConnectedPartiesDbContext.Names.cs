@@ -19,6 +19,8 @@ public partial class ConnectedPartiesDbContext
 
     private static readonly Dictionary<string, string[]> ColumnOrder = new(StringComparer.Ordinal)
     {
+        ["Roles"] = ["ID", "IS_ACTIVE", "NAME", "CREATED_BY", "CREATED_AT", "MODIFIED_BY", "MODIFIED_AT"],
+        ["Permissions"] = ["ID", "IS_ACTIVE", "MODULE", "CODE"],
         ["AppUsers"] = ["ID", "KEYCLOAK_ID", "USERNAME", "FIRST_NAME", "LAST_NAME", "EMAIL", "IS_ACTIVE",
             "LOGIN_CONFIRMED", "CREATED_AT", "CREATED_BY", "MODIFIED_AT", "MODIFIED_BY"],
         ["AuditLogs"] = ["ID", "ACTION", "USER", "TABLE_NAME", "OLD_VALUES", "NEW_VALUES", "TIMESTAMP"],

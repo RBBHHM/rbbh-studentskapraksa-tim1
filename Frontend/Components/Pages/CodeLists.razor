@@ -49,7 +49,7 @@ else
                     {
                         <li><button type="button" class="codes-card" aria-label="@category" aria-describedby="@($"codebook-status-{category}")" disabled="@(_busy || _refreshing)" @onclick="() => OpenCategoryAsync(category)"><AppIcon Name="AppIconName.BookOpen" /><span class="codes-card__name">@category</span>@if (_definitions.TryGetValue(category, out var cardDefinition))
                             {
-                                <span id="@($"codebook-status-{category}")" class="codebook-status @(cardDefinition.IsActive ? "codebook-status--active" : "codebook-status--inactive")">@T[cardDefinition.IsActive ? "codes.active" : "codes.inactive"]</span>
+                                <span id="@($"codebook-status-{category}")" class="codebook-status @(cardDefinition.IsActive ? "codebook-status--active" : "codebook-status--inactive")"><span class="app-visually-hidden">@T[cardDefinition.IsActive ? "codes.active" : "codes.inactive"]</span></span>
                             }</button></li>
                     }
                 </ul>

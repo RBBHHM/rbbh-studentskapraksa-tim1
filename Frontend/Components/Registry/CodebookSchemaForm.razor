@@ -3,10 +3,6 @@
 @inject IJSRuntime JS
 
 <form id="codebook-schema-form" class="custom-codebook-form" @onsubmit="SubmitAsync" @onsubmit:preventDefault novalidate>
-    @if (Error is not null)
-    {
-        <div id="codebook-schema-error" tabindex="-1"><RbiAlert Class="codebook-form-alert" Tone="RbiAlertTone.Danger" Title="@T[Error]" Announcement="RbiAlertAnnouncement.Assertive" /></div>
-    }
     <fieldset disabled="@_busy">
         <legend class="app-visually-hidden">@T["codes.column-structure"]</legend>
         <div class="registry-form-grid">
@@ -62,9 +58,15 @@
             </ol>
         </section>
     </fieldset>
-    <div class="registry-toolbar">
-        <RbiButton Variant="RbiButtonVariant.Secondary" OnClick="Cancel" Disabled="_busy">@T["common.cancel"]</RbiButton>
-        <RbiButton Type="RbiButtonType.Submit" Disabled="_busy">@T[Existing is null ? "codes.create-submit" : "common.save"]</RbiButton>
+    <div class="codebook-schema-footer">
+        @if (Error is not null)
+        {
+            <div id="codebook-schema-error" tabindex="-1"><RbiAlert Tone="RbiAlertTone.Danger" Title="@T[Error]" Announcement="RbiAlertAnnouncement.Assertive" /></div>
+        }
+        <div class="registry-toolbar">
+            <RbiButton Variant="RbiButtonVariant.Secondary" OnClick="Cancel" Disabled="_busy">@T["common.cancel"]</RbiButton>
+            <RbiButton Type="RbiButtonType.Submit" Disabled="_busy">@T[Existing is null ? "codes.create-submit" : "common.save"]</RbiButton>
+        </div>
     </div>
 </form>
 

@@ -1119,7 +1119,8 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bigint")
-                        .HasColumnName("ID");
+                        .HasColumnName("ID")
+                        .HasColumnOrder(0);
 
                     SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<long>("Id"), "PermissionsIdSequence");
 
@@ -1127,22 +1128,29 @@ namespace RBBH.ConnectedParties.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)")
-                        .HasColumnName("CODE");
+                        .HasColumnName("CODE")
+                        .HasColumnOrder(3);
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit")
-                        .HasColumnName("IS_ACTIVE");
+                        .HasColumnName("IS_ACTIVE")
+                        .HasColumnOrder(1);
 
                     b.Property<string>("Module")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)")
-                        .HasColumnName("MODULE");
+                        .HasColumnName("MODULE")
+                        .HasColumnOrder(2);
 
-                    b.HasKey("Id");
+                    SqlServerKeyBuilderExtensions.IsClustered(b.HasKey("Id"), false);
 
                     b.HasIndex("Code")
                         .IsUnique();
+
+                    SqlServerIndexBuilderExtensions.IsClustered(b.HasIndex("Module", "Code")
+                        .IsUnique()
+                        .HasDatabaseName("IX_PERMISSIONS_MODULE_CODE"));
 
                     b.ToTable("PERMISSIONS");
                 });
@@ -1152,47 +1160,44 @@ namespace RBBH.ConnectedParties.Migrations
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bigint")
-                        .HasColumnName("ID");
+                        .HasColumnName("ID")
+                        .HasColumnOrder(0);
 
                     SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<long>("Id"), "RolesIdSequence");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2")
-                        .HasColumnName("CREATED_AT");
+                        .HasColumnName("CREATED_AT")
+                        .HasColumnOrder(4);
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)")
-                        .HasColumnName("CREATED_BY");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)")
-                        .HasColumnName("DESCRIPTION");
-
-                    b.Property<string>("DisplayName")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("DISPLAY_NAME");
+                        .HasColumnName("CREATED_BY")
+                        .HasColumnOrder(3);
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit")
-                        .HasColumnName("IS_ACTIVE");
+                        .HasColumnName("IS_ACTIVE")
+                        .HasColumnOrder(1);
 
                     b.Property<DateTime?>("ModifiedAt")
                         .IsConcurrencyToken()
                         .HasColumnType("datetime2")
-                        .HasColumnName("MODIFIED_AT");
+                        .HasColumnName("MODIFIED_AT")
+                        .HasColumnOrder(6);
 
                     b.Property<string>("ModifiedBy")
                         .HasColumnType("nvarchar(max)")
-                        .HasColumnName("MODIFIED_BY");
+                        .HasColumnName("MODIFIED_BY")
+                        .HasColumnOrder(5);
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)")
                         .HasColumnName("NAME")
+                        .HasColumnOrder(2)
                         .UseCollation("Latin1_General_100_CI_AS");
 
                     b.HasKey("Id");

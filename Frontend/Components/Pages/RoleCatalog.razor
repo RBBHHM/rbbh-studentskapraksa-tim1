@@ -44,7 +44,6 @@ else
             <thead>
                 <tr>
                     <th scope="col">@T["rolecatalog.name"]</th>
-                    <th scope="col">@T["rolecatalog.description-field"]</th>
                     <th scope="col">@T["rolecatalog.permissions"]</th>
                     <th scope="col">@T["rolecatalog.status"]</th>
                     <th scope="col">@T["common.actions"]</th>
@@ -55,7 +54,6 @@ else
                 {
                     <tr @key="role.Id">
                         <td class="registry-strong"><span class="registry-cell-label" aria-hidden="true">@T["rolecatalog.name"]</span><span>@(role.Name.Equals("gost", StringComparison.OrdinalIgnoreCase) ? T.Role(role.Name) : role.Name)</span></td>
-                        <td><span class="registry-cell-label" aria-hidden="true">@T["rolecatalog.description-field"]</span><span>@(string.IsNullOrWhiteSpace(role.Description) ? "—" : role.Description)</span></td>
                         <td><span class="registry-cell-label" aria-hidden="true">@T["rolecatalog.permissions"]</span>@role.PermissionIds.Count</td>
                         <td><span class="registry-cell-label" aria-hidden="true">@T["rolecatalog.status"]</span><Indicator Kind="@(role.IsActive ? "active" : "inactive")" Label="@T[role.IsActive ? "codes.active" : "codes.inactive"]" /></td>
                         <td><span class="registry-cell-label" aria-hidden="true">@T["common.actions"]</span>
@@ -110,13 +108,6 @@ else
                                               UpdateMode="RbiInputUpdateMode.Input" @bind-Value="draft.Name" @bind-Value:after="ClearFormError" @onblur="ShowValidation" />
                                     @if (NameError is { } nameError) { <p class="app-error" id="rolecatalog-name-error" role="status">@T[nameError]</p> }
                                 </div>
-                                <div class="role-catalog-field">
-                                    <label for="rolecatalog-description">@T["rolecatalog.description-field"]</label>
-                                    <RbiTextArea Id="rolecatalog-description" Rows="2" maxlength="500"
-                                                 Invalid="@(DescriptionError is not null)" aria-describedby="@(DescriptionError is not null ? "rolecatalog-description-error" : null)"
-                                                 @bind-Value="draft.Description" @onblur="ShowValidation" />
-                                    @if (DescriptionError is { } descriptionError) { <p class="app-error" id="rolecatalog-description-error" role="status">@T[descriptionError]</p> }
-                                </div>
                             </div>
                             @if (draft.Id is not null)
                             {
@@ -165,7 +156,6 @@ else
     {
         public long? Id { get; init; }
         public string Name { get; set; } = "";
-        public string Description { get; set; } = "";
         public bool IsActive { get; set; } = true;
         public DateTime Version { get; init; }
         public PermissionChoice[] Permissions { get; init; } = [];
@@ -203,8 +193,6 @@ else
                 ? "rolecatalog.invalid-name" : null;
         }
     }
-    private string? DescriptionError => _showValidation && _draft is { } draft && draft.Description.Length > 500
-        ? "rolecatalog.description-too-long" : null;
 
     private void ShowValidation() => _showValidation = true;
 
@@ -287,7 +275,6 @@ else
         {
             Id = role?.Id,
             Name = role?.Name ?? "",
-            Description = role?.Description ?? "",
             IsActive = role?.IsActive ?? true,
             Version = role?.Version ?? default,
             OtherPermissionIds = selected.Except(_permissions.Select(permission => permission.Id)).ToArray(),
@@ -335,7 +322,7 @@ else
     {
         if (!_canWrite || _draft is not { } draft || _busy) return;
         _showValidation = true;
-        if (NameError is not null || DescriptionError is not null)
+        if (NameError is not null)
         {
             _editorTab = "details";
             return;
@@ -345,9 +332,9 @@ else
         try
         {
             if (draft.Id is { } id)
-                await Api.UpdateAsync(id, new(null, string.IsNullOrWhiteSpace(draft.Description) ? null : draft.Description.Trim(), draft.IsActive, draft.Version, draft.SelectedPermissionIds), _token);
+                await Api.UpdateAsync(id, new(null, null, draft.IsActive, draft.Version, draft.SelectedPermissionIds), _token);
             else
-                await Api.CreateAsync(new(draft.Name.Trim(), null, string.IsNullOrWhiteSpace(draft.Description) ? null : draft.Description.Trim(), draft.SelectedPermissionIds), _token);
+                await Api.CreateAsync(new(draft.Name.Trim(), null, null, draft.SelectedPermissionIds), _token);
             _draft = null;
             _notice = "rolecatalog.saved";
             await LoadAsync();

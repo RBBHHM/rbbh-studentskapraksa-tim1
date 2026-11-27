@@ -30,7 +30,6 @@ test("admin can create a DB-backed role with selected permission and search for 
   await page.goto("/app/admin/role-catalog"); await interactive(page);
   await page.getByRole("button", { name: "Nova rola" }).click();
   await page.locator("#rolecatalog-name").fill("qa_custom");
-  await page.locator("#rolecatalog-description").fill("Automated test role");
   const dialog = page.getByRole("dialog", { name: "Nova rola" });
   await dialog.getByRole("tab", { name: "Dozvole", exact: true }).click();
   const firstPermission = dialog.getByRole("checkbox").first();
@@ -49,7 +48,6 @@ test("admin can create a DB-backed role with selected permission and search for 
   await expect(page.getByRole("status").getByText("Rola je uspješno sačuvana.")).toBeVisible();
   await page.locator("#rolecatalog-search").fill("qa_custom");
   await expect(page.getByRole("table").getByText("qa_custom", { exact: true })).toBeVisible();
-  await expect(page.getByRole("table").getByText("Automated test role", { exact: true })).toBeVisible();
   await page.getByRole("row", { name: /qa_custom/ }).getByRole("button", { name: "Obriši" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Obriši" }).click();
   await expect(page.getByRole("status").getByText("Rola je obrisana.")).toBeVisible();

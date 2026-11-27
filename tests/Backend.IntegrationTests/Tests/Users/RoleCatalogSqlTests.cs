@@ -41,7 +41,7 @@ public sealed class RoleCatalogSqlTests : RoleCatalogFixture
         await InDatabase(async db =>
         {
             var stored = await db.Roles.SingleAsync(row => row.Id == role.Id);
-            Assert.Equal(role.DisplayName, stored.DisplayName); Assert.True(stored.IsActive); Assert.Null(stored.ModifiedAt);
+            Assert.Equal(role.Name, stored.Name); Assert.True(stored.IsActive); Assert.Null(stored.ModifiedAt);
             Assert.Equal(role.PermissionIds, await db.RolePermissions.Where(row => row.RoleId == role.Id).Select(row => row.PermissionId).ToArrayAsync());
             Assert.Single(db.AuditLogs);
         });
@@ -73,11 +73,19 @@ public sealed class RoleCatalogSqlTests : RoleCatalogFixture
                 {
                     await db.Database.MigrateAsync();
                     var role = await db.Roles.SingleAsync(); Assert.True(role.Id > 0); Assert.Equal("existing-role", role.Name);
-                    Assert.Null(role.DisplayName); Assert.Null(role.Description); Assert.Null(role.ModifiedAt);
+                    Assert.Null(role.ModifiedAt);
                     var grant = await db.RolePermissions.SingleAsync();
                     Assert.Equal(role.Id, grant.RoleId);
                     Assert.Equal((await db.Permissions.SingleAsync()).Id, grant.PermissionId);
                     Assert.Equal("original", role.CreatedBy);
+                    Assert.Equal(new[] { "ID", "IS_ACTIVE", "NAME", "CREATED_BY", "CREATED_AT", "MODIFIED_BY", "MODIFIED_AT" },
+                        await db.Database.SqlQueryRaw<string>("""
+                            SELECT name AS [Value] FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.ROLES') ORDER BY column_id
+                            """).ToArrayAsync());
+                    Assert.Equal(new[] { "ID", "IS_ACTIVE", "MODULE", "CODE" },
+                        await db.Database.SqlQueryRaw<string>("""
+                            SELECT name AS [Value] FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.PERMISSIONS') ORDER BY column_id
+                            """).ToArrayAsync());
                 }
             }
             finally { await db.Database.EnsureDeletedAsync(); }

@@ -20,15 +20,12 @@ public sealed class RoleRequestWorkflowSqlTests : RoleRequestFixture
     protected override bool UseSql => true;
 
     [SqlServerFact]
-    public async Task OptionsUseDisplayNameOrRoleNameAcrossDifferentSqlCollations()
+    public async Task OptionsUseRoleNameAndExcludeInactiveRoles()
     {
         await InDatabase(async db =>
         {
-            await db.Database.ExecuteSqlRawAsync("""
-                ALTER TABLE dbo.ROLES ALTER COLUMN DISPLAY_NAME nvarchar(100) COLLATE SQL_Latin1_General_CP1_CI_AS NULL;
-                """);
             db.Roles.AddRange(
-                new Role { Name = "fixture-label", DisplayName = "Član tima", CreatedBy = "fixture" },
+                new Role { Name = "fixture-label", CreatedBy = "fixture" },
                 new Role { Name = "fixture-fallback", CreatedBy = "fixture" },
                 new Role { Name = "fixture-inactive", IsActive = false, CreatedBy = "fixture" });
             await db.SaveChangesAsync();
@@ -39,7 +36,7 @@ public sealed class RoleRequestWorkflowSqlTests : RoleRequestFixture
         var labels = payload.GetProperty("items").EnumerateArray()
             .ToDictionary(role => role.GetProperty("name").GetString()!, role => role.GetProperty("displayName").GetString());
 
-        Assert.Equal("Član tima", labels["fixture-label"]);
+        Assert.Equal("fixture-label", labels["fixture-label"]);
         Assert.Equal("fixture-fallback", labels["fixture-fallback"]);
         Assert.DoesNotContain("fixture-inactive", labels.Keys);
         Assert.DoesNotContain(ApplicationAccessRoles.Guest, labels.Keys);

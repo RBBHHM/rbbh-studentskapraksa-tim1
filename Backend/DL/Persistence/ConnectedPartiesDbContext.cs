@@ -159,8 +159,10 @@ public partial class ConnectedPartiesDbContext(
 
         modelBuilder.Entity<Permission>(entity =>
         {
-            entity.HasKey(e => e.Id);
+            entity.HasKey(e => e.Id).IsClustered(false);
             entity.HasIndex(e => e.Code).IsUnique();
+            entity.HasIndex(e => new { e.Module, e.Code }).IsUnique().IsClustered()
+                .HasDatabaseName("IX_PERMISSIONS_MODULE_CODE");
         });
 
         modelBuilder.Entity<RolePermission>(entity =>
