@@ -387,25 +387,31 @@ h1[tabindex="-1"]:focus, h1:focus-visible { outline: none; }
 .app-confirm--primary .rbi-button--destructive:hover:not(:disabled) { background: var(--action-primary-background-hover); }
 .registry-family__icon { flex-shrink: 1; min-width: 0; }
 
-.audit-badge { display: inline-block; padding: .125rem .625rem; border-radius: 9999px; border: 1px solid var(--border-strong); font-size: var(--font-size-xs); font-weight: 600; background: var(--surface-muted); color: var(--text-primary); }
+.audit-badge { display: inline-flex; align-items: center; padding: .3rem .7rem; border-radius: 9999px; border: 1px solid var(--border-strong); font-size: var(--font-size-sm); line-height: 1.3; font-weight: 600; background: var(--surface-muted); color: var(--text-primary); }
 .audit-badge--success { border-color: var(--feedback-success-border); background: var(--feedback-success-background); color: var(--feedback-success-foreground); }
 .audit-badge--warning { border-color: var(--feedback-warning-border); background: var(--feedback-warning-background); color: var(--feedback-warning-foreground); }
 .audit-badge--danger { border-color: var(--feedback-danger-border); background: var(--feedback-danger-background); color: var(--feedback-danger-foreground); }
-.audit-summary { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-width: 22rem; margin-block-end: .25rem; }
-.audit-row--added > * { background: var(--feedback-success-background); color: var(--feedback-success-foreground); }
-.audit-row--removed > * { background: var(--feedback-danger-background); color: var(--feedback-danger-foreground); }
-.audit-row--changed > * { background: var(--feedback-warning-background); color: var(--feedback-warning-foreground); }
+.audit-summary { display: grid; gap: .375rem; max-width: 28rem; margin: 0 0 .25rem; padding: 0; list-style: none; }
+.audit-summary li { display: grid; gap: .125rem; }
+.audit-summary-more { display: block; color: var(--text-secondary); font-size: var(--font-size-sm); }
+.audit-summary li > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.audit-row--added td:last-child { background: var(--feedback-success-background); color: var(--feedback-success-foreground); }
+.audit-row--removed td:nth-child(2) { background: var(--feedback-danger-background); color: var(--feedback-danger-foreground); }
+.audit-row--changed td:last-child { background: var(--feedback-warning-background); color: var(--feedback-warning-foreground); }
 .rbi-dialog.audit-detail-dialog:not(.rbi-command-dialog) { width: min(calc(100vw - 2rem), 58rem); }
 .audit-detail-dialog .rbi-modal__body { overflow-wrap: anywhere; }
+.audit-detail-meta { display: grid; justify-items: start; gap: .875rem; margin-block-end: 1.25rem; padding: 1rem 1.25rem; background: var(--surface-muted); border: 1px solid var(--border-subtle); border-radius: .5rem; }
+.audit-detail-meta dl { display: flex; flex-wrap: wrap; gap: .75rem 2rem; margin: 0; }
+.audit-detail-meta dt { color: var(--text-secondary); font-size: var(--font-size-sm); }
+.audit-detail-meta dd { margin: .25rem 0 0; font-weight: 600; }
 .audit-detail-dialog .rbi-table-scroll { box-sizing: border-box; overflow: visible; }
 .audit-detail-table th[scope="row"] { width: 26%; }
 .audit-detail-table :is(th[scope="row"], td) { overflow-wrap: anywhere; white-space: pre-wrap; }
 @media (max-width: 48rem) {
     .audit-detail-table th[scope="row"] { display: block; width: auto; padding: var(--space-2); }
 }
-.audit-raw { white-space: pre-wrap; overflow-wrap: anywhere; }
-.codes-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 1rem; list-style: none; padding: 0; margin: 0; }
-.codes-card { display: flex; align-items: center; gap: .75rem; width: 100%; min-height: 4.5rem; padding: 1rem; text-align: start; cursor: pointer; border: 1px solid var(--border-strong); border-radius: .75rem; background: var(--surface-raised, var(--surface-muted)); color: var(--text-primary); font: inherit; }
+.codes-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr)); grid-auto-rows: 1fr; gap: .75rem; list-style: none; padding: 0; margin: 0; }
+.codes-card { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr) .625rem; align-items: center; gap: .75rem; box-sizing: border-box; width: 100%; height: 100%; min-height: 4.25rem; padding: 1rem; text-align: start; cursor: pointer; border: 1px solid var(--border-subtle); border-radius: .75rem; background: var(--surface-raised, var(--surface-muted)); color: var(--text-primary); font: inherit; }
 .codes-card:hover:not(:disabled) { border-color: var(--border-brand); background: var(--surface-brand-subtle); }
 .codes-card:focus-visible { outline: 2px solid var(--border-brand); outline-offset: 2px; }
 .codes-card__name { font-weight: 600; overflow-wrap: anywhere; }
@@ -643,8 +649,6 @@ h1[tabindex="-1"]:focus, h1:focus-visible { outline: none; }
     }
 }
 
-.codes-cards { grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr)); gap: .75rem; }
-.codes-card { min-height: 3.75rem; border-color: var(--border-subtle); }
 .codebook-detail { margin-block-end: 1rem; }
 .codebook-detail__title { margin: 0 0 .75rem; font-size: 1.125rem; overflow-wrap: anywhere; }
 .codebook-detail__actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
@@ -679,9 +683,9 @@ h1[tabindex="-1"]:focus, h1:focus-visible { outline: none; }
 .registry-codes-table--custom th.registry-center { min-width: 0; width: 1%; white-space: nowrap; }
 .registry-codes-table--custom th, .registry-codes-table--custom td { padding: .35rem .65rem; vertical-align: middle; }
 
-.codebook-status { margin-inline-start: auto; border-radius: 50%; width: .625rem; height: .625rem; flex: none; }
-.codebook-status--active { background: #15803d; }
-.codebook-status--inactive { background: #dc2626; }
+.codebook-status { grid-column: 3; justify-self: end; background: var(--status-color); box-shadow: 0 0 0 .2rem color-mix(in srgb, var(--status-color) 14%, transparent), 0 0 .6rem color-mix(in srgb, var(--status-color) 30%, transparent); border-radius: 50%; width: .625rem; height: .625rem; flex: none; }
+.codebook-status--active { --status-color: #15803d; }
+.codebook-status--inactive { --status-color: #dc2626; }
 
 .codebook-schema-list li { padding-block: var(--space-2); }
 .codebook-schema-footer { position: sticky; bottom: 0; z-index: 1; background: var(--surface-default); padding-block: var(--space-2); }

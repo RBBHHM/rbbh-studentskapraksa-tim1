@@ -379,6 +379,21 @@ internal static partial class BrowserHostProgram
                                     NewValues = System.Text.Json.JsonSerializer.Serialize(new { note = "<img src=x onerror=\"window.__auditExecuted=true\">audit-body-needle" })
                                 });
                             break;
+                        case "/__fixtures/audit-role-change":
+                            await using (var scope = backend.Services.CreateAsyncScope())
+                            {
+                                var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                                var permissionId = await db.Permissions.Where(row => row.Code == "FL_VIEW").Select(row => row.Id).SingleAsync();
+                                db.AuditLogs.Add(new RBBH.ConnectedParties.DL.Entities.Audit.AuditLog
+                                {
+                                    TableName = "Role", Action = "ROLE_CATALOG_UPDATE", Username = "fixture-role-editor",
+                                    OldValues = """{"Name":"Fixture","IsActive":true,"PermissionIds":[]}""",
+                                    NewValues = System.Text.Json.JsonSerializer.Serialize(new { Name = "Fixture", IsActive = false, PermissionIds = new[] { permissionId } }),
+                                    Timestamp = DateTime.UtcNow
+                                });
+                                await db.SaveChangesAsync();
+                            }
+                            break;
                         case "/__fixtures/audit-pages":
                             await using (var scope = backend.Services.CreateAsyncScope())
                             {

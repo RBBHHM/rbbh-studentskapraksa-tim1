@@ -14,6 +14,24 @@ public sealed class AuditChangeTests
         Assert.Equal(AuditChangeKind.Added, changes["d"].Kind);
     }
 
+    [Fact]
+    public void FlattensNestedSnapshotsAndFormatsReferenceNamesWithoutTreatingPermissionOrderAsAChange()
+    {
+        var changes = AuditChange.Compare(
+            """{"Definition":{"Name":"Srodstvo","IsActive":true},"PermissionIds":[14,9],"LegalEntityId":42}""",
+            """{"Definition":{"Name":"Srodstvo","IsActive":false},"PermissionIds":[9,14],"LegalEntityId":43,"Columns":[{"Name":"Kod"}]}""",
+            new Dictionary<long, string> { [9] = "LIMITI_VIEW", [14] = "PL_VIEW" }, yes: "Da", no: "Ne",
+            referenceNames: new Dictionary<string, Dictionary<long, string>> { ["LegalEntityId"] = new() { [42] = "Firma A", [43] = "Firma B" } })
+            .ToDictionary(change => change.Field);
+
+        Assert.Equal(new AuditFieldChange("Definition.IsActive", "Da", "Ne", AuditChangeKind.Changed), changes["Definition.IsActive"]);
+        Assert.Equal(new AuditFieldChange("LegalEntityId", "Firma A", "Firma B", AuditChangeKind.Changed), changes["LegalEntityId"]);
+        Assert.Equal("Kod", changes["Columns [1].Name"].New);
+        Assert.Equal(AuditChangeKind.Unchanged, changes["PermissionIds"].Kind);
+        Assert.Contains("LIMITI_VIEW", changes["PermissionIds"].Old);
+        Assert.DoesNotContain("[", changes["PermissionIds"].Old);
+    }
+
     [Theory]
     [InlineData("not json")]
     [InlineData("[1,2]")]
@@ -21,6 +39,8 @@ public sealed class AuditChangeTests
 
     [Theory]
     [InlineData("CREATE", "success")]
+    [InlineData("ROLE_CATALOG_CREATE", "success")]
+    [InlineData("ROLE_CATALOG_UPDATE", "warning")]
     [InlineData("update", "warning")]
     [InlineData("DELETE", "danger")]
     [InlineData("OTHER", "neutral")]

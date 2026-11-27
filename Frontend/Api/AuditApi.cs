@@ -15,7 +15,8 @@ public sealed record AuditRecord(long Id, string TableName, string Action, strin
         return values.Any(value => value?.Contains(term, StringComparison.OrdinalIgnoreCase) == true);
     }
 }
-public sealed record AuditPage(IReadOnlyList<AuditRecord> Logs, int Total, int Page, int PageSize);
+public sealed record AuditPage(IReadOnlyList<AuditRecord> Logs, int Total, int Page, int PageSize, IReadOnlyDictionary<long, string>? PermissionCodes = null,
+    IReadOnlyDictionary<string, Dictionary<long, string>>? ReferenceNames = null);
 public interface IAuditApi { Task<AuditPage> GetAsync(int page = 1, CancellationToken token = default); }
 public sealed class AuditApi(IRbiApiTransport transport) : IAuditApi
 {

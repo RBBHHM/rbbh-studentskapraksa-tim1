@@ -37,6 +37,20 @@ test("audit details open in a dialog with highlighted field changes and inert ma
   expect(await body.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
   await page.keyboard.press("Escape"); await expect(dialog).toHaveCount(0);
 });
+test("role audit displays changed fields and resolves historical permission IDs", async ({ page, request }) => {
+  expect((await request.post("/__fixtures/audit-role-change", { headers })).status()).toBe(204);
+  await page.goto("/app/admin/audit"); await interactive(page);
+  const row = page.getByRole("row", { name: /fixture-role-editor/ });
+  await expect(row.locator(".audit-badge--warning")).toHaveText("Izmjena role");
+  await expect(row.locator(".audit-summary")).toContainText("FL_VIEW");
+  await row.getByRole("button", { name: /^Detalji/ }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("rowheader")).toHaveText(["Aktivan", "Permisije"]);
+  await expect(dialog.getByRole("row", { name: /Aktivan/ })).toContainText("Da");
+  await expect(dialog.getByRole("row", { name: /Aktivan/ })).toContainText("Ne");
+  await expect(dialog.getByRole("row", { name: /Permisije/ })).toContainText("FL_VIEW");
+  await expect(dialog.locator("pre")).toHaveCount(0);
+});
 test("audit paging reaches records beyond the source first 200", async ({ page, request }) => {
   await request.post("/__fixtures/audit-pages", { headers }); await page.goto("/app/admin/audit"); await interactive(page);
   await expect(page.getByRole("row", { name: /audit-page-000/ })).toBeVisible(); await expect(page.getByRole("row", { name: /audit-page-200/ })).toHaveCount(0);
