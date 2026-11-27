@@ -265,6 +265,27 @@ internal static partial class BrowserHostProgram
                                 await db.SaveChangesAsync();
                             }
                             break;
+                        case "/__fixtures/paged-codebooks":
+                            await using (var scope = backend.Services.CreateAsyncScope())
+                            {
+                                var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                                for (var index = 0; index < 31; index++)
+                                    db.CodeListDefinitions.Add(new CodeListDefinition { Name = $"ZZ_PAGE_{index:D2}", CreatedBy = "fixture" });
+                                for (var index = 0; index < 51; index++)
+                                    db.CodeLists.Add(new CodeList { Kategorija = "ZZ_PAGE_30", Kod = $"K{index:D2}", Naziv = $"Value {index:D2}", KreiraoKorisnik = "fixture", Aktivan = index != 50 });
+                                await db.SaveChangesAsync();
+                            }
+                            break;
+                        case "/__fixtures/paged-people":
+                            await using (var scope = backend.Services.CreateAsyncScope())
+                            {
+                                var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                                for (var index = 0; index < 31; index++)
+                                    db.RelatedPersons.Add(new RBBH.ConnectedParties.DL.Entities.RelatedPersons.RelatedPerson
+                                    { FirstName = "Paged", LastName = $"Person {index:D2}", CreatedBy = "fixture", IsActive = true });
+                                await db.SaveChangesAsync();
+                            }
+                            break;
                         case "/__fixtures/codes-reference":
                             await using (var scope = backend.Services.CreateAsyncScope())
                             {

@@ -39,9 +39,13 @@ public sealed record DuplicateIdentity(bool Exists, string? Field, string? Messa
 public sealed record ImportResult(int Imported, int Failed, IReadOnlyList<string> Errors);
 public sealed record ReferenceOption(string Kod, string Naziv, string? Opis);
 
+public sealed record PeoplePage(IReadOnlyList<RelatedPerson> Items, int Total, int Page, int PageSize);
+
 public interface IRelatedPersonsApi
 {
     Task<IReadOnlyList<RelatedPerson>> ListAsync(CancellationToken token = default);
+    Task<PeoplePage> PageAsync(int page, string? search, CancellationToken token = default);
+    Task<RelatedPerson> GetAsync(long id, CancellationToken token = default);
     Task<IReadOnlyList<PersonTreeNode>> TreeAsync(long id, CancellationToken token = default);
     Task<DuplicateIdentity> CheckDuplicateAsync(string field, string value, long? excludeId, CancellationToken token = default);
     Task<IReadOnlyList<ReferenceOption>> OptionsAsync(string category, CancellationToken token = default);
@@ -56,6 +60,10 @@ public sealed class RelatedPersonsApi(IRbiApiFileTransport transport) : IRelated
 {
     public async Task<IReadOnlyList<RelatedPerson>> ListAsync(CancellationToken token = default) =>
         Value(await transport.GetAsync<List<RelatedPerson>>("api/related-persons/detailed", token), token);
+    public async Task<PeoplePage> PageAsync(int page, string? search, CancellationToken token = default) =>
+        Value(await transport.GetAsync<PeoplePage>($"api/related-persons/page?page={page}&pageSize=30&search={Uri.EscapeDataString(search?.Trim() ?? "")}", token), token);
+    public async Task<RelatedPerson> GetAsync(long id, CancellationToken token = default) =>
+        Value(await transport.GetAsync<RelatedPerson>($"api/related-persons/{id:D}", token), token);
     public async Task<IReadOnlyList<PersonTreeNode>> TreeAsync(long id, CancellationToken token = default) =>
         Value(await transport.GetAsync<List<PersonTreeNode>>($"api/related-persons/{id:D}/relationship-tree", token), token);
     public async Task<DuplicateIdentity> CheckDuplicateAsync(string field, string value, long? excludeId, CancellationToken token = default)
@@ -99,6 +107,8 @@ internal sealed class UnconfiguredRelatedPersonsApi : IRelatedPersonsApi
 {
     private static Task<T> Unavailable<T>() => Task.FromException<T>(new RegistryApiException());
     public Task<IReadOnlyList<RelatedPerson>> ListAsync(CancellationToken token = default) => Unavailable<IReadOnlyList<RelatedPerson>>();
+    public Task<PeoplePage> PageAsync(int page, string? search, CancellationToken token = default) => Unavailable<PeoplePage>();
+    public Task<RelatedPerson> GetAsync(long id, CancellationToken token = default) => Unavailable<RelatedPerson>();
     public Task<IReadOnlyList<PersonTreeNode>> TreeAsync(long id, CancellationToken token = default) => Unavailable<IReadOnlyList<PersonTreeNode>>();
     public Task<DuplicateIdentity> CheckDuplicateAsync(string field, string value, long? excludeId, CancellationToken token = default) => Unavailable<DuplicateIdentity>();
     public Task<IReadOnlyList<ReferenceOption>> OptionsAsync(string category, CancellationToken token = default) => Unavailable<IReadOnlyList<ReferenceOption>>();

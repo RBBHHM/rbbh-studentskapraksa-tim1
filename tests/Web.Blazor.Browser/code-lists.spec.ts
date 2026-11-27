@@ -271,3 +271,16 @@ test("duplicate definition shows an alert and allows retry with a new name", asy
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "TESTNI_SIFRARNIK", exact: true })).toBeVisible();
 });
+
+
+test("codebook search and value pagination reach records outside the initial pages", async ({ page, request }) => {
+  expect((await request.post("/__fixtures/paged-codebooks", { headers })).status()).toBe(204);
+  await visit(page);
+  await expect(page.getByRole("button", { name: "ZZ_PAGE_30", exact: true })).toHaveCount(0);
+  await page.getByLabel("Pretraga šifrarnika", { exact: false }).fill("ZZ_PAGE_30");
+  await openCategory(page, "ZZ_PAGE_30");
+  await expect(page.getByRole("row", { name: /Value 00/ })).toBeVisible();
+  await expect(page.getByRole("row", { name: /Value 50/ })).toHaveCount(0);
+  await page.getByRole("button", { name: "Sljedeća stranica", exact: true }).click();
+  await expect(page.getByRole("row", { name: /Value 50/ })).toBeVisible();
+});

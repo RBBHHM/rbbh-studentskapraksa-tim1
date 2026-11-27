@@ -50,7 +50,7 @@ public sealed class AuditApiTests
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
         {
-            Assert.Equal("/api/audit-logs?page=2&pageSize=200", request.RequestUri!.PathAndQuery);
+            Assert.Equal("/api/audit-logs?page=2&pageSize=50", request.RequestUri!.PathAndQuery);
             return Task.FromResult(new HttpResponseMessage(status) { Content = new StringContent(body, Encoding.UTF8, "application/json") });
         }
     }

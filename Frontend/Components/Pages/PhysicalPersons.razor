@@ -33,15 +33,15 @@ else
     @if ((_canCreate || _canEdit || _canDelete) && _periodLocked) { <RbiAlert Title="@T[_periodError ?? "errors.locked"]" /> }
     @if (!_delete && _action is null && _actionError is not null) { <div role="alert" class="app-toast app-toast--danger"><RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_actionError]" /></div> }
     @if (_notice is not null) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@T.Format(_notice, _noticeCount)" /></div> }
-    <div class="registry-controls"><RegistrySearch Id="physical-search" @bind-Value="_search" /></div>
+    <div class="registry-controls"><RegistrySearch Id="physical-search" @bind-Value="_search" @bind-Value:after="SearchAsync" /></div>
     <div class="registry-surface">
-    @if (!Filtered.Any()) { <RegistryEmpty Body="@T[string.IsNullOrWhiteSpace(_search) ? "state.empty-body" : "state.no-match"]" /> }
+    @if (_peoplePage.Items.Count == 0) { <RegistryEmpty Body="@T[string.IsNullOrWhiteSpace(_search) ? "state.empty-body" : "state.no-match"]" /> }
     else
     {
         <RbiTable AccessibleLabel="@T["person.title"]" Class="registry-table registry-persons-table">
             <thead><tr><th scope="col" class="registry-center">@T["person.type"]</th><th scope="col">@T["person.first-name"]</th><th scope="col">@T["person.last-name"]</th><th scope="col" class="registry-center">@T["person.residency"]</th><th scope="col">@T["person.jmbg"]</th><th scope="col">@T["person.passport"]</th><th scope="col">@T["person.basis"]</th><th scope="col" class="registry-center">@T["common.status"]</th>@if (_canEdit || _canDelete) { <th scope="col" class="registry-center registry-actions-cell">@T["common.actions"]</th> }</tr></thead>
             <tbody>
-                @foreach (var person in Filtered)
+                @foreach (var person in _peoplePage.Items)
                 {
                     <tr @key="person.Id">
                         <td class="registry-center"><Indicator Kind="@(person.RelatedToPersonId.HasValue ? "family" : person.IsIdentifiedStaff ? "employee" : "related")" Label="@T[person.RelatedToPersonId.HasValue ? "person.family" : person.IsIdentifiedStaff ? "person.employee" : "person.related"]" /></td>
@@ -66,6 +66,14 @@ else
         </RbiTable>
     }
     </div>
+    @if (TotalPages > 1)
+    {
+        <p class="page-total" role="status">@T.Format("legal.page-summary", _peoplePage.Page, TotalPages, _peoplePage.Total)</p>
+        <RbiPagination CurrentPage="_peoplePage.Page" CurrentPageChanged="ChangePageAsync" TotalPages="TotalPages"
+                       AccessibleLabel="@T["person.title"]" PreviousLabel="@T["common.back"]" PreviousAccessibleLabel="@T["legal.previous"]"
+                       NextLabel="@T["common.actions.continue"]" NextAccessibleLabel="@T["legal.next"]"
+                       PageAccessibleLabel="@(number => T.Format("legal.page", number))" />
+    }
     <section class="registry-family" aria-labelledby="family-heading">
         <div class="registry-family__intro">
             <RbiIcon Name="RbiIconName.Network" Class="registry-family__icon" />
@@ -78,6 +86,11 @@ else
         <div class="registry-family__select"><RbiSelect TValue="long?" Id="family-person" @bind-Value="_treePerson" @bind-Value:after="LoadTreeAsync" Placeholder="@T["family.placeholder"]">
             @foreach (var person in _people) { <option value="@person.Id">@person.FirstName @person.LastName — @T[person.RelatedToPersonId.HasValue ? "person.family" : person.IsIdentifiedStaff ? "person.employee" : "person.related"]</option> }
         </RbiSelect></div>
+        @if (HasMorePeople)
+        {
+            <RbiButton Variant="RbiButtonVariant.Ghost" Disabled="_peopleLoading" OnClick="LoadMorePeopleAsync">@T["person.load-more"]</RbiButton>
+        }
+        @if (_peopleError is not null) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_peopleError]" /> }
         <div class="registry-family__panel">
         @if (_treePerson is null) { <RbiText Tone="RbiTextTone.Secondary">@T["family.prompt"]</RbiText> }
         else if (_treeLoading) { <div role="status">@T["state.loading"]</div> }
@@ -97,7 +110,7 @@ else
     <RbiDialog Open Class="app-form-dialog" Title="@T[_editingId.HasValue ? "common.edit" : "common.new"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseEditor">
         <DialogBody>
             @if (_fallback) { <RbiAlert Title="@T["person.fallback"]" /> }
-            <PhysicalPersonForm MutationBlocked="_periodLocked" @key="draft" Model="draft" Id="_editingId" People="_people" Bases="_bases" SpecialBases="_special" Save="SaveAsync" Cancel="() => CloseEditor(false)" />
+            <PhysicalPersonForm MutationBlocked="_periodLocked" @key="draft" Model="draft" Id="_editingId" People="_people" HasMorePeople="HasMorePeople" PeopleLoading="_peopleLoading" PeopleError="@_peopleError" LoadMorePeople="LoadMorePeopleAsync" Bases="_bases" SpecialBases="_special" Save="SaveAsync" Cancel="() => CloseEditor(false)" />
         </DialogBody>
     </RbiDialog>
 }
@@ -128,6 +141,10 @@ else
     public PhysicalPersons() => _token = _lifetime.Token;
     private CancellationTokenSource? _treeRequest;
     private IReadOnlyList<RelatedPerson> _people = [];
+    private int _peopleOptionPage, _peopleOptionTotal, _peopleOptionSize = 30;
+    private bool _peopleLoading;
+    private string? _peopleError;
+    private bool HasMorePeople => _peopleOptionPage * _peopleOptionSize < _peopleOptionTotal;
     private IReadOnlyList<PersonTreeNode> _tree = [];
     private IReadOnlyList<ReferenceOption> _bases = [], _special = [];
     private PhysicalPersonDraft? _draft;
@@ -143,7 +160,9 @@ else
     private bool _authenticated, _loading = true, _busy, _canRead, _canCreate, _canEdit, _canDelete, _treeLoading, _treeError, _delete, _importOpen, _fallback;
     private bool _loaded, _refreshing, _openingEditor;
     private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
-    private IEnumerable<RelatedPerson> Filtered => _people.Where(person => person.Matches(_search));
+    private PeoplePage _peoplePage = new([], 0, 1, 30);
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling(_peoplePage.Total / (double)_peoplePage.PageSize));
+    private readonly LatestPageRequest _pageRequest = new();
     private string? _self;
     // Four-eyes: the person who entered a record cannot verify it (the backend remains authoritative).
     private bool Own(string? createdBy) => !string.IsNullOrWhiteSpace(_self) && string.Equals(createdBy, _self, StringComparison.OrdinalIgnoreCase);
@@ -162,7 +181,17 @@ else
             if (!_canRead) return;
             try { _periodLocked = (await Period.CurrentAsync(_token)).IsLocked; _periodError = null; }
             catch (RegistryApiException) { _periodLocked = true; _periodError = "period.state-unavailable"; }
-            _people = await Api.ListAsync(_token);
+            await LoadPageAsync(_peoplePage.Page);
+            var previousSelection = _people.FirstOrDefault(person => person.Id == _treePerson);
+            _people = [];
+            _peopleOptionPage = 0;
+            _peopleOptionTotal = 0;
+            if (_peoplePage.Page == 1 && string.IsNullOrWhiteSpace(_search))
+                ApplyPeopleOptions(_peoplePage);
+            else
+                await LoadMorePeopleAsync();
+            if (previousSelection is not null && !_people.Any(person => person.Id == previousSelection.Id))
+                await IncludeSelectedPersonAsync(previousSelection.Id);
             _loaded = true;
             if (_treePerson is { } selected && !_people.Any(person => person.Id == selected)) _treePerson = null;
             await LoadTreeAsync();
@@ -171,6 +200,51 @@ else
         catch (RegistryApiException exception) { _error = exception.MessageKey; }
         finally { _loading = false; _refreshing = false; }
     }
+    private void ApplyPeopleOptions(PeoplePage page)
+    {
+        _people = _people.Concat(page.Items).DistinctBy(person => person.Id).ToArray();
+        _peopleOptionPage = page.Page;
+        _peopleOptionTotal = page.Total;
+        _peopleOptionSize = page.PageSize;
+    }
+
+    private async Task LoadMorePeopleAsync()
+    {
+        if (_peopleLoading || _disposed) return;
+        _peopleLoading = true;
+        _peopleError = null;
+        try { ApplyPeopleOptions(await Api.PageAsync(_peopleOptionPage + 1, null, _token)); }
+        catch (RegistryApiException exception) { _peopleError = exception.MessageKey; }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally { _peopleLoading = false; }
+    }
+
+    private async Task IncludeSelectedPersonAsync(long id)
+    {
+        if (_people.Any(person => person.Id == id)) return;
+        try { _people = [.. _people, await Api.GetAsync(id, _token)]; }
+        catch (RegistryApiException exception) when (exception.StatusCode == System.Net.HttpStatusCode.NotFound) { }
+    }
+
+    private Task SearchAsync() => LoadPageAsync(1, debounce: true);
+    private Task ChangePageAsync(int page) => LoadPageAsync(page);
+
+    private async Task LoadPageAsync(int page, bool debounce = false)
+    {
+        if (_disposed) return;
+        var search = _search;
+        _refreshing = true;
+        await _pageRequest.RunAsync(_token, debounce, async token =>
+        {
+            var result = await Api.PageAsync(page, search, token);
+            var lastPage = Math.Max(1, (int)Math.Ceiling(result.Total / (double)result.PageSize));
+            if (page > lastPage) result = await Api.PageAsync(lastPage, search, token);
+            token.ThrowIfCancellationRequested();
+            _peoplePage = result;
+            _error = null;
+        }, exception => _error = exception.MessageKey, () => _refreshing = false);
+    }
+
     private async Task Edit(RelatedPerson? person)
     {
         if (_periodLocked || _busy || _openingEditor || _refreshing || _disposed || !_authenticated || (person is null ? !_canCreate : !_canEdit)) return;
@@ -179,6 +253,8 @@ else
         _openingEditor = true;
         try
         {
+            if (person is not null) person = await Api.GetAsync(person.Id, _token);
+            if (person?.RelatedToPersonId is { } parentId) await IncludeSelectedPersonAsync(parentId);
             _editingId = person?.Id;
             _bases = PhysicalPersonOptions.Bases(T); _special = PhysicalPersonOptions.Special(T); _fallback = false;
             try
@@ -194,6 +270,8 @@ else
             if (person?.SpecialRelationBasis is { } specialBasis && !_special.Any(option => option.Kod == specialBasis)) _special = [.. _special, new(specialBasis, specialBasis, null)];
             _draft = person is null ? new() : PhysicalPersonDraft.From(person);
         }
+        catch (RegistryApiException exception) { _error = exception.MessageKey; }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         finally { _openingEditor = false; }
     }
     private void CloseEditor(bool open) { if (!open && !_busy) _draft = null; }

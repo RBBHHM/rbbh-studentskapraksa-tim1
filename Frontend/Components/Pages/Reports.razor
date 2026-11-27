@@ -77,8 +77,8 @@ else { <div role="status">@T["state.loading"]</div> }
     private int _dailyPage = 1, _monthlyPage = 1, _year = DateTime.UtcNow.Year, _month = DateTime.UtcNow.Month;
     private string? _identifier, _loadError, _actionError, _notice;
     private bool _disposed, _authenticated, _canRead, _canGenerate, _busy, _refreshing = true;
-    private int DailyPages => Math.Max(1, (int)Math.Ceiling(_daily.Total / 100d));
-    private int MonthlyPages => Math.Max(1, (int)Math.Ceiling(_monthly.Total / 100d));
+    private int DailyPages => Math.Max(1, (int)Math.Ceiling(_daily.Total / (double)Math.Max(1, _daily.PageSize)));
+    private int MonthlyPages => Math.Max(1, (int)Math.Ceiling(_monthly.Total / (double)Math.Max(1, _monthly.PageSize)));
     private bool ValidPeriod => _year >= 2000 && _year <= DateTime.UtcNow.Year && _month is >= 1 and <= 12;
     private bool ValidIdentifier => ReportsApi.ValidIdentifier(_identifier);
     private string TypeLabel(string? value) => value?.ToUpperInvariant() switch { "DAILY" => T["reports.daily"], "MONTHLY" => T["reports.monthly"], _ => string.IsNullOrWhiteSpace(value) ? "—" : value };
@@ -112,8 +112,25 @@ else { <div role="status">@T["state.loading"]</div> }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         finally { _refreshing = false; }
     }
-    private async Task ChangeDailyAsync(int page) { if (_busy || _refreshing || page < 1 || page > DailyPages) return; _dailyPage = page; await LoadAsync(); }
-    private async Task ChangeMonthlyAsync(int page) { if (_busy || _refreshing || page < 1 || page > MonthlyPages) return; _monthlyPage = page; await LoadAsync(); }
+    private Task ChangeDailyAsync(int page) => ChangeReportPageAsync(ReportKind.Daily, page, DailyPages);
+    private Task ChangeMonthlyAsync(int page) => ChangeReportPageAsync(ReportKind.Monthly, page, MonthlyPages);
+
+    private async Task ChangeReportPageAsync(ReportKind kind, int page, int totalPages)
+    {
+        if (_disposed || !_canRead || _busy || _refreshing || page < 1 || page > totalPages) return;
+        _refreshing = true;
+        _loadError = null;
+        try
+        {
+            var result = await Api.ListAsync(kind, page, _token);
+            if (kind == ReportKind.Daily) { _daily = result; _dailyPage = result.Page; }
+            else { _monthly = result; _monthlyPage = result.Page; }
+        }
+        catch (RegistryApiException exception) { _loadError = exception.MessageKey; }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally { _refreshing = false; }
+    }
+
     private async Task GenerateAsync(bool monthly)
     {
         if (!_authenticated || !_canRead || !_canGenerate || _busy || _refreshing || (monthly && !ValidPeriod)) return;

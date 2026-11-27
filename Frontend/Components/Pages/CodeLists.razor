@@ -39,20 +39,35 @@ else
         @if (_notice is not null) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@_notice" /></div> }
         @if (_category.Length == 0)
         {
-            <div class="registry-controls"><RegistrySearch Id="code-search" Label="@T["codes.search"]" @bind-Value="_search" /></div>
-            @if (_categories.Count == 0) { <div class="registry-surface"><RegistryEmpty Body="@T["codes.no-categories"]" /></div> }
-            else if (!FilteredCategories.Any()) { <div class="registry-surface"><RegistryEmpty Body="@T["state.no-match"]" /></div> }
+            <div class="registry-controls"><RegistrySearch Id="code-search" Label="@T["codes.search"]" @bind-Value="_search" @bind-Value:after="SearchDefinitionsAsync" /></div>
+            @if (_overview.Items.Count == 0)
+            {
+                <div class="registry-surface"><RegistryEmpty Body="@T[string.IsNullOrWhiteSpace(_search) ? "codes.no-categories" : "state.no-match"]" /></div>
+            }
             else
             {
                 <ul class="codes-cards" aria-label="@T["codes.title"]">
-                    @foreach (var category in FilteredCategories)
+                    @foreach (var item in _overview.Items)
                     {
-                        <li><button type="button" class="codes-card" aria-label="@category" aria-describedby="@($"codebook-status-{category}")" disabled="@(_busy || _refreshing)" @onclick="() => OpenCategoryAsync(category)"><AppIcon Name="AppIconName.BookOpen" /><span class="codes-card__name">@category</span>@if (_definitions.TryGetValue(category, out var cardDefinition))
-                            {
-                                <span id="@($"codebook-status-{category}")" class="codebook-status @(cardDefinition.IsActive ? "codebook-status--active" : "codebook-status--inactive")"><span class="app-visually-hidden">@T[cardDefinition.IsActive ? "codes.active" : "codes.inactive"]</span></span>
-                            }</button></li>
+                        <li @key="item.Id">
+                            <button type="button" class="codes-card" aria-label="@item.Name" aria-describedby="@($"codebook-status-{item.Id}")"
+                                    disabled="@(_busy || _refreshing)" @onclick="() => OpenCategoryAsync(item.Name)">
+                                <AppIcon Name="AppIconName.BookOpen" /><span class="codes-card__name">@item.Name</span>
+                                <span id="@($"codebook-status-{item.Id}")" class="codebook-status @(item.IsActive ? "codebook-status--active" : "codebook-status--inactive")">
+                                    <span class="app-visually-hidden">@T[item.IsActive ? "codes.active" : "codes.inactive"]</span>
+                                </span>
+                            </button>
+                        </li>
                     }
                 </ul>
+                @if (DefinitionPages > 1)
+                {
+                    <p class="page-total" role="status">@T.Format("legal.page-summary", _overview.Page, DefinitionPages, _overview.Total)</p>
+                    <RbiPagination CurrentPage="_overview.Page" CurrentPageChanged="LoadDefinitionsPageAsync" TotalPages="DefinitionPages"
+                                   AccessibleLabel="@T["codes.title"]" PreviousLabel="@T["common.back"]" PreviousAccessibleLabel="@T["legal.previous"]"
+                                   NextLabel="@T["common.actions.continue"]" NextAccessibleLabel="@T["legal.next"]"
+                                   PageAccessibleLabel="@(number => T.Format("legal.page", number))" />
+                }
             }
         }
         else
@@ -66,12 +81,12 @@ else
                 <div class="codebook-detail__actions">
                     <RbiButton Disabled="@(_busy || _refreshing)" OnClick="BackToOverviewAsync" Variant="RbiButtonVariant.Secondary"><RbiIcon Name="RbiIconName.ArrowLeft" />@T["codes.all"]</RbiButton>
                     <RbiButton Disabled="@(_busy || _refreshing)" OnClick="OpenColumnsAsync" Variant="RbiButtonVariant.Secondary">@T["codes.column-structure"]</RbiButton>
-                    @if (_canWrite && _customColumns && _definitions.TryGetValue(_category, out var currentDefinition) && currentDefinition.IsActive)
+                    @if (_canWrite && _customColumns && _selectedDefinition is { IsActive: true } currentDefinition)
                     {
                         <RbiButton Disabled="@(_busy || _refreshing)" Variant="RbiButtonVariant.Secondary"
                                    OnClick="() => OpenSchema(currentDefinition)">@T["codes.edit-schema"]</RbiButton>
                     }
-                    @if (_definitions.TryGetValue(_category, out var definition))
+                    @if (_selectedDefinition is { } definition)
                     {
                         @if (_canWrite && (!definition.IsSystemRequired || !definition.IsActive))
                         {
@@ -125,6 +140,14 @@ else
                     </tr>
                 }</tbody>
             </RbiTable>
+            @if (ValuePages > 1)
+            {
+                <p class="page-total" role="status">@T.Format("legal.page-summary", _valuePage, ValuePages, _valueTotal)</p>
+                <RbiPagination CurrentPage="_valuePage" CurrentPageChanged="ChangeValuePageAsync" TotalPages="ValuePages"
+                               AccessibleLabel="@T["codes.title"]" PreviousLabel="@T["common.back"]" PreviousAccessibleLabel="@T["legal.previous"]"
+                               NextLabel="@T["common.actions.continue"]" NextAccessibleLabel="@T["legal.next"]"
+                               PageAccessibleLabel="@(number => T.Format("legal.page", number))" />
+            }
         }
     }
 }
@@ -156,7 +179,7 @@ else
     <RbiDialog Open Class="app-form-dialog app-form-dialog--md" Title="@T[_schemaExisting is null ? "codes.definition-create" : "codes.edit-schema"]"
                CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseSchema">
         <DialogBody><CodebookSchemaForm Existing="_schemaExisting" Columns="@(_schemaExisting is null ? [] : _valueColumns)"
-                                       HasValues="@(_values.Count > 0)" Save="SaveSchemaAsync" Cancel="() => CloseSchema(false)" /></DialogBody>
+                                       HasValues="@(_valueTotal > 0)" Save="SaveSchemaAsync" Cancel="() => CloseSchema(false)" /></DialogBody>
     </RbiDialog>
 }
 @if (_customEditorOpen)
@@ -210,9 +233,13 @@ else
     private readonly CancellationToken _token;
     public CodeLists() => _token = _lifetime.Token;
     private bool _disposed, _authenticated, _canRead, _canWrite, _busy, _loading = true, _refreshing, _loaded;
-    private IReadOnlyList<string> _categories = [];
-    private Dictionary<string, CodeListMeta> _definitions = new(StringComparer.OrdinalIgnoreCase);
+    private CodeListMetas _overview = new([]);
+    private int DefinitionPages => PageCount(_overview.Total, _overview.PageSize);
+    private CodeListMeta? _selectedDefinition;
+    private readonly LatestPageRequest _definitionRequest = new();
     private IReadOnlyList<CodeValue> _values = [];
+    private int _valuePage = 1, _valueTotal, _valuePageSize = 50;
+    private int ValuePages => Math.Max(1, (int)Math.Ceiling(_valueTotal / (double)_valuePageSize));
     private IReadOnlyList<CodebookColumn> _valueColumns = [];
     private string SlotText(CodeValue row, int slot) =>
         row.SlotValues?.GetValueOrDefault(slot) is { } value && value.ValueKind != System.Text.Json.JsonValueKind.Null
@@ -249,29 +276,70 @@ else
             _canRead = ApplicationAccess.IsAdministrator(profile) && profile.Permissions.Contains("CODE_LISTS_VIEW");
             _canWrite = _canRead && profile.Permissions.Contains("ADMINISTRATION_MANAGE");
             if (!_canRead) return;
-            _categories = (await Api.CategoriesAsync(_token)).Categories;
-            // Created-by / last-modified are advisory metadata: a failure here must not hide the lists themselves.
-            try { _definitions = (await Api.DefinitionsAsync(_token)).Items.ToDictionary(item => item.Name, StringComparer.OrdinalIgnoreCase); }
-            catch (RegistryApiException) { _definitions = new(StringComparer.OrdinalIgnoreCase); }
-            if (!_categories.Contains(_category)) _category = "";
-            var values = _category.Length == 0 ? null : await Api.ValuesAsync(_category, _token);
-            _values = values?.Items ?? [];
-            var columns = values?.Columns ?? [];
-            var referenceFields = columns.Any(column => column is { Slot: 15, Name: "VALUE_KEY" }) &&
-                columns.Any(column => column is { Slot: 17, Name: "NAME" }) &&
-                columns.Any(column => column is { Slot: 18, Name: "DESCRIPTION" });
-            _customColumns = values is not null && !referenceFields && !IsLanguagePack && _category != "LANGUAGES";
-            _valueColumns = _customColumns ? columns : columns.Where(column => column.Slot is not (1 or 15 or 17 or 18) &&
-                (!IsLanguagePack || column.Slot is not (12 or 13 or 14 or 16 or 19 or 20)) &&
-                (_category != "LANGUAGES" || column.Slot is not (12 or 13))).ToArray();
-            _valueModifiedAt = values?.ModifiedAt;
+            if (_category.Length == 0) await LoadDefinitionsPageAsync(_overview.Page);
+            else await LoadValuesAsync();
             _loaded = true;
         }
         catch (RegistryApiException exception) { _error = exception.MessageKey; }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         finally { _loading = _refreshing = false; }
     }
-    private bool CategoryInactive => _definitions.TryGetValue(_category, out var definition) && !definition.IsActive;
+    private static int PageCount(int total, int size) => Math.Max(1, (int)Math.Ceiling(total / (double)Math.Max(1, size)));
+    private Task SearchDefinitionsAsync() => LoadDefinitionsAsync(1, debounce: true);
+    private Task LoadDefinitionsPageAsync(int page) => LoadDefinitionsAsync(page);
+
+    private async Task LoadDefinitionsAsync(int page, bool debounce = false)
+    {
+        if (_disposed || _category.Length > 0) return;
+        var search = _search;
+        _refreshing = true;
+        await _definitionRequest.RunAsync(_token, debounce, async token =>
+        {
+            var result = await Api.DefinitionsAsync(token, page, search);
+            var lastPage = PageCount(result.Total, result.PageSize);
+            if (page > lastPage) result = await Api.DefinitionsAsync(token, lastPage, search);
+            token.ThrowIfCancellationRequested();
+            _overview = result;
+            _error = null;
+        }, exception => _error = exception.MessageKey, () => _refreshing = false);
+    }
+
+    private async Task ChangeValuePageAsync(int page)
+    {
+        if (_disposed || _refreshing || _busy || page < 1 || page > ValuePages) return;
+        _valuePage = page;
+        _refreshing = true;
+        try { await LoadValuesAsync(); }
+        catch (RegistryApiException exception) { _error = exception.MessageKey; }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally { _refreshing = false; }
+    }
+
+    private async Task LoadValuesAsync()
+    {
+        var values = _category.Length == 0 ? null : await Api.ValuesAsync(_category, _token, _valuePage);
+        _valueTotal = values?.Total ?? 0;
+        _valuePageSize = Math.Max(1, values?.PageSize ?? 50);
+        if (values is not null && _valuePage > ValuePages)
+        {
+            _valuePage = ValuePages;
+            values = await Api.ValuesAsync(_category, _token, _valuePage);
+            _valueTotal = values.Total;
+        }
+        _selectedDefinition = values?.Definition;
+        _values = values?.Items ?? [];
+        var columns = values?.Columns ?? [];
+        var referenceFields = columns.Any(column => column is { Slot: 15, Name: "VALUE_KEY" }) &&
+            columns.Any(column => column is { Slot: 17, Name: "NAME" }) &&
+            columns.Any(column => column is { Slot: 18, Name: "DESCRIPTION" });
+        _customColumns = values is not null && !referenceFields && !IsLanguagePack && _category != "LANGUAGES";
+        _valueColumns = _customColumns ? columns : columns.Where(column => column.Slot is not (1 or 15 or 17 or 18) &&
+            (!IsLanguagePack || column.Slot is not (12 or 13 or 14 or 16 or 19 or 20)) &&
+            (_category != "LANGUAGES" || column.Slot is not (12 or 13))).ToArray();
+        _valueModifiedAt = values?.ModifiedAt;
+    }
+
+    private bool CategoryInactive => _selectedDefinition is { } definition && !definition.IsActive;
 
     private async Task SetCategoryStatusAsync(CodeListMeta definition)
     {
@@ -318,9 +386,8 @@ else
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
     }
     private string _search = "";
-    private IEnumerable<string> FilteredCategories => _categories.Where(item => string.IsNullOrWhiteSpace(_search) || item.Contains(_search.Trim(), StringComparison.OrdinalIgnoreCase));
     // Values are loaded only for the list the user opens, never for an automatically chosen first one.
-    private Task OpenCategoryAsync(string category) { _category = category; _values = []; _notice = null; return LoadAsync(); }
+    private Task OpenCategoryAsync(string category) { _category = category; _valuePage = 1; _values = []; _notice = null; return LoadAsync(); }
     private Task BackToOverviewAsync() { _category = ""; _values = []; _notice = null; return LoadAsync(); }
     private void NewDefinition() => OpenSchema(null);
     private void OpenSchema(CodeListMeta? definition)
@@ -364,6 +431,7 @@ else
                 var result = await Api.CreateCategoryAsync(name, description, _token, columns);
                 if (result.Name is null) return result.ErrorKey;
                 _category = result.Name;
+                _valuePage = 1;
                 _notice = T["toast.code-def"];
             }
             _schemaOpen = false;
@@ -432,7 +500,12 @@ else
         try
         {
             if (_deleteValue is { } value) await Api.DeleteAsync(value.Id, _token);
-            else if (_deleteCategory is { } category) await Api.DeleteCategoryAsync(category, _token);
+            else if (_deleteCategory is { } category)
+            {
+                await Api.DeleteCategoryAsync(category, _token);
+                _category = "";
+                _valuePage = 1;
+            }
             _notice = T[_deleteValue is not null ? "toast.code-value-deleted" : "toast.code-deleted"]; _deleteValue = null; _deleteCategory = null; await LoadAsync();
         }
         catch (RegistryApiException exception) { _error = (int?)exception.StatusCode == 400 ? "codes.delete-rejected" : MutationError(exception); }

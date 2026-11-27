@@ -34,13 +34,13 @@ else
     @if ((_canCreate || _canEdit || _canDelete) && _periodLocked) { <RbiAlert Title="@T[_periodError ?? "errors.locked"]" /> }
     @if (!_delete && _action is null && _actionError is not null) { <div role="alert" class="app-toast app-toast--danger"><RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_actionError]" /></div> }
     @if (_notice is not null) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@T.Format(_notice, _noticeCount)" /></div> }
-    <div class="registry-controls"><RegistrySearch Id="legal-search" Label="@T["legal.search"]" @bind-Value="_search" /></div>
-    @if (!Filtered.Any()) { <div class="registry-surface"><RegistryEmpty Body="@T[string.IsNullOrWhiteSpace(_search) ? "state.empty-body" : "state.no-match"]" /></div> }
+    <div class="registry-controls"><RegistrySearch Id="legal-search" Label="@T["legal.search"]" @bind-Value="_search" @bind-Value:after="SearchAsync" /></div>
+    @if (_entities.Count == 0) { <div class="registry-surface"><RegistryEmpty Body="@T[string.IsNullOrWhiteSpace(_search) ? "state.empty-body" : "state.no-match"]" /></div> }
     else
     {
         <RbiTable AccessibleLabel="@T["legal.title"]" Class="registry-table registry-persons-table">
                         <thead><tr><th scope="col">@T["legal.name"]</th><th scope="col" class="registry-center">@T["person.residency"]</th><th scope="col">@T["legal.tax"]</th><th scope="col">@T["legal.registration"]</th><th scope="col">@T["person.fba"]</th><th scope="col">@T["legal.gcc"]</th><th scope="col" class="registry-center">@T["legal.large-exposure"]</th><th scope="col">@T["person.basis"]</th><th scope="col" class="registry-center">@T["common.status"]</th>@if (_canEdit || _canDelete) { <th scope="col" class="registry-center registry-actions-cell">@T["common.actions"]</th> }</tr></thead>
-            <tbody>@foreach (var entity in Filtered)
+            <tbody>@foreach (var entity in _entities)
             {
                 <tr @key="entity.Id"><td>@entity.Name</td><td class="registry-center"><Indicator Kind="@(entity.IsResident ? "yes" : "no")" Label="@T[entity.IsResident ? "person.resident" : "person.nonresident"]" /></td><td>@Dash(entity.TaxNumber)</td><td>@Dash(entity.MaticniBroj)</td><td>@Dash(entity.FbaId)</td><td>@Dash(entity.GccNumber is { Length: > 0 } ? $"{entity.GccNumber} — {entity.GccName}" : null)</td><td class="registry-center">@(entity.IsLargeExposure is { } large ? (large ? T["common.yes"] : T["common.no"]) : "—")</td><td>@Dash(entity.BasisOfConnection)</td><td class="registry-center"><Indicator Kind="@entity.Status.ToLowerInvariant()" Label="@T[$"status.{entity.Status.ToLowerInvariant()}"]" /></td>
                     @if (_canEdit || _canDelete)
@@ -110,12 +110,12 @@ else
     private string? _search, _error, _notice, _actionError, _importError;
     private string? _periodError;
     private bool _periodLocked = true;
-    private int _page = 1, _total;
-    private int TotalPages => Math.Max(1, (int)Math.Ceiling(_total / 20d));
+    private int _page = 1, _total, _pageSize = 20;
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling(_total / (double)_pageSize));
     private bool _disposed, _authenticated, _loading = true, _busy, _canRead, _canCreate, _canEdit, _canDelete, _delete, _importOpen, _fallback;
     private bool _loaded, _refreshing, _openingEditor;
     private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
-    private IEnumerable<LegalEntity> Filtered => _entities.Where(entity => entity.Matches(_search));
+
     private string? _self;
     // Four-eyes: the person who entered a record cannot verify it (the backend remains authoritative).
     private bool Own(string? createdBy) => !string.IsNullOrWhiteSpace(_self) && string.Equals(createdBy, _self, StringComparison.OrdinalIgnoreCase);
@@ -134,19 +134,33 @@ else
             if (!_canRead) return;
             try { _periodLocked = (await Period.CurrentAsync(_token)).IsLocked; _periodError = null; }
             catch (RegistryApiException) { _periodLocked = true; _periodError = "period.state-unavailable"; }
-            var result = await Api.ListAsync(_page, _token);
-            _total = result.Total;
-            if (_page > TotalPages) { _page = TotalPages; result = await Api.ListAsync(_page, _token); }
-            _entities = result.Items; _loaded = true;
+            await LoadPageAsync(_page);
+            _loaded = true;
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         catch (RegistryApiException exception) { _error = exception.MessageKey; }
         finally { _loading = false; _refreshing = false; }
     }
-    private async Task ChangePageAsync(int page)
+    private readonly LatestPageRequest _pageRequest = new();
+
+    private Task SearchAsync() => LoadPageAsync(1, debounce: true);
+    private Task ChangePageAsync(int page) => LoadPageAsync(page);
+
+    private async Task LoadPageAsync(int page, bool debounce = false)
     {
-        if (_busy || _refreshing || _openingEditor || page < 1 || page > TotalPages) return;
-        _page = page; await LoadAsync();
+        if (_disposed) return;
+        var search = _search;
+        _refreshing = true;
+        await _pageRequest.RunAsync(_token, debounce, async token =>
+        {
+            var result = await Api.ListAsync(page, token, search);
+            var lastPage = Math.Max(1, (int)Math.Ceiling(result.Total / (double)Math.Max(1, result.PageSize)));
+            if (page > lastPage) result = await Api.ListAsync(lastPage, token, search);
+            token.ThrowIfCancellationRequested();
+            _entities = result.Items; _total = result.Total; _pageSize = result.PageSize;
+            _page = result.Page;
+            _error = null;
+        }, exception => _error = exception.MessageKey, () => _refreshing = false);
     }
     private async Task Edit(LegalEntity? entity)
     {

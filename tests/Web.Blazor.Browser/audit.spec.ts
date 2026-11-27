@@ -15,10 +15,10 @@ test("real audit entries retain human fields and scalar search without executing
   const row = page.getByRole("row", { name: /fixture-auditor/ }); await expect(row).toBeVisible();
   await expect(row.getByRole("cell", { name: "Unos", exact: true })).toBeVisible();
   await expect(row.getByRole("cell", { name: "Fizička lica", exact: true })).toBeVisible();
-  await page.getByLabel("Pretraga podataka na prikazanoj stranici", { exact: true }).fill("  audit-body-needle  "); await expect(row).toBeVisible();
+  await page.getByLabel("Pretraži zapise", { exact: true }).fill("  audit-body-needle  "); await expect(row).toBeVisible();
   expect(await page.evaluate(() => (window as unknown as Record<string, unknown>).__auditExecuted)).toBeUndefined();
   await expect(page.locator('img[src="x"]')).toHaveCount(0);
-  await page.getByLabel("Pretraga podataka na prikazanoj stranici", { exact: true }).fill("no-match"); await expect(row).toHaveCount(0);
+  await page.getByLabel("Pretraži zapise", { exact: true }).fill("no-match"); await expect(row).toHaveCount(0);
 });
 test("audit details open in a dialog with highlighted field changes and inert markup", async ({ page, request }) => {
   await request.post("/__fixtures/audit-existing", { headers }); await page.goto("/app/admin/audit"); await interactive(page);
@@ -55,7 +55,11 @@ test("audit paging reaches records beyond the source first 200", async ({ page, 
   await request.post("/__fixtures/audit-pages", { headers }); await page.goto("/app/admin/audit"); await interactive(page);
   await expect(page.getByRole("row", { name: /audit-page-000/ })).toBeVisible(); await expect(page.getByRole("row", { name: /audit-page-200/ })).toHaveCount(0);
   await page.getByRole("button", { name: "Sljedeća stranica", exact: true }).click();
-  await expect(page.getByRole("row", { name: /audit-page-200/ })).toBeVisible(); await expect(page.getByRole("row", { name: /audit-page-000/ })).toHaveCount(0);
+  await expect(page.getByRole("row", { name: /audit-page-050/ })).toBeVisible();
+  await expect(page.getByRole("row", { name: /audit-page-000/ })).toHaveCount(0);
+  await page.getByLabel("Pretraži zapise", { exact: true }).fill("audit-page-200");
+  await expect(page.getByRole("row", { name: /audit-page-200/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sljedeća stranica", exact: true })).toHaveCount(0);
 });
 test("audit outage fails safely and recovers without synthetic entries", async ({ page, request }) => {
   await request.post("/__fixtures/unavailable", { headers }); await page.goto("/app/admin/audit"); await interactive(page);

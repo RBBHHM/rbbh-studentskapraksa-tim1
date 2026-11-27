@@ -8,7 +8,7 @@ public sealed record CodeValue(int Id, string Category, string Code, string Valu
     bool IsActive, string? ModifiedBy, DateTime? ModifiedAt, CodeListResource? Localization = null, IReadOnlyDictionary<int, JsonElement>? SlotValues = null);
 public sealed record CodeListResource(string? LanguageCode, string? ResourceKey, string? ResourceLabel,
     string? ResourceHelper, string? ResourcePlaceholder, string? ContextInfo);
-public sealed record CodeValues(string Category, IReadOnlyList<CodeValue> Items, IReadOnlyList<CodebookColumn>? Columns = null, DateTime? ModifiedAt = null);
+public sealed record CodeValues(string Category, IReadOnlyList<CodeValue> Items, IReadOnlyList<CodebookColumn>? Columns = null, DateTime? ModifiedAt = null, int Total = 0, int Page = 1, int PageSize = 50, CodeListMeta? Definition = null);
 public sealed record CreateCodeValue(string Kategorija, string Kod, string Naziv, string? Opis, bool Aktivan);
 public sealed record UpdateCodeValue(string Naziv, string? Opis, bool Aktivan);
 public sealed record CodeCsvIssue(string Key, string[] Arguments);
@@ -25,14 +25,14 @@ public sealed record CodeListMeta(long Id, string Name, string? Description, boo
 public sealed record CodebookColumn(int Slot, string Name, string? Description, int? Position, string TypeKey = "codes.csv.type-text");
 public sealed record CodebookColumnInput(int Slot, string Name, string? Description, int Position);
 public sealed record CodebookColumns(IReadOnlyList<CodebookColumn> Items);
-public sealed record CodeListMetas(IReadOnlyList<CodeListMeta> Items);
+public sealed record CodeListMetas(IReadOnlyList<CodeListMeta> Items, int Total = 0, int Page = 1, int PageSize = 30);
 public sealed record CodebookCreation(string? Name, string? ErrorKey = null);
 public interface ICodeListsApi
 {
     Task<CodebookColumns> ColumnsAsync(string category, CancellationToken token = default);
-    Task<CodeListMetas> DefinitionsAsync(CancellationToken token = default);
+    Task<CodeListMetas> DefinitionsAsync(CancellationToken token = default, int? page = null, string? search = null);
     Task<CodeCategories> CategoriesAsync(CancellationToken token = default);
-    Task<CodeValues> ValuesAsync(string category, CancellationToken token = default);
+    Task<CodeValues> ValuesAsync(string category, CancellationToken token = default, int? page = null);
     Task<CodebookCreation> CreateCategoryAsync(string name, string? description, CancellationToken token = default, IReadOnlyList<CodebookColumnInput>? columns = null);
     Task<string?> SetDefinitionStatusAsync(string name, bool isActive, DateTime? modifiedAt, CancellationToken token);
     Task<string?> SaveDefinitionAsync(string name, string? description, DateTime? modifiedAt, IReadOnlyList<CodebookColumnInput> columns, CancellationToken token);
@@ -58,14 +58,15 @@ public sealed class CodeListsApi(IRbiApiFileTransport transport) : ICodeListsApi
         var value = Value(await transport.GetAsync<CodebookColumns>($"api/code-lists/categories/{Uri.EscapeDataString(category)}/columns", token), token);
         return value.Items is null ? throw new RegistryApiException() : value;
     }
-    public async Task<CodeListMetas> DefinitionsAsync(CancellationToken token = default)
+    public async Task<CodeListMetas> DefinitionsAsync(CancellationToken token = default, int? page = null, string? search = null)
     {
-        var value = Value(await transport.GetAsync<CodeListMetas>("api/code-lists/categories/definitions", token), token);
+        var query = page.HasValue ? $"?page={page.Value}&pageSize=30&search={Uri.EscapeDataString(search?.Trim() ?? "")}" : "";
+        var value = Value(await transport.GetAsync<CodeListMetas>("api/code-lists/categories/definitions" + query, token), token);
         return value.Items is null ? throw new RegistryApiException() : value;
     }
-    public async Task<CodeValues> ValuesAsync(string category, CancellationToken token = default)
+    public async Task<CodeValues> ValuesAsync(string category, CancellationToken token = default, int? page = null)
     {
-        var value = Value(await transport.GetAsync<CodeValues>($"api/code-lists/{Uri.EscapeDataString(category)}", token), token);
+        var value = Value(await transport.GetAsync<CodeValues>($"api/code-lists/{Uri.EscapeDataString(category)}" + (page.HasValue ? $"?page={page.Value}&pageSize=50" : ""), token), token);
         return value.Items is null ? throw new RegistryApiException() : value;
     }
     public async Task<CodebookCreation> CreateCategoryAsync(string name, string? description, CancellationToken token = default, IReadOnlyList<CodebookColumnInput>? columns = null)
@@ -165,8 +166,8 @@ internal sealed class UnconfiguredCodeListsApi : ICodeListsApi
     private static Task Unavailable() => Task.FromException(new RegistryApiException());
     public Task<CodeCategories> CategoriesAsync(CancellationToken token = default) => Task.FromException<CodeCategories>(new RegistryApiException());
     public Task<CodebookColumns> ColumnsAsync(string category, CancellationToken token = default) => Task.FromException<CodebookColumns>(new RegistryApiException());
-    public Task<CodeListMetas> DefinitionsAsync(CancellationToken token = default) => Task.FromException<CodeListMetas>(new RegistryApiException());
-    public Task<CodeValues> ValuesAsync(string category, CancellationToken token = default) => Task.FromException<CodeValues>(new RegistryApiException());
+    public Task<CodeListMetas> DefinitionsAsync(CancellationToken token = default, int? page = null, string? search = null) => Task.FromException<CodeListMetas>(new RegistryApiException());
+    public Task<CodeValues> ValuesAsync(string category, CancellationToken token = default, int? page = null) => Task.FromException<CodeValues>(new RegistryApiException());
     public Task<CodebookCreation> CreateCategoryAsync(string name, string? description, CancellationToken token = default, IReadOnlyList<CodebookColumnInput>? columns = null) =>
         Task.FromResult(new CodebookCreation(null, "errors.unavailable"));
     public Task<string?> SaveDefinitionAsync(string name, string? description, DateTime? modifiedAt, IReadOnlyList<CodebookColumnInput> columns, CancellationToken token) =>

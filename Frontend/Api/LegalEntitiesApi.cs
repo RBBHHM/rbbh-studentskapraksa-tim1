@@ -32,7 +32,7 @@ public sealed record BankCustomerPage(IReadOnlyList<BankCustomerOption> Items, i
 
 public interface ILegalEntitiesApi
 {
-    Task<LegalEntityPage> ListAsync(int page = 1, CancellationToken token = default);
+    Task<LegalEntityPage> ListAsync(int page = 1, CancellationToken token = default, string? search = null);
     Task<LegalEntity> GetAsync(long id, CancellationToken token = default);
     Task<LegalEntity> SaveAsync(long? id, LegalEntityRequest request, CancellationToken token = default);
     Task VerifyAsync(long id, CancellationToken token = default);
@@ -46,10 +46,10 @@ public interface ILegalEntitiesApi
 
 public sealed class LegalEntitiesApi(IRbiApiFileTransport transport) : ILegalEntitiesApi
 {
-    public async Task<LegalEntityPage> ListAsync(int page = 1, CancellationToken token = default)
+    public async Task<LegalEntityPage> ListAsync(int page = 1, CancellationToken token = default, string? search = null)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(page, 1);
-        return Value(await transport.GetAsync<LegalEntityPage>($"api/legal-entities?page={page}&pageSize=20", token), token);
+        return Value(await transport.GetAsync<LegalEntityPage>($"api/legal-entities?page={page}&pageSize=20" + (string.IsNullOrWhiteSpace(search) ? "" : $"&search={Uri.EscapeDataString(search.Trim())}"), token), token);
     }
     public async Task<LegalEntity> GetAsync(long id, CancellationToken token = default) =>
         Value(await transport.GetAsync<LegalEntity>($"api/legal-entities/{id:D}", token), token);
@@ -94,7 +94,7 @@ public sealed class LegalEntitiesApi(IRbiApiFileTransport transport) : ILegalEnt
 internal sealed class UnconfiguredLegalEntitiesApi : ILegalEntitiesApi
 {
     private static Task<T> Unavailable<T>() => Task.FromException<T>(new RegistryApiException());
-    public Task<LegalEntityPage> ListAsync(int page = 1, CancellationToken token = default) => Unavailable<LegalEntityPage>();
+    public Task<LegalEntityPage> ListAsync(int page = 1, CancellationToken token = default, string? search = null) => Unavailable<LegalEntityPage>();
     public Task<LegalEntity> GetAsync(long id, CancellationToken token = default) => Unavailable<LegalEntity>();
     public Task<LegalEntity> SaveAsync(long? id, LegalEntityRequest request, CancellationToken token = default) => Unavailable<LegalEntity>();
     public Task VerifyAsync(long id, CancellationToken token = default) => Unavailable<object>();

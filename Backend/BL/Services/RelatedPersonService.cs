@@ -83,7 +83,15 @@ public class RelatedPersonService(
         if (!string.IsNullOrWhiteSpace(search))
         {
             var term = search.Trim().ToUpperInvariant();
-            query = query.Where(row => row.FirstName.ToUpper().Contains(term) || row.LastName.ToUpper().Contains(term) || row.JMBG != null && row.JMBG.Contains(term));
+            query = query.Where(row => (row.FirstName + " " + row.LastName).ToUpper().Contains(term) ||
+                (row.JMBG != null && row.JMBG.Contains(term)) ||
+                (row.PassportNumber != null && row.PassportNumber.ToUpper().Contains(term)) ||
+                (row.FBAId != null && row.FBAId.ToUpper().Contains(term)) ||
+                (row.RelationBasis != null && row.RelationBasis.ToUpper().Contains(term)) ||
+                (row.SpecialRelationBasis != null && row.SpecialRelationBasis.ToUpper().Contains(term)) ||
+                row.CreatedBy.ToUpper().Contains(term) ||
+                (row.ModifiedBy != null && row.ModifiedBy.ToUpper().Contains(term)) ||
+                (row.VerifiedBy != null && row.VerifiedBy.ToUpper().Contains(term)));
         }
         var items = await query.OrderBy(row => row.LastName).ThenBy(row => row.FirstName).ThenBy(row => row.Id)
             .Skip((page - 1) * pageSize).Take(pageSize).ProjectToType<RelatedPersonSummaryDTO>().ToListAsync(ct);

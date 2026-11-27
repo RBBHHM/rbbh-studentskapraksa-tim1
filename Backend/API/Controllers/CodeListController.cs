@@ -75,11 +75,24 @@ public partial class CodeListController(ICodeListService codeListService, Connec
     }
 
     [HttpGet("categories/definitions")]
-    public async Task<IActionResult> Definitions(CancellationToken ct) => Ok(new
+    public async Task<IActionResult> Definitions(CancellationToken ct, int page = 1, int? pageSize = null, string? search = null)
     {
-        items = await db.CodeListDefinitions.AsNoTracking().OrderBy(row => row.Name).Select(row => new
-        { row.Id, row.Name, row.Description, row.IsActive, row.IsSystemRequired, row.CreatedAt, row.CreatedBy, row.ModifiedAt, row.ModifiedBy }).ToListAsync(ct)
-    });
+        var query = db.CodeListDefinitions.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim().ToUpperInvariant();
+            query = query.Where(row => row.Name.ToUpper().Contains(term));
+        }
+
+        page = Math.Clamp(page, 1, 1_000_000);
+        var size = Math.Clamp(pageSize ?? 30, 1, 100);
+        var ordered = query.OrderBy(row => row.Name).ThenBy(row => row.Id);
+        var rows = await (pageSize.HasValue ? ordered.Skip((page - 1) * size).Take(size) : ordered)
+            .Select(row => new { row.Id, row.Name, row.Description, row.IsActive, row.IsSystemRequired,
+                row.CreatedAt, row.CreatedBy, row.ModifiedAt, row.ModifiedBy }).ToListAsync(ct);
+        var total = !pageSize.HasValue || (page == 1 && rows.Count < size) ? rows.Count : await query.CountAsync(ct);
+        return Ok(new { items = rows, total, page, pageSize = size });
+    }
 
     [HttpPut("categories/{name}/status"), Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
     public async Task<IActionResult> SetDefinitionStatus(string name, CodebookStatusRequest input, CancellationToken ct)
@@ -197,37 +210,42 @@ public partial class CodeListController(ICodeListService codeListService, Connec
     [HttpGet("{kategorija}")]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<object>> GetAll([FromRoute] string kategorija)
+    public async Task<ActionResult<object>> GetAll([FromRoute] string kategorija, int page = 1, int? pageSize = null)
     {
-        var definition = await db.CodeListDefinitions.SingleOrDefaultAsync(row => row.Name == kategorija, HttpContext.RequestAborted);
-        var result = await _codeListService.GetAllByKategorija(kategorija);
-        if (!result.IsSuccessful) return HandleResult(result);
+        if (string.IsNullOrWhiteSpace(kategorija))
+            return BadRequest(BackendMessages.Message("validation.codelist.category.required"));
 
+        var ct = HttpContext.RequestAborted;
+        var definition = await db.CodeListDefinitions.SingleOrDefaultAsync(row => row.Name == kategorija, ct);
         var columns = definition is null ? [] : CodebookCsv.Columns(db, definition).ToArray();
-        var slots = new Dictionary<int, Dictionary<int, object?>>();
-        if (columns.Length > 0)
-        {
-            var rows = await db.CodeLists.IgnoreQueryFilters().Where(row => row.Definition!.Name == kategorija).ToListAsync(HttpContext.RequestAborted);
-            foreach (var row in rows)
-                slots[row.ID] = columns.ToDictionary(column => column.Slot, column => CodebookCsv.ReadValue(db, row, column.Slot));
-        }
+        var definitionId = definition?.Id;
+        var query = db.CodeLists.IgnoreQueryFilters().Where(row => row.DefinitionId == definitionId);
+        var ordered = query.OrderBy(row => row.Naziv).ThenBy(row => row.ID);
+        page = Math.Clamp(page, 1, 1_000_000);
+        var size = Math.Clamp(pageSize ?? 50, 1, 100);
+        var rows = await (pageSize.HasValue ? ordered.Skip((page - 1) * size).Take(size) : ordered).ToListAsync(ct);
+        var total = !pageSize.HasValue || (page == 1 && rows.Count < size) ? rows.Count : await query.CountAsync(ct);
 
-        // Map to API contract format (English field names)
-        var items = result.Value.Select(x => new
+        var items = rows.Select(row => new
         {
-            id = x.ID,
-            category = x.Kategorija,
-            code = x.Kod,
-            value = x.Naziv,
-            description = x.Opis,
-            isActive = x.Aktivan,
-            localization = x.Localization,
-            slotValues = slots.GetValueOrDefault(x.ID),
-            modifiedBy = x.IzmijenioKorisnik ?? x.KreiraoKorisnik,
-            modifiedAt = x.IzmijenjenDatum ?? x.KreiranDatum
-        }).ToList();
+            id = row.ID,
+            category = definition!.Name,
+            code = row.Kod,
+            value = row.Naziv,
+            description = row.Opis,
+            isActive = row.Aktivan,
+            localization = row.Localization,
+            slotValues = columns.Length == 0 ? null : columns.ToDictionary(column => column.Slot, column => CodebookCsv.ReadValue(db, row, column.Slot)),
+            modifiedBy = row.IzmijenioKorisnik ?? row.KreiraoKorisnik,
+            modifiedAt = row.IzmijenjenDatum ?? row.KreiranDatum
+        }).ToArray();
 
-        return Ok(new { category = kategorija, items, columns, definition?.ModifiedAt });
+        var metadata = definition is null ? null : new
+        {
+            definition.Id, definition.Name, definition.Description, definition.IsActive, definition.IsSystemRequired,
+            definition.CreatedAt, definition.CreatedBy, definition.ModifiedAt, definition.ModifiedBy
+        };
+        return Ok(new { category = kategorija, items, columns, definition?.ModifiedAt, total, page, pageSize = size, definition = metadata });
     }
 
     /// <summary>

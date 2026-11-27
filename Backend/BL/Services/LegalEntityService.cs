@@ -39,16 +39,18 @@ public partial class LegalEntityService : ILegalEntityService
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var term = search.Trim();
-            query = _context.Database.IsRelational()
-                ? query.Where(e => EF.Functions.Like(EF.Functions.Collate(e.Name, "Latin1_General_100_CI_AS"), $"%{term}%")
-                    || (e.TaxNumber != null && e.TaxNumber.Contains(term))
-                    || (e.MaticniBroj != null && e.MaticniBroj.Contains(term))
-                    || (e.FbaId != null && EF.Functions.Like(EF.Functions.Collate(e.FbaId, "Latin1_General_100_CI_AS"), $"%{term}%")))
-                : query.Where(e => e.Name.ToLower().Contains(term.ToLower())
-                    || (e.TaxNumber != null && e.TaxNumber.Contains(term))
-                    || (e.MaticniBroj != null && e.MaticniBroj.Contains(term))
-                    || (e.FbaId != null && e.FbaId.ToLower().Contains(term.ToLower())));
+            var term = search.Trim().ToUpperInvariant();
+            query = query.Where(row => row.Name.ToUpper().Contains(term) ||
+                (row.TaxNumber != null && row.TaxNumber.Contains(term)) ||
+                (row.MaticniBroj != null && row.MaticniBroj.ToUpper().Contains(term)) ||
+                (row.FbaId != null && row.FbaId.ToUpper().Contains(term)) ||
+                (row.Matbroj != null && row.Matbroj.ToUpper().Contains(term)) ||
+                (row.GccNumber != null && row.GccNumber.ToUpper().Contains(term)) ||
+                (row.GccName != null && row.GccName.ToUpper().Contains(term)) ||
+                row.BasisOfConnection.ToUpper().Contains(term) ||
+                row.Status.ToUpper().Contains(term) || row.CreatedBy.ToUpper().Contains(term) ||
+                (row.ModifiedBy != null && row.ModifiedBy.ToUpper().Contains(term)) ||
+                (row.VerifiedBy != null && row.VerifiedBy.ToUpper().Contains(term)));
         }
 
         var cancellation = _actor?.HttpContext?.RequestAborted ?? default;

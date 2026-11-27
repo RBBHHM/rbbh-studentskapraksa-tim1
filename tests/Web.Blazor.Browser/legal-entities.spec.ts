@@ -94,18 +94,21 @@ test("edit retains hidden Matbroj, verifies and soft deactivates through real ba
   await expect(row).toHaveCount(0);
   record = (await (await request.get("/__fixtures/legal-record", { headers })).json())[0]; expect(record.isActive).toBe(false);
 });
-test("paged data remains reachable and metadata search stays scoped to displayed page", async ({ page, request }) => {
+test("paged data remains reachable and metadata search covers all pages", async ({ page, request }) => {
   await request.post("/__fixtures/legal-pages", { headers }); await open(page);
   await expect(page.getByRole("row", { name: /Existing Company 21/ })).toBeVisible();
-  await page.getByLabel("Pretraga podataka na prikazanoj stranici", { exact: true }).fill("fixture-author");
+  await page.getByLabel("Pretraži zapise", { exact: true }).fill("fixture-author");
   await expect(page.getByRole("row", { name: /Existing Company 21/ })).toBeVisible();
-  await page.getByLabel("Pretraga podataka na prikazanoj stranici", { exact: true }).fill("  fixture-author  ");
+  await page.getByLabel("Pretraži zapise", { exact: true }).fill("  fixture-author  ");
   await expect(page.getByRole("row", { name: /Existing Company 21/ })).toBeVisible();
   await page.getByRole("button", { name: "Sljedeća stranica", exact: true }).click();
   await expect(page.getByRole("row", { name: /Existing Company 00/ })).toBeVisible();
   await expect(page.getByRole("row", { name: /Existing Company 21/ })).toHaveCount(0);
   await page.getByRole("button", { name: "Prethodna stranica", exact: true }).click();
   await expect(page.getByRole("row", { name: /Existing Company 21/ })).toBeVisible();
+  await page.getByLabel("Pretraži zapise", { exact: true }).fill("Existing Company 00");
+  await expect(page.getByRole("row", { name: /Existing Company 00/ })).toBeVisible();
+  await expect(page.getByRole("row", { name: /Existing Company 21/ })).toHaveCount(0);
 });
 test("real backend XLSX download and import retain counts and safe schema guidance", async ({ page }, info) => {
   await open(page); await create(page, "Export Company");

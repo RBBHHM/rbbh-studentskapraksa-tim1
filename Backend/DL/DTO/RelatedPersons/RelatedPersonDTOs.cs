@@ -181,6 +181,9 @@ public class RelatedPersonSummaryDTO
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
     public string? JMBG { get; set; }
+    public string? PassportNumber { get; set; }
+    public string? RelationBasis { get; set; }
+    public string? CreatedBy { get; set; }
     public RelatedPersonStatus Status { get; set; }
     public string StatusLabel => Status.ToString();
     public ResidencyType Residency { get; set; }

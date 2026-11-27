@@ -43,6 +43,11 @@
                         <RbiSelect TValue="long?" @bind-Value="Model.RelatedToPersonId"><option value="">@T["common.select"]</option>
                             @foreach (var person in People.Where(person => person.Id != Id)) { <option value="@person.Id">@person.FirstName @person.LastName</option> }
                         </RbiSelect>
+                        @if (HasMorePeople)
+                        {
+                            <RbiButton Variant="RbiButtonVariant.Ghost" Disabled="PeopleLoading" OnClick="LoadMorePeople">@T["person.load-more"]</RbiButton>
+                        }
+                        @if (PeopleError is not null) { <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[PeopleError]" /> }
                     </RbiField>
                 }
                 <RbiRadioGroup TValue="bool?" Label="@T["person.staff"]" Required Disabled="Model.IsFamily" @bind-Value="Model.IsIdentifiedStaff">
@@ -80,6 +85,10 @@
     [Parameter] public bool MutationBlocked { get; set; }
     [Parameter, EditorRequired] public PhysicalPersonDraft Model { get; set; } = null!;
     [Parameter] public long? Id { get; set; }
+    [Parameter] public bool HasMorePeople { get; set; }
+    [Parameter] public bool PeopleLoading { get; set; }
+    [Parameter] public string? PeopleError { get; set; }
+    [Parameter] public EventCallback LoadMorePeople { get; set; }
     [Parameter] public IReadOnlyList<RelatedPerson> People { get; set; } = [];
     [Parameter] public IReadOnlyList<ReferenceOption> Bases { get; set; } = [];
     [Parameter] public IReadOnlyList<ReferenceOption> SpecialBases { get; set; } = [];

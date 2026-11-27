@@ -18,13 +18,13 @@ else if (_error is not null)
 else if (!_admin) { <RbiAlert Title="@T["errors.forbidden"]" /> }
 else
 {
-    <div class="registry-controls"><RegistrySearch Id="audit-search" Label="@T["audit.search"]" @bind-Value="_search" /></div>
-    @if (!Filtered.Any()) { <div class="registry-surface"><RegistryEmpty Body="@T[string.IsNullOrWhiteSpace(_search) ? "audit.empty" : "state.no-match"]" /></div> }
+    <div class="registry-controls"><RegistrySearch Id="audit-search" Label="@T["audit.search"]" @bind-Value="_search" @bind-Value:after="SearchAsync" /></div>
+    @if (_result.Logs.Count == 0) { <div class="registry-surface"><RegistryEmpty Body="@T[string.IsNullOrWhiteSpace(_search) ? "audit.empty" : "state.no-match"]" /></div> }
     else
     {
         <RbiTable AccessibleLabel="@T["audit.title"]" Class="registry-table registry-audit-table">
             <thead><tr><th scope="col">@T["audit.time"]</th><th scope="col">@T["audit.action"]</th><th scope="col">@T["audit.area"]</th><th scope="col">@T["audit.change"]</th><th scope="col">@T["audit.user"]</th></tr></thead>
-            <tbody>@foreach (var entry in Filtered)
+            <tbody>@foreach (var entry in _result.Logs)
             {
                 <tr @key="entry.Id">
                     <td>@AppFormat.Timestamp(entry.Timestamp)</td>
@@ -153,9 +153,8 @@ else
     private string? _search, _error;
     private int _page = 1;
     private bool _disposed, _authenticated, _admin, _loading = true, _refreshing, _loaded;
-    private int TotalPages => Math.Max(1, (int)Math.Ceiling(_result.Total / 200d));
-    private IEnumerable<AuditRecord> Filtered => _result.Logs.Where(entry => entry.Matches(_search) || _changes[entry.Id].Any(change =>
-        $"{FieldLabel(change.Field)} {change.Old} {change.New}".Contains(_search!.Trim(), StringComparison.OrdinalIgnoreCase)));
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling(_result.Total / (double)Math.Max(1, _result.PageSize)));
+
     protected override Task OnInitializedAsync() => LoadAsync();
     private async Task LoadAsync()
     {
@@ -166,17 +165,36 @@ else
             if (!_authenticated) { _admin = false; return; }
             _admin = ApplicationAccess.IsAdministrator(await Profile.GetAsync(_token));
             if (!_admin) return;
-            _result = await Api.GetAsync(_page, _token);
-            if (_page > TotalPages) { _page = TotalPages; _result = await Api.GetAsync(_page, _token); }
-            _changes = _result.Logs.ToDictionary(entry => entry.Id, entry => (IReadOnlyList<AuditFieldChange>)AuditChange
-                .Compare(entry.OldValues, entry.NewValues, _result.PermissionCodes, T["common.yes"], T["common.no"], T["audit.unavailable-reference"], _result.ReferenceNames)
-                .Where(change => change.Kind != AuditChangeKind.Unchanged).ToArray());
+            await LoadPageAsync(_page);
             _loaded = true;
         }
         catch (RegistryApiException exception) { _error = exception.MessageKey; }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         finally { _loading = false; _refreshing = false; }
     }
-    private async Task ChangePageAsync(int page) { if (_refreshing || page < 1 || page > TotalPages) return; _page = page; await LoadAsync(); }
+    private readonly LatestPageRequest _pageRequest = new();
+
+    private Task SearchAsync() => LoadPageAsync(1, debounce: true);
+    private Task ChangePageAsync(int page) => LoadPageAsync(page);
+
+    private async Task LoadPageAsync(int page, bool debounce = false)
+    {
+        if (_disposed) return;
+        var search = _search;
+        _refreshing = true;
+        await _pageRequest.RunAsync(_token, debounce, async token =>
+        {
+            var result = await Api.GetAsync(page, token, search);
+            var lastPage = Math.Max(1, (int)Math.Ceiling(result.Total / (double)Math.Max(1, result.PageSize)));
+            if (page > lastPage) result = await Api.GetAsync(lastPage, token, search);
+            token.ThrowIfCancellationRequested();
+            _result = result;
+            _page = result.Page;
+            _error = null;
+            _changes = _result.Logs.ToDictionary(entry => entry.Id, entry => (IReadOnlyList<AuditFieldChange>)AuditChange
+                .Compare(entry.OldValues, entry.NewValues, _result.PermissionCodes, T["common.yes"], T["common.no"], T["audit.unavailable-reference"], _result.ReferenceNames)
+                .Where(change => change.Kind != AuditChangeKind.Unchanged).ToArray());
+        }, exception => _error = exception.MessageKey, () => _refreshing = false);
+    }
     public void Dispose() { _disposed = true; _lifetime.Cancel(); _lifetime.Dispose(); }
 }

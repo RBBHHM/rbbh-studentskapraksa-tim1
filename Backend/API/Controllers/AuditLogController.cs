@@ -78,13 +78,15 @@ public class AuditLogController(ConnectedPartiesDbContext db) : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var term = search.Trim();
-            query = db.Database.IsRelational()
-                ? query.Where(l => EF.Functions.Like(l.Username, $"%{term}%")
-                    || (l.Id.ToString() == term || EF.Functions.Like(l.NewValues ?? "", $"%{term}%") || EF.Functions.Like(l.OldValues ?? "", $"%{term}%")))
-                : query.Where(l => l.Username.ToLower().Contains(term.ToLower())
-                    || l.Id.ToString() == term || (l.OldValues ?? "").Contains(term, StringComparison.OrdinalIgnoreCase)
-                    || (l.NewValues ?? "").Contains(term, StringComparison.OrdinalIgnoreCase));
+            var term = search.Trim().ToUpperInvariant();
+            var numericId = long.TryParse(term, out var id) ? (long?)id : null;
+            var actions = ActionDisplayNames.Keys.Where(key =>
+                ActionDisplayName(key, english).Contains(term, StringComparison.OrdinalIgnoreCase)).ToArray();
+            query = query.Where(log => log.Username.ToUpper().Contains(term) ||
+                log.Action.ToUpper().Contains(term) || actions.Contains(log.Action) ||
+                log.TableName.ToUpper().Contains(term) || (numericId.HasValue && log.Id == numericId.Value) ||
+                (log.NewValues != null && log.NewValues.ToUpper().Contains(term)) ||
+                (log.OldValues != null && log.OldValues.ToUpper().Contains(term)));
         }
 
         if (dateFrom.HasValue)
@@ -154,9 +156,9 @@ public class AuditLogController(ConnectedPartiesDbContext db) : ControllerBase
         }
 
         Dictionary<long, string> permissionCodes = [];
-        if (logEntities.Any(log => log.TableName == "Role"))
+        if (referenceIds.TryGetValue("PermissionIds", out var permissionIds))
         {
-            permissionCodes = await db.Permissions.AsNoTracking()
+            permissionCodes = await db.Permissions.AsNoTracking().Where(permission => permissionIds.Contains(permission.Id))
                 .ToDictionaryAsync(permission => permission.Id, permission => permission.Code, HttpContext.RequestAborted);
         }
 
@@ -203,6 +205,15 @@ public class AuditLogController(ConnectedPartiesDbContext db) : ControllerBase
                         if (!idsByField.TryGetValue(property.Name, out var ids))
                             idsByField[property.Name] = ids = [];
                         ids.Add(id);
+                    }
+                    if (property.Name.Equals("PermissionIds", StringComparison.OrdinalIgnoreCase) &&
+                        property.Value.ValueKind == JsonValueKind.Array)
+                    {
+                        if (!idsByField.TryGetValue("PermissionIds", out var permissions))
+                            idsByField["PermissionIds"] = permissions = [];
+                        foreach (var item in property.Value.EnumerateArray())
+                            if (item.ValueKind == JsonValueKind.Number && item.TryGetInt64(out var permissionId))
+                                permissions.Add(permissionId);
                     }
                     Visit(property.Value);
                 }

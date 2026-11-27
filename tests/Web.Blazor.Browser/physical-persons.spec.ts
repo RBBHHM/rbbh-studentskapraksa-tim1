@@ -289,3 +289,16 @@ async function createNonresident(page: import("@playwright/test").Page, name: st
   await finishBusiness(dialog);
   await expect(page.getByRole("row", { name: new RegExp(`${name} Fixture`) })).toBeVisible();
 }
+
+
+test("physical registry pages and tree selector reach records beyond the initial page", async ({ page, request }) => {
+  expect((await request.post("/__fixtures/paged-people", { headers: { "X-Fixture-Control": "true" } })).status()).toBe(204);
+  await openPhysical(page);
+  await expect(page.getByRole("row", { name: /Person 00/ })).toBeVisible();
+  await expect(page.getByRole("row", { name: /Person 30/ })).toHaveCount(0);
+  await page.getByRole("button", { name: "Učitaj još lica", exact: true }).click();
+  await expect(page.locator("#family-person option").filter({ hasText: /Person 30/ })).toHaveCount(1);
+  await page.getByLabel("Pretraži zapise", { exact: true }).fill("Person 30");
+  await expect(page.getByRole("row", { name: /Person 30/ })).toBeVisible();
+  await expect(page.getByRole("row", { name: /Person 00/ })).toHaveCount(0);
+});
