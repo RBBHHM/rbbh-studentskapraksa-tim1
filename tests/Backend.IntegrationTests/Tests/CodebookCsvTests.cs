@@ -147,7 +147,7 @@ public sealed class CodebookCsvTests : CodebookCsvFixture
     }
 
     [Fact]
-    public async Task FirstBooleanColumnIsOptionalAndIndependentOfRowStatus()
+    public async Task CustomRowsAcceptOneCellAndCanRepeatExistingValues()
     {
         const string category = "BOOLEAN_SLOTS";
         using var definition = await Client.PostAsJsonAsync("/api/code-lists/categories", new
@@ -169,6 +169,18 @@ public sealed class CodebookCsvTests : CodebookCsvFixture
         Assert.True(item.GetProperty("isActive").GetBoolean());
         Assert.False(item.GetProperty("slotValues").GetProperty("1").GetBoolean());
         Assert.Equal(JsonValueKind.Null, item.GetProperty("slotValues").GetProperty("17").ValueKind);
+
+        var template = await Client.GetStringAsync($"/api/code-lists/{category}/csv-template");
+        Assert.Equal("\"Flag\",\"Note\"\r\n", template.TrimStart('\uFEFF'));
+        const string csv = "Flag,Note\ntrue,Example\nfalse,\nfalse,\n,\n,Example";
+        var preview = await Import(category, csv, true);
+        Assert.Equal(4, preview.GetProperty("ready").GetInt32());
+        Assert.False(preview.GetProperty("exampleSkipped").GetBoolean());
+        Assert.Equal(0, preview.GetProperty("duplicates").GetInt32());
+        Assert.Empty(preview.GetProperty("errors").EnumerateArray());
+        Assert.Equal(4, (await Import(category, csv, false)).GetProperty("imported").GetInt32());
+        var saved = await Client.GetFromJsonAsync<JsonElement>($"/api/code-lists/{category}");
+        Assert.Equal(5, saved.GetProperty("items").GetArrayLength());
     }
 
     [Fact]
@@ -214,8 +226,8 @@ public sealed class CodebookCsvTests : CodebookCsvFixture
 
         Assert.Equal(4, (await Import(category, csv, false, allowPartial: true)).GetProperty("imported").GetInt32());
         var retry = await Import(category, csv, false, allowPartial: true);
-        Assert.Equal(0, retry.GetProperty("imported").GetInt32());
-        Assert.Equal(4, retry.GetProperty("duplicates").GetInt32());
+        Assert.Equal(4, retry.GetProperty("imported").GetInt32());
+        Assert.Equal(0, retry.GetProperty("duplicates").GetInt32());
     }
 
     [Fact]
@@ -285,7 +297,7 @@ public sealed class CodebookCsvSqlTests : CodebookCsvFixture
         Assert.DoesNotContain("VALUE_KEY", template);
         var csv = "Precizno,Datum,Napomena,Kratko,Da ili ne\n2.000002,2027-01-02,CSV,XX,true";
         Assert.Equal(1, (await Import(category, csv, false)).GetProperty("imported").GetInt32());
-        Assert.Equal(1, (await Import(category, csv, false)).GetProperty("duplicates").GetInt32());
+        Assert.Equal(1, (await Import(category, csv, false)).GetProperty("imported").GetInt32());
     }
 
     [SqlServerFact]

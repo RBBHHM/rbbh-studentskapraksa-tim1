@@ -94,8 +94,9 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
     {
         var schema = Schema(definition, definition.Name == LanguageBooks.Packs ? await ExampleLanguage(ct) : "BS");
         if (!ValidSchema(schema)) return null;
-        var csv = string.Join(',', schema.Select(field => Escape(field.Header))) + "\r\n" +
-                  string.Join(',', schema.Select(field => Escape(field.Example))) + "\r\n";
+        var csv = string.Join(',', schema.Select(field => Escape(field.Header))) + "\r\n";
+        if (CodebookDefinitions.UsesReferenceFields(definition))
+            csv += string.Join(',', schema.Select(field => Escape(field.Example))) + "\r\n";
         return [.. Encoding.UTF8.GetPreamble(), .. Utf8.GetBytes(csv)];
     }
 
@@ -153,19 +154,14 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
         if (missing is not null) return Failure("codes.csv.header-missing", missing.Header);
 
         var indices = schema.Select(field => byHeader[field.Header]).ToArray();
-        var rows = db.CodeLists.IgnoreQueryFilters().Where(row => row.Definition!.Name == definition.Name);
-        HashSet<string> used;
-        if (!CodebookDefinitions.UsesReferenceFields(definition))
+        var usesReferenceFields = CodebookDefinitions.UsesReferenceFields(definition);
+        var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (usesReferenceFields)
         {
-            var existing = await rows.ToListAsync(ct);
-            used = existing.Select(row => CellKey(schema.Select(field => ReadValue(db, row, field.Slot))))
-                .ToHashSet(StringComparer.Ordinal);
-        }
-        else
-        {
-            var existing = await rows.Select(row => new { row.Kod, row.Localization!.LanguageCode, row.Localization!.ResourceKey }).ToListAsync(ct);
-            used = existing.Select(row => packs ? Pair(row.LanguageCode, row.ResourceKey) :
-                languages ? row.LanguageCode ?? row.Kod : row.Kod).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var existing = await db.CodeLists.IgnoreQueryFilters().Where(row => row.DefinitionId == definition.Id)
+                .Select(row => new { row.Kod, row.Localization!.LanguageCode, row.Localization!.ResourceKey }).ToListAsync(ct);
+            used.UnionWith(existing.Select(row => packs ? Pair(row.LanguageCode, row.ResourceKey) :
+                languages ? row.LanguageCode ?? row.Kod : row.Kod));
         }
         var seen = new HashSet<string>(used.Comparer);
         var pending = new List<Dictionary<int, object?>>();
@@ -183,7 +179,7 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
             catch (MalformedLineException) { return Failure("codes.csv.syntax", line); }
             if (cells.Length != header.Length) { issues.Add(new("codes.csv.cells", line)); continue; }
             if (cells.All(string.IsNullOrWhiteSpace)) { total--; continue; }
-            if (total == 1 && indices.Select(i => cells[i]).SequenceEqual(schema.Select(field => field.Example), StringComparer.Ordinal))
+            if (usesReferenceFields && total == 1 && indices.Select(i => cells[i]).SequenceEqual(schema.Select(field => field.Example), StringComparer.Ordinal))
             {
                 exampleSkipped = true;
                 continue;
@@ -202,19 +198,8 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
                 values.Add(field.Slot, value);
             }
             if (values.Count != schema.Length) continue;
-            if (!CodebookDefinitions.UsesReferenceFields(definition))
+            if (!usesReferenceFields)
             {
-                var signature = CellKey(schema.Select(field => values[field.Slot]));
-                if (!seen.Add(signature))
-                {
-                    issues.Add(new("codes.csv.row-duplicate", line));
-                    continue;
-                }
-                if (used.Contains(signature))
-                {
-                    duplicates++;
-                    continue;
-                }
                 pending.Add(values);
                 continue;
             }
@@ -244,7 +229,7 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
 
         if (total == 0) return Failure("codes.csv.data");
         var imported = 0;
-        if (!dryRun && pending.Count > 0 && (issues.Count == 0 || (allowPartial && !CodebookDefinitions.UsesReferenceFields(definition))))
+        if (!dryRun && pending.Count > 0 && (issues.Count == 0 || (allowPartial && !usesReferenceFields)))
         {
             var now = DateTime.UtcNow;
             foreach (var values in pending) Add(definition, values, actor, now);
@@ -254,17 +239,10 @@ internal sealed class CodebookCsv(ConnectedPartiesDbContext db)
             await db.SaveChangesAsync(ct);
             imported = pending.Count;
         }
-        return new(total - (exampleSkipped ? 1 : 0), pending.Count, duplicates, imported, exampleSkipped, issues, !CodebookDefinitions.UsesReferenceFields(definition));
+        return new(total - (exampleSkipped ? 1 : 0), pending.Count, duplicates, imported, exampleSkipped, issues, !usesReferenceFields);
     }
 
     private static CsvPreview Failure(string key, params string[] parameters) => new(0, 0, 0, 0, false, [new(key, parameters)]);
-    private static string CellKey(IEnumerable<object?> values) => System.Text.Json.JsonSerializer.Serialize(values.Select(value => value switch
-    {
-        decimal number => number.ToString("G29", Invariant),
-        IFormattable formattable => formattable.ToString(null, Invariant),
-        _ => value?.ToString()
-    }));
-
     private static string Pair(string? language, string? key) => language + "\u001f" + key;
 
     private static string Delimiter(string text)
