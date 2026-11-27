@@ -52,7 +52,6 @@ public partial class LegalEntityService : ILegalEntityService
         }
 
         var cancellation = _actor?.HttpContext?.RequestAborted ?? default;
-        var total = await query.CountAsync(cancellation);
 
         var items = await query
             .OrderByDescending(e => e.CreatedAt).ThenBy(e => e.Id)
@@ -60,6 +59,7 @@ public partial class LegalEntityService : ILegalEntityService
             .Take(pageSize)
             .Select(DtoProjection)
             .ToListAsync(cancellation);
+        var total = page == 1 && items.Count < pageSize ? items.Count : await query.CountAsync(cancellation);
 
         await FillConnectionDescriptions(items, cancellation);
 

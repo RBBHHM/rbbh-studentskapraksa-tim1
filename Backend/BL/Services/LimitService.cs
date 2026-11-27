@@ -39,15 +39,12 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
         else if (!string.IsNullOrWhiteSpace(matbroj))
             query = query.Where(x => x.Entity.MaticniBroj == matbroj.Trim() || x.Entity.Matbroj == matbroj.Trim());
 
-        var capital = await GetGlobalCapitalAsync(asOf, ct);
-
         IQueryable<LimitJoinRow> ordered = query.OrderBy(x => x.Entity.Name).ThenBy(x => x.Limit.Id);
         if (maximum.HasValue) ordered = ordered.Take(maximum.Value + 1);
-        var items = await ordered.Select(x => ToResponseDto(x.Limit, x.Entity, x.Capital)).ToListAsync(ct);
+        var items = await ordered.Select(ResponseProjection).ToListAsync(ct);
         if (maximum.HasValue && items.Count > maximum.Value)
             return Result<List<LimitResponseDTO>>.ValidationError(BackendMessages.Message("errors.workbook.export.limit"));
-        foreach (var item in items)
-            if (item.CapitalId is null || DateTime.UtcNow.Date != asOf.Date) ApplyCapital(item, capital);
+        await ApplyGlobalCapitalWhenNeeded(items, asOf, asOf.Date != DateTime.UtcNow.Date, ct);
 
         return Result<List<LimitResponseDTO>>.Success(items);
     }
@@ -60,12 +57,26 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
         if (legalEntityId.HasValue) query = query.Where(row => row.Entity.Id == legalEntityId);
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var term = search.Trim().ToUpperInvariant(); query = query.Where(row => row.Entity.Name.ToUpper().Contains(term) || row.Limit.TipLimita.ToUpper().Contains(term));
+            var term = search.Trim().ToUpperInvariant();
+            var searchResident = true.ToString().ToUpperInvariant().Contains(term);
+            var searchNonresident = false.ToString().ToUpperInvariant().Contains(term);
+            query = query.Where(row => row.Entity.Name.ToUpper().Contains(term) ||
+                row.Limit.TipLimita.ToUpper().Contains(term) || row.Limit.CreatedBy.ToUpper().Contains(term) ||
+                (row.Limit.ModifiedBy != null && row.Limit.ModifiedBy.ToUpper().Contains(term)) ||
+                (row.Limit.Komentar != null && row.Limit.Komentar.ToUpper().Contains(term)) ||
+                (row.Entity.FbaId != null && row.Entity.FbaId.ToUpper().Contains(term)) ||
+                (row.Entity.TaxNumber != null && row.Entity.TaxNumber.Contains(term)) ||
+                (row.Entity.MaticniBroj != null && row.Entity.MaticniBroj.ToUpper().Contains(term)) ||
+                (row.Entity.Matbroj != null && row.Entity.Matbroj.ToUpper().Contains(term)) ||
+                row.Limit.Id.ToString().Contains(term) || row.Entity.Id.ToString().Contains(term) ||
+                (row.Limit.OdobreniLimit.HasValue && row.Limit.OdobreniLimit.Value.ToString().Contains(term)) ||
+                (row.Limit.MaksimalnaOcekivanaUtilizacija.HasValue && row.Limit.MaksimalnaOcekivanaUtilizacija.Value.ToString().Contains(term)) ||
+                (searchResident && row.Entity.IsResident) || (searchNonresident && !row.Entity.IsResident));
         }
-        var total = await query.CountAsync(ct);
         var items = await query.OrderBy(row => row.Entity.Name).ThenBy(row => row.Limit.Id).Skip((page - 1) * pageSize).Take(pageSize)
-            .Select(row => ToResponseDto(row.Limit, row.Entity, row.Capital)).ToListAsync(ct);
-        var capital = await GetGlobalCapitalAsync(asOf, ct); foreach (var item in items) if (asOf.HasValue || item.CapitalId is null) ApplyCapital(item, capital);
+            .Select(ResponseProjection).ToListAsync(ct);
+        var total = page == 1 && items.Count < pageSize ? items.Count : await query.CountAsync(ct);
+        await ApplyGlobalCapitalWhenNeeded(items, asOf, asOf.HasValue, ct);
         return new(items, total, page, pageSize);
     }
 
@@ -77,7 +88,7 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
 
         var item = await BaseQuery()
             .Where(x => x.Limit.Id == id)
-            .Select(x => ToResponseDto(x.Limit, x.Entity, x.Capital))
+            .Select(ResponseProjection)
             .FirstOrDefaultAsync();
 
         if (item is null)
@@ -342,29 +353,37 @@ public class LimitService(ConnectedPartiesDbContext dbContext, IHttpContextAcces
         dto.DatumKapitala = capital?.CapitalDate;
     }
 
-    private static LimitResponseDTO ToResponseDto(Limit limit, LegalEntity entity, DL.Entities.Report.Capital? capital) => new()
+    private async Task ApplyGlobalCapitalWhenNeeded(List<LimitResponseDTO> items, DateTime? asOf, bool overrideStored, CancellationToken ct)
     {
-        Id = limit.Id,
-        CapitalId = limit.CapitalId,
-        LegalEntityId = limit.LegalEntityId,
-        RegulatorniKapital = capital?.RegulatoryCapital,
-        OsnovniKapital = capital?.CoreCapital,
-        DatumKapitala = capital?.CapitalDate,
-        Naziv = entity.Name,
-        IsResident = entity.IsResident,
-        FbaId = entity.FbaId,
-        TaxNumber = entity.TaxNumber,
-        MaticniBroj = entity.MaticniBroj,
-        Matbroj = entity.Matbroj,
-        TipLimita = limit.TipLimita,
-        OdobreniLimit = limit.OdobreniLimit,
-        MaksimalnaOcekivanaUtilizacija = limit.MaksimalnaOcekivanaUtilizacija,
-        RokOcekivaneUtilizacije = limit.RokOcekivaneUtilizacije,
-        Komentar = limit.Komentar,
-        CreatedAt = limit.CreatedAt,
-        CreatedBy = limit.CreatedBy,
-        ModifiedAt = limit.ModifiedAt,
-        ModifiedBy = limit.ModifiedBy,
+        if (!items.Any(item => overrideStored || item.CapitalId is null)) return;
+        var capital = await GetGlobalCapitalAsync(asOf, ct);
+        foreach (var item in items)
+            if (overrideStored || item.CapitalId is null) ApplyCapital(item, capital);
+    }
+
+    private static readonly System.Linq.Expressions.Expression<Func<LimitJoinRow, LimitResponseDTO>> ResponseProjection = row => new()
+    {
+        Id = row.Limit.Id,
+        CapitalId = row.Limit.CapitalId,
+        LegalEntityId = row.Limit.LegalEntityId,
+        RegulatorniKapital = row.Capital == null ? null : row.Capital.RegulatoryCapital,
+        OsnovniKapital = row.Capital == null ? null : row.Capital.CoreCapital,
+        DatumKapitala = row.Capital == null ? null : row.Capital.CapitalDate,
+        Naziv = row.Entity.Name,
+        IsResident = row.Entity.IsResident,
+        FbaId = row.Entity.FbaId,
+        TaxNumber = row.Entity.TaxNumber,
+        MaticniBroj = row.Entity.MaticniBroj,
+        Matbroj = row.Entity.Matbroj,
+        TipLimita = row.Limit.TipLimita,
+        OdobreniLimit = row.Limit.OdobreniLimit,
+        MaksimalnaOcekivanaUtilizacija = row.Limit.MaksimalnaOcekivanaUtilizacija,
+        RokOcekivaneUtilizacije = row.Limit.RokOcekivaneUtilizacije,
+        Komentar = row.Limit.Komentar,
+        CreatedAt = row.Limit.CreatedAt,
+        CreatedBy = row.Limit.CreatedBy,
+        ModifiedAt = row.Limit.ModifiedAt,
+        ModifiedBy = row.Limit.ModifiedBy,
     };
 
     /// <summary>

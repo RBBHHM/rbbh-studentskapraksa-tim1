@@ -37,6 +37,20 @@ public sealed class LimitsApiTests
         Assert.Equal("limits.xlsx", (await api.ExportAsync(id)).FileName); Assert.Equal(2, calls);
     }
     [Fact]
+    public async Task PagedLimitsSendTrimmedSearchAndLegalEntityScope()
+    {
+        await using var provider = Client(request =>
+        {
+            Assert.Equal("/api/limiti/page", request.RequestUri!.AbsolutePath);
+            Assert.Equal("?page=2&pageSize=50&legalEntityId=42&search=A%2FB", request.RequestUri.Query);
+            return Task.FromResult(Json("""{"items":[],"total":53,"page":2,"pageSize":50}"""));
+        });
+        var page = await provider.GetRequiredService<ILimitsApi>().PageAsync(2, 42, "  A/B  ");
+        Assert.Equal(53, page.Total);
+        Assert.Equal(2, page.Page);
+    }
+
+    [Fact]
     public async Task LookupEscapesQueryAndFormDataComesFromBackend()
     {
         var id = Random.Shared.NextInt64(1L << 32, 1L << 50);

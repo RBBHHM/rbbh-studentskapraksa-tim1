@@ -98,6 +98,9 @@ namespace RBBH.ConnectedParties.Migrations
 
                     b.HasIndex("Username");
 
+                    b.HasIndex("Timestamp", "Id").IsDescending(true, true)
+                        .HasDatabaseName("IX_AUDIT_LOGS_TimestampId");
+
                     b.ToTable("AUDIT_LOGS");
                 });
 
@@ -353,6 +356,9 @@ namespace RBBH.ConnectedParties.Migrations
                     b.HasIndex("TaxNumber")
                         .IsUnique()
                         .HasFilter("\"TAX_NUMBER\" IS NOT NULL");
+
+                    b.HasIndex("IsActive", "CreatedAt", "Id").IsDescending(false, true, false)
+                        .HasDatabaseName("IX_LEGAL_ENTITIES_IsActiveCreatedAtId");
 
                     b.ToTable("LEGAL_ENTITIES");
                 });
@@ -963,6 +969,9 @@ namespace RBBH.ConnectedParties.Migrations
 
                     b.HasIndex("Status");
 
+                    b.HasIndex("IsActive", "LastName", "FirstName", "Id")
+                        .HasDatabaseName("IX_RELATED_PERSONS_IsActiveLastNameFirstNameId");
+
                     b.ToTable("RELATED_PERSONS", t =>
                         {
                             t.HasCheckConstraint("CK_RelatedPersons_FBAId_Trimmed", "DATALENGTH([FBA_ID]) = DATALENGTH(LTRIM(RTRIM([FBA_ID])))");
@@ -1110,6 +1119,9 @@ namespace RBBH.ConnectedParties.Migrations
                     b.HasIndex("ReportType");
 
                     b.HasIndex("ReportType", "ReportDate");
+
+                    b.HasIndex("ReportType", "IsActive", "ReportDate", "CreatedAt", "Id").IsDescending(false, false, true, true, false)
+                        .HasDatabaseName("IX_REPORTS_ReportTypeIsActiveReportDateCreatedAtId");
 
                     b.ToTable("REPORTS");
                 });
@@ -1827,6 +1839,9 @@ namespace RBBH.ConnectedParties.Migrations
 
                     b.HasIndex("Username")
                         .IsUnique();
+
+                    b.HasIndex("LastName", "FirstName", "Id")
+                        .HasDatabaseName("IX_APP_USERS_LastNameFirstNameId");
 
                     b.ToTable("APP_USERS", t =>
                         {

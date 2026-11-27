@@ -24,6 +24,7 @@ public class LegalEntityConfiguration : IEntityTypeConfiguration<LegalEntity>
                .HasFilter("\"FBA_ID\" IS NOT NULL");
 
         builder.HasIndex(e => e.Status);
+        builder.HasIndex(e => new { e.IsActive, e.CreatedAt, e.Id }).IsDescending(false, true, false).HasDatabaseName("IX_LEGAL_ENTITIES_IsActiveCreatedAtId");
         builder.HasIndex(e => e.IsResident);
 
         builder.Property(e => e.Name).HasMaxLength(200).IsRequired();

@@ -30,8 +30,9 @@ public sealed class NotificationDispatcher(ConnectedPartiesDbContext db, IEmailS
             {
                 var titleKey = row.Notification.TitleKey.Replace('_', '.');
                 var bodyKey = row.Notification.BodyKey.Replace('_', '.');
-                var title = await localization.Text(titleKey, null, ct);
-                var text = await localization.Text(bodyKey, null, ct);
+                var pack = await localization.ForRequest(null, ct);
+                var title = localization.Text(titleKey, pack);
+                var text = localization.Text(bodyKey, pack);
                 // Missing setup/templates is retryable; sending raw keys would falsely mark delivery as successful.
                 if (title == titleKey || text == bodyKey) throw new InvalidOperationException("Notification resources unavailable.");
                 var roleStatus = titleKey switch

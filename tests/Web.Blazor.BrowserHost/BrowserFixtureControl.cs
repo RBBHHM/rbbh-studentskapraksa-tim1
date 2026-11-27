@@ -460,11 +460,21 @@ internal static partial class BrowserHostProgram
                             }
                             break;
                         case "/__fixtures/limit-existing":
+                        case "/__fixtures/limit-pages":
                             await using (var scope = backend.Services.CreateAsyncScope())
                             {
                                 var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
                                 var entity = await db.LegalEntities.OrderBy(item => item.CreatedAt).FirstAsync();
-                                db.Limiti.Add(new RBBH.ConnectedParties.DL.Entities.Limiti.Limit { LegalEntityId = entity.Id, TipLimita = "REG", OdobreniLimit = 125.50m, CreatedBy = "fixture", CreatedAt = DateTime.UtcNow });
+                                var count = context.Request.Path == "/__fixtures/limit-pages" ? 51 : 1;
+                                for (var index = 0; index < count; index++)
+                                {
+                                    db.Limiti.Add(new RBBH.ConnectedParties.DL.Entities.Limiti.Limit
+                                    {
+                                        LegalEntityId = entity.Id, TipLimita = "REG", OdobreniLimit = 125.50m + index,
+                                        CreatedBy = "fixture", CreatedAt = DateTime.UtcNow,
+                                        Komentar = index == 50 ? "later-page-marker" : null
+                                    });
+                                }
                                 await db.SaveChangesAsync();
                             }
                             break;

@@ -34,17 +34,17 @@ else
     @if ((_canCreate || _canEdit || _canDelete) && _periodLocked) { <RbiAlert Title="@T[_periodError ?? "errors.locked"]" /> }
     @if (_notice is not null) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@T[_notice]" /></div> }
     <div class="registry-controls">
-        <RegistrySearch Id="limit-search" @bind-Value="_search" />
+        <RegistrySearch Id="limit-search" @bind-Value="_search" @bind-Value:after="SearchAsync" />
         <div class="registry-filter">
             <LimitEntityPicker Id="limit-filter" Filter Value="_filter" ValueChanged="FilterAsync" RequireData="false" Disabled="@(_busy || _refreshing || _openingEditor)" />
         </div>
     </div>
-    @if (!Filtered.Any()) { <div class="registry-surface"><RegistryEmpty Body="@T[string.IsNullOrWhiteSpace(_search) && _filter is null ? "state.empty-body" : "state.no-match"]" /></div> }
+    @if (_records.Count == 0) { <div class="registry-surface"><RegistryEmpty Body="@T[string.IsNullOrWhiteSpace(_search) && _filter is null ? "state.empty-body" : "state.no-match"]" /></div> }
     else
     {
         <RbiTable AccessibleLabel="@T["limit.title"]" Class="registry-table registry-limits-table">
             <thead><tr><th scope="col">@T["legal.name"]</th><th scope="col">@T["limit.type"]</th><th scope="col">@T["limit.approved"]</th><th scope="col">@T["limit.expected"]</th><th scope="col">@T["limit.deadline"]</th><th scope="col">@T["limit.regulatory"]</th><th scope="col">@T["limit.core"]</th>@if (_canEdit || _canDelete) { <th scope="col" class="registry-center registry-actions-cell">@T["common.actions"]</th> }</tr></thead>
-            <tbody>@foreach (var record in Filtered)
+            <tbody>@foreach (var record in _records)
             {
                 <tr @key="record.Id"><td>@record.Naziv</td><td>@record.TipLimita</td><td>@Plain(record.OdobreniLimit)</td><td>@Plain(record.MaksimalnaOcekivanaUtilizacija)</td><td>@(record.RokOcekivaneUtilizacije?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) ?? "—")</td><td>@Plain(record.RegulatorniKapital)</td><td>@Plain(record.OsnovniKapital)</td>
                     @if (_canEdit || _canDelete)
@@ -58,6 +58,14 @@ else
             }</tbody>
         </RbiTable>
     }
+    @if (TotalPages > 1)
+    {
+        <p class="page-total" role="status">@T.Format("legal.page-summary", _page, TotalPages, _total)</p>
+        <RbiPagination CurrentPage="_page" CurrentPageChanged="ChangePageAsync" TotalPages="TotalPages" AccessibleLabel="@T["legal.pages"]"
+                       PreviousLabel="@T["common.back"]" PreviousAccessibleLabel="@T["legal.previous"]" NextLabel="@T["common.actions.continue"]"
+                       NextAccessibleLabel="@T["legal.next"]" PageAccessibleLabel="@(number => T.Format("legal.page", number))" />
+    }
+
 }
 @if (_draft is { } draft)
 {
@@ -106,7 +114,11 @@ else
     private ImportResult? _importResult;
     private string? _importError;
     private Guid _fileKey = Guid.NewGuid();
-    private IEnumerable<LimitRecord> Filtered => _records.Where(record => record.Matches(_search));
+    private CancellationTokenSource? _pageRequest;
+    private int _page = 1;
+    private int _total;
+    private int _pageSize = 50;
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling((double)_total / _pageSize));
     protected override Task OnInitializedAsync() => LoadAsync();
     private async Task LoadAsync()
     {
@@ -121,13 +133,60 @@ else
             if (!_canRead) return;
             try { _periodLocked = (await Period.CurrentAsync(_token)).IsLocked; _periodError = null; }
             catch (RegistryApiException) { _periodLocked = true; _periodError = "period.state-unavailable"; }
-            _records = await Api.ListAsync(_filter, _token); _loaded = true;
+            await LoadPageAsync(_page);
+            _loaded = true;
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         catch (RegistryApiException exception) { _error = exception.MessageKey; }
         finally { _loading = false; _refreshing = false; }
     }
-    private async Task FilterAsync(long? entity) { if (_busy || _refreshing || _openingEditor) return; _filter = entity; await LoadAsync(); }
+    private Task SearchAsync() => LoadPageAsync(1, debounce: true);
+    private Task ChangePageAsync(int page) => LoadPageAsync(page);
+
+    private Task FilterAsync(long? entity)
+    {
+        if (_busy || _openingEditor) return Task.CompletedTask;
+        _filter = entity;
+        return LoadPageAsync(1);
+    }
+
+    private async Task LoadPageAsync(int page, bool debounce = false)
+    {
+        if (_disposed) return;
+        _pageRequest?.Cancel();
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(_token);
+        _pageRequest = request;
+        _refreshing = true;
+        var search = _search;
+        var filter = _filter;
+        try
+        {
+            if (debounce) await Task.Delay(250, request.Token);
+            var result = await Api.PageAsync(page, filter, search, request.Token);
+            var lastPage = Math.Max(1, (int)Math.Ceiling((double)result.Total / result.PageSize));
+            if (page > lastPage)
+                result = await Api.PageAsync(lastPage, filter, search, request.Token);
+            request.Token.ThrowIfCancellationRequested();
+            _records = result.Items;
+            _total = result.Total;
+            _pageSize = result.PageSize;
+            _page = result.Page;
+            _error = null;
+        }
+        catch (OperationCanceledException) when (request.IsCancellationRequested) { }
+        catch (RegistryApiException exception) when (!request.IsCancellationRequested)
+        {
+            _error = exception.MessageKey;
+        }
+        finally
+        {
+            if (ReferenceEquals(_pageRequest, request))
+            {
+                _pageRequest = null;
+                _refreshing = false;
+            }
+        }
+    }
     private async Task Edit(LimitRecord? record)
     {
         if (_periodLocked || _busy || _openingEditor || _refreshing || _disposed || !_authenticated || (record is null ? !_canCreate : !_canEdit)) return;

@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -17,7 +18,11 @@ public sealed class RuntimeLocalizationOptions
 }
 
 public sealed record RuntimeResource(string ResourceKey, string Label, string? Helper, string? Placeholder, string? ContextInfo = null);
-public sealed record RuntimeResourcePack(string Language, string FallbackLanguage, string Version, IReadOnlyList<RuntimeResource> Items);
+public sealed record RuntimeResourcePack(string Language, string FallbackLanguage, string Version, IReadOnlyList<RuntimeResource> Items)
+{
+    internal FrozenDictionary<string, RuntimeResource> ByKey { get; } =
+        Items.ToFrozenDictionary(item => item.ResourceKey, StringComparer.OrdinalIgnoreCase);
+}
 public sealed record PutRuntimeResource(string Label, string? Helper = null, string? Placeholder = null, bool IsActive = true, string? ContextInfo = null);
 
 public sealed class RuntimeLocalizationCache : IDisposable
@@ -36,39 +41,59 @@ public sealed class RuntimeLocalizationCatalog(ConnectedPartiesDbContext db, IOp
     public async Task<object> Languages(CancellationToken ct)
     {
         var rows = await db.CodeLists.AsNoTracking().Where(row => row.Definition!.Name == Settings.LanguagesCodebook &&
-                db.CodeListDefinitions.Any(definition => definition.Name == row.Definition!.Name && definition.IsActive))
+                row.Definition!.IsActive)
             .OrderBy(row => row.Kod)
             .Select(row => new { row.Kod, row.Naziv, row.Localization!.LanguageCode, row.Localization!.ResourceKey }).ToListAsync(ct);
         return new { items = rows.Select(row => new { code = row.LanguageCode ?? row.Kod, name = row.ResourceKey ?? row.Naziv }) };
     }
 
     private Task<bool> Supported(string language, CancellationToken ct) => db.CodeLists.AsNoTracking().AnyAsync(row =>
-        row.Definition!.Name == Settings.LanguagesCodebook && (row.Localization!.LanguageCode ?? row.Kod).ToUpper() == language && db.CodeListDefinitions.Any(definition => definition.Name == row.Definition!.Name && definition.IsActive), ct);
+        row.Definition!.Name == Settings.LanguagesCodebook && (row.Localization!.LanguageCode ?? row.Kod).ToUpper() == language && row.Definition!.IsActive, ct);
 
     public async Task<RuntimeResourcePack> Resources(string language, CancellationToken ct)
     {
         language = language.Trim().ToUpperInvariant();
-        if (language.Length > 10 || !await Supported(language, ct))
+        if (language.Length > 10)
             throw new BusinessRuleException(404, "localization.language_unavailable");
-        var versions = await db.CodeListDefinitions.AsNoTracking().Where(row => row.Name == Settings.LanguagesCodebook || row.Name == Settings.LanguagePacksCodebook)
-            .OrderBy(row => row.Name).Select(row => new { row.Id, row.ModifiedAt, row.IsActive }).ToListAsync(ct);
+
+        var languages = Settings.LanguagesCodebook;
+        var packs = Settings.LanguagePacksCodebook;
+        var versions = await db.CodeListDefinitions.AsNoTracking()
+            .Where(row => row.Name == languages || row.Name == packs).OrderBy(row => row.Name)
+            .Select(row => new
+            {
+                row.Id, row.ModifiedAt, row.IsActive,
+                SupportsLanguage = row.Name == languages && row.IsActive && db.CodeLists.Any(value =>
+                    value.DefinitionId == row.Id && (value.Localization!.LanguageCode ?? value.Kod).ToUpper() == language)
+            }).ToListAsync(ct);
+        if (!versions.Any(row => row.SupportsLanguage))
+            throw new BusinessRuleException(404, "localization.language_unavailable");
         var version = string.Join(':', versions.Select(row => $"{row.Id}.{row.ModifiedAt?.Ticks}.{row.IsActive}"));
         var cacheKey = $"pack:{Settings.LanguagesCodebook}:{Settings.LanguagePacksCodebook}:{language}:{DefaultLanguage}:{version}";
         if (cache.Values.TryGetValue(cacheKey, out RuntimeResourcePack? existing)) return existing!;
         var fallback = DefaultLanguage;
-        var rows = await db.CodeLists.AsNoTracking().Where(row => row.Definition!.Name == Settings.LanguagePacksCodebook &&
-                row.Localization != null && row.Localization.ResourceKey != null && row.Localization.LanguageCode != null && (row.Localization!.LanguageCode == language || row.Localization!.LanguageCode == fallback) &&
-                db.CodeListDefinitions.Any(definition => definition.Name == row.Definition!.Name && definition.IsActive)).Take(10_001).ToListAsync(ct);
+        var rows = await db.CodeLists.AsNoTracking()
+            .Where(row => row.Definition!.Name == packs && row.Definition.IsActive &&
+                row.Localization != null && row.Localization.ResourceKey != null &&
+                (row.Localization.LanguageCode == language || row.Localization.LanguageCode == fallback))
+            .Select(row => new
+            {
+                row.Localization!.LanguageCode,
+                Resource = new RuntimeResource(row.Localization.ResourceKey!, row.Localization.ResourceLabel!,
+                    row.Localization.ResourceHelper, row.Localization.ResourcePlaceholder, row.Localization.ContextInfo)
+            }).Take(10_001).ToListAsync(ct);
         if (rows.Count > 10_000) throw new BusinessRuleException(503, "localization.catalog_limit");
-        var defaults = rows.Where(row => row.Localization!.LanguageCode == fallback).ToDictionary(row => row.Localization!.ResourceKey!, StringComparer.OrdinalIgnoreCase);
-        var requested = rows.Where(row => row.Localization!.LanguageCode == language).ToDictionary(row => row.Localization!.ResourceKey!, StringComparer.OrdinalIgnoreCase);
+        var defaults = rows.Where(row => row.LanguageCode == fallback)
+            .ToDictionary(row => row.Resource.ResourceKey, row => row.Resource, StringComparer.OrdinalIgnoreCase);
+        var requested = rows.Where(row => row.LanguageCode == language)
+            .ToDictionary(row => row.Resource.ResourceKey, row => row.Resource, StringComparer.OrdinalIgnoreCase);
         var keys = defaults.Keys.Concat(requested.Keys).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase);
         var items = keys.Select(key =>
         {
-            defaults.TryGetValue(key, out var baseline); requested.TryGetValue(key, out var preferred);
-            return new RuntimeResource(key, preferred?.Localization?.ResourceLabel ?? baseline?.Localization?.ResourceLabel ?? key,
-                preferred?.Localization?.ResourceHelper ?? baseline?.Localization?.ResourceHelper, preferred?.Localization?.ResourcePlaceholder ?? baseline?.Localization?.ResourcePlaceholder,
-                preferred?.Localization?.ContextInfo ?? baseline?.Localization?.ContextInfo);
+            defaults.TryGetValue(key, out var baseline);
+            requested.TryGetValue(key, out var preferred);
+            return new RuntimeResource(key, preferred?.Label ?? baseline?.Label ?? key, preferred?.Helper ?? baseline?.Helper,
+                preferred?.Placeholder ?? baseline?.Placeholder, preferred?.ContextInfo ?? baseline?.ContextInfo);
         }).ToArray();
         var pack = new RuntimeResourcePack(language, fallback, version, items);
         cache.Values.Set(cacheKey, pack, new MemoryCacheEntryOptions { Size = Math.Max(1, items.Length), AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(2) });
@@ -88,11 +113,12 @@ public sealed class RuntimeLocalizationCatalog(ConnectedPartiesDbContext db, IOp
         }
     }
 
-    public async Task<string> Text(string key, string? requestedLanguage, CancellationToken ct)
+    public async Task<string> Text(string key, string? requestedLanguage, CancellationToken ct) =>
+        Text(key, await ForRequest(requestedLanguage, ct));
+
+    internal string Text(string key, RuntimeResourcePack? pack)
     {
-        var pack = await ForRequest(requestedLanguage, ct);
-        var resource = pack?.Items.FirstOrDefault(row => row.ResourceKey.Equals(key, StringComparison.OrdinalIgnoreCase));
-        if (resource is not null) return resource.Label;
+        if (pack is not null && pack.ByKey.TryGetValue(key, out var resource)) return resource.Label;
         var language = pack?.Language ?? DefaultLanguage;
         var diagnostic = "missing:" + language + ":" + key;
         if (!cache.Values.TryGetValue(diagnostic, out _))

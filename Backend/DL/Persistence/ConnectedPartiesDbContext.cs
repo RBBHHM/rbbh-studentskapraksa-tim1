@@ -116,6 +116,7 @@ public partial class ConnectedPartiesDbContext(
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.KeycloakId).IsUnique();
             entity.HasIndex(e => e.Username).IsUnique();
+            entity.HasIndex(e => new { e.LastName, e.FirstName, e.Id }).HasDatabaseName("IX_APP_USERS_LastNameFirstNameId");
             entity.HasIndex(e => e.Email).IsUnique();
             entity.Property(e => e.Email).UseCollation("Latin1_General_100_CI_AS");
             entity.Property(e => e.Username).UseCollation("Latin1_General_100_CI_AS");
@@ -132,6 +133,7 @@ public partial class ConnectedPartiesDbContext(
         {
             entity.HasQueryFilter(row => row.Action != RegistryVerification.CreationProof);
             entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.Timestamp, e.Id }).IsDescending(true, true).HasDatabaseName("IX_AUDIT_LOGS_TimestampId");
             entity.HasIndex(e => e.Timestamp);
             entity.HasIndex(e => e.TableName);
             entity.HasIndex(e => e.Username);

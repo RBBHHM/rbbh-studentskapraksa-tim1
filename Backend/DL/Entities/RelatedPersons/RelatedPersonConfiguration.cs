@@ -45,6 +45,7 @@ public class RelatedPersonConfiguration : IEntityTypeConfiguration<RelatedPerson
                 "DATALENGTH([FBA_ID]) = DATALENGTH(LTRIM(RTRIM([FBA_ID])))");
         });
         builder.HasIndex(e => e.Status);
+        builder.HasIndex(e => new { e.IsActive, e.LastName, e.FirstName, e.Id }).HasDatabaseName("IX_RELATED_PERSONS_IsActiveLastNameFirstNameId");
         builder.HasIndex(e => e.RelatedToPersonId);
 
         // Soft delete filter — nikad fizički DELETE

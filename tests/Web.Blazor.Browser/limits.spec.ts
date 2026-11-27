@@ -89,6 +89,20 @@ test("filter and metadata search preserve scope and real XLSX download", async (
   const target = info.outputPath("limits.xlsx"); await download.saveAs(target); expect((await readFile(target)).subarray(0, 2)).toEqual(Buffer.from([0x50, 0x4b]));
   await page.getByRole("button", { name: "Ukloni filter", exact: true }).click(); await expect(filter).toBeVisible(); await expect(row).toBeVisible();
 });
+test("limit pagination and server search reach records beyond the first page", async ({ page, request }) => {
+  expect((await request.post("/__fixtures/limit-pages", { headers })).status()).toBe(204);
+  await open(page);
+  const rows = page.getByRole("row", { name: /Existing Company 00/ });
+  await expect(rows).toHaveCount(50);
+  await page.getByRole("button", { name: "Sljedeća stranica", exact: true }).click();
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText("175.50");
+  await page.getByLabel("Pretraži zapise", { exact: true }).fill("");
+  await page.getByLabel("Pretraži zapise", { exact: true }).fill("later-page-marker");
+  await expect(page.getByRole("button", { name: "Sljedeća stranica", exact: true })).toHaveCount(0);
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText("175.50");
+});
 test("actual period lock rejects create without record or audit writes", async ({ page, request }) => {
   await open(page); const dialog = await begin(page);
   await request.post("/__fixtures/lock", { headers });

@@ -62,24 +62,26 @@ namespace RBBH.ConnectedParties.Exceptions
                     var family = statusCode >= 500 ? "unavailable" : "invalid";
                     var titleKey = $"errors.request.{family}.title";
                     var detailKey = $"errors.request.{family}.detail";
-                    if (exception is BusinessRuleException rule)
+                    var rule = exception as BusinessRuleException;
+                    var resourceKey = rule is null ? null : "errors." + rule.Code.Replace('_', '.');
+                    if (resourceKey is not null) problem.Extensions["resourceKey"] = resourceKey;
+                    var pack = await catalog.ForRequest(language, cancellationToken);
+                    if (rule is not null && resourceKey is not null)
                     {
-                        var resourceKey = "errors." + rule.Code.Replace('_', '.');
-                        problem.Extensions["resourceKey"] = resourceKey;
-                        var translated = await catalog.Text(resourceKey, language, cancellationToken);
+                        var translated = catalog.Text(resourceKey, pack);
                         if (translated != resourceKey) problem.Detail = string.Format(System.Globalization.CultureInfo.InvariantCulture, translated, rule.Parameters.ToArray());
                         else if (!string.IsNullOrWhiteSpace(language) && !language.StartsWith("BS", StringComparison.OrdinalIgnoreCase))
                         {
-                            var genericDetail = await catalog.Text(detailKey, language, cancellationToken);
+                            var genericDetail = catalog.Text(detailKey, pack);
                             if (genericDetail != detailKey) problem.Detail = genericDetail;
                         }
                     }
                     else
                     {
-                        var detail = await catalog.Text(detailKey, language, cancellationToken);
+                        var detail = catalog.Text(detailKey, pack);
                         if (detail != detailKey) problem.Detail = detail;
                     }
-                    var title = await catalog.Text(titleKey, language, cancellationToken);
+                    var title = catalog.Text(titleKey, pack);
                     if (title != titleKey) problem.Title = title;
                 }
                 catch (Exception localizationFailure) when (localizationFailure is not OperationCanceledException)

@@ -6,18 +6,8 @@ public sealed record LimitRecord(int Id, long LegalEntityId, string Naziv, bool 
     string? TaxNumber, string? MaticniBroj, string? Matbroj, string TipLimita, decimal? OdobreniLimit,
     decimal? MaksimalnaOcekivanaUtilizacija, DateTime? RokOcekivaneUtilizacije, string? Komentar,
     decimal? RegulatorniKapital, decimal? OsnovniKapital, DateTime? DatumKapitala,
-    DateTime CreatedAt, string CreatedBy, DateTime? ModifiedAt, string? ModifiedBy, long? CapitalId = null)
-{
-    public bool Matches(string? search)
-    {
-        if (string.IsNullOrWhiteSpace(search)) return true;
-        var term = search.Trim();
-        object?[] values = [Id, LegalEntityId, Naziv, IsResident, FbaId, TaxNumber, MaticniBroj, Matbroj,
-            TipLimita, OdobreniLimit, MaksimalnaOcekivanaUtilizacija, RokOcekivaneUtilizacije?.ToString("O"), Komentar,
-            RegulatorniKapital, OsnovniKapital, DatumKapitala?.ToString("O"), CreatedAt.ToString("O"), CreatedBy, ModifiedAt?.ToString("O"), ModifiedBy];
-        return values.Any(value => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture)?.Contains(term, StringComparison.OrdinalIgnoreCase) == true);
-    }
-}
+    DateTime CreatedAt, string CreatedBy, DateTime? ModifiedAt, string? ModifiedBy, long? CapitalId = null);
+public sealed record LimitsPage(IReadOnlyList<LimitRecord> Items, int Total, int Page, int PageSize);
 public sealed record LimitRequest(long LegalEntityId, string TipLimita, decimal? OdobreniLimit,
     decimal? MaksimalnaOcekivanaUtilizacija, DateTime? RokOcekivaneUtilizacije, string? Komentar);
 public sealed record LimitEntityOption(long Id, string Name, string? MaticniBroj, string? TaxNumber);
@@ -27,6 +17,7 @@ public sealed record LimitEntityData(long Id, bool IsResident, string? FbaId, st
 public interface ILimitsApi
 {
     Task<IReadOnlyList<LimitRecord>> ListAsync(long? entity = null, CancellationToken token = default);
+    Task<LimitsPage> PageAsync(int page, long? entity, string? search, CancellationToken token = default);
     Task<LimitRecord> GetAsync(int id, CancellationToken token = default);
     Task<IReadOnlyList<LimitEntityOption>> SearchEntitiesAsync(string? search, CancellationToken token = default);
     Task<LimitEntityData> EntityDataAsync(long id, CancellationToken token = default);
@@ -41,6 +32,12 @@ public sealed class LimitsApi(IRbiApiFileTransport transport) : ILimitsApi
     private static string Filter(long? id) => id is { } key ? $"?legalEntityId={key:D}" : "";
     public async Task<IReadOnlyList<LimitRecord>> ListAsync(long? entity = null, CancellationToken token = default) =>
         Value(await transport.GetAsync<List<LimitRecord>>("api/limiti" + Filter(entity), token), token);
+    public async Task<LimitsPage> PageAsync(int page, long? entity, string? search, CancellationToken token = default)
+    {
+        var scope = entity is { } id ? $"&legalEntityId={id:D}" : "";
+        var term = Uri.EscapeDataString(search?.Trim() ?? "");
+        return Value(await transport.GetAsync<LimitsPage>($"api/limiti/page?page={page}&pageSize=50{scope}&search={term}", token), token);
+    }
     public async Task<LimitRecord> GetAsync(int id, CancellationToken token = default) =>
         Value(await transport.GetAsync<LimitRecord>($"api/limiti/{id}", token), token);
     public async Task<IReadOnlyList<LimitEntityOption>> SearchEntitiesAsync(string? search, CancellationToken token = default) =>
@@ -77,6 +74,7 @@ internal sealed class UnconfiguredLimitsApi : ILimitsApi
 {
     private static Task<T> Unavailable<T>() => Task.FromException<T>(new RegistryApiException());
     public Task<IReadOnlyList<LimitRecord>> ListAsync(long? entity = null, CancellationToken token = default) => Unavailable<IReadOnlyList<LimitRecord>>();
+    public Task<LimitsPage> PageAsync(int page, long? entity, string? search, CancellationToken token = default) => Unavailable<LimitsPage>();
     public Task<LimitRecord> GetAsync(int id, CancellationToken token = default) => Unavailable<LimitRecord>();
     public Task<IReadOnlyList<LimitEntityOption>> SearchEntitiesAsync(string? search, CancellationToken token = default) => Unavailable<IReadOnlyList<LimitEntityOption>>();
     public Task<LimitEntityData> EntityDataAsync(long id, CancellationToken token = default) => Unavailable<LimitEntityData>();

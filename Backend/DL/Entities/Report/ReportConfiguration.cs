@@ -13,6 +13,7 @@ public class ReportConfiguration : IEntityTypeConfiguration<Report>
 
         builder.HasIndex(e => e.ReportType);
         builder.HasIndex(e => e.ReportDate);
+        builder.HasIndex(e => new { e.ReportType, e.IsActive, e.ReportDate, e.CreatedAt, e.Id }).IsDescending(false, false, true, true, false).HasDatabaseName("IX_REPORTS_ReportTypeIsActiveReportDateCreatedAtId");
         builder.HasIndex(e => new { e.ReportType, e.ReportDate });
 
         builder.Property(e => e.ReportType).HasMaxLength(10).IsRequired();

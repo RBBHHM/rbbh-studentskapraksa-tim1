@@ -39,34 +39,47 @@ public partial class AppUserService(ConnectedPartiesDbContext dbContext, Keycloa
                 : query.Where(user => activeAssignments.Any(assignment => assignment.UserId == user.Id &&
                     assignment.Role.Name.ToUpper() == normalizedRole));
         }
-        var total = await query.CountAsync(ct);
         var users = await query.OrderBy(user => user.LastName).ThenBy(user => user.FirstName).ThenBy(user => user.Id)
-            .Skip((int)Math.Min((long)(page - 1) * pageSize, int.MaxValue)).Take(pageSize).ToListAsync(ct);
-        var userIds = users.Select(user => user.Id).ToList();
-        var userRoles = await _db.UserRoles.AsNoTracking()
-            .Where(ur => userIds.Contains(ur.UserId) && ur.IsActive)
-            .Join(_db.Roles.Where(role => role.IsActive && role.Name != ApplicationAccessRoles.Guest),
-                ur => ur.RoleId, r => r.Id, (ur, r) => new { ur.UserId, r.Name })
+            .Skip((int)Math.Min((long)(page - 1) * pageSize, int.MaxValue)).Take(pageSize)
+            .Select(user => new { user.Id, user.Username, user.FirstName, user.LastName, user.Email, user.IsActive, user.KeycloakSubjectConfirmed })
             .ToListAsync(ct);
-        var rolesByUser = userRoles.GroupBy(x => x.UserId)
-            .ToDictionary(g => g.Key, g => g.Select(x => x.Name).ToList());
-        var grants = await _db.RolePermissions.Where(mapping => mapping.Role.IsActive && mapping.Permission.IsActive)
-            .Select(mapping => new { Role = mapping.Role.Name, Permission = mapping.Permission.Code }).ToListAsync(ct);
+        var total = page == 1 && users.Count < pageSize ? users.Count : await query.CountAsync(ct);
+        var userIds = users.Select(user => user.Id).ToArray();
+        var assignments = userIds.Length == 0 ? null : await _db.UserRoles.AsNoTracking()
+            .Where(assignment => userIds.Contains(assignment.UserId) && assignment.IsActive &&
+                assignment.Role.IsActive && assignment.Role.Name != ApplicationAccessRoles.Guest)
+            .Select(assignment => new { assignment.UserId, assignment.RoleId, assignment.Role.Name })
+            .ToListAsync(ct);
+        var rolesByUser = (assignments ?? []).ToLookup(assignment => assignment.UserId);
+        var eligibleUsers = users.Where(user => user.IsActive && user.KeycloakSubjectConfirmed).Select(user => user.Id).ToHashSet();
+        var roleIds = (assignments ?? []).Where(assignment => eligibleUsers.Contains(assignment.UserId))
+            .Select(assignment => assignment.RoleId).Distinct().ToArray();
+        var grants = roleIds.Length == 0 ? null : await _db.RolePermissions.AsNoTracking()
+            .Where(mapping => roleIds.Contains(mapping.RoleId) && mapping.Role.IsActive && mapping.Permission.IsActive)
+            .Select(mapping => new { mapping.RoleId, mapping.Permission.Code }).ToListAsync(ct);
+        var grantsByRole = (grants ?? []).ToLookup(grant => grant.RoleId, grant => grant.Code);
+        var guestPermissions = RolePermissionMatrix.PermissionsByRole[ApplicationAccessRoles.Guest];
 
-        var result = users.Select(u => new UserDTO
+        var result = users.Select(user =>
         {
-            Id = u.Id,
-            Username = u.Username,
-            FirstName = u.FirstName,
-            LastName = u.LastName,
-            Email = u.Email,
-            IsActive = u.IsActive,
-            IdentityConfirmed = u.KeycloakSubjectConfirmed,
-            Roles = rolesByUser.TryGetValue(u.Id, out var r) ? r : [],
-            EffectivePermissions = u.IsActive ? grants.Where(grant => u.KeycloakSubjectConfirmed &&
-                    rolesByUser.TryGetValue(u.Id, out var assignedRoles) && assignedRoles.Contains(grant.Role))
-                .Select(grant => grant.Permission).Concat(RolePermissionMatrix.PermissionsByRole[ApplicationAccessRoles.Guest])
-                .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList() : []
+            var roles = rolesByUser[user.Id];
+            IEnumerable<string> permissions = user.KeycloakSubjectConfirmed
+                ? roles.SelectMany(role => grantsByRole[role.RoleId])
+                : [];
+            return new UserDTO
+            {
+                Id = user.Id,
+                Username = user.Username,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                IsActive = user.IsActive,
+                IdentityConfirmed = user.KeycloakSubjectConfirmed,
+                Roles = roles.Select(role => role.Name).ToList(),
+                EffectivePermissions = user.IsActive
+                    ? permissions.Concat(guestPermissions).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList()
+                    : []
+            };
         }).ToList();
         return Result<GetUsersResponseDTO>.Success(new GetUsersResponseDTO
         {

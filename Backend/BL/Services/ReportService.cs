@@ -96,11 +96,11 @@ public class ReportService : IReportService
             .Where(r => r.ReportType == reportType)
             .OrderByDescending(r => r.ReportDate).ThenByDescending(r => r.CreatedAt).ThenBy(r => r.Id);
 
-        var total = await query.CountAsync(Cancellation);
         var items = await query
             .Skip((page - 1) * pageSize).Take(pageSize)
             .Select(ReportDtoProjection)
             .ToListAsync(Cancellation);
+        var total = page == 1 && items.Count < pageSize ? items.Count : await query.CountAsync(Cancellation);
 
         return new ReportListDTO { Items = items, Total = total, Page = page, PageSize = pageSize };
     }

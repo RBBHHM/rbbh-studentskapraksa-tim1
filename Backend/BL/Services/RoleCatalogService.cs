@@ -27,9 +27,9 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
             var term = search.Trim().ToUpperInvariant();
             query = query.Where(row => row.Name.ToUpper().Contains(term));
         }
-        var total = await query.CountAsync(ct);
         var rows = await query.Include(row => row.RolePermissions).OrderBy(row => row.Name).ThenBy(row => row.Id)
             .Skip((int)Math.Min((long)(page - 1) * pageSize, int.MaxValue)).Take(pageSize).ToListAsync(ct);
+        var total = page == 1 && rows.Count < pageSize ? rows.Count : await query.CountAsync(ct);
         return new { items = rows.Select(Map).ToArray(), total, page, pageSize };
     }
 

@@ -85,9 +85,9 @@ public class RelatedPersonService(
             var term = search.Trim().ToUpperInvariant();
             query = query.Where(row => row.FirstName.ToUpper().Contains(term) || row.LastName.ToUpper().Contains(term) || row.JMBG != null && row.JMBG.Contains(term));
         }
-        var total = await query.CountAsync(ct);
         var items = await query.OrderBy(row => row.LastName).ThenBy(row => row.FirstName).ThenBy(row => row.Id)
             .Skip((page - 1) * pageSize).Take(pageSize).ProjectToType<RelatedPersonSummaryDTO>().ToListAsync(ct);
+        var total = page == 1 && items.Count < pageSize ? items.Count : await query.CountAsync(ct);
         return new(items, total, page, pageSize);
     }
 
@@ -152,28 +152,39 @@ public class RelatedPersonService(
 
     public async Task<Result<List<RelatedPersonTreeNodeDTO>>> GetRelationshipTree(long relatedPersonId)
     {
-        var people = await _dbContext.RelatedPersons
-            .AsNoTracking()
-            .Where(person => person.IsActive)
-            .OrderBy(person => person.FirstName)
-            .ThenBy(person => person.LastName)
-            .ToListAsync();
-
-        var selected = people.FirstOrDefault(person => person.Id == relatedPersonId);
-        if (selected is null)
+        var ct = actor?.HttpContext?.RequestAborted ?? default;
+        var people = _dbContext.RelatedPersons.AsNoTracking().Where(person => person.IsActive);
+        IQueryable<RelationshipPerson> Project(IQueryable<RelatedPerson> query) =>
+            query.Select(person => new RelationshipPerson(person.Id, person.RelatedToPersonId, person.FirstName,
+                person.LastName, person.IsIdentifiedStaff));
+        var root = await Project(people.Where(person => person.Id == relatedPersonId)).SingleOrDefaultAsync(ct);
+        if (root is null)
             return Result<List<RelatedPersonTreeNodeDTO>>.NotFoundError(BackendMessages.Message("validation.person.missing"));
 
-        var byId = people.ToDictionary(person => person.Id);
-        var childrenByParent = people.Where(person => person.RelatedToPersonId.HasValue)
-            .ToLookup(person => person.RelatedToPersonId!.Value);
-        var root = selected;
         var visited = new HashSet<long>();
-        while (root.RelatedToPersonId.HasValue
-               && visited.Add(root.Id)
-               && byId.TryGetValue(root.RelatedToPersonId.Value, out var parent))
+        while (root.RelatedToPersonId is { } parentId && visited.Add(root.Id))
+        {
+            var parent = await Project(people.Where(person => person.Id == parentId)).SingleOrDefaultAsync(ct);
+            if (parent is null) break;
             root = parent;
+        }
 
-        RelatedPersonTreeNodeDTO Build(RelatedPerson person, HashSet<long> path)
+        var descendants = new List<RelationshipPerson>();
+        visited.Clear();
+        visited.Add(root.Id);
+        long[] parentIds = [root.Id];
+        while (parentIds.Length > 0)
+        {
+            var children = await Project(people.Where(person =>
+                    person.RelatedToPersonId.HasValue && parentIds.Contains(person.RelatedToPersonId.Value))
+                .OrderBy(person => person.FirstName).ThenBy(person => person.LastName).ThenBy(person => person.Id))
+                .ToListAsync(ct);
+            descendants.AddRange(children);
+            parentIds = children.Where(person => visited.Add(person.Id)).Select(person => person.Id).ToArray();
+        }
+        var childrenByParent = descendants.ToLookup(person => person.RelatedToPersonId);
+
+        RelatedPersonTreeNodeDTO Build(RelationshipPerson person, HashSet<long> path)
         {
             var node = new RelatedPersonTreeNodeDTO
             {
@@ -186,13 +197,16 @@ public class RelatedPersonService(
 
             if (!path.Add(person.Id)) return node;
             node.Children = childrenByParent[person.Id]
-                .Select(candidate => Build(candidate, new HashSet<long>(path)))
+                .Select(candidate => Build(candidate, path))
                 .ToList();
+            path.Remove(person.Id);
             return node;
         }
 
         return Result<List<RelatedPersonTreeNodeDTO>>.Success([Build(root, [])]);
     }
+
+    private sealed record RelationshipPerson(long Id, long? RelatedToPersonId, string FirstName, string LastName, bool IsIdentifiedStaff);
 
     public async Task<DuplicateIdentityResponseDTO> CheckDuplicateIdentity(
         string? jmbg,
