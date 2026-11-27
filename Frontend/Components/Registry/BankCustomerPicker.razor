@@ -3,15 +3,16 @@
 
 <div class="app-typeahead">
     <input type="text" id="@Id" class="rbi-control rbi-input app-typeahead__input" autocomplete="off" maxlength="100" data-app-combobox
-           role="combobox" aria-autocomplete="list" aria-expanded="@(_open ? "true" : "false")"
-           aria-controls="@(Id + "-list")" aria-activedescendant="@ActiveId"
-           placeholder="@T["legal.bank-placeholder"]" value="@_query"
+           role="combobox" aria-required="true" aria-autocomplete="list" aria-expanded="@(_open ? "true" : "false")"
+           aria-invalid="@(Invalid ? "true" : null)" aria-describedby="@(Invalid ? Id + "-error" : null)"
+           aria-controls="@(_open ? Id + "-list" : null)" aria-activedescendant="@ActiveId"
+           placeholder="@T["legal.bank-placeholder"]" value="@Value"
            @oninput="TypedAsync" @onfocus="OpenList" @onblur="CloseList" @onkeydown="KeyAsync" />
     @if (_open)
     {
         <ul id="@(Id + "-list")" role="listbox" class="app-typeahead__list" aria-label="@T["legal.bank-results"]">
             @if (_searching) { <li class="app-typeahead__note" role="presentation">@T["limit.searching"]</li> }
-            else if (_query.Trim().Length < 2) { <li class="app-typeahead__note" role="presentation">@T["legal.bank-type"]</li> }
+            else if ((Value?.Trim().Length ?? 0) < 2) { <li class="app-typeahead__note" role="presentation">@T["legal.bank-type"]</li> }
             else if (_results.Count == 0) { <li class="app-typeahead__note" role="presentation">@T["limit.no-results"]</li> }
             @for (var index = 0; index < _results.Count; index++)
             {
@@ -24,16 +25,16 @@
     }
 </div>
 @if (_unavailable) { <p class="app-hint" role="status">@T["legal.bank-unavailable"]</p> }
-@if (_selectedName is { Length: > 0 }) { <p class="app-hint">@T.Format("legal.bank-selected", _selectedName)</p> }
 
 @code {
     [Parameter, EditorRequired] public string Id { get; set; } = "";
+    [Parameter] public bool Invalid { get; set; }
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
     [Parameter] public EventCallback<BankCustomerOption> Selected { get; set; }
     private readonly CancellationTokenSource _lifetime = new();
     private CancellationTokenSource? _typing;
     private IReadOnlyList<BankCustomerOption> _results = [];
-    private string _query = "";
-    private string? _selectedName;
     private bool _open, _searching, _unavailable;
     private int _active = -1;
     private string? ActiveId => _open && _active >= 0 && _active < _results.Count ? Id + "-option-" + _active : null;
@@ -42,42 +43,35 @@
     private void CloseList() { _open = false; _active = -1; }
     private async Task TypedAsync(ChangeEventArgs args)
     {
-        _query = args.Value?.ToString() ?? "";
-        _selectedName = null;
-        _open = true; _active = -1;
-        await SearchAsync();
-    }
-    private async Task SearchAsync()
-    {
-        _typing?.Cancel(); _typing?.Dispose();
-        _typing = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
-        var token = _typing.Token;
-        var query = _query.Trim();
-        if (query.Length < 2)
-        {
-            _results = []; _searching = false; _unavailable = false;
-            await InvokeAsync(StateHasChanged);
-            return;
-        }
-        _searching = true;
+        var value = args.Value?.ToString() ?? "";
+        var query = value.Trim();
+        _typing?.Cancel();
+        _results = [];
+        _active = -1;
+        _open = query.Length >= 2;
+        _searching = _open;
+        _unavailable = false;
+
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
+        _typing = request;
+        var token = request.Token;
         try
         {
+            await ValueChanged.InvokeAsync(value);
+            if (query.Length < 2) return;
             await Task.Delay(250, token);
             var result = await Api.CustomersAsync(query, token);
             token.ThrowIfCancellationRequested();
             _results = result.Items;
-            _unavailable = false;
-            _active = -1;
         }
         catch (RegistryApiException exception)
         {
-            if (token.IsCancellationRequested) return;
-            _results = []; _unavailable = (int?)exception.StatusCode == 503;
+            if (!token.IsCancellationRequested) _unavailable = (int?)exception.StatusCode == 503;
         }
-        catch (OperationCanceledException) when (token.IsCancellationRequested) { return; }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         finally
         {
-            if (!token.IsCancellationRequested) { _searching = false; await InvokeAsync(StateHasChanged); }
+            if (ReferenceEquals(_typing, request)) { _typing = null; _searching = false; }
         }
     }
     private async Task KeyAsync(KeyboardEventArgs args)
@@ -92,9 +86,10 @@
     }
     private async Task SelectAsync(BankCustomerOption item)
     {
-        _open = false; _active = -1; _selectedName = item.Name;
-        _query = string.Join(" — ", new[] { item.TaxNumber, item.Name }.Where(value => !string.IsNullOrWhiteSpace(value)));
+        _typing?.Cancel();
+        CloseList();
+        _results = [];
         await Selected.InvokeAsync(item);
     }
-    public void Dispose() { _lifetime.Cancel(); _typing?.Cancel(); _typing?.Dispose(); _lifetime.Dispose(); }
+    public void Dispose() { _lifetime.Cancel(); _typing?.Cancel(); _lifetime.Dispose(); }
 }

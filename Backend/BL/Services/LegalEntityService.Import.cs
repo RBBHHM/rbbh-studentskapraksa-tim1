@@ -128,7 +128,7 @@ public partial class LegalEntityService
                 };
                 ValidateCreateDto(dto);
                 choices.Check("OSNOV_POVEZANOSTI", dto.BasisOfConnection, "basisOfConnection");
-                var verifiedMatbroj = await ValidateBankCustomer(dto.IsResident, dto.TaxNumber, dto.Matbroj, dto.Name);
+                var bankCustomer = await ValidateBankCustomer(dto.IsResident, dto.TaxNumber, dto.MaticniBroj, dto.Name);
                 var gcc = await ResolveGcc(dto.GccNumber);
                 if (dto.ConnectedWithBank is null)
                     throw new ValidationException(BackendMessages.Message("validation.registry.bank.relation.import"));
@@ -145,8 +145,8 @@ public partial class LegalEntityService
                     TaxNumber = dto.IsResident ? dto.TaxNumber : null,
                     FbaId = dto.IsResident ? null : dto.FbaId,
                     Name = dto.Name,
-                    Matbroj = verifiedMatbroj,
-                    MaticniBroj = dto.MaticniBroj,
+                    Matbroj = ResolveRegistrationNumber(bankCustomer, dto.Matbroj),
+                    MaticniBroj = ResolveRegistrationNumber(bankCustomer, dto.MaticniBroj),
                     GccNumber = gcc?.Number, GccName = gcc?.Name, IsLargeExposure = dto.IsLargeExposure ?? false,
                     BasisOfConnection = dto.BasisOfConnection,
                     ConnectedWithBank = dto.ConnectedWithBank,
@@ -172,7 +172,7 @@ public partial class LegalEntityService
                 result.Failed++; result.Errors.Add(BackendMessages.Message("workbook.row.error", row, exception.Message));
                 var field = exception.Code switch
                 {
-                    "registry.bank_customer_not_found" => "matbroj",
+                    "registry.bank_customer_not_found" => "maticniBroj",
                     "registry.bank_tax_mismatch" => "taxNumber",
                     "registry.bank_name_mismatch" => "name",
                     _ => "gccNumber"

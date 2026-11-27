@@ -51,7 +51,7 @@ public sealed class RegistryGccHttpTests : AuthenticatedApiFixture
     [InlineData("Fixture company", "00042", HttpStatusCode.Created, null)]
     [InlineData("Other company", "00042", HttpStatusCode.BadRequest, "registry.bank_name_mismatch")]
     [InlineData("Fixture company", "00043", HttpStatusCode.BadRequest, "registry.bank_customer_not_found")]
-    public async Task VerifiesBankCustomerNumberAndNameBeforeSaving(string name, string matbroj, HttpStatusCode expected, string? error)
+    public async Task VerifiesRegistrationNumberAndNameBeforeSaving(string name, string maticniBroj, HttpStatusCode expected, string? error)
     {
         _source.SetupGet(source => source.IsConfigured).Returns(true);
         _source.Setup(source => source.Customer("00042", true, It.IsAny<CancellationToken>()))
@@ -60,15 +60,28 @@ public sealed class RegistryGccHttpTests : AuthenticatedApiFixture
             .ReturnsAsync((BankCustomer?)null);
         var response = await Client.PostAsJsonAsync("/api/legal-entities", new
         {
-            name, matbroj, isResident = false, fbaId = "12345", basisOfConnection = "VL",
+            name, maticniBroj, isResident = false, fbaId = "12345", basisOfConnection = "VL",
             connectedWithBank = true, dateFrom = "2026-01-01", gccNumber = "123"
         });
 
         Assert.Equal(expected, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        if (error is null) Assert.Equal("00042", body.GetProperty("matbroj").GetString());
+        if (error is null) Assert.Equal("00042", body.GetProperty("maticniBroj").GetString());
         else Assert.Equal(error, body.GetProperty("code").GetString());
         await InDatabase(async db => Assert.Equal(error is null ? 1 : 0, await db.LegalEntities.CountAsync()));
+    }
+
+    [Fact]
+    public async Task BlankCustomerSearchReturnsAnEmptyPageWhileTheSourceIsDisabled()
+    {
+        var response = await Client.GetAsync("/api/bank-reference/customers?search=%20%20");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Empty(body.GetProperty("items").EnumerateArray());
+        _source.Verify(source => source.Customers(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable,
+            (await Client.GetAsync("/api/bank-reference/customers?search=Fixture")).StatusCode);
     }
 
     [Fact]

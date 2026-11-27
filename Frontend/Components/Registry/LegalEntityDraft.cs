@@ -21,9 +21,8 @@ public sealed class LegalEntityDraft
     public string? GccName { get; set; }
     /// <summary>Unknown (null) for historical records; the backend defaults new records to false.</summary>
     public bool? IsLargeExposure { get; set; }
-    // This is NOT MaticniBroj. It is not an editable field in the source UI.
-    // Retain the latest server value on update rather than clearing it silently.
-    public string? BankCustomerNumber { get; set; }
+    // Preserve the legacy column for API and workbook compatibility.
+    private string? LegacyMatbroj { get; set; }
     public static LegalEntityDraft From(LegalEntity entity) => new()
     {
         Name = entity.Name,
@@ -39,14 +38,14 @@ public sealed class LegalEntityDraft
         GccNumber = entity.GccNumber,
         GccName = entity.GccName,
         IsLargeExposure = entity.IsLargeExposure,
-        BankCustomerNumber = entity.Matbroj
+        LegacyMatbroj = entity.Matbroj
     };
-    /// <summary>Copies only fields supplied by the bank reference; the separate application registration number stays untouched.</summary>
+    /// <summary>Copies the fields mapped to the authoritative customer record.</summary>
     public void ApplyBankCustomer(BankCustomerOption customer)
     {
         Name = customer.Name;
-        if (IsResident != false && !string.IsNullOrWhiteSpace(customer.TaxNumber)) TaxNumber = customer.TaxNumber;
-        BankCustomerNumber = customer.Matbroj;
+        if (IsResident != false) TaxNumber = string.IsNullOrWhiteSpace(customer.TaxNumber) ? null : customer.TaxNumber;
+        MaticniBroj = string.IsNullOrWhiteSpace(customer.Matbroj) ? null : customer.Matbroj;
     }
     public void ResidencyChanged()
     {
@@ -74,7 +73,7 @@ public sealed class LegalEntityDraft
         if (Validate().Count > 0) throw new InvalidOperationException("Resolve field validation before creating the request.");
         static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
         return new(IsResident!.Value, IsResident == true ? Clean(TaxNumber) : null, Clean(MaticniBroj),
-            IsResident == false ? Clean(FbaId) : null, Name!.Trim(), Clean(BankCustomerNumber), BasisOfConnection!,
+            IsResident == false ? Clean(FbaId) : null, Name!.Trim(), Clean(LegacyMatbroj), BasisOfConnection!,
             ConnectedWithBank, DateFrom, DateTo, Clean(GccNumber), IsLargeExposure);
     }
     public static bool ValidTaxNumber(string? value)

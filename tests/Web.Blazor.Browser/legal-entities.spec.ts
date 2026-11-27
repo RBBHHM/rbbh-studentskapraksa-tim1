@@ -186,12 +186,14 @@ test("legal BS/EN copy persists with backend culture propagation", async ({ page
 test("GCC lookup: unavailable source is stated honestly; an available source offers numbers, the server resolves the name, large exposure is saved", async ({ page, request }) => {
   await open(page); await page.getByRole("button", { name: "Novi zapis", exact: true }).click();
   let dialog = page.getByRole("dialog"); await fill(dialog, "Gcc Company");
+  await dialog.getByLabel("Matični broj", { exact: true }).fill("");
   await dialog.getByLabel("GCC", { exact: true }).focus();
   await expect(dialog.getByText("Izvor GCC podataka trenutno nije dostupan", { exact: false })).toBeVisible(); // 503 from the unconfigured source
   await expect(dialog.getByRole("listbox", { name: "GCC rezultati" }).getByRole("option")).toHaveCount(0); // nothing is invented
   await dialog.getByRole("button", { name: "Odustani", exact: true }).click();
   expect((await request.post("/__fixtures/bank-source-on", { headers })).status()).toBe(204);
   await page.getByRole("button", { name: "Novi zapis", exact: true }).click(); dialog = page.getByRole("dialog"); await fill(dialog, "Gcc Company");
+  await dialog.getByLabel("Matični broj", { exact: true }).fill("");
   const gcc = dialog.getByLabel("GCC", { exact: true }); await gcc.focus();
   await expect(dialog.getByRole("listbox", { name: "GCC rezultati" }).getByRole("option")).toHaveCount(2);
   await gcc.fill("1002"); await expect(dialog.getByRole("listbox", { name: "GCC rezultati" }).getByRole("option")).toHaveCount(1);
@@ -207,16 +209,22 @@ test("GCC lookup: unavailable source is stated honestly; an available source off
 test("bank customer lookup never invents data and can fill the legal form from an available source", async ({ page, request }) => {
   await open(page); await page.getByRole("button", { name: "Novi zapis", exact: true }).click();
   const dialog = page.getByRole("dialog");
-  const lookup = dialog.getByLabel("Pretraži klijente banke", { exact: true });
+  const lookup = dialog.getByRole("combobox", { name: "Naziv", exact: true });
   await lookup.fill("Fixture");
   await expect(dialog.getByText("Izvor podataka o klijentima banke trenutno nije dostupan.", { exact: true })).toBeVisible();
   await expect(dialog.getByRole("listbox", { name: "Rezultati pretrage klijenata" }).getByRole("option")).toHaveCount(0);
+  await lookup.fill("");
+  await expect(dialog.getByText("Izvor podataka o klijentima banke trenutno nije dostupan.", { exact: true })).toHaveCount(0);
+  await expect(lookup).toHaveValue("");
   expect((await request.post("/__fixtures/bank-source-on", { headers })).status()).toBe(204);
-  await lookup.fill("123456789");
-  await expect(dialog.getByRole("listbox", { name: "Rezultati pretrage klijenata" }).getByRole("option").first()).toBeVisible();
-  await dialog.getByRole("listbox", { name: "Rezultati pretrage klijenata" }).getByRole("option").first().click();
-  await expect(dialog.getByLabel("Naziv", { exact: false })).toHaveValue("Fixture Bank Customer");
-  await expect(dialog.getByLabel("Porezni broj", { exact: false })).toHaveValue("1234567890125");
-  await expect(dialog.getByLabel("Broj klijenta banke (Matbroj)", { exact: true })).toHaveValue("789456123");
+  const options = dialog.getByRole("listbox", { name: "Rezultati pretrage klijenata" }).getByRole("option");
+  for (const term of ["789456123", "1234567890125", "Fixture Bank"]) {
+    await lookup.fill(term);
+    await expect(options).toHaveCount(1);
+    await options.first().click();
+    await expect(lookup).toHaveValue("Fixture Bank Customer");
+    await expect(dialog.getByLabel("Porezni broj", { exact: true })).toHaveValue("1234567890125");
+    await expect(dialog.getByLabel("Matični broj", { exact: true })).toHaveValue("789456123");
+  }
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
 });

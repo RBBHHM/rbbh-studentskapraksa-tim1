@@ -753,17 +753,14 @@
     "release.version": "Version: {0}",
     "release.github": "Auf GitHub ansehen",
     "legal.bases-unavailable": "Die Schlüsselliste für Verbindungsgrundlagen ist derzeit nicht verfügbar.",
-    "legal.bank-matbroj": "Kundennummer der Bank",
     "legal.bank-customer-not-found": "Die Kundennummer wurde in den Bankdaten nicht gefunden.",
     "legal.bank-tax-mismatch": "Die Steuernummer stimmt nicht mit dem ausgewählten Bankkunden überein.",
     "legal.bank-name-mismatch": "Der Name stimmt nicht mit dem Bankkunden überein. Wählen Sie den Namen aus den Suchergebnissen aus.",
     "legal.bank-ambiguous": "In den Bankdaten gibt es mehrere Einträge mit dieser Kennung.",
-    "legal.bank-lookup": "Bankkunden suchen",
     "legal.bank-placeholder": "Name, Steuernummer oder Registrierungsnummer",
     "legal.bank-results": "Suchergebnisse für Bankkunden",
     "legal.bank-type": "Geben Sie mindestens 2 Zeichen ein, um zu suchen.",
     "legal.bank-unavailable": "Die Bankkundendatenquelle ist derzeit nicht verfügbar.",
-    "legal.bank-selected": "Ausgewählter Kunde: {0}",
     "errors.verification-provenance-required": "Verifizierung nicht möglich, da die ursprüngliche erstellende Person des Eintrags nicht zuverlässig festgestellt werden kann. Wenden Sie sich an einen Administrator."
   }
 }
