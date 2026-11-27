@@ -17,7 +17,8 @@ public sealed class SeedLegalConnectionBases : Migration
 
         DECLARE @basis bigint = (SELECT ID FROM dbo.CODELIST_DEFINITIONS WHERE NAME = 'OSNOV_POVEZANOSTI');
         DECLARE @packs bigint = (SELECT ID FROM dbo.CODELIST_DEFINITIONS WHERE NAME = 'LANGUAGE_PACKS');
-        DECLARE @bases TABLE (Code nvarchar(100), Label nvarchar(4000), Description nvarchar(4000));
+        -- The application's code and resource keys use this collation even when the database default differs.
+        DECLARE @bases TABLE (Code nvarchar(100) COLLATE Latin1_General_100_CI_AS, Label nvarchar(4000), Description nvarchar(4000));
         INSERT @bases VALUES
                 (N'ZOB-2-U-2', N'Zakon o bankama, član 2, paragraf u, odjeljak 2', N'Lice sa najmanje 5% učešća u banci ili u licima koja su članovi bankarske grupe u kojoj je banka i članovi uže porodice tih lica.'),
                 (N'ZOB-2-V-1', N'Zakon o bankama, član 2, paragraf v, odjeljak 1', N'Član bankarske grupe u kojoj je banka.'),
@@ -65,7 +66,9 @@ public sealed class SeedLegalConnectionBases : Migration
         ) seed(LanguageCode, ResourceKey, Label, Description)
         WHERE @packs IS NOT NULL AND NOT EXISTS (
             SELECT 1 FROM dbo.CODELIST_VALUES entry
-            WHERE entry.DEFINITION_ID = @packs AND entry.ID12 = seed.LanguageCode AND entry.ID13 = seed.ResourceKey);
+            WHERE entry.DEFINITION_ID = @packs
+                AND entry.ID12 = seed.LanguageCode COLLATE Latin1_General_100_CI_AS
+                AND entry.ID13 = seed.ResourceKey COLLATE Latin1_General_100_CI_AS);
 
         UPDATE dbo.CODELIST_DEFINITIONS SET MODIFIED_AT = SYSUTCDATETIME() WHERE ID = @packs;
         """);
