@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -13,6 +14,7 @@ public sealed class BankReferenceSqlTests : IAsyncLifetime
 {
     private ConnectedPartiesDbContext _db = null!;
     private BankReferenceOptions _options = null!;
+    private IConfiguration _configuration = null!;
     public async Task InitializeAsync()
     {
         var baseConnection = Environment.GetEnvironmentVariable(SqlServerFactAttribute.Variable);
@@ -26,10 +28,26 @@ public sealed class BankReferenceSqlTests : IAsyncLifetime
             INSERT FixtureCustomers VALUES ('1234567890123','001',N'Customer Mixed Case'),('2222222222222','002',N'Literal % sign');
             INSERT FixtureGroups VALUES ('123',N'Group Mixed Case'),('124',N'Second'),('125',N'Third');
             """);
-        _options = new() { Enabled = true, ConnectionString = connection.ConnectionString, CustomerTable = "dbo.FixtureCustomers",
-            CustomerTaxColumn = "Tax", CustomerMatbrojColumn = "Matbroj", CustomerNameColumn = "Name", GccTable = "dbo.FixtureGroups", GccNumberColumn = "Number", GccNameColumn = "Name" };
+        _options = new()
+        {
+            Enabled = true,
+            ServerName = connection.DataSource,
+            Database = connection.InitialCatalog,
+            Customers = new() { Table = "dbo.FixtureCustomers", Columns = new() { TaxNumber = "Tax", RegistrationNumber = "Matbroj", Name = "Name" } },
+            Gcc = new() { Table = "dbo.FixtureGroups", Columns = new() { Number = "Number", Name = "Name" } }
+        };
+        _configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Database:IntegratedSecurity"] = connection.IntegratedSecurity.ToString(),
+            ["Database:User"] = connection.UserID,
+            ["Database:Password"] = connection.Password,
+            ["ASPNETCORE_ENVIRONMENT"] = connection.TrustServerCertificate ? "Development" : "Production"
+        }).Build();
     }
-    private SqlBankReferenceSource Source() => new(Options.Create(_options), NullLogger<SqlBankReferenceSource>.Instance);
+
+    private SqlBankReferenceSource Source() =>
+        new(Options.Create(_options), _configuration, NullLogger<SqlBankReferenceSource>.Instance);
+
     [SqlServerFact]
     public async Task RealParameterizedQuerySupportsCaseInsensitiveSearchLiteralWildcardsAndPaging()
     {
@@ -44,7 +62,7 @@ public sealed class BankReferenceSqlTests : IAsyncLifetime
         Assert.Equal("Group Mixed Case", (await Source().Group("123", default))!.Name);
         await _db.Database.ExecuteSqlRawAsync("INSERT FixtureGroups VALUES ('123',N'Conflicting group')");
         Assert.Equal(409, (await Assert.ThrowsAsync<BusinessRuleException>(() => Source().Group("123", default))).Status);
-        _options.GccTable = "FixtureGroups; DROP TABLE FixtureCustomers";
+        _options.Gcc.Table = "FixtureGroups; DROP TABLE FixtureCustomers";
         Assert.Equal(503, (await Assert.ThrowsAsync<BusinessRuleException>(() => Source().Group("123", default))).Status);
         await using var command = _db.Database.GetDbConnection().CreateCommand(); command.CommandText = "SELECT COUNT(*) FROM FixtureCustomers";
         await command.Connection!.OpenAsync(); Assert.Equal(2, Convert.ToInt32(await command.ExecuteScalarAsync()));
@@ -52,8 +70,8 @@ public sealed class BankReferenceSqlTests : IAsyncLifetime
     [SqlServerFact]
     public async Task MissingMappingAndUnconfiguredSourceFailSafelyRatherThanSupplyingFakeValues()
     {
-        _options.CustomerTaxColumn = "";
-        var error = await Assert.ThrowsAsync<BusinessRuleException>(() => Source().Customers(null, 1, 20, default)); Assert.Equal(503, error.Status); Assert.DoesNotContain(_options.ConnectionString, error.Message);
+        _options.Customers.Columns.TaxNumber = "";
+        var error = await Assert.ThrowsAsync<BusinessRuleException>(() => Source().Customers(null, 1, 20, default)); Assert.Equal(503, error.Status); Assert.DoesNotContain(_options.ServerName, error.Message);
         _options.Enabled = false; Assert.Equal(503, (await Assert.ThrowsAsync<BusinessRuleException>(() => Source().Groups(null, 1, 20, default))).Status);
     }
     public async Task DisposeAsync() { if (_db is not null) { await _db.Database.EnsureDeletedAsync(); await _db.DisposeAsync(); } }

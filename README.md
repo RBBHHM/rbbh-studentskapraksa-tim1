@@ -90,7 +90,7 @@ Use `__` for nested environment keys. Secrets stay outside Git. The backend load
 | `KeycloakSettings__Enabled`, `__Issuer`, `__PublicIssuer`, `__ClientId`, `__ClientSecret` | Token validation. Disabled only in Development. Issuer must be HTTPS outside local loopback. |
 | `KeycloakSettings__Audience` | Required API access-token audience outside Development (distinct from the OIDC client id). |
 | `Localization__LanguagesCodebook`, `__LanguagePacksCodebook`, `__DefaultLanguage` | Codebook names for runtime localization (defaults `Languages`, `LanguagePacks`, `BS`). |
-| `BankReference__Enabled`, `__ConnectionString`, `__CustomerTable`, `__CustomerTaxColumn`, `__CustomerMatbrojColumn`, `__CustomerNameColumn`, `__GccTable`, `__GccNumberColumn`, `__GccNameColumn` | Read-only bank source for customer and GCC lookup (`kod.dbo.komitent`, `glava.dbo.grupekom`). Disabled means lookups return 503; nothing is fabricated. |
+| `BankReference__Enabled`, `BankReference__ServerName`, `BankReference__Database` | DataHub defaults are configured in backend appsettings with customer and GCC table mappings. Authentication reuses the `Database__*` settings. |
 | `FinanceMonthly__Enabled`, `__ConnectionString`, `__CustomerKeyColumn`, `__Currency`, `__BalanceColumn`, `__OffBalanceColumn`, `FinanceMonthly:MonthlyTables` | Approved monthly finance source for regulatory reports. Disabled means snapshots are labelled non-authoritative. |
 | `KeycloakSettings__AdminClientId`, `__AdminClientSecret` | Only where the Keycloak administration lookup is used. |
 | `Email__From`, `Email__SendEmailWithHtmlBodyUrl` | Approved sender and full HTML mail endpoint. Empty values select demo delivery in Development/Testing. |

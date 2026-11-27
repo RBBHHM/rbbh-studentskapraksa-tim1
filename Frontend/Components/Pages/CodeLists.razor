@@ -105,9 +105,15 @@ else
                 </div>
             </header>
         }
+        @if (IsLanguagePack)
+        {
+            <div class="registry-controls">
+                <RegistrySearch Id="code-translation-search" Label="@T["codes.search-translations"]" @bind-Value="_valueSearch" @bind-Value:after="SearchValuesAsync" />
+            </div>
+        }
         @if (_refreshing) { <div role="status"><RbiText>@T["state.loading"]</RbiText><RbiSkeleton /></div> }
         else if (_category.Length == 0) { }
-        else if (_values.Count == 0 && _error is null) { <div class="registry-surface"><RegistryEmpty Body="@T["codes.empty"]" /></div> }
+        else if (_values.Count == 0 && _error is null) { <div class="registry-surface"><RegistryEmpty Body="@T[string.IsNullOrWhiteSpace(_valueSearch) ? "codes.empty" : "state.no-match"]" /></div> }
         else if (_error is null)
         {
             <p class="registry-help app-visually-hidden">@T["codes.history"]</p>
@@ -315,17 +321,34 @@ else
         finally { _refreshing = false; }
     }
 
-    private async Task LoadValuesAsync()
+    private string _valueSearch = "";
+    private readonly LatestPageRequest _valueRequest = new();
+
+    private async Task SearchValuesAsync()
     {
-        var values = _category.Length == 0 ? null : await Api.ValuesAsync(_category, _token, _valuePage);
+        if (_disposed || _busy || !IsLanguagePack) return;
+        _refreshing = true;
+        await _valueRequest.RunAsync(_token, debounce: true, async token =>
+        {
+            await LoadValuesAsync(1, token);
+            _error = null;
+        }, exception => _error = exception.MessageKey, () => _refreshing = false);
+    }
+
+    private async Task LoadValuesAsync(int? page = null, CancellationToken? cancellation = null)
+    {
+        var token = cancellation ?? _token;
+        var search = IsLanguagePack ? _valueSearch : null;
+        var requestedPage = page ?? _valuePage;
+        var values = _category.Length == 0 ? null : await Api.ValuesAsync(_category, token, requestedPage, search);
+        var lastPage = PageCount(values?.Total ?? 0, values?.PageSize ?? 50);
+        if (values is not null && requestedPage > lastPage)
+            values = await Api.ValuesAsync(_category, token, lastPage, search);
+
+        token.ThrowIfCancellationRequested();
+        _valuePage = values?.Page ?? 1;
         _valueTotal = values?.Total ?? 0;
         _valuePageSize = Math.Max(1, values?.PageSize ?? 50);
-        if (values is not null && _valuePage > ValuePages)
-        {
-            _valuePage = ValuePages;
-            values = await Api.ValuesAsync(_category, _token, _valuePage);
-            _valueTotal = values.Total;
-        }
         _selectedDefinition = values?.Definition;
         _values = values?.Items ?? [];
         var columns = values?.Columns ?? [];
@@ -387,8 +410,8 @@ else
     }
     private string _search = "";
     // Values are loaded only for the list the user opens, never for an automatically chosen first one.
-    private Task OpenCategoryAsync(string category) { _category = category; _valuePage = 1; _values = []; _notice = null; return LoadAsync(); }
-    private Task BackToOverviewAsync() { _category = ""; _values = []; _notice = null; return LoadAsync(); }
+    private Task OpenCategoryAsync(string category) { _category = category; _valuePage = 1; _valueSearch = ""; _values = []; _notice = null; return LoadAsync(); }
+    private Task BackToOverviewAsync() { _category = ""; _valueSearch = ""; _values = []; _notice = null; return LoadAsync(); }
     private void NewDefinition() => OpenSchema(null);
     private void OpenSchema(CodeListMeta? definition)
     {

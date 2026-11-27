@@ -32,7 +32,7 @@ public interface ICodeListsApi
     Task<CodebookColumns> ColumnsAsync(string category, CancellationToken token = default);
     Task<CodeListMetas> DefinitionsAsync(CancellationToken token = default, int? page = null, string? search = null);
     Task<CodeCategories> CategoriesAsync(CancellationToken token = default);
-    Task<CodeValues> ValuesAsync(string category, CancellationToken token = default, int? page = null);
+    Task<CodeValues> ValuesAsync(string category, CancellationToken token = default, int? page = null, string? search = null);
     Task<CodebookCreation> CreateCategoryAsync(string name, string? description, CancellationToken token = default, IReadOnlyList<CodebookColumnInput>? columns = null);
     Task<string?> SetDefinitionStatusAsync(string name, bool isActive, DateTime? modifiedAt, CancellationToken token);
     Task<string?> SaveDefinitionAsync(string name, string? description, DateTime? modifiedAt, IReadOnlyList<CodebookColumnInput> columns, CancellationToken token);
@@ -64,9 +64,12 @@ public sealed class CodeListsApi(IRbiApiFileTransport transport) : ICodeListsApi
         var value = Value(await transport.GetAsync<CodeListMetas>("api/code-lists/categories/definitions" + query, token), token);
         return value.Items is null ? throw new RegistryApiException() : value;
     }
-    public async Task<CodeValues> ValuesAsync(string category, CancellationToken token = default, int? page = null)
+    public async Task<CodeValues> ValuesAsync(string category, CancellationToken token = default, int? page = null, string? search = null)
     {
-        var value = Value(await transport.GetAsync<CodeValues>($"api/code-lists/{Uri.EscapeDataString(category)}" + (page.HasValue ? $"?page={page.Value}&pageSize=50" : ""), token), token);
+        var query = page.HasValue ? $"?page={page.Value}&pageSize=50" : "";
+        if (!string.IsNullOrWhiteSpace(search))
+            query += (query.Length == 0 ? "?" : "&") + $"search={Uri.EscapeDataString(search.Trim())}";
+        var value = Value(await transport.GetAsync<CodeValues>($"api/code-lists/{Uri.EscapeDataString(category)}" + query, token), token);
         return value.Items is null ? throw new RegistryApiException() : value;
     }
     public async Task<CodebookCreation> CreateCategoryAsync(string name, string? description, CancellationToken token = default, IReadOnlyList<CodebookColumnInput>? columns = null)
@@ -167,7 +170,7 @@ internal sealed class UnconfiguredCodeListsApi : ICodeListsApi
     public Task<CodeCategories> CategoriesAsync(CancellationToken token = default) => Task.FromException<CodeCategories>(new RegistryApiException());
     public Task<CodebookColumns> ColumnsAsync(string category, CancellationToken token = default) => Task.FromException<CodebookColumns>(new RegistryApiException());
     public Task<CodeListMetas> DefinitionsAsync(CancellationToken token = default, int? page = null, string? search = null) => Task.FromException<CodeListMetas>(new RegistryApiException());
-    public Task<CodeValues> ValuesAsync(string category, CancellationToken token = default, int? page = null) => Task.FromException<CodeValues>(new RegistryApiException());
+    public Task<CodeValues> ValuesAsync(string category, CancellationToken token = default, int? page = null, string? search = null) => Task.FromException<CodeValues>(new RegistryApiException());
     public Task<CodebookCreation> CreateCategoryAsync(string name, string? description, CancellationToken token = default, IReadOnlyList<CodebookColumnInput>? columns = null) =>
         Task.FromResult(new CodebookCreation(null, "errors.unavailable"));
     public Task<string?> SaveDefinitionAsync(string name, string? description, DateTime? modifiedAt, IReadOnlyList<CodebookColumnInput> columns, CancellationToken token) =>

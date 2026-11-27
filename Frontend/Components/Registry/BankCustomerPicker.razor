@@ -33,6 +33,9 @@
     [Parameter] public EventCallback<string> ValueChanged { get; set; }
     [Parameter] public EventCallback<BankCustomerOption> Selected { get; set; }
     private readonly CancellationTokenSource _lifetime = new();
+    private readonly CancellationToken _lifetimeToken;
+    public BankCustomerPicker() => _lifetimeToken = _lifetime.Token;
+    private readonly SemaphoreSlim _lookup = new(1);
     private CancellationTokenSource? _typing;
     private IReadOnlyList<BankCustomerOption> _results = [];
     private bool _open, _searching, _unavailable;
@@ -52,7 +55,7 @@
         _searching = _open;
         _unavailable = false;
 
-        using var request = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeToken);
         _typing = request;
         var token = request.Token;
         try
@@ -60,9 +63,14 @@
             await ValueChanged.InvokeAsync(value);
             if (query.Length < 2) return;
             await Task.Delay(250, token);
-            var result = await Api.CustomersAsync(query, token);
-            token.ThrowIfCancellationRequested();
-            _results = result.Items;
+            await _lookup.WaitAsync(token);
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                var result = await Api.CustomersAsync(query, _lifetimeToken);
+                if (!token.IsCancellationRequested) _results = result.Items;
+            }
+            finally { _lookup.Release(); }
         }
         catch (RegistryApiException exception)
         {

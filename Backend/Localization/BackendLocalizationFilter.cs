@@ -22,6 +22,11 @@ public sealed class BackendLocalizationFilter(ILogger<BackendLocalizationFilter>
                 if (pack is not null) labels = ValidatedLabels.GetValue(pack, ValidateLabels);
             }
         }
+        catch (OperationCanceledException) when (context.HttpContext.RequestAborted.IsCancellationRequested)
+        {
+            context.Result = new Microsoft.AspNetCore.Mvc.StatusCodeResult(StatusCodes.Status499ClientClosedRequest);
+            return;
+        }
         catch (Exception error) when (error is not OperationCanceledException)
         {
             logger.LogWarning("Backend message resources unavailable. FailureType {FailureType}", error.GetType().Name);

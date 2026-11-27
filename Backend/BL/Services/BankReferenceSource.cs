@@ -3,22 +3,10 @@ using System.Text.RegularExpressions;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
 using RBBH.ConnectedParties.Exceptions;
+using RBBH.ConnectedParties.Helpers.Utils;
 
 namespace RBBH.ConnectedParties.BL.Services;
 
-public sealed class BankReferenceOptions
-{
-    public bool Enabled { get; set; }
-    public string ConnectionString { get; set; } = "";
-    public string CustomerTable { get; set; } = "kod.dbo.komitent";
-    // Column names come from POPRAVKE.txt; real schema/access still needs bank-owner reconciliation.
-    public string CustomerTaxColumn { get; set; } = "porez_broj";
-    public string CustomerNameColumn { get; set; } = "naziv";
-    public string CustomerMatbrojColumn { get; set; } = "matbroj";
-    public string GccTable { get; set; } = "glava.dbo.grupekom";
-    public string GccNumberColumn { get; set; } = "brojg";
-    public string GccNameColumn { get; set; } = "naziv_grupe";
-}
 public sealed record BankCustomer(string TaxNumber, string Matbroj, string Name);
 public sealed record BankGroup(string Number, string Name);
 public sealed record ReferencePage<T>(IReadOnlyList<T> Items, int Total, int Page, int PageSize);
@@ -32,10 +20,16 @@ public interface IBankReferenceSource
 }
 
 /// <summary>Parameterized read-only adapter; production must use a SELECT-only bank account.</summary>
-public sealed class SqlBankReferenceSource(IOptions<BankReferenceOptions> options, ILogger<SqlBankReferenceSource> logger) : IBankReferenceSource
+public sealed class SqlBankReferenceSource(IOptions<BankReferenceOptions> options, IConfiguration configuration, ILogger<SqlBankReferenceSource> logger) : IBankReferenceSource
 {
     private BankReferenceOptions Settings => options.Value;
-    public bool IsConfigured => Settings.Enabled && !string.IsNullOrWhiteSpace(Settings.ConnectionString);
+    public bool IsConfigured => Settings.Enabled &&
+        !string.IsNullOrWhiteSpace(Settings.ServerName) &&
+        !string.IsNullOrWhiteSpace(Settings.Database) &&
+        (configuration.GetValue<bool>("Database:IntegratedSecurity") ||
+         (!string.IsNullOrWhiteSpace(configuration["Database:User"]) &&
+          !string.IsNullOrWhiteSpace(configuration["Database:Password"])));
+
     private static string Identifier(string value)
     {
         var parts = value.Split('.');
@@ -45,19 +39,20 @@ public sealed class SqlBankReferenceSource(IOptions<BankReferenceOptions> option
     }
     private static BusinessRuleException Unavailable() => new(503, "bank_reference.unavailable");
     private async Task<ReferencePage<T>> Read<T>(string table, string[] columns, string? search, int page, int size,
-        bool exact, Func<SqlDataReader, T> map, CancellationToken ct)
+        int? exactColumn, Func<SqlDataReader, T> map, CancellationToken ct)
     {
         if (!IsConfigured) throw Unavailable();
         if (search?.Length > 100) throw new BusinessRuleException(400, "bank_reference.invalid_search");
         page = Math.Clamp(page, 1, 1_000_000); size = Math.Clamp(size, 1, 100);
         var source = Identifier(table); var fields = columns.Select(Identifier).ToArray();
         var projected = fields.Select(field => $"CONVERT(nvarchar(4000),{field})").ToArray();
-        var predicate = exact ? $"{projected[0]} = @term" : string.Join(" OR ", projected.Select(field => $"{field} COLLATE Latin1_General_100_CI_AS LIKE @term ESCAPE '~'"));
+        var predicate = exactColumn is { } column ? $"{projected[column]} = @term" : string.Join(" OR ", projected.Select(field => $"{field} COLLATE Latin1_General_100_CI_AS LIKE @term ESCAPE '~'"));
         var term = search?.Trim() ?? "";
-        if (!exact) term = "%" + term.Replace("~", "~~").Replace("%", "~%").Replace("_", "~_").Replace("[", "~[") + "%";
+        if (exactColumn is null) term = "%" + term.Replace("~", "~~").Replace("%", "~%").Replace("_", "~_").Replace("[", "~[") + "%";
         try
         {
-            var connectionOptions = new SqlConnectionStringBuilder(Settings.ConnectionString) { ConnectTimeout = 5 };
+            var connectionString = ConnectionHelper.BuildConnection(configuration, Settings.ServerName, Settings.Database);
+            var connectionOptions = new SqlConnectionStringBuilder(connectionString) { ConnectTimeout = 5 };
             await using var connection = new SqlConnection(connectionOptions.ConnectionString); await connection.OpenAsync(ct);
             await using var command = connection.CreateCommand(); command.CommandTimeout = 10;
             command.CommandText = $"SELECT COUNT(*) FROM {source} WHERE {predicate}; SELECT {string.Join(',', projected)} FROM {source} WHERE {predicate} ORDER BY {string.Join(',', projected)} OFFSET @offset ROWS FETCH NEXT @take ROWS ONLY;";
@@ -75,27 +70,34 @@ public sealed class SqlBankReferenceSource(IOptions<BankReferenceOptions> option
         }
     }
     private static string Text(SqlDataReader reader, int index) => reader.IsDBNull(index) ? "" : reader.GetString(index).Trim();
-    public Task<ReferencePage<BankCustomer>> Customers(string? search, int page, int pageSize, CancellationToken ct) =>
-        Read(Settings.CustomerTable, [Settings.CustomerTaxColumn, Settings.CustomerMatbrojColumn, Settings.CustomerNameColumn], search, page, pageSize, false,
-            reader => new BankCustomer(Text(reader, 0), Text(reader, 1), Text(reader, 2)), ct);
-    public async Task<BankCustomer?> Customer(string identifier, bool byMatbroj, CancellationToken ct)
+    private Task<ReferencePage<BankCustomer>> ReadCustomers(string? search, int page, int pageSize, int? exactColumn, CancellationToken ct)
     {
-        var columns = byMatbroj
-            ? new[] { Settings.CustomerMatbrojColumn, Settings.CustomerTaxColumn, Settings.CustomerNameColumn }
-            : [Settings.CustomerTaxColumn, Settings.CustomerMatbrojColumn, Settings.CustomerNameColumn];
-        var result = await Read(Settings.CustomerTable, columns, identifier, 1, 2, true,
-            reader => new BankCustomer(Text(reader, byMatbroj ? 1 : 0), Text(reader, byMatbroj ? 0 : 1), Text(reader, 2)), ct);
-        if (result.Total > 1) throw new BusinessRuleException(409, "bank_reference.ambiguous");
-        return result.Items.SingleOrDefault();
+        var mapping = Settings.Customers;
+        return Read(mapping.Table, [mapping.Columns.TaxNumber, mapping.Columns.RegistrationNumber, mapping.Columns.Name],
+            search, page, pageSize, exactColumn, reader => new BankCustomer(Text(reader, 0), Text(reader, 1), Text(reader, 2)), ct);
+    }
+
+    public Task<ReferencePage<BankCustomer>> Customers(string? search, int page, int pageSize, CancellationToken ct) =>
+        ReadCustomers(search, page, pageSize, null, ct);
+
+    public async Task<BankCustomer?> Customer(string identifier, bool byMatbroj, CancellationToken ct) =>
+        SingleMatch(await ReadCustomers(identifier, 1, 2, byMatbroj ? 1 : 0, ct));
+
+    private Task<ReferencePage<BankGroup>> ReadGroups(string? search, int page, int pageSize, int? exactColumn, CancellationToken ct)
+    {
+        var mapping = Settings.Gcc;
+        return Read(mapping.Table, [mapping.Columns.Number, mapping.Columns.Name], search, page, pageSize, exactColumn,
+            reader => new BankGroup(Text(reader, 0), Text(reader, 1)), ct);
     }
 
     public Task<ReferencePage<BankGroup>> Groups(string? search, int page, int pageSize, CancellationToken ct) =>
-        Read(Settings.GccTable, [Settings.GccNumberColumn, Settings.GccNameColumn], search, page, pageSize, false,
-            reader => new BankGroup(Text(reader, 0), Text(reader, 1)), ct);
-    public async Task<BankGroup?> Group(string number, CancellationToken ct)
+        ReadGroups(search, page, pageSize, null, ct);
+
+    public async Task<BankGroup?> Group(string number, CancellationToken ct) =>
+        SingleMatch(await ReadGroups(number, 1, 2, 0, ct));
+
+    private static T? SingleMatch<T>(ReferencePage<T> result)
     {
-        var result = await Read(Settings.GccTable, [Settings.GccNumberColumn, Settings.GccNameColumn], number, 1, 2, true,
-            reader => new BankGroup(Text(reader, 0), Text(reader, 1)), ct);
         if (result.Total > 1) throw new BusinessRuleException(409, "bank_reference.ambiguous");
         return result.Items.SingleOrDefault();
     }

@@ -521,6 +521,7 @@
     "period.status.rejected": "Abgelehnt",
     "codes.title": "Schlüsselverzeichnisse",
     "codes.subtitle": "Verwalten Sie zentral die Werte, die in Anwendungsformularen verwendet werden.",
+    "codes.search-translations": "Übersetzungen nach Schlüssel, Sprache oder Bezeichnung suchen",
     "codes.search": "Schlüsselverzeichnisse durchsuchen",
     "codes.all": "Alle Schlüsselverzeichnisse",
     "codes.created-by": "Erstellt von {0}",

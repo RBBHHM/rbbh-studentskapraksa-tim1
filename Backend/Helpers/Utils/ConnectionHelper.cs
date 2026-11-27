@@ -4,9 +4,7 @@ namespace RBBH.ConnectedParties.Helpers.Utils
 {
     public static class ConnectionHelper
     {
-        public static string BuildConnection(
-            IConfiguration configuration
-        )
+        public static string BuildConnection(IConfiguration configuration, string? serverName = null, string? databaseName = null)
         {
             ArgumentNullException.ThrowIfNull(configuration);
 
@@ -14,8 +12,8 @@ namespace RBBH.ConnectedParties.Helpers.Utils
             var integratedSecurity = configuration.GetValue<bool?>("Database:IntegratedSecurity") ?? false;
             var builder = new SqlConnectionStringBuilder
             {
-                DataSource = GetRequiredValue(configuration, "Database:ServerName"),
-                InitialCatalog = GetRequiredValue(configuration, "Database:Name"),
+                DataSource = serverName ?? GetRequiredValue(configuration, "Database:ServerName"),
+                InitialCatalog = databaseName ?? GetRequiredValue(configuration, "Database:Name"),
                 IntegratedSecurity = integratedSecurity,
                 MultipleActiveResultSets = true,
                 Encrypt = true,

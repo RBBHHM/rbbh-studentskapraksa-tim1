@@ -210,7 +210,7 @@ public partial class CodeListController(ICodeListService codeListService, Connec
     [HttpGet("{kategorija}")]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<object>> GetAll([FromRoute] string kategorija, int page = 1, int? pageSize = null)
+    public async Task<ActionResult<object>> GetAll([FromRoute] string kategorija, int page = 1, int? pageSize = null, string? search = null)
     {
         if (string.IsNullOrWhiteSpace(kategorija))
             return BadRequest(BackendMessages.Message("validation.codelist.category.required"));
@@ -220,6 +220,15 @@ public partial class CodeListController(ICodeListService codeListService, Connec
         var columns = definition is null ? [] : CodebookCsv.Columns(db, definition).ToArray();
         var definitionId = definition?.Id;
         var query = db.CodeLists.IgnoreQueryFilters().Where(row => row.DefinitionId == definitionId);
+        if (kategorija.Equals("LANGUAGE_PACKS", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim().ToUpperInvariant();
+            query = query.Where(row => row.Localization != null &&
+                ((row.Localization.ResourceKey != null && row.Localization.ResourceKey.ToUpper().Contains(term)) ||
+                 (row.Localization.LanguageCode != null && row.Localization.LanguageCode.ToUpper().Contains(term)) ||
+                 (row.Localization.ResourceLabel != null && row.Localization.ResourceLabel.ToUpper().Contains(term))));
+        }
+
         var ordered = query.OrderBy(row => row.Naziv).ThenBy(row => row.ID);
         page = Math.Clamp(page, 1, 1_000_000);
         var size = Math.Clamp(pageSize ?? 50, 1, 100);

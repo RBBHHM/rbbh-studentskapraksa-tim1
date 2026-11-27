@@ -244,6 +244,10 @@ test("LANGUAGE_PACKS exposes translation fields and saves changes by resource ke
   await expect(structure).toContainText("Ključ po kojem aplikacija pronalazi tekst.");
   await expect(structure).not.toContainText("Stable resource key");
   await structure.getByRole("button", { name: "Zatvori", exact: true }).click();
+  const search = page.getByRole("textbox", { name: "Pretraži prevode po ključu, jeziku ili nazivu" });
+  await search.fill("notifications.fixture.title");
+  await expect(page.getByRole("row").filter({ hasText: "notifications.fixture.title" })).toHaveCount(2);
+  await expect(page.getByRole("row").filter({ hasText: "notifications.fixture.body" })).toHaveCount(0);
   const row = page.getByRole("row").filter({ hasText: "Rola dodijeljena" });
   await row.getByRole("button", { name: "Uredi vrijednost", exact: true }).click();
   const dialog = page.getByRole("dialog");
