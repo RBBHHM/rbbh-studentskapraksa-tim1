@@ -73,7 +73,7 @@
             }
 
             var options = await optionsTask;
-            _choices = options.Items.Select(role => new Choice { Id = role.Id, Label = string.IsNullOrWhiteSpace(role.DisplayName) || role.DisplayName.Equals(role.Name, StringComparison.OrdinalIgnoreCase) ? T.Role(role.Name) : role.DisplayName, Selected = Purpose == "change" && current.Contains(role.Name) }).ToList();
+            _choices = options.Items.Select(role => new Choice { Id = role.Id, Label = T.Role(role.Name, role.DisplayName), Selected = Purpose == "change" && current.Contains(role.Name) }).ToList();
         }
         catch (RegistryApiException) { _loadFailed = true; }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }

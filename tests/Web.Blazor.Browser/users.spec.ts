@@ -40,18 +40,18 @@ test("Admin sees real user/access metadata, accessible create form and disabled 
 });
 test("create preserves multiple application roles and persists the actual backend record", async ({ page, request }) => {
   await visit(page); const dialog = await createFields(page);
-  await dialog.getByText("FL", { exact: true }).click();
-  await expect(dialog.getByRole("checkbox", { name: "FL", exact: true })).toBeChecked();
-  await access(dialog, "PL", true);
+  await dialog.getByText("Fizička lica", { exact: true }).click();
+  await expect(dialog.getByRole("checkbox", { name: "Fizička lica", exact: true })).toBeChecked();
+  await access(dialog, "Pravna lica", true);
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).toHaveCount(0);
   await expect(page.getByRole("status").filter({ hasText: "Korisnik je kreiran. Dodatne role čekaju potvrdu identiteta." })).toBeVisible();
   const row = page.getByRole("row").filter({ hasText: "new.user@raiffeisengroup.ba" });
-  await expect(row).toContainText("FL, PL");
+  await expect(row).toContainText("Fizička lica, Pravna lica");
   await page.reload(); await interactive(page); await expect(row).toBeVisible();
   const state = await (await request.get("/__fixtures/users-state", { headers })).json();
   expect(state.users.find((user: { username: string }) => user.username === "new.user")).toMatchObject({ firstName: "Native", lastName: "User", isActive: true });
   expect(state.audit.map((entry: { action: string }) => entry.action)).toEqual(["CREATE"]);
-  const duplicate = await createFields(page); await access(duplicate, "FL", true);
+  const duplicate = await createFields(page); await access(duplicate, "Fizička lica", true);
   await duplicate.getByRole("button", { name: "Sačuvaj", exact: true }).click();
   await expect(duplicate.getByText("Korisnik s ovim korisničkim imenom ili email adresom već postoji.", { exact: true })).toBeVisible();
   const afterDuplicate = await (await request.get("/__fixtures/users-state", { headers })).json();
@@ -59,7 +59,7 @@ test("create preserves multiple application roles and persists the actual backen
 });
 test("Enter toggles a focused checkbox and Tab moves on without submitting", async ({ page, request }) => {
   await visit(page); const dialog = await createFields(page);
-  const fl = dialog.getByRole("checkbox", { name: "FL", exact: true });
+  const fl = dialog.getByRole("checkbox", { name: "Fizička lica", exact: true });
   await fl.focus(); await fl.press("Enter");
   await expect(fl).toBeChecked(); await expect(dialog).toBeVisible();
   await fl.press("Enter"); await expect(fl).not.toBeChecked();
@@ -73,7 +73,7 @@ test("required names and a well-formed email block requests; Guest needs no chec
   await expect(dialog.locator("[aria-invalid=true]").first()).toBeVisible();
   expect((await (await request.get("/__fixtures/counts", { headers })).json()).mutations).toBe(0);
   await dialog.getByRole("button", { name: "Odustani", exact: true }).click(); dialog = await createFields(page, "not-an-email");
-  await access(dialog, "FL", true); await dialog.getByLabel("Email", { exact: false }).blur();
+  await access(dialog, "Fizička lica", true); await dialog.getByLabel("Email", { exact: false }).blur();
   await expect(dialog.getByRole("button", { name: "Sačuvaj", exact: true })).toBeDisabled();
   await expect(dialog.getByText("Unesite ispravnu email adresu.", { exact: true }).first()).toBeVisible();
   expect((await (await request.get("/__fixtures/counts", { headers })).json()).mutations).toBe(0);
@@ -82,7 +82,7 @@ test("role replacement and non-final empty roles preserve the existing mapping-r
   await request.post("/__fixtures/users-reference", { headers }); await visit(page);
   let other = page.getByRole("row").filter({ hasText: "other-FL@fixture.test" });
   await other.getByRole("button", { name: "Promijeni ulogu", exact: true }).click();
-  let dialog = page.getByRole("dialog"); await access(dialog, "FL", false);
+  let dialog = page.getByRole("dialog"); await access(dialog, "Fizička lica", false);
   await access(dialog, "Kapital", true); await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
   await expect(dialog).toHaveCount(0); await expect(other).toContainText("Kapital");
   await other.getByRole("button", { name: "Promijeni ulogu", exact: true }).click(); dialog = page.getByRole("dialog");
@@ -123,7 +123,7 @@ test("unconfirmed Keycloak identity is explicitly flagged, not silently displaye
   const row = page.getByRole("row").filter({ hasText: "unconfirmed@fixture.test" });
   await expect(row).toBeVisible();
   await expect(row.locator('[data-identity="unconfirmed"]')).toHaveText("Identitet nije potvrđen");
-  await expect(row).toContainText("FL");
+  await expect(row).toContainText("Fizička lica");
   await page.reload(); await interactive(page);
   await expect(page.getByRole("row").filter({ hasText: "unconfirmed@fixture.test" })
     .locator('[data-identity="unconfirmed"]')).toBeVisible();

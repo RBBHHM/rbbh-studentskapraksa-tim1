@@ -9,7 +9,7 @@ using RBBH.ConnectedParties.Helpers.Constants;
 namespace RBBH.ConnectedParties.BL.Services;
 
 /// <summary>Maintains DB-backed role definitions without replacing normalized grants or provider identity.</summary>
-public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContextAccessor accessor)
+public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContextAccessor accessor, RuntimeLocalizationCatalog? localization = null)
 {
     private System.Security.Claims.ClaimsPrincipal Actor => accessor.HttpContext?.User ?? throw new MissingActorIdentityException();
     private static DateTime VersionOf(Role role) =>
@@ -25,21 +25,28 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
         if (!string.IsNullOrWhiteSpace(search))
         {
             var term = search.Trim().ToUpperInvariant();
-            query = query.Where(row => row.Name.ToUpper().Contains(term));
+            const string prefix = "users.role.";
+            var pack = localization is null ? null : await localization.ForRequest(
+                accessor.HttpContext?.Request.Headers.AcceptLanguage.ToString(), ct);
+            var labels = pack?.Items.Where(item => item.ResourceKey.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                    && item.Label.Contains(term, StringComparison.OrdinalIgnoreCase))
+                .Select(item => item.ResourceKey[prefix.Length..].ToUpperInvariant()).ToArray() ?? [];
+            query = query.Where(row => row.Name.ToUpper().Contains(term) || labels.Contains(row.Name.ToUpper()));
         }
         var rows = await query.Include(row => row.RolePermissions).OrderBy(row => row.Name).ThenBy(row => row.Id)
             .Skip((int)Math.Min((long)(page - 1) * pageSize, int.MaxValue)).Take(pageSize).ToListAsync(ct);
         var total = page == 1 && rows.Count < pageSize ? rows.Count : await query.CountAsync(ct);
         var ids = rows.Select(row => row.Id).ToArray();
         var assigned = (await ActorRoleIds().Where(id => ids.Contains(id)).ToListAsync(ct)).ToHashSet();
-        return new { items = rows.Select(row => Map(row, assigned.Contains(row.Id))).ToArray(), total, page, pageSize };
+        var referenced = (await ReferencedRoles(ids).ToListAsync(ct)).ToHashSet();
+        return new { items = rows.Select(row => Map(row, assigned.Contains(row.Id), referenced.Contains(row.Id))).ToArray(), total, page, pageSize };
     }
 
     public async Task<RoleCatalogDTO> Get(long id, CancellationToken ct)
     {
         var row = await db.Roles.AsNoTracking().Include(row => row.RolePermissions).SingleOrDefaultAsync(row => row.Id == id, ct)
             ?? throw new BusinessRuleException(404, "roles.not_found");
-        return Map(row, await ActorRoleIds().ContainsAsync(id, ct));
+        return Map(row, await ActorRoleIds().ContainsAsync(id, ct), await ReferencedRoles([id]).AnyAsync(ct));
     }
 
     public async Task<object> Permissions(CancellationToken ct) => new
@@ -93,7 +100,7 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
             new { row.Name, row.IsActive, PermissionIds = input.PermissionIds }));
         await db.SaveChangesAsync(ct);
         // Removed tracked children need not remain in the returned grant set.
-        return new(row.Id, row.Name, row.Name, null, row.IsActive, VersionOf(row), input.PermissionIds.Order().ToArray(), false);
+        return new(row.Id, row.Name, row.Name, null, row.IsActive, VersionOf(row), input.PermissionIds.Order().ToArray(), false, HasReferences: await ReferencedRoles([id]).AnyAsync(ct));
     }, ct);
 
     public Task<RoleDeletionResult> Delete(long id, DateTime expectedVersion, CancellationToken ct) => Locked(async () =>
@@ -103,8 +110,7 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
         if (row is null) return RoleDeletionResult.Missing;
         if (Protected(row.Name)) return RoleDeletionResult.Protected;
         if (expectedVersion != VersionOf(row)) return RoleDeletionResult.Stale;
-        if (await db.UserRoles.AnyAsync(assignment => assignment.RoleId == id, ct) ||
-            await db.Set<DL.Entities.Authorization.RequestedRole>().AnyAsync(request => request.RoleId == id, ct))
+        if (await ReferencedRoles([id]).AnyAsync(ct))
             return RoleDeletionResult.InUse;
 
         db.AuditLogs.Add(BusinessAudit.Create("Role", "ROLE_CATALOG_DELETE",
@@ -116,6 +122,11 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
     }, ct);
 
     public enum RoleDeletionResult { Deleted, Missing, Protected, Stale, InUse }
+
+    private IQueryable<long> ReferencedRoles(long[] ids) => db.UserRoles
+        .Where(assignment => ids.Contains(assignment.RoleId)).Select(assignment => assignment.RoleId)
+        .Union(db.Set<DL.Entities.Authorization.RequestedRole>()
+            .Where(request => ids.Contains(request.RoleId)).Select(request => request.RoleId));
 
     private IQueryable<long> ActorRoleIds()
     {
@@ -144,6 +155,6 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
     private Task<T> Locked<T>(Func<Task<T>> mutation, CancellationToken ct) => UsersMutationBoundary.ExecuteAsync(db, mutation,
         () => throw new BusinessRuleException(409, "request.busy"), ct);
     private static BusinessRuleException Invalid() => new(400, "roles.invalid_definition");
-    private static RoleCatalogDTO Map(Role row, bool isAssignedToCurrentUser) => new(row.Id, row.Name, row.Name, null,
-        row.IsActive, VersionOf(row), row.RolePermissions.Select(grant => grant.PermissionId).Order().ToArray(), Protected(row.Name), isAssignedToCurrentUser);
+    private static RoleCatalogDTO Map(Role row, bool isAssignedToCurrentUser, bool hasReferences = false) => new(row.Id, row.Name, row.Name, null,
+        row.IsActive, VersionOf(row), row.RolePermissions.Select(grant => grant.PermissionId).Order().ToArray(), Protected(row.Name), isAssignedToCurrentUser, hasReferences);
 }

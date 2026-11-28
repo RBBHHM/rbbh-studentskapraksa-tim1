@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { interactive } from "./readiness";
+import { chooseLanguage, interactive } from "./readiness";
 const headers = { "X-Fixture-Control": "true" };
 const admin = (process.env.BROWSER_FIXTURE_ROLE ?? "FL") === "admin";
 test.beforeEach(async ({ request }) => {
@@ -76,3 +76,15 @@ if (admin) {
     await expect(page.getByRole("button", { name: "Odobri", exact: true })).toHaveCount(0);
   });
 }
+
+test("requestable role labels change with the language", async ({ page }) => {
+  await page.goto("/app");
+  await interactive(page);
+  await page.getByRole("button", { name: "Zatraži rolu", exact: true }).click();
+  await expect(page.getByRole("dialog").getByRole("checkbox", { name: "Fizička lica", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await chooseLanguage(page, "en");
+  await page.getByRole("button", { name: "Request role", exact: true }).click();
+  await expect(page.getByRole("dialog").getByRole("checkbox", { name: "Natural persons", exact: true })).toBeVisible();
+  await expect(page.getByRole("dialog").getByRole("checkbox", { name: "Legal entities", exact: true })).toBeVisible();
+});

@@ -654,6 +654,8 @@ p { text-wrap: pretty; }
 /* The trigger keeps the platform <select>; its size, shape and type follow the native Input and the source trigger (h-10, rounded-md, shadow-sm, text-sm). */
 .rbi-select { height: 2.5rem; min-height: 0; border-radius: var(--radii-md); box-shadow: var(--elevation-sm); line-height: 1.25rem; }
 @media (min-width: 48rem) { .rbi-select { font-size: var(--font-size-sm); } }
+/* Keep focus visible inside scrollable dialogs and other containers. */
+.rbi-select:focus-visible { outline-offset: calc(-1 * var(--focus-ring-width)); }
 .rbi-select:has(> option[value=""]:checked) { color: var(--text-secondary); }
 .rbi-select:disabled { background: var(--surface-muted); color: var(--text-primary); opacity: .7; cursor: not-allowed; }
 .rbi-select:disabled:has(> option[value=""]:checked) { color: var(--text-secondary); }

@@ -53,7 +53,7 @@ else
                 @foreach (var role in _page.Items)
                 {
                     <tr @key="role.Id">
-                        <td class="registry-strong"><span class="registry-cell-label" aria-hidden="true">@T["rolecatalog.name"]</span><span>@(role.Name.Equals("gost", StringComparison.OrdinalIgnoreCase) ? T.Role(role.Name) : role.Name)</span></td>
+                        <td class="registry-strong"><span class="registry-cell-label" aria-hidden="true">@T["rolecatalog.name"]</span><span>@T.Role(role.Name, role.DisplayName)</span></td>
                         <td><span class="registry-cell-label" aria-hidden="true">@T["rolecatalog.permissions"]</span>@role.PermissionIds.Count</td>
                         <td><span class="registry-cell-label" aria-hidden="true">@T["rolecatalog.status"]</span><Indicator Kind="@(role.IsActive ? "active" : "inactive")" Label="@T[role.IsActive ? "codes.active" : "codes.inactive"]" /></td>
                         <td><span class="registry-cell-label" aria-hidden="true">@T["common.actions"]</span>
@@ -61,12 +61,19 @@ else
                             {
                                 <div class="role-catalog-actions">
                                     <RbiButton Variant="RbiButtonVariant.Secondary" Disabled="@(_busy || _refreshing)" OnClick="() => EditRole(role)">@T["rolecatalog.edit"]</RbiButton>
-                                    <RbiButton Variant="RbiButtonVariant.Ghost" Class="role-catalog-delete" Disabled="@(_busy || _refreshing)" OnClick="() => ConfirmDelete(role)">@T["common.delete"]</RbiButton>
+                                    @if (!role.HasReferences)
+                                    {
+                                        <RbiButton Variant="RbiButtonVariant.Ghost" Class="role-catalog-delete" Disabled="@(_busy || _refreshing)" OnClick="() => ConfirmDelete(role)">@T["common.delete"]</RbiButton>
+                                    }
                                 </div>
                             }
                             else
                             {
                                 <span class="app-hint">@T[role.IsProtected ? "rolecatalog.protected" : role.IsAssignedToCurrentUser ? "rolecatalog.self-management-denied" : "rolecatalog.read-only"]</span>
+                            }
+                            @if (role.HasReferences && !role.IsProtected && !role.IsAssignedToCurrentUser)
+                            {
+                                <span class="app-hint">@T[role.IsActive ? "rolecatalog.delete-blocked" : "rolecatalog.inactive-retained"]</span>
                             }
                         </td>
                     </tr>
@@ -83,7 +90,7 @@ else
 @if (_deleteTarget is { } target)
 {
     <RbiAlertDialog Open Title="@T["rolecatalog.delete-title"]"
-                    Description="@T.Format("rolecatalog.delete-description", target.Name)"
+                    Description="@T.Format("rolecatalog.delete-description", T.Role(target.Name, target.DisplayName))"
                     CancelLabel="@T["common.cancel"]" ConfirmLabel="@T["common.delete"]"
                     Confirming="_busy" ConfirmLoadingLabel="@T["state.loading"]"
                     OnConfirm="DeleteAsync" OpenChanged="CloseDelete" />
@@ -292,7 +299,7 @@ else
 
     private void ConfirmDelete(RoleDefinition role)
     {
-        if (!_canWrite || role.IsProtected || role.IsAssignedToCurrentUser || _busy || _refreshing) return;
+        if (!_canWrite || role.IsProtected || role.IsAssignedToCurrentUser || role.HasReferences || _busy || _refreshing) return;
         _deleteError = null;
         _notice = null;
         _deleteTarget = role;
@@ -313,7 +320,11 @@ else
             _notice = "rolecatalog.deleted";
             await LoadAsync();
         }
-        catch (RegistryApiException exception) { _deleteError = exception.MessageKey; }
+        catch (RegistryApiException exception)
+        {
+            if (exception.Code == "roles.in_use") await LoadAsync();
+            _deleteError = exception.MessageKey;
+        }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         finally { _busy = false; _deleteTarget = null; }
     }
