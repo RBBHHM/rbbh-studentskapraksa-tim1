@@ -1,119 +1,51 @@
 using Moq;
-using RBI.Authorization;
 using RBBH.RelatedPartiesRegister.Web.Api;
 
 namespace Web.Blazor.Tests;
 
 public sealed class ApplicationNavigationAccessTests
 {
-    [Fact]
-    public async Task EvaluatesEveryMenuPermissionOnceAndUsesDatabaseOwnedAdministratorRole()
+    [Theory]
+    [InlineData("custom-viewer", true, false, "ADMINISTRATION_VIEW")]
+    [InlineData("custom-manager", true, true, "ADMINISTRATION_VIEW", "ADMINISTRATION_MANAGE")]
+    [InlineData("admin", false, false, "ADMINISTRATION_MANAGE")]
+    [InlineData("gost", false, false)]
+    public async Task MenuAndActionsFollowEffectiveProfileGrants(string role, bool canRead, bool canManage, params string[] grants)
     {
+        var effective = new ApplicationProfile("id", "Fixture", "fixture", "fixture@example.test",
+            [role], ["FL_VIEW", .. grants]);
         var profile = new Mock<IProfileApi>();
-        profile.Setup(client => client.GetAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ApplicationProfile("id", "Fixture", "fixture", "fixture@example.test",
-                ["admin"], ["ADMINISTRATION_MANAGE"]));
+        profile.Setup(client => client.GetAsync(It.IsAny<CancellationToken>())).ReturnsAsync(effective);
 
-        var permissions = new Mock<IRbiPermissionService>();
-        permissions.Setup(client => client.HasPermissionAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns((string name, CancellationToken _) =>
-                ValueTask.FromResult(name is "fl.read" or "reports.read"));
+        var access = await ApplicationNavigationAccess.ReadAsync(profile.Object);
 
-        var access = await ApplicationNavigationAccess.ReadAsync(profile.Object, permissions.Object);
-
-        Assert.True(access.Administrator);
+        Assert.Equal(canRead, access.Administration);
+        Assert.Equal(canManage, ApplicationAccess.CanManageAdministration(effective));
         Assert.True(access.Physical);
         Assert.True(access.Reports);
         Assert.False(access.Legal);
         Assert.False(access.Limits);
         Assert.False(access.Capital);
         profile.Verify(client => client.GetAsync(It.IsAny<CancellationToken>()), Times.Once);
-        foreach (var permission in new[] { "reports.read", "fl.read", "pl.read", "limiti.read", "kapital.read" })
-            permissions.Verify(client => client.HasPermissionAsync(permission, It.IsAny<CancellationToken>()), Times.Once);
-        permissions.VerifyNoOtherCalls();
-    }
-
-    [Fact]
-    public async Task IdentityProviderRoleDoesNotCreateAdministratorWithoutEffectiveProfileRole()
-    {
-        var profile = new Mock<IProfileApi>();
-        profile.Setup(client => client.GetAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ApplicationProfile("id", "Fixture", "fixture", "fixture@example.test",
-                ["gost"], ["FL_VIEW"]));
-        var permissions = new Mock<IRbiPermissionService>();
-        permissions.Setup(client => client.HasPermissionAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(ValueTask.FromResult(false));
-
-        var access = await ApplicationNavigationAccess.ReadAsync(profile.Object, permissions.Object);
-        Assert.False(access.Administrator);
-        Assert.False(access.Physical);
-        Assert.False(access.Legal);
-        Assert.False(access.Limits);
-        Assert.False(access.Capital);
-        Assert.False(access.Reports);
     }
 
     [Fact]
     public async Task UnavailableProfileNeverProducesAnAppNavigationProjection()
     {
         var profile = new Mock<IProfileApi>();
-        profile.Setup(client => client.GetAsync(It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new RegistryApiException());
-        var permissions = new Mock<IRbiPermissionService>();
-        permissions.Setup(client => client.HasPermissionAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(ValueTask.FromResult(true));
-        await Assert.ThrowsAsync<RegistryApiException>(() =>
-            ApplicationNavigationAccess.ReadAsync(profile.Object, permissions.Object));
-        permissions.VerifyNoOtherCalls();
+        profile.Setup(client => client.GetAsync(It.IsAny<CancellationToken>())).ThrowsAsync(new RegistryApiException());
+        await Assert.ThrowsAsync<RegistryApiException>(() => ApplicationNavigationAccess.ReadAsync(profile.Object));
     }
 
     [Fact]
-    public async Task PermissionChecksDoNotOverlapInASharedScope()
-    {
-        var profile = new Mock<IProfileApi>();
-        profile.Setup(client => client.GetAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ApplicationProfile("id", "Fixture", "fixture", "fixture@example.test",
-                ["gost"], []));
-
-        var activeChecks = 0;
-        var checks = 0;
-        async Task<bool> CheckAsync()
-        {
-            if (Interlocked.Increment(ref activeChecks) != 1)
-                throw new InvalidOperationException("Shared authorization service was invoked concurrently.");
-            try
-            {
-                await Task.Yield();
-                Interlocked.Increment(ref checks);
-                return true;
-            }
-            finally
-            {
-                Interlocked.Decrement(ref activeChecks);
-            }
-        }
-
-        var permissions = new Mock<IRbiPermissionService>();
-        permissions.Setup(client => client.HasPermissionAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns((string _, CancellationToken _) => new ValueTask<bool>(CheckAsync()));
-
-        var access = await ApplicationNavigationAccess.ReadAsync(profile.Object, permissions.Object);
-        Assert.True(access.Reports && access.Physical && access.Legal && access.Limits && access.Capital);
-        Assert.Equal(5, checks);
-        Assert.Equal(0, activeChecks);
-    }
-
-    [Fact]
-    public async Task CancelledRequestDoesNotFetchProfileOrCheckPermissions()
+    public async Task CancelledRequestDoesNotFetchProfile()
     {
         using var cancelled = new CancellationTokenSource();
         cancelled.Cancel();
         var profile = new Mock<IProfileApi>(MockBehavior.Strict);
-        var permissions = new Mock<IRbiPermissionService>(MockBehavior.Strict);
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            ApplicationNavigationAccess.ReadAsync(profile.Object, permissions.Object, cancelled.Token));
+            ApplicationNavigationAccess.ReadAsync(profile.Object, cancelled.Token));
         profile.VerifyNoOtherCalls();
-        permissions.VerifyNoOtherCalls();
     }
 }

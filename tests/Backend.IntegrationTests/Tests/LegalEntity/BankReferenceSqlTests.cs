@@ -57,6 +57,25 @@ public sealed class BankReferenceSqlTests : IAsyncLifetime
         Assert.Empty((await Source().Customers("' OR 1=1;--", 1, 20, default)).Items);
     }
     [SqlServerFact]
+    public async Task GccSearchPaginatesDistinctNumberAndNamePairs()
+    {
+        await _db.Database.ExecuteSqlRawAsync("""
+            INSERT FixtureGroups VALUES
+                ('001436', N'GROUP VOKEL'), ('001436', N' GROUP VOKEL '), ('001436', N'GROUP VOKEL'),
+                ('001437', N'GROUP VOKEL');
+            """);
+
+        var source = Source();
+        var first = await source.Groups("vokel", 1, 1, default);
+        var second = await source.Groups("vokel", 2, 1, default);
+        var beyondLast = await source.Groups("vokel", 3, 1, default);
+        Assert.Equal(2, first.Total);
+        Assert.Equal(new BankGroup("001436", "GROUP VOKEL"), Assert.Single(first.Items));
+        Assert.Equal(new BankGroup("001437", "GROUP VOKEL"), Assert.Single(second.Items));
+        Assert.Equal(2, beyondLast.Total);
+        Assert.Empty(beyondLast.Items);
+    }
+    [SqlServerFact]
     public async Task ExactLookupsAcceptRepeatedMappedValuesAndPreserveLeadingZeros()
     {
         await _db.Database.ExecuteSqlRawAsync("""

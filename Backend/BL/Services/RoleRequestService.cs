@@ -74,15 +74,15 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
                 return Conflict("role_request.pending_exists");
             var roles = await db.Roles.Where(role => input.RoleIds.Contains(role.Id) && role.IsActive && role.Name != ApplicationAccessRoles.Guest).ToListAsync(ct);
             if (roles.Count != input.RoleIds.Length) return InvalidRoles();
-            var admins = await ActiveAdmins().ToListAsync(ct);
-            if (admins.Count == 0) return RoleRequestResult.Failure(503, "role_request.approver_unavailable");
+            var reviewers = await AdministrationGrants.Managers(db).ToListAsync(ct);
+            if (reviewers.Count == 0) return RoleRequestResult.Failure(503, "role_request.approver_unavailable");
             var row = new RoleRequest { ClientRequestId = input.ClientRequestId, RequesterSubject = subject,
                 Username = username, FirstName = first, LastName = last, Email = email, Purpose = input.Purpose, Note = input.Note?.Trim() };
             row.RequestedRoles = roles.Select(role => new RequestedRole { Role = role, RoleId = role.Id, RequestId = row.Id }).ToList();
             db.RoleRequests.Add(row);
             db.AuditLogs.Add(Audit("ROLE_REQUEST", null, new { row.Purpose, Roles = roles.Select(role => role.Name) }));
-            foreach (var admin in admins)
-                Notify(admin.KeycloakId, admin.Email, $"role-request:{row.Id}:submitted", "role_request.submitted", row, $"/app/admin/role-requests?requestId={row.Id}");
+            foreach (var reviewer in reviewers)
+                Notify(reviewer.KeycloakId, reviewer.Email, $"role-request:{row.Id}:submitted", "role_request.submitted", row, $"/app/admin/role-requests?requestId={row.Id}");
             await db.SaveChangesAsync(ct);
             return new(Map(row, false), 201);
         }, ct);
@@ -108,7 +108,7 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
         return await Locked(async () =>
         {
             var subject = Subject;
-            if (!await IsAdmin(subject, ct)) return RoleRequestResult.Failure(403, "authorization.admin_required");
+            if (!await AdministrationGrants.Managers(db).AnyAsync(user => user.KeycloakId == subject, ct)) return RoleRequestResult.Failure(403, "authorization.admin_required");
             var row = await Query().SingleOrDefaultAsync(row => row.Id == id, ct);
             if (row is null) return RoleRequestResult.Failure(404, "request.not_found");
             if (row.RequesterSubject == subject) return RoleRequestResult.Failure(403, "role_request.self_decision_denied");
@@ -175,10 +175,6 @@ public sealed class RoleRequestService(ConnectedPartiesDbContext db, IHttpContex
     private IQueryable<AppUser> ActiveAdmins() => db.AppUsers.Where(user => user.IsActive && user.KeycloakSubjectConfirmed &&
         db.UserRoles.Any(assignment => assignment.UserId == user.Id && assignment.IsActive && assignment.Role.IsActive && assignment.Role.Name == ApplicationAccessRoles.Administrator &&
             assignment.Role.RolePermissions.Any(grant => grant.Permission.IsActive && grant.Permission.Code == ApplicationPermissions.AdministrationManage)));
-    public Task<bool> CanReview(CancellationToken ct) => IsAdmin(Subject, ct);
-    private Task<bool> IsAdmin(string subject, CancellationToken ct) =>
-        ActiveAdmins().AnyAsync(user => user.KeycloakId == subject, ct);
-
     private Task<bool> IsInactiveApplicant(string subject, string email, CancellationToken ct)
     {
         var normalized = email.ToUpperInvariant();

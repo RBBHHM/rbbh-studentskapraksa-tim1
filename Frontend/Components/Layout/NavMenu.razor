@@ -1,6 +1,5 @@
 @implements IDisposable
 @inject NavigationManager Navigation
-@inject RBI.Authorization.IRbiPermissionService Permissions
 @inject IProfileApi Profile
 @inject AuthenticationStateProvider AuthenticationState
 
@@ -42,19 +41,42 @@
 
 @code {
     private bool _physical, _legal, _limits, _capital, _admin, _reports;
-    protected override async Task OnInitializedAsync()
+    private readonly LatestPageRequest _accessRequest = new();
+    private readonly CancellationTokenSource _lifetime = new();
+
+    protected override Task OnInitializedAsync()
     {
         Navigation.LocationChanged += RouteChanged;
-        if ((await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated != true) return;
-        try
-        {
-            var access = await ApplicationNavigationAccess.ReadAsync(Profile, Permissions);
-            (_admin, _reports, _physical, _legal, _limits, _capital) =
-                (access.Administrator, access.Reports, access.Physical, access.Legal, access.Limits, access.Capital);
-        }
-        catch (RegistryApiException) { _physical = _legal = _limits = _capital = _admin = _reports = false; }
+        return LoadAccessAsync();
     }
-    private void RouteChanged(object? sender, LocationChangedEventArgs args) => _ = InvokeAsync(StateHasChanged);
-    public void Dispose() => Navigation.LocationChanged -= RouteChanged;
+
+    private Task LoadAccessAsync() => _accessRequest.RunAsync(_lifetime.Token, false, async token =>
+    {
+        if ((await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated != true)
+        {
+            ClearAccess();
+            return;
+        }
+
+        var access = await ApplicationNavigationAccess.ReadAsync(Profile, token);
+        token.ThrowIfCancellationRequested();
+        (_admin, _reports, _physical, _legal, _limits, _capital) =
+            (access.Administration, access.Reports, access.Physical, access.Legal, access.Limits, access.Capital);
+    }, _ => ClearAccess(), () => { if (!_lifetime.IsCancellationRequested) StateHasChanged(); });
+
+    private void ClearAccess() => _physical = _legal = _limits = _capital = _admin = _reports = false;
+    private void RouteChanged(object? sender, LocationChangedEventArgs args) => _ = InvokeAsync(async () =>
+    {
+        if (_lifetime.IsCancellationRequested) return;
+        StateHasChanged();
+        await LoadAccessAsync();
+    });
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= RouteChanged;
+        _lifetime.Cancel();
+        _lifetime.Dispose();
+    }
     private bool IsActive(string path) => Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].Trim('/') == path;
 }

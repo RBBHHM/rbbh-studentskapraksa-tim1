@@ -28,5 +28,4 @@ public static class ApplicationPolicies
     public const string CodeListsRead = "code-lists.read";
     public const string AdministrationRead = "administration.read";
     public const string AdministrationWrite = "administration.write";
-    public const string AdminOnly = "admin.only";
 }

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { interactive } from "./readiness";
 const headers = { "X-Fixture-Control": "true" };
 const role = process.env.BROWSER_FIXTURE_ROLE ?? "FL";
 test("actual protected controller matrix rejects cross-module and forged-provider writes before business validation", async ({ request }) => {
@@ -20,4 +21,24 @@ test("actual protected controller matrix rejects cross-module and forged-provide
   expect(await (await request.get("/__fixtures/codes-state", { headers })).json()).toEqual(beforeCodes);
   expect(await (await request.get("/__fixtures/capital", { headers })).json()).toEqual([]);
   expect((await (await request.get("/__fixtures/reports", { headers })).json()).records).toEqual([]);
+});
+
+test("custom administration grants refresh the menu and separate viewing from managing users", async ({ page, request }) => {
+  expect((await request.post("/__fixtures/reset", { headers })).status()).toBe(204);
+  expect((await request.post("/__fixtures/custom-admin-view", { headers })).status()).toBe(204);
+  await page.goto("/app/profile");
+  await interactive(page);
+  const administration = page.getByRole("navigation", { name: "Administracija", exact: true });
+  await expect(administration.getByRole("link", { name: "Korisnici", exact: true })).toBeVisible();
+  await expect(administration.getByRole("link", { name: "Audit evidencija", exact: true })).toBeVisible();
+
+  await administration.getByRole("link", { name: "Korisnici", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Korisnici", exact: true }).getByRole("table")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Dodaj korisnika", exact: true })).toHaveCount(0);
+
+  expect((await request.post("/__fixtures/custom-admin-manage", { headers })).status()).toBe(204);
+  await administration.getByRole("link", { name: "Audit evidencija", exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/admin\/audit$/);
+  await administration.getByRole("link", { name: "Korisnici", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Dodaj korisnika", exact: true })).toBeVisible();
 });

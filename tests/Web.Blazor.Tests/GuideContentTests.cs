@@ -14,15 +14,15 @@ public sealed class GuideContentTests
     public void SectionsFollowActualPermissionsRatherThanRoleNames(string permission, string section)
     {
         var visible = GuideContent.Visible(new("u", "Name", "user", "u@example.test", ["gost"], [permission]));
-        Assert.Contains(visible, item => item.Id == section); Assert.Contains(visible, item => item.Id == "reports"); Assert.DoesNotContain(visible, item => item.Administrator);
+        Assert.Contains(visible, item => item.Id == section); Assert.Contains(visible, item => item.Id == "reports"); Assert.DoesNotContain(visible, item => item.Id == "administration");
     }
     [Fact]
     public void ReportingReadRemainsAvailableWithoutMutationPermissionsAndAdminNeedsRealApplicationAccess()
     {
         Assert.Empty(GuideContent.Visible(new("u", null, null, null, [], [])));
         Assert.Equal(["reports", "general"], GuideContent.Visible(new("u", null, null, null, ["gost"], [])).Select(item => item.Id));
-        Assert.DoesNotContain(GuideContent.Visible(new("u", null, null, null, ["admin"], [])), item => item.Administrator);
-        Assert.Contains(GuideContent.Visible(new("u", null, null, null, ["admin"], ["ADMINISTRATION_MANAGE"])), item => item.Administrator);
+        Assert.DoesNotContain(GuideContent.Visible(new("u", null, null, null, ["admin"], [])), item => item.Id == "administration");
+        Assert.Contains(GuideContent.Visible(new("u", null, null, null, ["custom-admin"], ["ADMINISTRATION_VIEW"])), item => item.Id == "administration");
     }
     [Theory]
     [InlineData("bs")]
@@ -34,7 +34,7 @@ public sealed class GuideContentTests
         Assert.NotNull(directory);
         using var document = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory.FullName, "Frontend", "Localization", culture + ".json")));
         var resource = document.RootElement.GetProperty("translations");
-        var all = GuideContent.Visible(new("u", null, null, null, ["admin"], ["FL_VIEW", "PL_VIEW", "LIMITI_VIEW", "KAPITAL_VIEW", "ADMINISTRATION_MANAGE"]));
+        var all = GuideContent.Visible(new("u", null, null, null, ["admin"], ["FL_VIEW", "PL_VIEW", "LIMITI_VIEW", "KAPITAL_VIEW", "ADMINISTRATION_VIEW"]));
         Assert.Equal(6, all.Count);
         foreach (var section in all)
         {

@@ -14,7 +14,7 @@ else if (_error is not null)
     <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_error]" />
     <RbiButton OnClick="LoadAsync">@T["state.retry"]</RbiButton>
 }
-else if (!_canManage) { <RbiAlert Title="@T["errors.forbidden"]" /> }
+else if (!_canRead) { <RbiAlert Title="@T["errors.forbidden"]" /> }
 else
 {
     @if (_notice is not null) { <div role="status" class="app-toast"><RbiAlert Tone="RbiAlertTone.Success" Title="@T[_notice]" /></div> }
@@ -47,7 +47,7 @@ else
                     <td>@T["roles.status." + item.Status]</td>
                     <td>@AppFormat.Timestamp(item.CreatedAt)</td>
                     <td>
-                        @if (item.Status == "pending")
+                        @if (_canManage && item.Status == "pending")
                         {
                             <RbiButton Disabled="_busy" OnClick="() => Decide(item, true)">@T["roles.approve"]</RbiButton>
                             <RbiButton Disabled="_busy" Variant="RbiButtonVariant.Secondary" OnClick="() => Decide(item, false)">@T["roles.reject"]</RbiButton>
@@ -94,7 +94,7 @@ else
     private string _decisionNote = "";
     private string? _error, _notice, _decisionError;
     private int _pageNumber = 1;
-    private bool _disposed, _authenticated, _canManage, _loading = true, _refreshing, _busy, _approve;
+    private bool _disposed, _authenticated, _canRead, _canManage, _loading = true, _refreshing, _busy, _approve;
     private int TotalPages => Math.Max(1, (int)Math.Ceiling(_page.Total / (double)Math.Max(1, _page.PageSize)));
     [SupplyParameterFromQuery] public long? RequestId { get; set; }
 
@@ -111,8 +111,9 @@ else
             _authenticated = (await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true;
             if (!_authenticated) return;
             var profile = await Profile.GetAsync(_token);
-            _canManage = ApplicationAccess.IsAdministrator(profile) && profile.Permissions.Contains("ADMINISTRATION_MANAGE");
-            if (!_canManage) return;
+            _canRead = ApplicationAccess.CanViewAdministration(profile);
+            _canManage = ApplicationAccess.CanManageAdministration(profile);
+            if (!_canRead) return;
             _page = await Api.ReviewAsync(_pageNumber, RequestId.HasValue || _filter == StatusFilter.All ? "" : _filter.ToString().ToLowerInvariant(), _token, RequestId);
         }
         catch (RegistryApiException exception) { _error = exception.MessageKey; }
@@ -125,7 +126,7 @@ else
     private void Decide(RoleRequest item, bool approve) { _target = item; _approve = approve; _decisionNote = ""; _decisionError = null; }
     private async Task ConfirmAsync()
     {
-        if (_busy || _target is not { } target) return; _busy = true; _decisionError = null;
+        if (!_canManage || _busy || _target is not { } target) return; _busy = true; _decisionError = null;
         try
         {
             var result = await Api.DecideAsync(target, _approve, string.IsNullOrWhiteSpace(_decisionNote) ? null : _decisionNote.Trim(), _token);

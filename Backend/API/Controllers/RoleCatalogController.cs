@@ -19,7 +19,7 @@ public sealed class RoleCatalogController(RoleCatalogService catalog) : Controll
     [HttpGet("permissions")]
     public Task<object> Permissions(CancellationToken ct) => catalog.Permissions(ct);
 
-    [HttpPost, Authorize(Policy = ApplicationPolicies.AdminOnly)]
+    [HttpPost, Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
     public async Task<IActionResult> Create(CreateRoleCatalogDTO input, CancellationToken ct)
     {
         var row = await catalog.Create(input, ct);
@@ -35,7 +35,7 @@ public sealed class RoleCatalogController(RoleCatalogService catalog) : Controll
         return Created($"/api/role-catalog/{row.Id}", row);
     }
 
-    [HttpDelete("{id:long}"), Authorize(Policy = ApplicationPolicies.AdminOnly)]
+    [HttpDelete("{id:long}"), Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
     public async Task<IActionResult> Delete(long id, [FromQuery] DateTime? expectedVersion, CancellationToken ct)
     {
         if (expectedVersion is null) return BadRequest();
@@ -49,6 +49,6 @@ public sealed class RoleCatalogController(RoleCatalogService catalog) : Controll
         };
     }
 
-    [HttpPut("{id:long}"), Authorize(Policy = ApplicationPolicies.AdminOnly)]
+    [HttpPut("{id:long}"), Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
     public Task<RoleCatalogDTO> Update(long id, UpdateRoleCatalogDTO input, CancellationToken ct) => catalog.Update(id, input, ct);
 }

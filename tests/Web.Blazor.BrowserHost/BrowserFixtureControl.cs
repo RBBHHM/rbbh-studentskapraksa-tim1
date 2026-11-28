@@ -223,6 +223,31 @@ internal static partial class BrowserHostProgram
                             database.AuditRequests = 0; database.ForgeAdmin = false;
                             database.MutationAttempts = 0;
                             await SeedAsync(backend, user); break;
+                        case "/__fixtures/custom-admin-view":
+                        case "/__fixtures/custom-admin-manage":
+                        {
+                            await using var scope = backend.Services.CreateAsyncScope();
+                            var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
+                            var account = await db.AppUsers.SingleAsync(row => row.KeycloakId == "fixture-user");
+                            var role = await db.Roles.Include(row => row.RolePermissions).SingleOrDefaultAsync(row => row.Name == "fixture-administration");
+                            if (role is null)
+                            {
+                                role = new Role { Name = "fixture-administration", CreatedBy = "fixture" };
+                                db.Roles.Add(role);
+                                var assignments = await db.UserRoles.Where(row => row.UserId == account.Id).ToListAsync();
+                                db.UserRoles.RemoveRange(assignments);
+                                db.UserRoles.Add(new UserRole { UserId = account.Id, RoleId = role.Id });
+                            }
+
+                            var manage = context.Request.Path == "/__fixtures/custom-admin-manage";
+                            var permissions = await db.Permissions.Where(row => row.Code == ApplicationPermissions.AdministrationView ||
+                                (manage && row.Code == ApplicationPermissions.AdministrationManage)).ToListAsync();
+                            foreach (var permission in permissions)
+                                if (!role.RolePermissions.Any(grant => grant.PermissionId == permission.Id))
+                                    role.RolePermissions.Add(new RolePermission { RoleId = role.Id, PermissionId = permission.Id });
+                            await db.SaveChangesAsync();
+                            break;
+                        }
                         case "/__fixtures/unavailable": database.Unavailable = true; break;
                         case "/__fixtures/period-unavailable": database.PeriodUnavailable = true; break;
                         case "/__fixtures/period-available": database.PeriodUnavailable = false; break;

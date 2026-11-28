@@ -21,16 +21,16 @@ public sealed class RoleRequestsController(RoleRequestService service) : Control
         [FromQuery] int pageSize = 20, [FromQuery] long? requestId = null, CancellationToken ct = default) =>
         service.List(false, status, page, pageSize, ct, requestId);
 
-    [HttpGet, Authorize(Policy = ApplicationPolicies.AdminOnly)]
-    public async Task<IActionResult> Review([FromQuery] string? status = null, [FromQuery] int page = 1,
+    [HttpGet, Authorize(Policy = ApplicationPolicies.AdministrationRead)]
+    public Task<PagedResponse<RoleRequestDTO>> Review([FromQuery] string? status = null, [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20, [FromQuery] long? requestId = null, CancellationToken ct = default) =>
-        await service.CanReview(ct) ? Ok(await service.List(true, status, page, pageSize, ct, requestId)) : Forbid();
+        service.List(true, status, page, pageSize, ct, requestId);
 
-    [HttpPost("{id:long}/approve"), Authorize(Policy = ApplicationPolicies.AdminOnly)]
+    [HttpPost("{id:long}/approve"), Authorize(Policy = ApplicationPolicies.AdministrationRead), Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
     public async Task<IActionResult> Approve(long id, RoleRequestDecisionDTO input, CancellationToken ct) =>
         MutationResponse(await service.Decide(id, true, input, ct));
 
-    [HttpPost("{id:long}/reject"), Authorize(Policy = ApplicationPolicies.AdminOnly)]
+    [HttpPost("{id:long}/reject"), Authorize(Policy = ApplicationPolicies.AdministrationRead), Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
     public async Task<IActionResult> Reject(long id, RoleRequestDecisionDTO input, CancellationToken ct) =>
         MutationResponse(await service.Decide(id, false, input, ct));
 

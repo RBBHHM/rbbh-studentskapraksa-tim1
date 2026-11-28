@@ -10,13 +10,14 @@ namespace Web.Blazor.Tests;
 public sealed class AuditApiTests
 {
     [Theory]
-    [InlineData("admin", true)]
-    [InlineData("Admin", false)]
-    [InlineData("gost", false)]
-    public void AdminOnlyMatchesActualBackendApplicationRoleNotPermissionOrProviderRole(string role, bool expected)
+    [InlineData("admin", "ADMINISTRATION_VIEW", true)]
+    [InlineData("custom-viewer", "ADMINISTRATION_VIEW", true)]
+    [InlineData("custom-manager", "ADMINISTRATION_MANAGE", false)]
+    [InlineData("gost", "KAPITAL_VIEW", false)]
+    public void AuditReadUsesTheEffectiveAdministrationViewGrant(string role, string grant, bool expected)
     {
-        var profile = new ApplicationProfile("u", "User", "user", "fixture@example.test", [role], ["ADMINISTRATION_MANAGE"]);
-        Assert.Equal(expected, ApplicationAccess.IsAdministrator(profile));
+        var profile = new ApplicationProfile("u", "User", "user", "fixture@example.test", [role], [grant]);
+        Assert.Equal(expected, ApplicationAccess.CanViewAdministration(profile));
     }
     [Fact]
     public async Task ActualAuditContractUsesLogsAndSourcePageSizeNotStarterAuditEnvelope()

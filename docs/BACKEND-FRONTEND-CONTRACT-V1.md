@@ -22,9 +22,9 @@ All routes require authentication. Request/owner identity comes from validated s
 | GET `/api/role-requests/options` | none | `{items:[{id,name}]}` active requestable DB roles | authenticated |
 | POST `/api/role-requests` | `{clientRequestId:guid,purpose:"new"|"change",roleIds:guid[],note?:string}` |201 request; matching clientRequestId replay200 same request | authenticated, verified email/subject |
 | GET `/api/role-requests/mine` | page=1,pageSize=20,status? | `{items,total,page,pageSize}` current subject only | authenticated |
-| GET `/api/role-requests` | same filters | same envelope | active application Admin |
-| POST `/api/role-requests/{id}/approve` | `{decisionId:guid,expectedVersion:int,note?:string}` |200 final request | active application Admin; no self-approval |
-| POST `/api/role-requests/{id}/reject` | same |200 final request | active application Admin; no self-rejection |
+| GET `/api/role-requests` | same filters | same envelope | `ADMINISTRATION_VIEW` |
+| POST `/api/role-requests/{id}/approve` | `{decisionId:guid,expectedVersion:int,note?:string}` |200 final request | `ADMINISTRATION_VIEW` and `ADMINISTRATION_MANAGE`; no self-approval |
+| POST `/api/role-requests/{id}/reject` | same |200 final request | `ADMINISTRATION_VIEW` and `ADMINISTRATION_MANAGE`; no self-rejection |
 | GET `/api/notifications` | page,pageSize,unreadOnly? | `{items,total,page,pageSize,unreadCount}` | recipient subject only |
 | POST `/api/notifications/{id}/read` | none |204, idempotent | recipient subject only; other owner404 |
 
@@ -120,7 +120,7 @@ New users/role-approval/subject-link audit rows use stable authenticated `sub` a
 - `POST /api/role-catalog`: `{name,displayName,description?,permissionIds:[]}` →201. Immutable name is ASCII letters/digits/underscore/hyphen/dot, max100; displayName required max100; description max500; distinct existing active permission IDs, max200.
 - `PUT /api/role-catalog/{id}`: `{displayName,description?,isActive,expectedVersion,permissionIds:[]}` →200. Names are immutable; deactivate through `isActive:false`, retaining history/assignments.
 - Definition shape: `{id,name,displayName,description,isActive,version,permissionIds,isProtected}`. Old roles use name as display fallback. Existing `/api/roles` shape is unchanged. Role-request options additionally return `displayName`.
-- Reads require administrative read. Writes require administrative management and current named Admin inside the serialized transaction. Technical Admin/Guest definitions are read-only (409 `roles.protected`); editing an actor's own assigned role is403 `roles.self_management_denied`. Duplicate name409, bad definition/permissions400, stale version409, unavailable mutation lock409, missing ID404. No Keycloak role mutation.
+- Reads require `ADMINISTRATION_VIEW`. Writes require `ADMINISTRATION_VIEW` and `ADMINISTRATION_MANAGE`, rechecked inside the serialized transaction. Technical Admin/Guest definitions are read-only (409 `roles.protected`); editing an actor's own assigned role is403 `roles.self_management_denied`. Duplicate name409, bad definition/permissions400, stale version409, unavailable mutation lock409, missing ID404. No Keycloak role mutation.
 - Apply `AddAdministrativeRoleCatalog` before backend rollout. Resolve any normalized duplicate names explicitly before migration; no automatic rename/merge. Display labels may be provided through language-pack keys by the frontend; do not treat technical names or permission codes as translated identity values.
 
 ### Business error resources

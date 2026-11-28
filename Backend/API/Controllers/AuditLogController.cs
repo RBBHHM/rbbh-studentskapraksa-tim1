@@ -10,7 +10,7 @@ namespace RBBH.ConnectedParties.API.Controllers;
 
 [ApiController]
 [Route("api/audit-logs")]
-[Authorize(Policy = ApplicationPolicies.AdminOnly)]
+[Authorize(Policy = ApplicationPolicies.AdministrationRead)]
 public class AuditLogController(ConnectedPartiesDbContext db) : ControllerBase
 {
     private static readonly Dictionary<string, string> ActionDisplayNames = new()

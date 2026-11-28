@@ -48,7 +48,7 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
 
     public Task<RoleCatalogDTO?> Create(CreateRoleCatalogDTO input, CancellationToken ct) => Locked<RoleCatalogDTO?>(async () =>
     {
-        await EnsureAdmin(ct);
+        await EnsureCanManage(ct);
         var name = input.Name?.Trim() ?? "";
         if (name.Length is < 1 or > 100 || !name.All(character => char.IsAsciiLetterOrDigit(character) || character is '_' or '-' or '.') || Protected(name))
             throw Invalid();
@@ -68,7 +68,7 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
 
     public Task<RoleCatalogDTO> Update(long id, UpdateRoleCatalogDTO input, CancellationToken ct) => Locked<RoleCatalogDTO>(async () =>
     {
-        await EnsureAdmin(ct);
+        await EnsureCanManage(ct);
         Validate(input.PermissionIds);
         var row = await db.Roles.Include(row => row.RolePermissions).SingleOrDefaultAsync(row => row.Id == id, ct)
             ?? throw new BusinessRuleException(404, "roles.not_found");
@@ -98,7 +98,7 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
 
     public Task<RoleDeletionResult> Delete(long id, DateTime expectedVersion, CancellationToken ct) => Locked(async () =>
     {
-        await EnsureAdmin(ct);
+        await EnsureCanManage(ct);
         var row = await db.Roles.Include(role => role.RolePermissions).SingleOrDefaultAsync(role => role.Id == id, ct);
         if (row is null) return RoleDeletionResult.Missing;
         if (Protected(row.Name)) return RoleDeletionResult.Protected;
@@ -117,13 +117,10 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
 
     public enum RoleDeletionResult { Deleted, Missing, Protected, Stale, InUse }
 
-    private async Task EnsureAdmin(CancellationToken ct)
+    private async Task EnsureCanManage(CancellationToken ct)
     {
         var subject = AuthenticatedActor.RequireSubject(Actor);
-        if (!await db.AppUsers.AnyAsync(user => user.IsActive && user.KeycloakSubjectConfirmed && user.KeycloakId == subject &&
-            db.UserRoles.Any(assignment => assignment.UserId == user.Id && assignment.IsActive && assignment.Role.IsActive &&
-                assignment.Role.Name == ApplicationAccessRoles.Administrator && assignment.Role.RolePermissions.Any(grant =>
-                    grant.Permission.IsActive && grant.Permission.Code == ApplicationPermissions.AdministrationManage)), ct))
+        if (!await AdministrationGrants.Managers(db).AnyAsync(user => user.KeycloakId == subject, ct))
             throw new BusinessRuleException(403, "authorization.admin_required");
     }
     private static void Validate(long[]? ids)

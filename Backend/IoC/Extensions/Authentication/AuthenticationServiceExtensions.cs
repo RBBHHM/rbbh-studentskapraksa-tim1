@@ -233,7 +233,6 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
                 AddPermissionPolicy(options, ApplicationPolicies.CodeListsRead, ApplicationPermissions.CodeListsView);
                 AddPermissionPolicy(options, ApplicationPolicies.AdministrationRead, ApplicationPermissions.AdministrationView);
                 AddPermissionPolicy(options, ApplicationPolicies.AdministrationWrite, ApplicationPermissions.AdministrationManage);
-                AddPermissionPolicy(options, ApplicationPolicies.AdminOnly, ApplicationPermissions.AdministrationManage);
             });
 
             return services;

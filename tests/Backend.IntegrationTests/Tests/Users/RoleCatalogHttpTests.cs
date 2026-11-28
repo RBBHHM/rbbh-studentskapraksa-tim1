@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using RBBH.ConnectedParties.BL.Services;
+using RBBH.ConnectedParties.BL.ServiceInterfaces;
 using RBBH.ConnectedParties.DL.DTO.Roles;
 using RBBH.ConnectedParties.DL.Entities.Role;
 using RBBH.ConnectedParties.Helpers.Constants;
@@ -13,7 +14,12 @@ namespace IntegrationTests.Tests.Users;
 public abstract class RoleCatalogFixture : RoleRequestFixture
 {
     protected override void ConfigureServices(IServiceCollection services)
-    { base.ConfigureServices(services); services.AddScoped<RoleCatalogService>(); }
+    {
+        base.ConfigureServices(services);
+        services.AddScoped<RoleCatalogService>();
+        services.AddScoped<IAppUserService, AppUserService>();
+        services.AddHttpClient<KeycloakAdminService>();
+    }
 
     protected async Task<RoleCatalogDTO> CreateCatalog(string name = "custom-reviewer")
     {
@@ -31,6 +37,44 @@ public abstract class RoleCatalogFixture : RoleRequestFixture
 public sealed class RoleCatalogHttpTests : RoleCatalogFixture
 {
     private static string DeleteUrl(RoleCatalogDTO role) => $"/api/role-catalog/{role.Id}?expectedVersion={role.Version:O}";
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CustomAdministrationGrantsPermitReadsAndControlWrites(bool canManage)
+    {
+        long[] grants = [];
+        await InDatabase(async db =>
+            grants = await db.Permissions.Where(p => p.Code == ApplicationPermissions.AdministrationView ||
+                (canManage && p.Code == ApplicationPermissions.AdministrationManage)).Select(p => p.Id).ToArrayAsync());
+        var created = await Client.PostAsJsonAsync("/api/role-catalog", new CreateRoleCatalogDTO("custom-administration", null, null, grants));
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var role = (await created.Content.ReadFromJsonAsync<RoleCatalogDTO>())!;
+        using var custom = NewClient("custom-admin");
+        var grantRequest = await Submit(custom, roles: [role.Id]);
+        var grantRequestId = grantRequest.GetProperty("id").GetInt64();
+        Assert.Equal(HttpStatusCode.OK, (await Client.PostAsJsonAsync($"/api/role-requests/{grantRequestId}/approve",
+            new { decisionId = Guid.NewGuid(), expectedVersion = 1 })).StatusCode);
+
+        foreach (var url in new[] { "/api/users", "/api/role-catalog", "/api/audit-logs", "/api/role-requests" })
+        {
+            using var response = await custom.GetAsync(url);
+            Assert.True(response.StatusCode == HttpStatusCode.OK, $"{url} returned {response.StatusCode}");
+        }
+
+        var newRole = await custom.PostAsJsonAsync("/api/role-catalog", new CreateRoleCatalogDTO("managed-role", null, null, []));
+        Assert.Equal(canManage ? HttpStatusCode.Created : HttpStatusCode.Forbidden, newRole.StatusCode);
+        if (canManage)
+            Assert.Equal(HttpStatusCode.Forbidden, (await custom.PutAsJsonAsync($"/api/role-catalog/{role.Id}",
+                new UpdateRoleCatalogDTO(null, null, true, role.Version, []))).StatusCode);
+
+        using var applicant = NewClient("new-applicant");
+        var request = await Submit(applicant);
+        var requestId = request.GetProperty("id").GetInt64();
+        var decision = await custom.PostAsJsonAsync($"/api/role-requests/{requestId}/approve",
+            new { decisionId = Guid.NewGuid(), expectedVersion = 1 });
+        Assert.Equal(canManage ? HttpStatusCode.OK : HttpStatusCode.Forbidden, decision.StatusCode);
+    }
 
     [Fact]
     public async Task RoleWithoutDisplayNameCanBeDeletedWithItsPermissionsAndAudit()

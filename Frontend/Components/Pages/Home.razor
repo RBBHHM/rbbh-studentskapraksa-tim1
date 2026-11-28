@@ -1,6 +1,5 @@
 @page "/"
 @page "/app"
-@inject RBI.Authorization.IRbiPermissionService Permissions
 @inject IProfileApi Profile
 @inject AuthenticationStateProvider AuthenticationState
 <PageTitle>@T["app.title"]</PageTitle>
@@ -30,17 +29,17 @@
     @if (_capital) { <HomeCard Title="@T["notifications.title"]" Description="@T["notifications.subtitle"]" Href="/app/notifications" Icon="RbiIconName.Bell" /> }
 </RbiBentoGrid>
 @code {
-    private bool _physical, _legal, _limits, _capital, _admin, _reports;
+    private bool _physical, _legal, _limits, _capital, _reports;
     protected override async Task OnInitializedAsync()
     {
         if ((await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated != true) return;
         try
         {
-            var access = await ApplicationNavigationAccess.ReadAsync(Profile, Permissions);
-            (_admin, _reports, _physical, _legal, _limits, _capital) =
-                (access.Administrator, access.Reports, access.Physical, access.Legal, access.Limits, access.Capital);
+            var access = await ApplicationNavigationAccess.ReadAsync(Profile);
+            (_reports, _physical, _legal, _limits, _capital) =
+                (access.Reports, access.Physical, access.Legal, access.Limits, access.Capital);
         }
-        catch (RegistryApiException) { _physical = _legal = _limits = _capital = _admin = _reports = false; }
+        catch (RegistryApiException) { _physical = _legal = _limits = _capital = _reports = false; }
     }
 }
 

@@ -106,8 +106,8 @@ else
             _authenticated = (await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true;
             if (!_authenticated) return;
             _profile = await Profile.GetAsync(token);
-            _canRead = ApplicationAccess.IsAdministrator(_profile) && _profile.Permissions.Contains("ADMINISTRATION_VIEW");
-            _canWrite = _canRead && _profile.Permissions.Contains("ADMINISTRATION_MANAGE");
+            _canRead = ApplicationAccess.CanViewAdministration(_profile);
+            _canWrite = ApplicationAccess.CanManageAdministration(_profile);
             if (!_canRead) return;
             if (!_loaded) _roles = await Api.RolesAsync(token);
             _result = await Api.ListAsync(_page, token, _search, _roleFilter);

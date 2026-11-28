@@ -43,14 +43,14 @@ public sealed class SqlBankReferenceSource(IOptions<BankReferenceOptions> option
     }
     private static BusinessRuleException Unavailable() => new(503, "bank_reference.unavailable");
     private async Task<ReferencePage<T>> Read<T>(string table, string[] columns, string? search, int page, int size,
-        int? exactColumn, Func<SqlDataReader, T> map, CancellationToken ct)
+        int? exactColumn, Func<SqlDataReader, T> map, CancellationToken ct, bool distinctResults = false)
     {
         if (!IsConfigured) throw Unavailable();
         if (search?.Length > 100) throw new BusinessRuleException(400, "bank_reference.invalid_search");
         page = Math.Clamp(page, 1, 1_000_000); size = Math.Clamp(size, 1, 100);
         var source = Identifier(table); var fields = columns.Select(Identifier).ToArray();
         var projected = fields.Select(field => $"CONVERT(nvarchar(4000),{field})").ToArray();
-        var normalized = exactColumn.HasValue
+        var normalized = exactColumn.HasValue || distinctResults
             ? projected.Select(field => $"COALESCE(LTRIM(RTRIM({field})), N'') COLLATE Latin1_General_100_BIN2").ToArray()
             : projected;
         var predicate = exactColumn is { } column
@@ -73,7 +73,16 @@ public sealed class SqlBankReferenceSource(IOptions<BankReferenceOptions> option
             }
             else
             {
-                command.CommandText = $"SELECT COUNT(*) FROM {source} WHERE {predicate}; SELECT {projection} FROM {source} WHERE {predicate} ORDER BY {projection} OFFSET @offset ROWS FETCH NEXT @take ROWS ONLY;";
+                if (distinctResults)
+                {
+                    // The group source contains one row per member. Page the unique number/name pairs.
+                    var groups = $"SELECT DISTINCT {normalized[0]} AS GroupNumber, {normalized[1]} AS GroupName FROM {source} WHERE {predicate}";
+                    command.CommandText = $"SELECT COUNT(*) FROM ({groups}) AS distinctGcc; SELECT GroupNumber, GroupName FROM ({groups}) AS distinctGcc ORDER BY GroupNumber, GroupName OFFSET @offset ROWS FETCH NEXT @take ROWS ONLY;";
+                }
+                else
+                {
+                    command.CommandText = $"SELECT COUNT(*) FROM {source} WHERE {predicate}; SELECT {projection} FROM {source} WHERE {predicate} ORDER BY {projection} OFFSET @offset ROWS FETCH NEXT @take ROWS ONLY;";
+                }
                 command.Parameters.Add("@offset", SqlDbType.Int).Value = (page - 1) * size;
                 command.Parameters.Add("@take", SqlDbType.Int).Value = size;
             }
@@ -113,7 +122,7 @@ public sealed class SqlBankReferenceSource(IOptions<BankReferenceOptions> option
     {
         var mapping = Settings.Gcc;
         return Read(mapping.Table, [mapping.Columns.Number, mapping.Columns.Name], search, page, pageSize, exactColumn,
-            reader => new BankGroup(Text(reader, 0), Text(reader, 1)), ct);
+            reader => new BankGroup(Text(reader, 0), Text(reader, 1)), ct, distinctResults: true);
     }
 
     public Task<ReferencePage<BankGroup>> Groups(string? search, int page, int pageSize, CancellationToken ct) =>

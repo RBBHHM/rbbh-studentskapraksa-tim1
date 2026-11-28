@@ -208,8 +208,8 @@ else
             _authenticated = (await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true;
             if (!_authenticated) return;
             var profile = await Profile.GetAsync(_token);
-            _canRead = ApplicationAccess.IsAdministrator(profile) && profile.Permissions.Contains("ADMINISTRATION_VIEW");
-            _canWrite = _canRead && profile.Permissions.Contains("ADMINISTRATION_MANAGE");
+            _canRead = ApplicationAccess.CanViewAdministration(profile);
+            _canWrite = ApplicationAccess.CanManageAdministration(profile);
             if (!_canRead) return;
             _page = await Api.ListAsync(_pageNumber, _search.Trim(), _token);
             if (_canWrite && _permissions.Count == 0)

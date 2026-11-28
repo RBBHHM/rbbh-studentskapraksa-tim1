@@ -15,7 +15,7 @@ else if (_error is not null)
     <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_error]" />
     <RbiButton OnClick="LoadAsync">@T["state.retry"]</RbiButton>
 }
-else if (!_admin) { <RbiAlert Title="@T["errors.forbidden"]" /> }
+else if (!_canRead) { <RbiAlert Title="@T["errors.forbidden"]" /> }
 else
 {
     <div class="registry-controls"><RegistrySearch Id="audit-search" Label="@T["audit.search"]" @bind-Value="_search" @bind-Value:after="SearchAsync" /></div>
@@ -152,7 +152,7 @@ else
     private AuditPage _result = new([], 0, 1, 200);
     private string? _search, _error;
     private int _page = 1;
-    private bool _disposed, _authenticated, _admin, _loading = true, _refreshing, _loaded;
+    private bool _disposed, _authenticated, _canRead, _loading = true, _refreshing, _loaded;
     private int TotalPages => Math.Max(1, (int)Math.Ceiling(_result.Total / (double)Math.Max(1, _result.PageSize)));
 
     protected override Task OnInitializedAsync() => LoadAsync();
@@ -162,9 +162,9 @@ else
         try
         {
             _authenticated = (await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true;
-            if (!_authenticated) { _admin = false; return; }
-            _admin = ApplicationAccess.IsAdministrator(await Profile.GetAsync(_token));
-            if (!_admin) return;
+            if (!_authenticated) { _canRead = false; return; }
+            _canRead = ApplicationAccess.CanViewAdministration(await Profile.GetAsync(_token));
+            if (!_canRead) return;
             await LoadPageAsync(_page);
             _loaded = true;
         }
