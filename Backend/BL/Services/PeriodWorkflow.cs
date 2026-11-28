@@ -38,7 +38,7 @@ public sealed class PeriodWorkflow(ConnectedPartiesDbContext db)
         var reviewers = await db.AppUsers.AsNoTracking()
             .Where(user => user.IsActive && user.KeycloakSubjectConfirmed && user.KeycloakId != "" &&
                 db.UserRoles.Any(role => role.UserId == user.Id && role.IsActive && role.Role.IsActive && role.Role.RolePermissions.Any(grant => grant.Permission.IsActive &&
-                    (grant.Permission.Code == ApplicationPermissions.CapitalCreate || grant.Permission.Code == ApplicationPermissions.CapitalEdit || grant.Permission.Code == ApplicationPermissions.CapitalDelete))))
+                    grant.Permission.Code == ApplicationPermissions.PeriodLockManage)))
             .Select(user => new { user.KeycloakId, user.Email }).ToListAsync(ct);
         if (reviewers.Count == 0) throw new BusinessRuleException(503, "period.notification_setup");
         foreach (var reviewer in reviewers)

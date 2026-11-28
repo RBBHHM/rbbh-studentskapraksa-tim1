@@ -41,4 +41,30 @@ test("custom administration grants refresh the menu and separate viewing from ma
   await expect(page).toHaveURL(/\/app\/admin\/audit$/);
   await administration.getByRole("link", { name: "Korisnici", exact: true }).click();
   await expect(page.getByRole("button", { name: "Dodaj korisnika", exact: true })).toBeVisible();
+  await expect(administration.getByRole("link", { name: "Upravljanje periodom", exact: true })).toHaveCount(0);
+
+  await administration.getByRole("link", { name: "Katalog rola", exact: true }).click();
+  const ownRole = page.getByRole("row", { name: /fixture-administration/ });
+  await expect(ownRole.getByText("Ne možete mijenjati definiciju role koja vam je dodijeljena.")).toBeVisible();
+  await expect(ownRole.getByRole("button", { name: "Uredi", exact: true })).toHaveCount(0);
+});
+
+test("a custom period viewer can read requests and needs a separate grant to lock the period", async ({ page, request }) => {
+  expect((await request.post("/__fixtures/reset", { headers })).status()).toBe(204);
+  expect((await request.post("/__fixtures/custom-period-view", { headers })).status()).toBe(204);
+  await page.goto("/app/profile");
+  await interactive(page);
+  const periodLink = page.getByRole("link", { name: "Upravljanje periodom", exact: true });
+  await periodLink.click();
+
+  await expect(page.getByRole("heading", { name: "Zahtjevi za otključavanje", exact: true })).toBeVisible();
+  const lock = page.getByRole("button", { name: "Zaključaj period", exact: true });
+  await expect(lock).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Korisnici", exact: true })).toHaveCount(0);
+
+  expect((await request.post("/__fixtures/custom-period-manage", { headers })).status()).toBe(204);
+  await page.reload();
+  await interactive(page);
+  await lock.click();
+  await expect(page.getByRole("button", { name: "Otključaj period", exact: true })).toBeVisible();
 });

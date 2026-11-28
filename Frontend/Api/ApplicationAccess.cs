@@ -5,6 +5,12 @@ public static class ApplicationAccess
     // The API supplies virtual Guest for eligible identities and an empty role list for denied identities.
     public static bool HasEffectiveApplicationAccess(ApplicationProfile profile) => profile.Roles.Count > 0;
 
+    public static bool CanManagePeriodLock(ApplicationProfile profile) =>
+        profile.Permissions.Contains("PERIOD_LOCK_MANAGE", StringComparer.Ordinal);
+
+    public static bool CanViewPeriodLock(ApplicationProfile profile) =>
+        CanManagePeriodLock(profile) || profile.Permissions.Contains("PERIOD_LOCK_VIEW", StringComparer.Ordinal);
+
     public static bool CanViewAdministration(ApplicationProfile profile) =>
         profile.Permissions.Contains("ADMINISTRATION_VIEW", StringComparer.Ordinal);
 

@@ -733,6 +733,7 @@
     "rolecatalog.status": "Status",
     "rolecatalog.active": "Aktivna rola",
     "rolecatalog.protected": "Sistemska rola – zaštićena",
+    "rolecatalog.self-management-denied": "Ne možete mijenjati definiciju role koja vam je dodijeljena.",
     "rolecatalog.read-only": "Samo za čitanje",
     "rolecatalog.description-field": "Opis role",
     "rolecatalog.search": "Pretraži role",

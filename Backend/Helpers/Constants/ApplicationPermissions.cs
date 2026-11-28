@@ -24,6 +24,9 @@ public static class ApplicationPermissions
     public const string AdministrationView = "ADMINISTRATION_VIEW";
     public const string AdministrationManage = "ADMINISTRATION_MANAGE";
 
+    public const string PeriodLockView = "PERIOD_LOCK_VIEW";
+    public const string PeriodLockManage = "PERIOD_LOCK_MANAGE";
+
     public static readonly string[] All =
     [
         PhysicalPersonsView, PhysicalPersonsCreate, PhysicalPersonsEdit, PhysicalPersonsDelete,
@@ -32,6 +35,6 @@ public static class ApplicationPermissions
         LimitsView, LimitsCreate, LimitsEdit, LimitsDelete,
         RegulatoryReportingView, RegulatoryReportingExport,
         CodeListsView,
-        AdministrationView, AdministrationManage
+        AdministrationView, AdministrationManage, PeriodLockView, PeriodLockManage
     ];
 }

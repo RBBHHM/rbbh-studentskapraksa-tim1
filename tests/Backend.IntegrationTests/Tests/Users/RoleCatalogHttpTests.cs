@@ -133,10 +133,14 @@ public sealed class RoleCatalogHttpTests : RoleCatalogFixture
             guest = (await db.Roles.SingleAsync(row => row.Name == ApplicationAccessRoles.Guest)).Id;
             db.UserRoles.Add(new UserRole { UserId = (await db.AppUsers.SingleAsync(row => row.KeycloakId == "creator")).Id, RoleId = role.Id }); await db.SaveChangesAsync();
         });
+        var owned = await Client.GetFromJsonAsync<RoleCatalogDTO>($"/api/role-catalog/{role.Id}");
+        Assert.True(owned!.IsAssignedToCurrentUser);
         var edit = new UpdateRoleCatalogDTO("Changed", null, false, role.Version, []);
         Assert.Equal(HttpStatusCode.Conflict, (await Client.PutAsJsonAsync($"/api/role-catalog/{admin}", edit)).StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, (await Client.PutAsJsonAsync($"/api/role-catalog/{guest}", edit)).StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await Client.PutAsJsonAsync($"/api/role-catalog/{role.Id}", edit)).StatusCode);
+        var selfEdit = await Client.PutAsJsonAsync($"/api/role-catalog/{role.Id}", edit);
+        Assert.Equal(HttpStatusCode.Forbidden, selfEdit.StatusCode);
+        Assert.Equal("roles.self_management_denied", (await selfEdit.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
         await InDatabase(async db => { Assert.All(await db.Roles.ToListAsync(), row => Assert.True(row.IsActive)); Assert.Single(await db.AuditLogs.ToListAsync()); });
     }
 

@@ -216,7 +216,7 @@ namespace IntegrationTests.Tests.PeriodLock
         // ─────────────────────────────────────────────────────────────
 
         [Fact]
-        public void PeriodController_RequiresRegulatoryReportingAccess()
+        public void PeriodController_RequiresEffectiveApplicationAccess()
         {
             var authorizeAttr = typeof(PeriodLockController)
                 .GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute), true)
@@ -224,7 +224,7 @@ namespace IntegrationTests.Tests.PeriodLock
                 .FirstOrDefault();
 
             authorizeAttr.Should().NotBeNull("upravljanje periodom zahtijeva autentificiran funkcionalni pristup");
-            authorizeAttr!.Policy.Should().Be(RBBH.ConnectedParties.Helpers.Constants.ApplicationPolicies.CapitalRead);
+            authorizeAttr!.Policy.Should().Be(RBBH.ConnectedParties.Helpers.Constants.ApplicationPolicies.ApplicationAccess);
         }
 
         [Fact]
@@ -237,7 +237,7 @@ namespace IntegrationTests.Tests.PeriodLock
                 .GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AllowAnonymousAttribute), true)
                 .FirstOrDefault();
 
-            allowAnonAttr.Should().BeNull("podaci o periodu nisu javni i koriste isto pravilo pristupa kao modul izvještavanja");
+            allowAnonAttr.Should().BeNull("podaci potrebni za provjeru trenutne blokade dostupni su prijavljenim korisnicima aplikacije");
         }
 
         // ─────────────────────────────────────────────────────────────

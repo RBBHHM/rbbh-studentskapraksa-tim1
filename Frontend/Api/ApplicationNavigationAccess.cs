@@ -3,6 +3,7 @@ namespace RBBH.RelatedPartiesRegister.Web.Api;
 /// <summary>Shared navigation projection from one effective application profile.</summary>
 public sealed record ApplicationNavigationAccess(
     bool Administration,
+    bool PeriodLock,
     bool Reports,
     bool Physical,
     bool Legal,
@@ -16,6 +17,7 @@ public sealed record ApplicationNavigationAccess(
         var effective = await profile.GetAsync(cancellationToken);
         return new(
             ApplicationAccess.CanViewAdministration(effective),
+            ApplicationAccess.CanViewPeriodLock(effective),
             ApplicationAccess.HasEffectiveApplicationAccess(effective),
             effective.Permissions.Contains("FL_VIEW"),
             effective.Permissions.Contains("PL_VIEW"),

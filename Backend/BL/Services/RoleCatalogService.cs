@@ -30,14 +30,16 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
         var rows = await query.Include(row => row.RolePermissions).OrderBy(row => row.Name).ThenBy(row => row.Id)
             .Skip((int)Math.Min((long)(page - 1) * pageSize, int.MaxValue)).Take(pageSize).ToListAsync(ct);
         var total = page == 1 && rows.Count < pageSize ? rows.Count : await query.CountAsync(ct);
-        return new { items = rows.Select(Map).ToArray(), total, page, pageSize };
+        var ids = rows.Select(row => row.Id).ToArray();
+        var assigned = (await ActorRoleIds().Where(id => ids.Contains(id)).ToListAsync(ct)).ToHashSet();
+        return new { items = rows.Select(row => Map(row, assigned.Contains(row.Id))).ToArray(), total, page, pageSize };
     }
 
     public async Task<RoleCatalogDTO> Get(long id, CancellationToken ct)
     {
         var row = await db.Roles.AsNoTracking().Include(row => row.RolePermissions).SingleOrDefaultAsync(row => row.Id == id, ct)
             ?? throw new BusinessRuleException(404, "roles.not_found");
-        return Map(row);
+        return Map(row, await ActorRoleIds().ContainsAsync(id, ct));
     }
 
     public async Task<object> Permissions(CancellationToken ct) => new
@@ -63,20 +65,18 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
         db.Roles.Add(row);
         db.AuditLogs.Add(BusinessAudit.Create("Role", "ROLE_CATALOG_CREATE", AuthenticatedActor.Username(Actor), accessor, null,
             new { row.Name, row.IsActive, PermissionIds = input.PermissionIds }));
-        await db.SaveChangesAsync(ct); return Map(row);
+        await db.SaveChangesAsync(ct); return Map(row, false);
     }, ct);
 
-    public Task<RoleCatalogDTO> Update(long id, UpdateRoleCatalogDTO input, CancellationToken ct) => Locked<RoleCatalogDTO>(async () =>
+    public Task<RoleCatalogDTO?> Update(long id, UpdateRoleCatalogDTO input, CancellationToken ct) => Locked<RoleCatalogDTO?>(async () =>
     {
         await EnsureCanManage(ct);
         Validate(input.PermissionIds);
         var row = await db.Roles.Include(row => row.RolePermissions).SingleOrDefaultAsync(row => row.Id == id, ct)
             ?? throw new BusinessRuleException(404, "roles.not_found");
         if (Protected(row.Name)) throw new BusinessRuleException(409, "roles.protected");
-        var subject = AuthenticatedActor.RequireSubject(Actor);
-        if (await db.UserRoles.AnyAsync(assignment => assignment.RoleId == id && assignment.IsActive &&
-            db.AppUsers.Any(user => user.Id == assignment.UserId && user.KeycloakSubjectConfirmed && user.KeycloakId == subject), ct))
-            throw new BusinessRuleException(403, "roles.self_management_denied");
+        if (await ActorRoleIds().ContainsAsync(id, ct))
+            return null;
         if (input.ExpectedVersion != VersionOf(row)) throw new BusinessRuleException(409, "request.concurrent_change");
         await ValidatePermissions(input.PermissionIds, ct);
         var before = new { row.Name, row.IsActive, PermissionIds = row.RolePermissions.Select(grant => grant.PermissionId).ToArray() };
@@ -117,6 +117,14 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
 
     public enum RoleDeletionResult { Deleted, Missing, Protected, Stale, InUse }
 
+    private IQueryable<long> ActorRoleIds()
+    {
+        var subject = AuthenticatedActor.RequireSubject(Actor);
+        return db.UserRoles.Where(assignment => assignment.IsActive &&
+            db.AppUsers.Any(user => user.Id == assignment.UserId && user.KeycloakSubjectConfirmed && user.KeycloakId == subject))
+            .Select(assignment => assignment.RoleId);
+    }
+
     private async Task EnsureCanManage(CancellationToken ct)
     {
         var subject = AuthenticatedActor.RequireSubject(Actor);
@@ -136,6 +144,6 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
     private Task<T> Locked<T>(Func<Task<T>> mutation, CancellationToken ct) => UsersMutationBoundary.ExecuteAsync(db, mutation,
         () => throw new BusinessRuleException(409, "request.busy"), ct);
     private static BusinessRuleException Invalid() => new(400, "roles.invalid_definition");
-    private static RoleCatalogDTO Map(Role row) => new(row.Id, row.Name, row.Name, null,
-        row.IsActive, VersionOf(row), row.RolePermissions.Select(grant => grant.PermissionId).Order().ToArray(), Protected(row.Name));
+    private static RoleCatalogDTO Map(Role row, bool isAssignedToCurrentUser) => new(row.Id, row.Name, row.Name, null,
+        row.IsActive, VersionOf(row), row.RolePermissions.Select(grant => grant.PermissionId).Order().ToArray(), Protected(row.Name), isAssignedToCurrentUser);
 }

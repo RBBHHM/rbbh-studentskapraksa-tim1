@@ -225,6 +225,8 @@ internal static partial class BrowserHostProgram
                             await SeedAsync(backend, user); break;
                         case "/__fixtures/custom-admin-view":
                         case "/__fixtures/custom-admin-manage":
+                        case "/__fixtures/custom-period-view":
+                        case "/__fixtures/custom-period-manage":
                         {
                             await using var scope = backend.Services.CreateAsyncScope();
                             var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
@@ -239,9 +241,14 @@ internal static partial class BrowserHostProgram
                                 db.UserRoles.Add(new UserRole { UserId = account.Id, RoleId = role.Id });
                             }
 
-                            var manage = context.Request.Path == "/__fixtures/custom-admin-manage";
-                            var permissions = await db.Permissions.Where(row => row.Code == ApplicationPermissions.AdministrationView ||
-                                (manage && row.Code == ApplicationPermissions.AdministrationManage)).ToListAsync();
+                            string[] codes = context.Request.Path.Value switch
+                            {
+                                "/__fixtures/custom-period-view" => [ApplicationPermissions.PeriodLockView],
+                                "/__fixtures/custom-period-manage" => [ApplicationPermissions.PeriodLockManage],
+                                "/__fixtures/custom-admin-manage" => [ApplicationPermissions.AdministrationView, ApplicationPermissions.AdministrationManage],
+                                _ => [ApplicationPermissions.AdministrationView]
+                            };
+                            var permissions = await db.Permissions.Where(row => codes.Contains(row.Code)).ToListAsync();
                             foreach (var permission in permissions)
                                 if (!role.RolePermissions.Any(grant => grant.PermissionId == permission.Id))
                                     role.RolePermissions.Add(new RolePermission { RoleId = role.Id, PermissionId = permission.Id });

@@ -33,6 +33,38 @@ public sealed class PeriodOwnershipHttpTests : AuthenticatedApiFixture
         return row.Id;
     }
 
+    [Theory]
+    [InlineData(ApplicationPermissions.PeriodLockView, true, false)]
+    [InlineData(ApplicationPermissions.PeriodLockManage, true, true)]
+    [InlineData(ApplicationPermissions.AdministrationManage, false, false)]
+    [InlineData(ApplicationPermissions.CapitalEdit, false, false)]
+    public async Task CustomGrantsSeparatePeriodReviewFromMutations(string code, bool canRead, bool canManage)
+    {
+        const string subject = "period-custom-user";
+        await InDatabase(async db =>
+        {
+            var role = new Role { Name = "period-custom-role", CreatedBy = "fixture" };
+            var user = new AppUser { Username = subject, Email = subject + "@example.test",
+                KeycloakId = subject, KeycloakSubjectConfirmed = true };
+            db.AddRange(role, user);
+            var permission = await db.Permissions.SingleAsync(row => row.Code == code);
+            db.RolePermissions.Add(new RolePermission { RoleId = role.Id, PermissionId = permission.Id });
+            db.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = role.Id });
+            await db.SaveChangesAsync();
+        });
+
+        using var custom = NewClient(subject);
+        Assert.Equal(HttpStatusCode.OK, (await custom.GetAsync("/api/period-lock/current")).StatusCode);
+        var readStatus = canRead ? HttpStatusCode.OK : HttpStatusCode.Forbidden;
+        Assert.Equal(readStatus, (await custom.GetAsync("/api/period-lock/status?year=2027&month=10")).StatusCode);
+        Assert.Equal(readStatus, (await custom.GetAsync("/api/period-lock/unlock-requests/review")).StatusCode);
+
+        var target = new { year = 2027, month = 10 };
+        var writeStatus = canManage ? HttpStatusCode.OK : HttpStatusCode.Forbidden;
+        Assert.Equal(writeStatus, (await custom.PostAsJsonAsync("/api/period-lock/lock", target)).StatusCode);
+        Assert.Equal(writeStatus, (await custom.PostAsJsonAsync("/api/period-lock/unlock", target)).StatusCode);
+    }
+
     [Fact]
     public async Task DefaultListIsSubjectScopedAndPrivilegedReviewUsesSeparateRoute()
     {

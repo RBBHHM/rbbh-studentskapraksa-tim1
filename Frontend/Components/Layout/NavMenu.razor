@@ -16,17 +16,23 @@
                 @if (_reports) { <NavEntry Label="@T["reports.title"]" Href="/app/reports" Glyph="AppIconName.FileChartColumn" Active="@IsActive("app/reports")" /> }
             </nav>
         </div>
-        @if (_admin)
+        @if (_admin || _periodLock)
         {
             <div class="app-nav__area">
                 <p class="app-nav__eyebrow">@T["nav.area.administration"]</p>
                 <nav class="app-nav__list" aria-label="@T["nav.area.administration"]">
-                    <NavEntry Label="@T["users.title"]" Href="/app/admin/users" Icon="RbiIconName.Users" Active="@IsActive("app/admin/users")" />
-                    <NavEntry Label="@T["roles.admin-title"]" Href="/app/admin/role-requests" Glyph="AppIconName.UserCog" Active="@IsActive("app/admin/role-requests")" />
-                    <NavEntry Label="@T["rolecatalog.title"]" Href="/app/admin/role-catalog" Glyph="AppIconName.UserCog" Active="@IsActive("app/admin/role-catalog")" />
-                    <NavEntry Label="@T["period.title"]" Href="/app/admin/period" Glyph="AppIconName.CalendarClock" Active="@IsActive("app/admin/period")" />
-                    <NavEntry Label="@T["codes.title"]" Href="/app/admin/code-lists" Glyph="AppIconName.BookOpen" Active="@IsActive("app/admin/code-lists")" />
-                    <NavEntry Label="@T["audit.title"]" Href="/app/admin/audit" Glyph="AppIconName.ScrollText" Active="@IsActive("app/admin/audit")" />
+                    @if (_admin)
+                    {
+                        <NavEntry Label="@T["users.title"]" Href="/app/admin/users" Icon="RbiIconName.Users" Active="@IsActive("app/admin/users")" />
+                        <NavEntry Label="@T["roles.admin-title"]" Href="/app/admin/role-requests" Glyph="AppIconName.UserCog" Active="@IsActive("app/admin/role-requests")" />
+                        <NavEntry Label="@T["rolecatalog.title"]" Href="/app/admin/role-catalog" Glyph="AppIconName.UserCog" Active="@IsActive("app/admin/role-catalog")" />
+                        <NavEntry Label="@T["codes.title"]" Href="/app/admin/code-lists" Glyph="AppIconName.BookOpen" Active="@IsActive("app/admin/code-lists")" />
+                        <NavEntry Label="@T["audit.title"]" Href="/app/admin/audit" Glyph="AppIconName.ScrollText" Active="@IsActive("app/admin/audit")" />
+                    }
+                    @if (_periodLock)
+                    {
+                        <NavEntry Label="@T["period.title"]" Href="/app/admin/period" Glyph="AppIconName.CalendarClock" Active="@IsActive("app/admin/period")" />
+                    }
                 </nav>
             </div>
         }
@@ -40,7 +46,7 @@
 </div>
 
 @code {
-    private bool _physical, _legal, _limits, _capital, _admin, _reports;
+    private bool _physical, _legal, _limits, _capital, _admin, _periodLock, _reports;
     private readonly LatestPageRequest _accessRequest = new();
     private readonly CancellationTokenSource _lifetime = new();
 
@@ -60,11 +66,11 @@
 
         var access = await ApplicationNavigationAccess.ReadAsync(Profile, token);
         token.ThrowIfCancellationRequested();
-        (_admin, _reports, _physical, _legal, _limits, _capital) =
-            (access.Administration, access.Reports, access.Physical, access.Legal, access.Limits, access.Capital);
+        (_admin, _periodLock, _reports, _physical, _legal, _limits, _capital) =
+            (access.Administration, access.PeriodLock, access.Reports, access.Physical, access.Legal, access.Limits, access.Capital);
     }, _ => ClearAccess(), () => { if (!_lifetime.IsCancellationRequested) StateHasChanged(); });
 
-    private void ClearAccess() => _physical = _legal = _limits = _capital = _admin = _reports = false;
+    private void ClearAccess() => _physical = _legal = _limits = _capital = _admin = _periodLock = _reports = false;
     private void RouteChanged(object? sender, LocationChangedEventArgs args) => _ = InvokeAsync(async () =>
     {
         if (_lifetime.IsCancellationRequested) return;

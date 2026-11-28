@@ -50,5 +50,18 @@ public sealed class RoleCatalogController(RoleCatalogService catalog) : Controll
     }
 
     [HttpPut("{id:long}"), Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
-    public Task<RoleCatalogDTO> Update(long id, UpdateRoleCatalogDTO input, CancellationToken ct) => catalog.Update(id, input, ct);
+    public async Task<IActionResult> Update(long id, UpdateRoleCatalogDTO input, CancellationToken ct)
+    {
+        var role = await catalog.Update(id, input, ct);
+        if (role is not null) return Ok(role);
+
+        const string resourceKey = "errors.roles.self.management.denied";
+        return Problem(statusCode: StatusCodes.Status403Forbidden,
+            detail: Localization.BackendMessages.Message(resourceKey),
+            extensions: new Dictionary<string, object?>
+            {
+                ["code"] = "roles.self_management_denied",
+                ["resourceKey"] = resourceKey
+            });
+    }
 }

@@ -31,7 +31,9 @@ public static class RolePermissionMatrix
             [
                 ApplicationPermissions.CapitalCreate,
                 ApplicationPermissions.CapitalEdit,
-                ApplicationPermissions.CapitalDelete
+                ApplicationPermissions.CapitalDelete,
+                ApplicationPermissions.PeriodLockView,
+                ApplicationPermissions.PeriodLockManage
             ],
             [ApplicationAccessRoles.Limits] =
             [

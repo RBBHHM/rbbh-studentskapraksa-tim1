@@ -51,6 +51,7 @@ public sealed class RegistryApiException : Exception
         (System.Net.HttpStatusCode.BadRequest, "users.email_invalid") => "users.email-invalid",
         (System.Net.HttpStatusCode.BadRequest, "users.names_invalid") => "users.name-invalid",
         (System.Net.HttpStatusCode.BadRequest, "users.roles_invalid") => "users.create-roles-invalid",
+        (System.Net.HttpStatusCode.Forbidden, "roles.self_management_denied") => "rolecatalog.self-management-denied",
         (System.Net.HttpStatusCode.Conflict, "roles.in_use") => "rolecatalog.delete-in-use",
         (System.Net.HttpStatusCode.Conflict, "roles.duplicate_name") => "errors.roles.duplicate.name",
         (System.Net.HttpStatusCode.Conflict, "verification.provenance_required") => "errors.verification-provenance-required",

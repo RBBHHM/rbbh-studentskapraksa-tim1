@@ -25,6 +25,23 @@ public sealed class RegistryGccHttpTests : AuthenticatedApiFixture
         gccNumber = gcc, gccName = "Forged client name", isLargeExposure = exposure
     };
     [Fact]
+    public async Task GccSearchCancellationIsReportedWithoutAnErrorResponse()
+    {
+        using var cancellation = new CancellationTokenSource();
+        _source.SetupGet(source => source.IsConfigured).Returns(true);
+        _source.Setup(source => source.Groups("v", 1, 20, cancellation.Token)).Returns(() =>
+        {
+            cancellation.Cancel();
+            return Task.FromCanceled<ReferencePage<BankGroup>>(cancellation.Token);
+        });
+        var controller = new RBBH.ConnectedParties.API.Controllers.BankReferenceController(_source.Object);
+
+        var result = await controller.Groups(cancellation.Token, "v");
+
+        Assert.Equal(499, Assert.IsType<Microsoft.AspNetCore.Mvc.StatusCodeResult>(result.Result).StatusCode);
+    }
+
+    [Fact]
     public async Task GccNameIsServerResolvedAndOmittedFieldsPreserveStoredValues()
     {
         var response = await Client.PostAsJsonAsync("/api/legal-entities", Legal("123")); Assert.Equal(HttpStatusCode.Created, response.StatusCode);

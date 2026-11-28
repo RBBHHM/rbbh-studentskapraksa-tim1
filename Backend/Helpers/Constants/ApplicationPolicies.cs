@@ -26,6 +26,8 @@ public static class ApplicationPolicies
     public const string LimitsEdit = "limits.edit";
     public const string LimitsDelete = "limits.delete";
     public const string CodeListsRead = "code-lists.read";
+    public const string PeriodLockRead = "period-lock.read";
+    public const string PeriodLockWrite = "period-lock.write";
     public const string AdministrationRead = "administration.read";
     public const string AdministrationWrite = "administration.write";
 }

@@ -57,7 +57,7 @@ else
                         <td><span class="registry-cell-label" aria-hidden="true">@T["rolecatalog.permissions"]</span>@role.PermissionIds.Count</td>
                         <td><span class="registry-cell-label" aria-hidden="true">@T["rolecatalog.status"]</span><Indicator Kind="@(role.IsActive ? "active" : "inactive")" Label="@T[role.IsActive ? "codes.active" : "codes.inactive"]" /></td>
                         <td><span class="registry-cell-label" aria-hidden="true">@T["common.actions"]</span>
-                            @if (_canWrite && !role.IsProtected)
+                            @if (_canWrite && !role.IsProtected && !role.IsAssignedToCurrentUser)
                             {
                                 <div class="role-catalog-actions">
                                     <RbiButton Variant="RbiButtonVariant.Secondary" Disabled="@(_busy || _refreshing)" OnClick="() => EditRole(role)">@T["rolecatalog.edit"]</RbiButton>
@@ -66,7 +66,7 @@ else
                             }
                             else
                             {
-                                <span class="app-hint">@T[role.IsProtected ? "rolecatalog.protected" : "rolecatalog.read-only"]</span>
+                                <span class="app-hint">@T[role.IsProtected ? "rolecatalog.protected" : role.IsAssignedToCurrentUser ? "rolecatalog.self-management-denied" : "rolecatalog.read-only"]</span>
                             }
                         </td>
                     </tr>
@@ -262,7 +262,7 @@ else
 
     private void EditRole(RoleDefinition role)
     {
-        if (_canWrite && !role.IsProtected && !_busy) OpenEditor(role);
+        if (_canWrite && !role.IsProtected && !role.IsAssignedToCurrentUser && !_busy) OpenEditor(role);
     }
 
     private void OpenEditor(RoleDefinition? role = null)
@@ -292,7 +292,7 @@ else
 
     private void ConfirmDelete(RoleDefinition role)
     {
-        if (!_canWrite || role.IsProtected || _busy || _refreshing) return;
+        if (!_canWrite || role.IsProtected || role.IsAssignedToCurrentUser || _busy || _refreshing) return;
         _deleteError = null;
         _notice = null;
         _deleteTarget = role;

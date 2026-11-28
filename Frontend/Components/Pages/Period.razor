@@ -94,8 +94,8 @@ else if (_current is { } current)
             _authenticated = (await AuthenticationState.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true;
             if (!_authenticated) return;
             var profile = await Profile.GetAsync(_token);
-            _canRead = ApplicationAccess.CanViewAdministration(profile) && profile.Permissions.Contains("KAPITAL_VIEW");
-            _canWrite = _canRead && profile.Permissions.Any(code => code is "KAPITAL_CREATE" or "KAPITAL_EDIT" or "KAPITAL_DELETE");
+            _canRead = ApplicationAccess.CanViewPeriodLock(profile);
+            _canWrite = ApplicationAccess.CanManagePeriodLock(profile);
             if (!_canRead) return;
             _current = await Api.CurrentAsync(_token);
             await LoadRequestsAsync();
@@ -152,10 +152,10 @@ else if (_current is { } current)
 
     private async Task LoadRequestsAsync()
     {
-        _requests = await Api.RequestsAsync(_status, _page, _canWrite, _token);
+        _requests = await Api.RequestsAsync(_status, _page, true, _token);
         if (_page <= TotalPages) return;
         _page = TotalPages;
-        _requests = await Api.RequestsAsync(_status, _page, _canWrite, _token);
+        _requests = await Api.RequestsAsync(_status, _page, true, _token);
     }
     public void Dispose() { _disposed = true; _lifetime.Cancel(); _lifetime.Dispose(); }
 }

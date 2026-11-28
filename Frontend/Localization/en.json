@@ -733,6 +733,7 @@
     "rolecatalog.status": "Status",
     "rolecatalog.active": "Active role",
     "rolecatalog.protected": "System role – protected",
+    "rolecatalog.self-management-denied": "You cannot change the definition of a role assigned to you.",
     "rolecatalog.read-only": "Read only",
     "rolecatalog.description-field": "Role description",
     "rolecatalog.search": "Search roles",

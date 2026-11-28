@@ -33,5 +33,25 @@ public sealed class BankReferenceController(IBankReferenceSource source) : Contr
         }
     }
     [HttpGet("gcc")]
-    public Task<ReferencePage<BankGroup>> Groups(CancellationToken ct, string? search = null, int page = 1, int pageSize = 20) => source.Groups(search, page, pageSize, ct);
+    public async Task<ActionResult<ReferencePage<BankGroup>>> Groups(CancellationToken ct, string? search = null, int page = 1, int pageSize = 20)
+    {
+        if (!source.IsConfigured)
+            return Problem(statusCode: StatusCodes.Status503ServiceUnavailable,
+                extensions: new Dictionary<string, object?> { ["code"] = "bank_reference.unavailable" });
+        try
+        {
+            var result = await source.Groups(search, page, pageSize, ct);
+            if (ct.IsCancellationRequested) return StatusCode(StatusCodes.Status499ClientClosedRequest);
+            return Ok(result);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            return StatusCode(StatusCodes.Status499ClientClosedRequest);
+        }
+        catch (BusinessRuleException exception)
+        {
+            return Problem(statusCode: exception.Status,
+                extensions: new Dictionary<string, object?> { ["code"] = exception.Code });
+        }
+    }
 }

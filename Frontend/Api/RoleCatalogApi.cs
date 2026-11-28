@@ -3,7 +3,7 @@ using RBI.ApiCore;
 namespace RBBH.RelatedPartiesRegister.Web.Api;
 
 public sealed record RoleDefinition(long Id, string Name, string DisplayName, string? Description,
-    bool IsActive, DateTime Version, IReadOnlyList<long> PermissionIds, bool IsProtected);
+    bool IsActive, DateTime Version, IReadOnlyList<long> PermissionIds, bool IsProtected, bool IsAssignedToCurrentUser = false);
 public sealed record RoleCatalogPage(IReadOnlyList<RoleDefinition> Items, int Total, int Page, int PageSize);
 public sealed record RolePermissionOption(long Id, string Code, string Module, string? Description);
 public sealed record RolePermissionOptions(IReadOnlyList<RolePermissionOption> Items);

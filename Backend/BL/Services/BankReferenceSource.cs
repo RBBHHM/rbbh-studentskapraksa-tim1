@@ -99,6 +99,10 @@ public sealed class SqlBankReferenceSource(IOptions<BankReferenceOptions> option
             while (await reader.ReadAsync(ct)) rows.Add(map(reader));
             return new(rows, total ?? rows.Count, page, size);
         }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested && exactColumn is null)
+        {
+            return new([], 0, page, size);
+        }
         catch (Exception error) when (error is SqlException or InvalidOperationException or ArgumentException)
         {
             logger.LogWarning("Bank reference lookup unavailable. FailureType {FailureType}", error.GetType().Name); throw Unavailable();

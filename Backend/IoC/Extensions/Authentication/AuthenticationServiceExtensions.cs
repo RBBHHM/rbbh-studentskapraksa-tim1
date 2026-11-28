@@ -231,6 +231,8 @@ namespace RBBH.ConnectedParties.IoC.Extensions.Authentication
                 AddPermissionPolicy(options, ApplicationPolicies.LimitsEdit, ApplicationPermissions.LimitsEdit);
                 AddPermissionPolicy(options, ApplicationPolicies.LimitsDelete, ApplicationPermissions.LimitsDelete);
                 AddPermissionPolicy(options, ApplicationPolicies.CodeListsRead, ApplicationPermissions.CodeListsView);
+                AddWritePolicy(options, ApplicationPolicies.PeriodLockRead, ApplicationPermissions.PeriodLockView, ApplicationPermissions.PeriodLockManage);
+                AddPermissionPolicy(options, ApplicationPolicies.PeriodLockWrite, ApplicationPermissions.PeriodLockManage);
                 AddPermissionPolicy(options, ApplicationPolicies.AdministrationRead, ApplicationPermissions.AdministrationView);
                 AddPermissionPolicy(options, ApplicationPolicies.AdministrationWrite, ApplicationPermissions.AdministrationManage);
             });

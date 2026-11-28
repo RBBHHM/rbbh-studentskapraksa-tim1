@@ -16,7 +16,7 @@ namespace RBBH.ConnectedParties.API.Controllers;
 [RBBH.ConnectedParties.Helpers.RequireActorEmail]
 [ApiController]
 [Route("api/period-lock")]
-[Authorize(Policy = ApplicationPolicies.CapitalRead)]
+[Authorize(Policy = ApplicationPolicies.ApplicationAccess)]
 public class PeriodLockController(
     IPeriodLockRepository periodLockRepository,
     IUnlockRequestRepository unlockRequestRepository,
@@ -44,7 +44,7 @@ public class PeriodLockController(
         });
     }
 
-    [HttpGet("status")]
+    [HttpGet("status"), Authorize(Policy = ApplicationPolicies.PeriodLockRead)]
     public async Task<IActionResult> GetPeriodStatus(
         [FromQuery] int year, [FromQuery] int month)
     {
@@ -66,7 +66,7 @@ public class PeriodLockController(
     }
 
     [HttpPost("lock")]
-    [Authorize(Policy = ApplicationPolicies.CapitalWrite)]
+    [Authorize(Policy = ApplicationPolicies.PeriodLockWrite)]
     public Task<IActionResult> LockPeriod([FromBody] PeriodTargetDto? dto = null)
     {
         var now = DateTime.UtcNow; var year = dto?.Year ?? now.Year; var month = dto?.Month ?? now.Month;
@@ -74,7 +74,7 @@ public class PeriodLockController(
             BackendMessages.Message("messages.period.locked", periodLockService.GetMonthDisplayName(year, month)));
     }
 
-    [HttpPost("unlock"), Authorize(Policy = ApplicationPolicies.CapitalWrite)]
+    [HttpPost("unlock"), Authorize(Policy = ApplicationPolicies.PeriodLockWrite)]
     public Task<IActionResult> UnlockPeriod([FromBody] PeriodTargetDto? dto = null)
     {
         var now = DateTime.UtcNow; var year = dto?.Year ?? now.Year; var month = dto?.Month ?? now.Month;
@@ -82,7 +82,7 @@ public class PeriodLockController(
             BackendMessages.Message("messages.period.unlocked", periodLockService.GetMonthDisplayName(year, month)));
     }
 
-    [HttpPost("request-unlock"), Authorize(Policy = ApplicationPolicies.CapitalWrite)]
+    [HttpPost("request-unlock"), Authorize(Policy = ApplicationPolicies.PeriodLockWrite)]
     public Task<IActionResult> RequestUnlock([FromBody] RequestUnlockDto dto)
     {
         if (dto is null || string.IsNullOrWhiteSpace(dto.Reason) || dto.Reason.Length > 500 || dto.Reason.Trim().Length < 10)
@@ -102,8 +102,7 @@ public class PeriodLockController(
         return await ListUnlockRequests(status, page, pageSize, ActorSubject());
     }
 
-    [HttpGet("unlock-requests/review")]
-    [Authorize(Policy = ApplicationPolicies.CapitalWrite)]
+    [HttpGet("unlock-requests/review"), Authorize(Policy = ApplicationPolicies.PeriodLockRead)]
     public Task<IActionResult> GetReviewUnlockRequests([FromQuery] string? status = null,
         [FromQuery] int page = 1, [FromQuery] int pageSize = 20) => ListUnlockRequests(status, page, pageSize, null);
 
@@ -133,7 +132,7 @@ public class PeriodLockController(
     }
 
     [HttpPost("unlock-requests/{id:long}/reject")]
-    [Authorize(Policy = ApplicationPolicies.CapitalWrite)]
+    [Authorize(Policy = ApplicationPolicies.PeriodLockWrite)]
     public Task<IActionResult> RejectRequest([FromRoute] long id, [FromBody] AdminActionDto dto)
     {
         if (dto is null || string.IsNullOrWhiteSpace(dto.Note) || dto.Note.Length > 1000 || dto.Note.Trim().Length < 10)
@@ -141,7 +140,7 @@ public class PeriodLockController(
         return Command(() => workflow.Process(id, true, dto.Note, User, HttpContext.RequestAborted), BackendMessages.Message("messages.period.request.rejected"));
     }
 
-    [HttpPost("unlock-requests/{id:long}/request-info"), Authorize(Policy = ApplicationPolicies.CapitalWrite)]
+    [HttpPost("unlock-requests/{id:long}/request-info"), Authorize(Policy = ApplicationPolicies.PeriodLockWrite)]
     public Task<IActionResult> RequestMoreInfo([FromRoute] long id, [FromBody] AdminActionDto dto)
     {
         if (dto is null || string.IsNullOrWhiteSpace(dto.Note) || dto.Note.Length > 1000 || dto.Note.Trim().Length < 10)
@@ -149,7 +148,7 @@ public class PeriodLockController(
         return Command(() => workflow.Process(id, false, dto.Note, User, HttpContext.RequestAborted), BackendMessages.Message("messages.period.information.requested"));
     }
 
-    [HttpPost("unlock-requests/{id:long}/respond"), Authorize(Policy = ApplicationPolicies.CapitalWrite)]
+    [HttpPost("unlock-requests/{id:long}/respond"), Authorize(Policy = ApplicationPolicies.PeriodLockWrite)]
     public Task<IActionResult> RespondToRequest([FromRoute] long id, [FromBody] RespondDto dto)
     {
         if (dto is null || string.IsNullOrWhiteSpace(dto.Message) || dto.Message.Length > 490 || dto.Message.Trim().Length < 10)

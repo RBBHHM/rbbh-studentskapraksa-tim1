@@ -16,4 +16,4 @@ public sealed record UpdateRoleCatalogDTO(
     [Required, MaxLength(200)] long[] PermissionIds);
 
 public sealed record RoleCatalogDTO(long Id, string Name, string DisplayName, string? Description,
-    bool IsActive, DateTime Version, long[] PermissionIds, bool IsProtected);
+    bool IsActive, DateTime Version, long[] PermissionIds, bool IsProtected, bool IsAssignedToCurrentUser = false);
