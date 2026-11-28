@@ -173,7 +173,9 @@ test("codebook outage shows a warning without fallback values and Escape restore
   await request.post("/__fixtures/codebooks-unavailable", { headers }); await open(page);
   const launcher = page.getByRole("button", { name: "Novi zapis", exact: true }); await launcher.click();
   const dialog = page.getByRole("dialog"); await expect(dialog.getByText("šifrarn", { exact: false }).first()).toBeVisible();
-  await expect(dialog.getByLabel("Osnov povezanosti", { exact: false }).locator("option")).toHaveCount(1);
+  const basis = dialog.getByLabel("Osnov povezanosti", { exact: false });
+  await expect(basis.locator("option")).toHaveCount(1);
+  await basis.focus();
   await page.keyboard.press("Escape"); await expect(dialog).not.toBeVisible(); await expect(launcher).toBeFocused();
 });
 test("375px legal table and form remain usable without page overflow", async ({ page }, info) => {
