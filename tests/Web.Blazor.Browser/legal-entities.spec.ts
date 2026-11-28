@@ -69,6 +69,16 @@ test("duplicate FBA receives safe validation and does not add a record", async (
   expect(await (await request.get("/__fixtures/legal-record", { headers })).json()).toHaveLength(1);
   await expect(dialog).toBeVisible();
 });
+test("verifying your own legal record shows validation and keeps the record unverified", async ({ page, request }) => {
+  await open(page);
+  await create(page, "Own Company");
+  const row = page.getByRole("row", { name: /Own Company/ });
+  await row.getByRole("button", { name: "Verificiraj", exact: true }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Ne možete verificirati vlastiti zapis." }).first()).toBeVisible();
+  const records = await (await request.get("/__fixtures/legal-record", { headers })).json();
+  expect(records[0].status).toBe("Draft");
+});
+
 test("edit retains hidden Matbroj, verifies and soft deactivates through real backend", async ({ page, request }) => {
   expect((await request.post("/__fixtures/legal-existing", { headers })).status()).toBe(204);
   await open(page); let row = page.getByRole("row", { name: /Existing Company 00/ });

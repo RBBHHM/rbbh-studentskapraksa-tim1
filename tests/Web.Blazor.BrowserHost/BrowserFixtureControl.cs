@@ -33,18 +33,7 @@ namespace Web.Blazor.BrowserHost;
 // control headers; production never registers or links this test-only class.
 internal static partial class BrowserHostProgram
 {
-    private static void SeedVerificationOrigin(ConnectedPartiesDbContext db, string table, long id)
-    {
-        var existing = db.AuditLogs.IgnoreQueryFilters().SingleOrDefault(row =>
-            row.TableName == table && row.Action == "VERIFICATION_ORIGIN" && row.NewValues == id.ToString());
-        if (existing is null)
-            db.AuditLogs.Add(new()
-            {
-                TableName = table, Action = "VERIFICATION_ORIGIN", NewValues = id.ToString(),
-                Username = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.Unicode.GetBytes("fixture-author-subject"))),
-                Timestamp = DateTime.UtcNow
-            });
-    }
+
 
     private sealed class FixtureReset(WebApplication backend, FixtureUser user, FixtureDatabase database) : IStartupFilter
     {
@@ -528,8 +517,6 @@ internal static partial class BrowserHostProgram
                                     IsActive = true,
                                     CreatedAt = new DateTime(2026, 1, 1).AddMinutes(index)
                                 });
-                                foreach (var seeded in db.ChangeTracker.Entries<RBBH.ConnectedParties.DL.Entities.LegalEntity.LegalEntity>().ToArray())
-                                    SeedVerificationOrigin(db, "LegalEntity", seeded.Entity.Id);
                                 await db.SaveChangesAsync();
                             }
                             break;
@@ -537,7 +524,7 @@ internal static partial class BrowserHostProgram
                             await using (var scope = backend.Services.CreateAsyncScope())
                             {
                                 var db = scope.ServiceProvider.GetRequiredService<ConnectedPartiesDbContext>();
-                                foreach (var person in db.RelatedPersons.IgnoreQueryFilters()) { person.CreatedBy = "fixture-author"; SeedVerificationOrigin(db, "RelatedPerson", person.Id); }
+                                foreach (var person in db.RelatedPersons.IgnoreQueryFilters()) person.CreatedBy = "fixture-author";
                                 await db.SaveChangesAsync();
                             }
                             break;

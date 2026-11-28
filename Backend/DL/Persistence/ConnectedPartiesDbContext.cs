@@ -131,7 +131,8 @@ public partial class ConnectedPartiesDbContext(
 
         modelBuilder.Entity<AuditLog>(entity =>
         {
-            entity.HasQueryFilter(row => row.Action != RegistryVerification.CreationProof);
+            // Hide technical rows written by older versions. Verification no longer reads or writes these.
+            entity.HasQueryFilter(row => row.Action != "VERIFICATION_ORIGIN");
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => new { e.Timestamp, e.Id }).IsDescending(true, true).HasDatabaseName("IX_AUDIT_LOGS_TimestampId");
             entity.HasIndex(e => e.Timestamp);
@@ -190,15 +191,6 @@ public partial class ConnectedPartiesDbContext(
         modelBuilder.Entity<Limit>().HasOne(row => row.Capital).WithMany().HasForeignKey(row => row.CapitalId).OnDelete(DeleteBehavior.Restrict);
         OnModelCreatingPartial(modelBuilder);
         ApplyDatabaseNames(modelBuilder);
-    }
-
-    private void ProtectCreatorIdentity()
-    {
-        if (ChangeTracker.Entries<AuditLog>().Any(entry =>
-            entry.State is EntityState.Modified or EntityState.Deleted &&
-            (entry.Entity.Action == RegistryVerification.CreationProof ||
-             entry.Property(row => row.Action).OriginalValue == RegistryVerification.CreationProof)))
-            throw new Exceptions.BusinessRuleException(409, "verification.creator_immutable");
     }
 
     private static readonly JsonSerializerOptions ReadableAuditJson = new() { WriteIndented = true };
@@ -261,7 +253,6 @@ public partial class ConnectedPartiesDbContext(
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
-        ProtectCreatorIdentity();
         ProtectCapitalHistory();
         FormatNewAuditSnapshots();
         TouchCodebookDefinitions();
@@ -271,7 +262,6 @@ public partial class ConnectedPartiesDbContext(
     public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        ProtectCreatorIdentity();
         ProtectCapitalHistory();
         FormatNewAuditSnapshots();
         var categories = ChangedCodebookCategories();

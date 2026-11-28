@@ -119,7 +119,7 @@
     "common.export": "Excel exportieren",
     "common.new": "Neuer Eintrag",
     "common.edit": "Bearbeiten",
-    "common.verify-own": "Die Person, die einen Eintrag erfasst hat, darf ihn nicht selbst verifizieren (Vier-Augen-Prinzip).",
+    "common.verify-own": "Sie können Ihren eigenen Eintrag nicht verifizieren.",
     "common.verify": "Verifizieren",
     "common.deactivate": "Löschen",
     "common.confirm": "Bestätigen",

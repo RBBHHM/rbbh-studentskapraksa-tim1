@@ -5,7 +5,6 @@ using RBBH.ConnectedParties.DL.DTO.RelatedPersons;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RBBH.ConnectedParties.Helpers.Constants;
-using System.Security.Claims;
 
 namespace RBBH.ConnectedParties.API.Controllers;
 
@@ -21,16 +20,13 @@ public class VerificationController : BaseResuItController
 {
     private readonly IRelatedPersonService _relatedPersonService;
     private readonly ILegalEntityService _legalEntityService;
-    private readonly IAuditService _auditService;
 
     public VerificationController(
         IRelatedPersonService relatedPersonService,
-        ILegalEntityService legalEntityService,
-        IAuditService auditService)
+        ILegalEntityService legalEntityService)
     {
         _relatedPersonService = relatedPersonService;
         _legalEntityService = legalEntityService;
-        _auditService = auditService;
     }
 
     /// <summary>
@@ -66,11 +62,11 @@ public class VerificationController : BaseResuItController
         var korisnik = CurrentUser();
         var verified = await _legalEntityService.VerifyAsync(id, korisnik);
 
-        return Ok(verified);
+        return HandleResult(verified);
     }
 
     private string CurrentUser()
     {
-        return RBBH.ConnectedParties.Helpers.AuthenticatedActor.Email(User);
+        return RBBH.ConnectedParties.Helpers.AuthenticatedActor.Username(User);
     }
 }

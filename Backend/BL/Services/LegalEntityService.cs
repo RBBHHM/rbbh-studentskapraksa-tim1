@@ -6,6 +6,7 @@ using RBBH.ConnectedParties.DL.DTO.LegalEntity;
 using RBBH.ConnectedParties.DL.Entities.LegalEntity;
 using RBBH.ConnectedParties.DL.Persistence;
 using RBBH.ConnectedParties.Exceptions;
+using RBBH.ConnectedParties.Exceptions.Validations;
 using RBBH.ConnectedParties.Helpers.Validators;
 using Microsoft.EntityFrameworkCore;
 
@@ -129,7 +130,7 @@ public partial class LegalEntityService : ILegalEntityService
             IsActive = true
         };
 
-        AddNewEntity(entity);
+        _context.LegalEntities.Add(entity);
         _context.AuditLogs.Add(Helpers.BusinessAudit.Create("LegalEntity", "INSERT", createdBy, _actor, newValues: MapToDto(entity)));
         var result = await WithConnectionDescription(entity);
         await _context.SaveChangesAsync(_actor?.HttpContext?.RequestAborted ?? default);
@@ -211,19 +212,22 @@ public partial class LegalEntityService : ILegalEntityService
     }
 
     /// <inheritdoc />
-    public async Task<LegalEntityDTO> VerifyAsync(long id, string verifiedBy)
+    public async Task<Result<LegalEntityDTO>> VerifyAsync(long id, string verifiedBy)
     {
         var entity = await _context.LegalEntities
             .AsTracking()
             .FirstOrDefaultAsync(e => e.Id == id && e.IsActive);
 
         if (entity is null)
-            throw new ValidationException("id", BackendMessages.Message("validation.registry.legal.id.missing", id));
+            return Result<LegalEntityDTO>.NotFoundError(BackendMessages.Message("validation.registry.legal.id.missing", id));
 
         if (string.Equals(entity.Status, "Verified", StringComparison.OrdinalIgnoreCase))
-            throw new ValidationException("status", BackendMessages.Message("validation.registry.legal.verified"));
+            return Result<LegalEntityDTO>.ValidationError(BackendMessages.Message("validation.registry.legal.verified"));
 
-        await Helpers.RegistryVerification.Authorize(_context, "LegalEntity", entity.Id, _actor);
+        if (Helpers.RegistryVerification.IsOwnRecord(entity.CreatedBy, verifiedBy, _actor))
+            return Result<LegalEntityDTO>.ValidationError(BackendMessages.Message("errors.verification.self.denied"),
+                code: Helpers.RegistryVerification.SelfDenied);
+
         var before = new { status = entity.Status.ToString(), verifiedBy = entity.VerifiedBy, verifiedAt = entity.VerifiedAt };
         entity.Status = "Verified";
         entity.VerifiedBy = verifiedBy;
@@ -231,14 +235,14 @@ public partial class LegalEntityService : ILegalEntityService
         entity.ModifiedBy = verifiedBy;
         entity.MarkModified(DateTime.UtcNow);
 
-        _context.AuditLogs.Add(Helpers.RegistryVerification.Audit("LegalEntity", verifiedBy, _actor,
+        _context.AuditLogs.Add(Helpers.BusinessAudit.Create("LegalEntity", "VERIFY", verifiedBy, _actor,
             before, new { status = entity.Status.ToString(), verifiedBy = entity.VerifiedBy, verifiedAt = entity.VerifiedAt }));
         var result = await WithConnectionDescription(entity);
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("Legal entity verified.");
 
-        return result;
+        return Result<LegalEntityDTO>.Success(result);
     }
         /// <inheritdoc />
     public async Task<List<LegalEntityLookupDTO>> SearchForLimitsAsync(string? search) =>
@@ -435,12 +439,6 @@ public partial class LegalEntityService : ILegalEntityService
             if (exists)
                 throw new ValidationException("fbaId", BackendMessages.Message("validation.registry.legal.fba.exists", fbaId));
         }
-    }
-
-    private void AddNewEntity(LegalEntity entity)
-    {
-        _context.LegalEntities.Add(entity);
-        Helpers.RegistryVerification.RecordCreator(_context, "LegalEntity", entity.Id, _actor);
     }
 
     private async Task<LegalEntityDTO> WithConnectionDescription(LegalEntity entity)

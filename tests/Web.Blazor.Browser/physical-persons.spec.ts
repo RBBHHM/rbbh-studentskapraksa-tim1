@@ -99,8 +99,8 @@ test("duplicates block progression, edit excludes self, verification and deactiv
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click();
   await expect(dialog).not.toBeVisible();
   const own = row.getByRole("button", { name: "Verificiraj", exact: true });
-  await expect(own).toBeDisabled();
-  await expect(own.locator("xpath=..")).toHaveAttribute("title", /četiri oka/);
+  await own.click();
+  await expect(page.getByRole("alert").filter({ hasText: "Ne možete verificirati vlastiti zapis." }).first()).toBeVisible();
   expect((await request.post("/__fixtures/persons-entered-by-other", { headers })).status()).toBe(204);
   await page.reload(); await interactive(page);
   row = page.getByRole("row", { name: /Lifecycle Fixture/ });

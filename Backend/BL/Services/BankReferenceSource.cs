@@ -23,12 +23,16 @@ public interface IBankReferenceSource
 public sealed class SqlBankReferenceSource(IOptions<BankReferenceOptions> options, IConfiguration configuration, ILogger<SqlBankReferenceSource> logger) : IBankReferenceSource
 {
     private BankReferenceOptions Settings => options.Value;
+    private bool HasCredentialOverride => !string.IsNullOrWhiteSpace(Settings.User) || !string.IsNullOrWhiteSpace(Settings.Password);
+
     public bool IsConfigured => Settings.Enabled &&
         !string.IsNullOrWhiteSpace(Settings.ServerName) &&
         !string.IsNullOrWhiteSpace(Settings.Database) &&
-        (configuration.GetValue<bool>("Database:IntegratedSecurity") ||
-         (!string.IsNullOrWhiteSpace(configuration["Database:User"]) &&
-          !string.IsNullOrWhiteSpace(configuration["Database:Password"])));
+        (HasCredentialOverride
+            ? !string.IsNullOrWhiteSpace(Settings.User) && !string.IsNullOrWhiteSpace(Settings.Password)
+            : configuration.GetValue<bool>("Database:IntegratedSecurity") ||
+              (!string.IsNullOrWhiteSpace(configuration["Database:User"]) &&
+               !string.IsNullOrWhiteSpace(configuration["Database:Password"])));
 
     private static string Identifier(string value)
     {
@@ -51,7 +55,8 @@ public sealed class SqlBankReferenceSource(IOptions<BankReferenceOptions> option
         if (exactColumn is null) term = "%" + term.Replace("~", "~~").Replace("%", "~%").Replace("_", "~_").Replace("[", "~[") + "%";
         try
         {
-            var connectionString = ConnectionHelper.BuildConnection(configuration, Settings.ServerName, Settings.Database);
+            var connectionString = ConnectionHelper.BuildConnection(configuration, Settings.ServerName, Settings.Database,
+                HasCredentialOverride ? (Settings.User!, Settings.Password!) : null);
             var connectionOptions = new SqlConnectionStringBuilder(connectionString) { ConnectTimeout = 5 };
             await using var connection = new SqlConnection(connectionOptions.ConnectionString); await connection.OpenAsync(ct);
             await using var command = connection.CreateCommand(); command.CommandTimeout = 10;

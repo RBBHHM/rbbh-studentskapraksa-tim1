@@ -158,7 +158,7 @@ public partial class LegalEntityService
                     CreatedBy          = createdBy
                 };
 
-                AddNewEntity(entity);
+                _context.LegalEntities.Add(entity);
                 result.Imported++;
             }
             catch (ValidationException exception)

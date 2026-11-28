@@ -2,6 +2,7 @@
 
 using RBBH.ConnectedParties.DL.DTO;
 using RBBH.ConnectedParties.DL.DTO.LegalEntity;
+using RBBH.ConnectedParties.Exceptions.Validations;
 
 namespace RBBH.ConnectedParties.BL.ServiceInterfaces;
 
@@ -28,7 +29,7 @@ public interface ILegalEntityService
     Task DeleteAsync(long id, string deletedBy);
 
     /// <summary>Verifikuje pravno lice — mijenja status iz Draft u Verified.</summary>
-    Task<LegalEntityDTO> VerifyAsync(long id, string verifiedBy);
+    Task<Result<LegalEntityDTO>> VerifyAsync(long id, string verifiedBy);
 
     /// <summary>Pretražuje pravna lica za potrebe forme Limita po nazivu i matičnom broju.</summary>
     Task<List<LegalEntityLookupDTO>> SearchForLimitsAsync(string? search);

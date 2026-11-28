@@ -34,6 +34,7 @@ for local identity credentials. See root README for seeded demo versus real app 
 | --- | --- |
 | `Localization__LanguagesCodebook`, `Localization__LanguagePacksCodebook`, `Localization__DefaultLanguage` | Application-specific codebook names (defaults Languages/LanguagePacks) and default BS. No DP_ naming requirement. |
 | `BankReference__Enabled`, `BankReference__ServerName`, `BankReference__Database` | DataHub settings. Defaults in backend appsettings are enabled, server `datahub` and database `kod`. The connection uses the normal database authentication settings. |
+| `BankReference__User`, `BankReference__Password` | Optional temporary SQL credentials for DataHub only. Supply both. Removing both restores the normal database authentication settings for DataHub. |
 | `BankReference__Customers__Table`, `BankReference__Customers__Columns__{TaxNumber,RegistrationNumber,Name}` | Overrides for `dbo.komitent` and its `porez_broj`, `matbroj` and `naziv` mappings. |
 | `BankReference__Gcc__Table`, `BankReference__Gcc__Columns__{Number,Name}` | Overrides for `glava.dbo.grupekom`, `brojg` and `naziv_grupe`. |
 | `FinanceMonthly__Enabled`, `FinanceMonthly__ConnectionString`, `FinanceMonthly__CustomerKeyColumn`, `FinanceMonthly__Currency` | Approved source connection/key and confirmed BAM currency. Disabled local snapshots remain explicitly non-authoritative. |

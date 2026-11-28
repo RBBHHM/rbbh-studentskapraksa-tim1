@@ -49,7 +49,7 @@ else
                         <td class="registry-actions-cell"><div class="registry-row-actions">
                             @if (_canEdit)
                             {
-                                @if (!string.Equals(entity.Status, "Verified", StringComparison.OrdinalIgnoreCase)) { <span title="@T[Own(entity.CreatedBy) ? "common.verify-own" : "common.verify"]"><RbiButton Disabled="@(_busy || _openingEditor || _refreshing || _periodLocked || Own(entity.CreatedBy))" OnClick="() => Confirm(entity, false)" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["common.verify"]"><RbiIcon Name="RbiIconName.CheckCircle2" /></RbiButton></span> }
+                                @if (!string.Equals(entity.Status, "Verified", StringComparison.OrdinalIgnoreCase)) { <span title="@T[Own(entity.CreatedBy) ? "common.verify-own" : "common.verify"]"><RbiButton Disabled="@(_busy || _openingEditor || _refreshing || _periodLocked)" OnClick="() => Confirm(entity, false)" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["common.verify"]"><RbiIcon Name="RbiIconName.CheckCircle2" /></RbiButton></span> }
                                 <RbiButton Disabled="@(_busy || _refreshing || _periodLocked)" Loading="_openingEditor" LoadingLabel="@T["state.loading"]" OnClick="() => Edit(entity)" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["common.edit"]" title="@T["common.edit"]"><RbiIcon Name="RbiIconName.Pencil" /></RbiButton>
                             }
                             @if (_canDelete) { <RbiButton Disabled="@(_busy || _openingEditor || _refreshing || _periodLocked)" OnClick="() => Confirm(entity, true)" Variant="RbiButtonVariant.Ghost" Size="RbiButtonSize.Icon" IconOnly AccessibleLabel="@T["common.deactivate"]" title="@T["common.deactivate"]" Class="registry-danger-icon"><RbiIcon Name="RbiIconName.Trash2" /></RbiButton> }
@@ -119,7 +119,7 @@ else
 
     private string? _self;
     // Four-eyes: the person who entered a record cannot verify it (the backend remains authoritative).
-    private bool Own(string? createdBy) => !string.IsNullOrWhiteSpace(_self) && string.Equals(createdBy, _self, StringComparison.OrdinalIgnoreCase);
+    private bool Own(string? createdBy) => !string.IsNullOrWhiteSpace(_self) && string.Equals(createdBy?.Trim(), _self.Trim(), StringComparison.OrdinalIgnoreCase);
     protected override Task OnInitializedAsync() => LoadAsync();
     private async Task LoadAsync()
     {
@@ -211,7 +211,21 @@ else
         finally { _busy = false; }
         _draft = null;
     }
-    private async Task Confirm(LegalEntity entity, bool delete) { if (!_authenticated || _periodLocked || (delete ? !_canDelete : !_canEdit) || _openingEditor || _refreshing || _busy) return; _action = entity; _delete = delete; _actionError = null; if (!delete) await RunActionAsync(); }
+    private async Task Confirm(LegalEntity entity, bool delete)
+    {
+        if (!_authenticated || _periodLocked || (delete ? !_canDelete : !_canEdit) || _openingEditor || _refreshing || _busy) return;
+        _delete = delete;
+        if (!delete && Own(entity.CreatedBy))
+        {
+            _action = null;
+            _actionError = "common.verify-own";
+            return;
+        }
+
+        _action = entity;
+        _actionError = null;
+        if (!delete) await RunActionAsync();
+    }
     private void CloseAction(bool open) { if (!open && !_busy) _action = null; }
     private async Task RunActionAsync()
     {

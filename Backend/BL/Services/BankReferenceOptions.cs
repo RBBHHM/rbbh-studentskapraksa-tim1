@@ -5,6 +5,8 @@ public sealed class BankReferenceOptions
     public bool Enabled { get; set; }
     public string ServerName { get; set; } = "";
     public string Database { get; set; } = "";
+    public string? User { get; set; }
+    public string? Password { get; set; }
     public BankReferenceMapping<CustomerReferenceColumns> Customers { get; set; } = new();
     public BankReferenceMapping<GccReferenceColumns> Gcc { get; set; } = new();
 }

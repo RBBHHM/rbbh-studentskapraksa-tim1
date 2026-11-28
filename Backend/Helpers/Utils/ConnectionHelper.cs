@@ -4,12 +4,12 @@ namespace RBBH.ConnectedParties.Helpers.Utils
 {
     public static class ConnectionHelper
     {
-        public static string BuildConnection(IConfiguration configuration, string? serverName = null, string? databaseName = null)
+        public static string BuildConnection(IConfiguration configuration, string? serverName = null, string? databaseName = null, (string User, string Password)? credentials = null)
         {
             ArgumentNullException.ThrowIfNull(configuration);
 
             var environment = configuration["ASPNETCORE_ENVIRONMENT"] ?? "Production";
-            var integratedSecurity = configuration.GetValue<bool?>("Database:IntegratedSecurity") ?? false;
+            var integratedSecurity = credentials is null && (configuration.GetValue<bool?>("Database:IntegratedSecurity") ?? false);
             var builder = new SqlConnectionStringBuilder
             {
                 DataSource = serverName ?? GetRequiredValue(configuration, "Database:ServerName"),
@@ -29,8 +29,8 @@ namespace RBBH.ConnectedParties.Helpers.Utils
 
             if (!integratedSecurity)
             {
-                builder.UserID = GetRequiredValue(configuration, "Database:User");
-                builder.Password = GetRequiredValue(configuration, "Database:Password");
+                builder.UserID = credentials?.User ?? GetRequiredValue(configuration, "Database:User");
+                builder.Password = credentials?.Password ?? GetRequiredValue(configuration, "Database:Password");
             }
 
             return builder.ConnectionString;

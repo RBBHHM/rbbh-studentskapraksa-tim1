@@ -7,6 +7,23 @@ namespace UnitTests.Helpers
 {
     public class ConnectionHelperTests
     {
+        [Fact]
+        public void TemporaryDataHubSqlCredentialsDoNotChangeRegistryAuthentication()
+        {
+            var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Database:ServerName"] = "registry",
+                ["Database:Name"] = "registrydb",
+                ["Database:IntegratedSecurity"] = "true"
+            }).Build();
+            var dataHub = new SqlConnectionStringBuilder(ConnectionHelper.BuildConnection(configuration,
+                "datahub", "kod", ("fixture-user", "fixture-password")));
+            Assert.False(dataHub.IntegratedSecurity);
+            Assert.Equal("fixture-user", dataHub.UserID);
+            Assert.Equal("fixture-password", dataHub.Password);
+            Assert.True(new SqlConnectionStringBuilder(ConnectionHelper.BuildConnection(configuration)).IntegratedSecurity);
+        }
+
         [Theory]
         [InlineData(false)]
         [InlineData(true)]

@@ -44,7 +44,7 @@ public sealed class RegistryApiException : Exception
     public string MessageKey => (StatusCode, Code) switch
     {
         (System.Net.HttpStatusCode.Forbidden, "identity.verified_email_required") => "roles.verified-email-required",
-        (System.Net.HttpStatusCode.Forbidden, "verification.self_denied") => "common.verify-own",
+        (System.Net.HttpStatusCode.BadRequest or System.Net.HttpStatusCode.Forbidden, "verification.self_denied") => "common.verify-own",
         (System.Net.HttpStatusCode.Conflict, "users.duplicate") => "users.create-duplicate",
         (System.Net.HttpStatusCode.BadRequest, "users.identity_missing") => "users.identity-not-found",
         (System.Net.HttpStatusCode.Conflict, "identity.ambiguous") => "users.identity-ambiguous",

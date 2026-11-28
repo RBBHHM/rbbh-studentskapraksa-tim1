@@ -48,7 +48,7 @@ public sealed class RegistryWorkbookHttpTests : AuthenticatedApiFixture
                 var row = await db.LegalEntities.SingleAsync(); Assert.Equal("000123", row.Matbroj); Assert.Equal("000456", row.MaticniBroj);
                 Assert.Equal(new DateTime(2026, 3, 11), row.DateFrom); Assert.Equal(new DateTime(2026, 12, 5), row.DateTo);
                 Assert.True(row.IsLargeExposure); Assert.Null(row.GccName); Assert.Equal("Draft", row.Status);
-                Assert.Equal("creator", row.CreatedBy); Assert.True(await db.AuditLogs.IgnoreQueryFilters().AnyAsync(log => log.Action == "VERIFICATION_ORIGIN" && log.NewValues == row.Id.ToString())); Assert.NotEqual(2000, row.CreatedAt.Year);
+                Assert.Equal("creator", row.CreatedBy); Assert.False(await db.AuditLogs.IgnoreQueryFilters().AnyAsync(log => log.Action == "VERIFICATION_ORIGIN")); Assert.NotEqual(2000, row.CreatedAt.Year);
                 var audit = await db.AuditLogs.SingleAsync(); Assert.Equal("IMPORT", audit.Action); Assert.Equal("creator", audit.Username);
             });
         }

@@ -35,17 +35,16 @@ public class RegistryVerificationHttpTests : AuthenticatedApiFixture
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public async Task CreatorCannotVerifyEvenAfterEmailChangeAndForgedCreatorBody(bool legal)
+    public async Task CreatorCannotVerifyWithChangedEmailOrForgedCreatorBody(bool legal)
     {
         var id = await CreateRecord(legal);
         Client.DefaultRequestHeaders.Add("X-Email", "changed@example.test");
         var response = await Client.PostAsJsonAsync(VerifyRoute(legal, id), new { creatorSubject = "other", verifiedBy = "other" });
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Contains("verification.self_denied", await response.Content.ReadAsStringAsync());
         await InDatabase(async db =>
         {
-            var creator = (await db.AuditLogs.IgnoreQueryFilters().SingleAsync(row => row.Action == "VERIFICATION_ORIGIN")).Username;
-            Assert.Equal(Fingerprint("creator"), creator);
+            Assert.False(await db.AuditLogs.IgnoreQueryFilters().AnyAsync(row => row.Action == "VERIFICATION_ORIGIN"));
             Assert.Empty(await db.AuditLogs.Where(row => row.Action == "VERIFY").ToListAsync());
         });
     }
@@ -73,7 +72,7 @@ public class RegistryVerificationHttpTests : AuthenticatedApiFixture
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public async Task HistoricalRecordRequiresProvenanceInsteadOfGuessingFromEmail(bool legal)
+    public async Task HistoricalRecordCanBeVerifiedByAnotherUserUsingCreatedBy(bool legal)
     {
         long id = 0L;
         await InDatabase(async db =>
@@ -82,7 +81,7 @@ public class RegistryVerificationHttpTests : AuthenticatedApiFixture
             else { var row = new RelatedPerson { FirstName = "History", CreatedBy = "someone@example.test" }; db.RelatedPersons.Add(row); id = row.Id; }
             await db.SaveChangesAsync();
         });
-        Assert.Equal(HttpStatusCode.Conflict, (await Client.PostAsync(VerifyRoute(legal, id), null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await Client.PostAsync(VerifyRoute(legal, id), null)).StatusCode);
     }
 
     [Fact]
@@ -92,19 +91,6 @@ public class RegistryVerificationHttpTests : AuthenticatedApiFixture
         var response = await Client.PutAsJsonAsync($"/api/legal-entities/{id}", Legal("Verified"));
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         await InDatabase(async db => Assert.Equal("Draft", (await db.LegalEntities.FindAsync(id))!.Status));
-    }
-
-    [Fact]
-    public async Task VerificationOriginIsImmutableAtPersistenceBoundary()
-    {
-        var id = await CreateRecord(true);
-        await InDatabase(async db =>
-        {
-            var row = await db.AuditLogs.IgnoreQueryFilters().SingleAsync(log => log.Action == "VERIFICATION_ORIGIN");
-            row.Username = "forged";
-            await Assert.ThrowsAsync<RBBH.ConnectedParties.Exceptions.BusinessRuleException>(() => db.SaveChangesAsync());
-        });
-        await InDatabase(async db => Assert.Equal(Fingerprint("creator"), (await db.AuditLogs.IgnoreQueryFilters().SingleAsync(log => log.Action == "VERIFICATION_ORIGIN")).Username));
     }
 
     [Fact]
@@ -118,9 +104,7 @@ public class RegistryVerificationHttpTests : AuthenticatedApiFixture
         await InDatabase(async db =>
         {
             var row = (await db.RelatedPersons.FindAsync(id))!;
-            Assert.Equal(RelatedPersonStatus.Draft, row.Status); Assert.Equal(Fingerprint("creator"), (await db.AuditLogs.IgnoreQueryFilters().SingleAsync(log => log.Action == "VERIFICATION_ORIGIN")).Username);
+            Assert.Equal(RelatedPersonStatus.Draft, row.Status); Assert.Equal("creator", row.CreatedBy);
         });
     }
-    private static string Fingerprint(string subject) =>
-        Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.Unicode.GetBytes(subject)));
 }

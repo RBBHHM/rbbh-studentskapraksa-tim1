@@ -276,7 +276,6 @@ public class RelatedPersonService(
         entity.PassportNumber = NormalizeIdentifier(entity.PassportNumber)?.ToUpperInvariant();
         entity.FBAId = NormalizeIdentifier(entity.FBAId);
         _dbContext.RelatedPersons.Add(entity);
-        Helpers.RegistryVerification.RecordCreator(_dbContext, "RelatedPerson", entity.Id, actor);
         _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("RelatedPerson", "INSERT", korisnik, actor,
             newValues: entity.Adapt<RelatedPersonResponseDTO>()));
         await _dbContext.SaveChangesAsync(actor?.HttpContext?.RequestAborted ?? default);
@@ -385,7 +384,10 @@ public class RelatedPersonService(
         if (entity.Status == RelatedPersonStatus.Verified)
             return Result<RelatedPersonResponseDTO>.ValidationError(BackendMessages.Message("validation.person.verified"));
 
-        await Helpers.RegistryVerification.Authorize(_dbContext, "RelatedPerson", entity.Id, actor);
+        if (Helpers.RegistryVerification.IsOwnRecord(entity.CreatedBy, korisnik, actor))
+            return Result<RelatedPersonResponseDTO>.ValidationError(BackendMessages.Message("errors.verification.self.denied"),
+                code: Helpers.RegistryVerification.SelfDenied);
+
         var before = new { status = entity.Status.ToString(), verifiedBy = entity.VerifiedBy, verifiedAt = entity.VerifiedAt };
         entity.Status = RelatedPersonStatus.Verified;
         entity.VerifiedBy = korisnik;
@@ -393,7 +395,7 @@ public class RelatedPersonService(
         entity.ModifiedBy = korisnik;
         entity.MarkModified(DateTime.UtcNow);
 
-        _dbContext.AuditLogs.Add(Helpers.RegistryVerification.Audit("RelatedPerson", korisnik, actor,
+        _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("RelatedPerson", "VERIFY", korisnik, actor,
             before, new { status = entity.Status.ToString(), verifiedBy = entity.VerifiedBy, verifiedAt = entity.VerifiedAt }));
         await _dbContext.SaveChangesAsync();
 
@@ -775,7 +777,6 @@ public class RelatedPersonService(
                 };
 
                 _dbContext.RelatedPersons.Add(entity);
-                Helpers.RegistryVerification.RecordCreator(_dbContext, "RelatedPerson", entity.Id, actor);
                 if (dto.JMBG is not null) usedJmbgs.Add(dto.JMBG);
                 if (dto.PassportNumber is not null) usedPassports.Add(dto.PassportNumber);
                 if (dto.FBAId is not null) usedFbaIds.Add(dto.FBAId);
