@@ -65,6 +65,8 @@ public class RelatedPerson
     /// <summary>Datum do kada povezanost važi.</summary>
     public DateTime? DateTo { get; set; }
 
+    internal DateTime? HrExpiryNotifiedFor { get; set; }
+
     /// <summary>
     /// Označava da li je lice identifikovani zaposlenik — odgovara polju Is_Identified_Staff
     /// u HR sistemu (Employee tabela).

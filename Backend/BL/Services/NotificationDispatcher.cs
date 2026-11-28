@@ -42,6 +42,7 @@ public sealed class NotificationDispatcher(ConnectedPartiesDbContext db, IEmailS
                     "notifications.role.request.rejected.title" => "rejected",
                     _ => null
                 };
+                var isHr = titleKey.StartsWith(HrRelationshipNotices.KeyPrefix, StringComparison.Ordinal);
                 var parametersJson = row.Notification.ParametersJson;
                 if (parametersJson.Length > 32000) throw new InvalidOperationException("Notification parameters too large.");
                 using var parameters = JsonDocument.Parse(parametersJson, new JsonDocumentOptions { MaxDepth = 8 });
@@ -62,12 +63,17 @@ public sealed class NotificationDispatcher(ConnectedPartiesDbContext db, IEmailS
                 var encodedText = WebUtility.HtmlEncode(text).Replace("\r\n", "\n").Replace("\n", "<br>");
                 var origin = ApplicationOrigin();
                 var link = origin is not null && route.StartsWith("/app/", StringComparison.Ordinal) ? origin + route : null;
-                var html = roleStatus is not null
-                    ? RoleRequestMail.Build(roleStatus, title, encodedText, link,
+                var html = roleStatus is not null || isHr
+                    ? RoleRequestMail.Build(roleStatus ?? "hr", title, encodedText, link,
                         origin, localization.DefaultLanguage, MailLogoUrl())
                     : $"<p>{encodedText}</p>" + (link is null ? "" : $"<a href=\"{WebUtility.HtmlEncode(link)}\">{WebUtility.HtmlEncode(title)}</a>");
-                await mail.SendApplicationNotificationAsync(row.Notification.RecipientEmail, title, html, ct);
-                delivered++;
+                if (!isHr || await HrRelationshipNotices.Recipients(db)
+                        .AnyAsync(user => user.KeycloakId == row.Notification.RecipientSubject &&
+                                          user.Email == row.Notification.RecipientEmail, ct))
+                {
+                    await mail.SendApplicationNotificationAsync(row.Notification.RecipientEmail, title, html, ct);
+                    delivered++;
+                }
             }
             catch (Exception error) when (error is not OperationCanceledException)
             {

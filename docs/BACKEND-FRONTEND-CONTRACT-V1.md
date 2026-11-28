@@ -119,9 +119,13 @@ New users/role-approval/subject-link audit rows use stable authenticated `sub` a
 - `GET /api/role-catalog/permissions`: `{items:[{id,code,module,description}]}` from active DB permissions.
 - `POST /api/role-catalog`: `{name,displayName,description?,permissionIds:[]}` →201. Immutable name is ASCII letters/digits/underscore/hyphen/dot, max100; displayName required max100; description max500; distinct existing active permission IDs, max200.
 - `PUT /api/role-catalog/{id}`: `{displayName,description?,isActive,expectedVersion,permissionIds:[]}` →200. Names are immutable; deactivate through `isActive:false`, retaining history/assignments.
-- Definition shape: `{id,name,displayName,description,isActive,version,permissionIds,isProtected,isAssignedToCurrentUser,hasReferences}`. Referenced roles retain assignment and request history after deactivation. Existing `/api/roles` shape is unchanged. Role-request options additionally return `displayName`.
+- Definition shape: `{id,name,displayName,description,isActive,version,permissionIds,isProtected,isAssignedToCurrentUser,hasReferences}`. The delete dialog loads active assignments through GET `/api/role-catalog/{id}/deletion`. POST `/api/role-catalog/{id}/transfer` moves one assignment at a time and preserves other roles. Deletion requires no active assignments, removes old references, and rejects pending requests for the deleted role. Existing `/api/roles` shape is unchanged. Role-request options additionally return `displayName`.
 - Reads require `ADMINISTRATION_VIEW`. Writes require `ADMINISTRATION_VIEW` and `ADMINISTRATION_MANAGE`, rechecked inside the serialized transaction. Technical Admin/Guest definitions are read-only (409 `roles.protected`); editing an actor's own assigned role is403 `roles.self_management_denied`. Duplicate name409, bad definition/permissions400, stale version409, unavailable mutation lock409, missing ID404. No Keycloak role mutation.
 - Apply `AddAdministrativeRoleCatalog` before backend rollout. Resolve any normalized duplicate names explicitly before migration; no automatic rename/merge. The `SeedRoleCatalogLabels` migration seeds the role labels in Language Packs. Use `users.role.<lowercase technical name>` for role display translations.
+
+### HR relationship notices
+
+The HR role inherits the ordinary viewing baseline. Assign it to an active application user with a confirmed identity to receive notices by email. New related individuals, including Excel imports, stage a notice in the same save. The worker checks expired end dates and stages each expiry once, starting with relationships that end from rollout onward. Mail uses the existing outbox and the configured application URL and sender.
 
 ### Business error resources
 

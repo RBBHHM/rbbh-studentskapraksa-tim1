@@ -85,6 +85,6 @@ test("requestable role labels change with the language", async ({ page }) => {
   await page.keyboard.press("Escape");
   await chooseLanguage(page, "en");
   await page.getByRole("button", { name: "Request role", exact: true }).click();
-  await expect(page.getByRole("dialog").getByRole("checkbox", { name: "Natural persons", exact: true })).toBeVisible();
+  await expect(page.getByRole("dialog").getByRole("checkbox", { name: "Individuals", exact: true })).toBeVisible();
   await expect(page.getByRole("dialog").getByRole("checkbox", { name: "Legal entities", exact: true })).toBeVisible();
 });

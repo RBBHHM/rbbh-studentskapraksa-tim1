@@ -877,6 +877,11 @@ namespace RBBH.ConnectedParties.Migrations
                         .HasColumnType("bit")
                         .HasColumnName("IS_IDENTIFIED_STAFF");
 
+                    b.Property<DateTime?>("HrExpiryNotifiedFor")
+                        .IsConcurrencyToken()
+                        .HasColumnType("datetime2")
+                        .HasColumnName("HR_EXPIRY_NOTIFIED_FOR");
+
                     b.Property<string>("JMBG")
                         .HasMaxLength(13)
                         .HasColumnType("nvarchar(13)")
@@ -971,6 +976,9 @@ namespace RBBH.ConnectedParties.Migrations
 
                     b.HasIndex("IsActive", "LastName", "FirstName", "Id")
                         .HasDatabaseName("IX_RELATED_PERSONS_IsActiveLastNameFirstNameId");
+
+                    b.HasIndex("IsActive", "DateTo")
+                        .HasDatabaseName("IX_RELATED_PERSONS_HR_EXPIRY");
 
                     b.ToTable("RELATED_PERSONS", t =>
                         {

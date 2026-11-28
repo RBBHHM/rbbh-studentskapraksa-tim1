@@ -9,14 +9,15 @@ using RBBH.ConnectedParties.Helpers.Constants;
 namespace RBBH.ConnectedParties.BL.Services;
 
 /// <summary>Maintains DB-backed role definitions without replacing normalized grants or provider identity.</summary>
-public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContextAccessor accessor, RuntimeLocalizationCatalog? localization = null)
+public sealed partial class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContextAccessor accessor, RuntimeLocalizationCatalog? localization = null)
 {
     private System.Security.Claims.ClaimsPrincipal Actor => accessor.HttpContext?.User ?? throw new MissingActorIdentityException();
     private static DateTime VersionOf(Role role) =>
         DateTime.SpecifyKind(role.ModifiedAt ?? role.CreatedAt, DateTimeKind.Utc);
 
     private static bool Protected(string name) => name.Equals(ApplicationAccessRoles.Administrator, StringComparison.OrdinalIgnoreCase) ||
-        name.Equals(ApplicationAccessRoles.Guest, StringComparison.OrdinalIgnoreCase);
+        name.Equals(ApplicationAccessRoles.Guest, StringComparison.OrdinalIgnoreCase) ||
+        name.Equals(ApplicationAccessRoles.HumanResources, StringComparison.OrdinalIgnoreCase);
 
     public async Task<object> List(int page, int pageSize, string? search, CancellationToken ct)
     {
@@ -110,8 +111,21 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
         if (row is null) return RoleDeletionResult.Missing;
         if (Protected(row.Name)) return RoleDeletionResult.Protected;
         if (expectedVersion != VersionOf(row)) return RoleDeletionResult.Stale;
-        if (await ReferencedRoles([id]).AnyAsync(ct))
+        if (await db.UserRoles.AnyAsync(assignment => assignment.RoleId == id && assignment.IsActive, ct))
             return RoleDeletionResult.InUse;
+
+        db.UserRoles.RemoveRange(await db.UserRoles.Where(assignment => assignment.RoleId == id).ToListAsync(ct));
+        var links = await db.Set<DL.Entities.Authorization.RequestedRole>()
+            .Include(link => link.Request).Where(link => link.RoleId == id).ToListAsync(ct);
+        foreach (var link in links.Where(link => link.Request.Status == "pending"))
+        {
+            link.Request.Status = "rejected";
+            link.Request.DecisionNote = "Tražena rola je obrisana. Podnesite novi zahtjev.";
+            link.Request.ProcessedBy = AuthenticatedActor.Username(Actor);
+            link.Request.ProcessedAt = DateTime.UtcNow;
+            link.Request.Version++;
+        }
+        db.RemoveRange(links);
 
         db.AuditLogs.Add(BusinessAudit.Create("Role", "ROLE_CATALOG_DELETE",
             AuthenticatedActor.Username(Actor), accessor,
@@ -124,9 +138,8 @@ public sealed class RoleCatalogService(ConnectedPartiesDbContext db, IHttpContex
     public enum RoleDeletionResult { Deleted, Missing, Protected, Stale, InUse }
 
     private IQueryable<long> ReferencedRoles(long[] ids) => db.UserRoles
-        .Where(assignment => ids.Contains(assignment.RoleId)).Select(assignment => assignment.RoleId)
-        .Union(db.Set<DL.Entities.Authorization.RequestedRole>()
-            .Where(request => ids.Contains(request.RoleId)).Select(request => request.RoleId));
+        .Where(assignment => assignment.IsActive && ids.Contains(assignment.RoleId))
+        .Select(assignment => assignment.RoleId).Distinct();
 
     private IQueryable<long> ActorRoleIds()
     {

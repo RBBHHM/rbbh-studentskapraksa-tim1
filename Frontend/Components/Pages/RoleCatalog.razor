@@ -61,19 +61,12 @@ else
                             {
                                 <div class="role-catalog-actions">
                                     <RbiButton Variant="RbiButtonVariant.Secondary" Disabled="@(_busy || _refreshing)" OnClick="() => EditRole(role)">@T["rolecatalog.edit"]</RbiButton>
-                                    @if (!role.HasReferences)
-                                    {
-                                        <RbiButton Variant="RbiButtonVariant.Ghost" Class="role-catalog-delete" Disabled="@(_busy || _refreshing)" OnClick="() => ConfirmDelete(role)">@T["common.delete"]</RbiButton>
-                                    }
+                                    <RbiButton Variant="RbiButtonVariant.Ghost" Class="role-catalog-delete" Disabled="@(_busy || _refreshing)" OnClick="() => ConfirmDelete(role)">@T["common.delete"]</RbiButton>
                                 </div>
                             }
                             else
                             {
                                 <span class="app-hint">@T[role.IsProtected ? "rolecatalog.protected" : role.IsAssignedToCurrentUser ? "rolecatalog.self-management-denied" : "rolecatalog.read-only"]</span>
-                            }
-                            @if (role.HasReferences && !role.IsProtected && !role.IsAssignedToCurrentUser)
-                            {
-                                <span class="app-hint">@T[role.IsActive ? "rolecatalog.delete-blocked" : "rolecatalog.inactive-retained"]</span>
                             }
                         </td>
                     </tr>
@@ -89,11 +82,50 @@ else
 }
 @if (_deleteTarget is { } target)
 {
-    <RbiAlertDialog Open Title="@T["rolecatalog.delete-title"]"
-                    Description="@T.Format("rolecatalog.delete-description", T.Role(target.Name, target.DisplayName))"
-                    CancelLabel="@T["common.cancel"]" ConfirmLabel="@T["common.delete"]"
-                    Confirming="_busy" ConfirmLoadingLabel="@T["state.loading"]"
-                    OnConfirm="DeleteAsync" OpenChanged="CloseDelete" />
+    <RbiDialog Open Class="app-form-dialog role-catalog-dialog" Title="@T["rolecatalog.delete-title"]"
+               CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseDelete">
+        <DialogBody>
+            @if (_deleteError is not null)
+            {
+                <RbiAlert Tone="RbiAlertTone.Danger" Title="@T[_deleteError]" />
+            }
+            @if (_deletionPlan is { } plan)
+            {
+                @if (plan.Users.Count > 0)
+                {
+                    <p>@T.Format("rolecatalog.transfer-count", plan.Users.Count)</p>
+                    <ul class="role-transfer-list">
+                        @foreach (var user in plan.Users)
+                        {
+                            <li @key="user.UserId">
+                                <div><strong>@user.Username</strong><div class="app-hint">@user.Email</div></div>
+                                <select class="rbi-control rbi-select" aria-label="@T.Format("rolecatalog.transfer-for", user.Username)"
+                                        value="@TransferChoice(user.UserId)" @onchange="args => ChooseTransfer(user.UserId, args)" disabled="@_busy">
+                                    <option value="">@T["rolecatalog.transfer-select"]</option>
+                                    @foreach (var option in plan.Targets)
+                                    {
+                                        <option value="@option.Id">@T.Role(option.Name)</option>
+                                    }
+                                </select>
+                                <RbiButton Disabled="@(_busy || TransferChoice(user.UserId) is null)" OnClick="() => TransferAsync(user.UserId)">@T["rolecatalog.transfer-action"]</RbiButton>
+                            </li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <div class="role-delete-ready" role="status">
+                        <RbiIcon Name="RbiIconName.Check" /> @T["rolecatalog.delete-ready"]
+                    </div>
+                    <p>@T.Format("rolecatalog.delete-description", T.Role(target.Name, target.DisplayName))</p>
+                }
+            }
+        </DialogBody>
+        <DialogFooter>
+            <RbiButton Variant="RbiButtonVariant.Secondary" Disabled="@_busy" OnClick="() => CloseDelete(false)">@T["common.cancel"]</RbiButton>
+            <RbiButton Variant="RbiButtonVariant.Destructive" Disabled="@(_busy || _deletionPlan?.Users.Count != 0)" OnClick="DeleteAsync">@T["common.delete"]</RbiButton>
+        </DialogFooter>
+    </RbiDialog>
 }
 @if (_draft is { } draft)
 {
@@ -297,36 +329,66 @@ else
 
     private void CloseDialog(bool open) { if (!open && !_busy) _draft = null; }
 
-    private void ConfirmDelete(RoleDefinition role)
+    private RoleDeletionPlan? _deletionPlan;
+    private readonly Dictionary<long, long?> _transferChoices = [];
+    private long? TransferChoice(long userId) => _transferChoices.GetValueOrDefault(userId);
+    private void ChooseTransfer(long userId, ChangeEventArgs args) =>
+        _transferChoices[userId] = long.TryParse(args.Value?.ToString(), out var id) ? id : null;
+
+    private async Task ConfirmDelete(RoleDefinition role)
     {
-        if (!_canWrite || role.IsProtected || role.IsAssignedToCurrentUser || role.HasReferences || _busy || _refreshing) return;
+        if (!_canWrite || role.IsProtected || role.IsAssignedToCurrentUser || _busy || _refreshing) return;
         _deleteError = null;
         _notice = null;
+        _deletionPlan = null;
+        _transferChoices.Clear();
         _deleteTarget = role;
+        _busy = true;
+        try { _deletionPlan = await Api.DeletionPlanAsync(role.Id, _token); }
+        catch (RegistryApiException exception) { _deleteError = exception.MessageKey; }
+        finally { _busy = false; }
     }
 
     private void CloseDelete(bool open)
     {
-        if (!open && !_busy) _deleteTarget = null;
+        if (!open && !_busy) { _deleteTarget = null; _deleteError = null; }
+    }
+
+    private async Task TransferAsync(long userId)
+    {
+        if (_busy || _deleteTarget is not { } role || TransferChoice(userId) is not { } target) return;
+        _busy = true;
+        _deleteError = null;
+        try
+        {
+            await Api.TransferAsync(role.Id, userId, target, role.Version, _token);
+            _deletionPlan = await Api.DeletionPlanAsync(role.Id, _token);
+        }
+        catch (RegistryApiException exception) { _deleteError = exception.MessageKey; }
+        finally { _busy = false; }
     }
 
     private async Task DeleteAsync()
     {
-        if (!_canWrite || _busy || _deleteTarget is not { } target) return;
+        if (!_canWrite || _busy || _deleteTarget is not { } target || _deletionPlan?.Users.Count != 0) return;
         _busy = true;
         try
         {
             await Api.DeleteAsync(target.Id, target.Version, _token);
+            _deleteTarget = null;
             _notice = "rolecatalog.deleted";
             await LoadAsync();
         }
         catch (RegistryApiException exception)
         {
-            if (exception.Code == "roles.in_use") await LoadAsync();
             _deleteError = exception.MessageKey;
+            if (exception.Code == "roles.in_use")
+            {
+                try { _deletionPlan = await Api.DeletionPlanAsync(target.Id, _token); }
+                catch (RegistryApiException refreshError) { _deleteError = refreshError.MessageKey; }
+            }
         }
-        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
-        finally { _busy = false; _deleteTarget = null; }
+        finally { _busy = false; }
     }
 
     private async Task SaveAsync()

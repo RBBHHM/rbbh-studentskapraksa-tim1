@@ -694,3 +694,12 @@ h1[tabindex="-1"]:focus, h1:focus-visible { outline: none; }
     .codebook-schema-list li { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: end; gap: var(--space-3); }
     .codebook-schema-description { margin-block-start: 0; }
 }
+
+.role-transfer-list { list-style: none; margin: 1rem 0; padding: 0; }
+.role-transfer-list li { display: grid; grid-template-columns: minmax(0, 1fr) minmax(9rem, 1fr) auto; gap: .75rem; align-items: center; padding: .75rem 0; border-block-end: 1px solid var(--border-subtle); overflow-wrap: anywhere; }
+.role-delete-ready { display: flex; align-items: center; gap: .625rem; padding: .875rem; border-radius: .5rem; background: var(--feedback-success-surface, #e3f4e9); color: var(--feedback-success-foreground); }
+@media (prefers-reduced-motion: no-preference) {
+  .role-delete-ready { animation: role-delete-ready-in .24s ease-out; }
+  @keyframes role-delete-ready-in { from { opacity: 0; transform: translateY(.3rem); } to { opacity: 1; transform: translateY(0); } }
+}
+@media (max-width: 40rem) { .role-transfer-list li { grid-template-columns: minmax(0, 1fr); } }

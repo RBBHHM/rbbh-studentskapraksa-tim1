@@ -8,6 +8,8 @@ public class RelatedPersonConfiguration : IEntityTypeConfiguration<RelatedPerson
     public void Configure(EntityTypeBuilder<RelatedPerson> builder)
     {
         builder.HasKey(e => e.Id);
+        builder.Property(e => e.HrExpiryNotifiedFor).HasColumnName("HR_EXPIRY_NOTIFIED_FOR").IsConcurrencyToken();
+        builder.HasIndex(e => new { e.IsActive, e.DateTo }).HasDatabaseName("IX_RELATED_PERSONS_HR_EXPIRY");
 
         builder.Property(e => e.FirstName).IsRequired().HasMaxLength(100);
         builder.Property(e => e.LastName).IsRequired().HasMaxLength(100);

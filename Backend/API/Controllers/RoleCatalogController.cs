@@ -35,6 +35,15 @@ public sealed class RoleCatalogController(RoleCatalogService catalog) : Controll
         return Created($"/api/role-catalog/{row.Id}", row);
     }
 
+    [HttpGet("{id:long}/deletion"), Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
+    public Task<RoleDeletionPlan> DeletionPlan(long id, CancellationToken ct) => catalog.DeletionPlan(id, ct);
+
+    [HttpPost("{id:long}/transfer"), Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
+    public async Task<IActionResult> Transfer(long id, TransferRoleAssignment input, CancellationToken ct) =>
+        await catalog.Transfer(id, input, ct)
+            ? NoContent()
+            : Conflict(new { code = "roles.transfer_conflict" });
+
     [HttpDelete("{id:long}"), Authorize(Policy = ApplicationPolicies.AdministrationWrite)]
     public async Task<IActionResult> Delete(long id, [FromQuery] DateTime? expectedVersion, CancellationToken ct)
     {

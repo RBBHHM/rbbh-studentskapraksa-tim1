@@ -15,8 +15,9 @@ public sealed class NotificationDeliveryWorker(IServiceScopeFactory scopes, ILog
                 {
                     await using var scope = scopes.CreateAsyncScope();
                     await scope.ServiceProvider.GetRequiredService<NotificationDispatcher>().DeliverBatchAsync(stoppingToken);
-                    var backlog = await BackgroundOperationsMetrics.ObserveBacklog(
-                        scope.ServiceProvider.GetRequiredService<DL.Persistence.ConnectedPartiesDbContext>(), stoppingToken);
+                    var db = scope.ServiceProvider.GetRequiredService<DL.Persistence.ConnectedPartiesDbContext>();
+                    await new HrRelationshipNotices(db).StageExpiredAsync(DateTime.UtcNow.Date, stoppingToken);
+                    var backlog = await BackgroundOperationsMetrics.ObserveBacklog(db, stoppingToken);
                     if (backlog.Exhausted > 0)
                         logger.LogWarning("Notification retry budget exhausted. Count {Count}", backlog.Exhausted);
                 }

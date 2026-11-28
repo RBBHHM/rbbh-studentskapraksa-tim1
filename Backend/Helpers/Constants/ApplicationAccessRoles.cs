@@ -12,6 +12,7 @@ public static class ApplicationAccessRoles
     public const string Capital = "kapital";
     public const string Limits = "limiti";
     public const string Administrator = "admin";
+    public const string HumanResources = "HR";
     public const string Guest = "gost";
 
     // Includes the tolerated historical Guest catalog row, never an assignment requirement.
@@ -22,6 +23,7 @@ public static class ApplicationAccessRoles
         Capital,
         Limits,
         Administrator,
+        HumanResources,
         Guest
     ];
 
@@ -29,5 +31,5 @@ public static class ApplicationAccessRoles
     [PhysicalPersons, LegalPersons, Capital, Limits];
 
     public static readonly string[] Assignable =
-    [Administrator, Capital, LegalPersons, PhysicalPersons, Limits];
+    [Administrator, Capital, LegalPersons, PhysicalPersons, Limits, HumanResources];
 }

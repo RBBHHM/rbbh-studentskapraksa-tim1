@@ -15,6 +15,13 @@ internal static class RoleRequestMail
             _ => (status switch { "approved" => "Odobreno", "rejected" => "Odbijeno", _ => "Čeka odluku" },
                 status == "submitted" ? "Pregledaj zahtjev" : "Pogledaj odluku", "Registar povezanih lica", "Automatska obavijest iz Registra povezanih lica.")
         };
+        if (status == "hr")
+            (badge, action) = language switch
+            {
+                "EN" => ("HR notice", "Open the register"),
+                "DE" => ("HR-Mitteilung", "Register öffnen"),
+                _ => ("HR obavijest", "Otvori registar")
+            };
         var badgeBackground = status switch { "approved" => "#e3f4e9", "rejected" => "#fce8e8", _ => "#fff2bd" };
         const string font = "Amalia, 'Segoe UI', Arial, sans-serif";
         var assets = origin is null ? null : WebUtility.HtmlEncode(origin + "/_content/RBI.DesignSystem/assets");

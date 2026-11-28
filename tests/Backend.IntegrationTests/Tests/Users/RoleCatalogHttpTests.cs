@@ -106,20 +106,26 @@ public sealed class RoleCatalogHttpTests : RoleCatalogFixture
         Assert.Contains(options.GetProperty("items").EnumerateArray(), item => item.GetProperty("id").GetInt64() == role.Id && item.GetProperty("displayName").GetString() == role.DisplayName);
         Assert.Equal(HttpStatusCode.Forbidden, (await applicant.GetAsync("/api/role-catalog")).StatusCode);
         var request = await Submit(applicant, roles: [role.Id]); var requestId = request.GetProperty("id").GetInt64();
-        var blocked = await Client.DeleteAsync(DeleteUrl(role));
-        Assert.Equal(HttpStatusCode.Conflict, blocked.StatusCode);
-        Assert.Equal("roles.in_use", (await blocked.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
         Assert.Equal(HttpStatusCode.OK, (await Client.PostAsJsonAsync($"/api/role-requests/{requestId}/approve", new { decisionId = Guid.NewGuid(), expectedVersion = 1 })).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await applicant.GetAsync("/api/role-catalog")).StatusCode);
         // Read permission is not permission to mutate catalog/grants, even if body overposts a provider role.
         Assert.Equal(HttpStatusCode.Forbidden, (await applicant.PutAsJsonAsync($"/api/role-catalog/{role.Id}", new UpdateRoleCatalogDTO("Forged", null, false, role.Version, []))).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await Client.PutAsJsonAsync($"/api/role-catalog/{role.Id}", new UpdateRoleCatalogDTO(role.DisplayName, role.Description, false, role.Version, role.PermissionIds))).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await applicant.GetAsync("/api/role-catalog")).StatusCode);
+        var disabled = (await Client.GetFromJsonAsync<RoleCatalogDTO>($"/api/role-catalog/{role.Id}"))!;
+        Assert.Equal(HttpStatusCode.Conflict, (await Client.DeleteAsync(DeleteUrl(disabled))).StatusCode);
+        var plan = await Client.GetFromJsonAsync<RoleDeletionPlan>($"/api/role-catalog/{role.Id}/deletion");
+        var user = Assert.Single(plan!.Users);
+        var replacement = Assert.Single(plan.Targets, target => target.Name == ApplicationAccessRoles.LegalPersons);
+        Assert.Equal(HttpStatusCode.NoContent, (await Client.PostAsJsonAsync($"/api/role-catalog/{role.Id}/transfer",
+            new TransferRoleAssignment(user.UserId, replacement.Id, disabled.Version))).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await Client.DeleteAsync(DeleteUrl(disabled))).StatusCode);
         await InDatabase(async db =>
         {
-            Assert.Equal(2, await db.AuditLogs.CountAsync(row => row.TableName == "Role"));
-            Assert.False((await db.Roles.SingleAsync(row => row.Id == role.Id)).IsActive);
-            Assert.Equal(1, await db.UserRoles.CountAsync(row => row.RoleId == role.Id)); // Disable, not destructive deletion.
+            Assert.Equal(3, await db.AuditLogs.CountAsync(row => row.TableName == "Role"));
+            Assert.False(await db.Roles.AnyAsync(row => row.Id == role.Id));
+            Assert.True(await db.UserRoles.AnyAsync(row => row.RoleId == replacement.Id && row.UserId == user.UserId && row.IsActive));
+            Assert.False(await db.Set<RBBH.ConnectedParties.DL.Entities.Authorization.RequestedRole>().AnyAsync(row => row.RoleId == role.Id));
         });
     }
 

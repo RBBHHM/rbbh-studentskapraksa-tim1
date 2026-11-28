@@ -11,11 +11,17 @@ public sealed record CreateRoleDefinition(string Name, string? DisplayName, stri
 public sealed record UpdateRoleDefinition(string? DisplayName, string? Description, bool IsActive,
     DateTime ExpectedVersion, long[] PermissionIds);
 
+public sealed record RoleTransferUser(long UserId, string Username, string Email);
+public sealed record RoleTransferTarget(long Id, string Name);
+public sealed record RoleDeletionPlan(IReadOnlyList<RoleTransferUser> Users, IReadOnlyList<RoleTransferTarget> Targets);
+
 public interface IRoleCatalogApi
 {
     Task<RoleCatalogPage> ListAsync(int page = 1, string search = "", CancellationToken token = default);
     Task<RolePermissionOptions> PermissionsAsync(CancellationToken token = default);
     Task<RoleDefinition> CreateAsync(CreateRoleDefinition definition, CancellationToken token = default);
+    Task<RoleDeletionPlan> DeletionPlanAsync(long id, CancellationToken token = default);
+    Task TransferAsync(long id, long userId, long targetRoleId, DateTime expectedVersion, CancellationToken token = default);
     Task DeleteAsync(long id, DateTime expectedVersion, CancellationToken token = default);
     Task<RoleDefinition> UpdateAsync(long id, UpdateRoleDefinition definition, CancellationToken token = default);
 }
@@ -40,6 +46,17 @@ public sealed class RoleCatalogApi(IRbiApiTransport transport) : IRoleCatalogApi
     public async Task<RoleDefinition> UpdateAsync(long id, UpdateRoleDefinition definition, CancellationToken token = default) =>
         Value(await transport.SendAsync<RoleDefinition>(HttpMethod.Put, $"api/role-catalog/{id:D}", definition, token), token);
 
+    public async Task<RoleDeletionPlan> DeletionPlanAsync(long id, CancellationToken token = default) =>
+        Value(await transport.GetAsync<RoleDeletionPlan>($"api/role-catalog/{id:D}/deletion", token), token);
+
+    public async Task TransferAsync(long id, long userId, long targetRoleId, DateTime expectedVersion, CancellationToken token = default)
+    {
+        var result = await transport.SendAsync(HttpMethod.Post, $"api/role-catalog/{id:D}/transfer",
+            new { userId, targetRoleId, expectedVersion }, token);
+        token.ThrowIfCancellationRequested();
+        if (!result.IsSuccess) throw new RegistryApiException(result.Error?.StatusCode, result.Error?.Code);
+    }
+
     public async Task DeleteAsync(long id, DateTime expectedVersion, CancellationToken token = default)
     {
         var version = Uri.EscapeDataString(expectedVersion.ToString("O", System.Globalization.CultureInfo.InvariantCulture));
@@ -63,6 +80,8 @@ internal sealed class UnconfiguredRoleCatalogApi : IRoleCatalogApi
     public Task<RoleCatalogPage> ListAsync(int page = 1, string search = "", CancellationToken token = default) => Unavailable<RoleCatalogPage>();
     public Task<RolePermissionOptions> PermissionsAsync(CancellationToken token = default) => Unavailable<RolePermissionOptions>();
     public Task<RoleDefinition> CreateAsync(CreateRoleDefinition definition, CancellationToken token = default) => Unavailable<RoleDefinition>();
+    public Task<RoleDeletionPlan> DeletionPlanAsync(long id, CancellationToken token = default) => Unavailable<RoleDeletionPlan>();
+    public Task TransferAsync(long id, long userId, long targetRoleId, DateTime expectedVersion, CancellationToken token = default) => Unavailable<bool>();
     public Task DeleteAsync(long id, DateTime expectedVersion, CancellationToken token = default) => Unavailable<bool>();
     public Task<RoleDefinition> UpdateAsync(long id, UpdateRoleDefinition definition, CancellationToken token = default) => Unavailable<RoleDefinition>();
 }

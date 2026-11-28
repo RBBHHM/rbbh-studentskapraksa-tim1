@@ -53,6 +53,7 @@ public sealed class RegistryApiException : Exception
         (System.Net.HttpStatusCode.BadRequest, "users.roles_invalid") => "users.create-roles-invalid",
         (System.Net.HttpStatusCode.Forbidden, "roles.self_management_denied") => "rolecatalog.self-management-denied",
         (System.Net.HttpStatusCode.Conflict, "roles.in_use") => "rolecatalog.delete-blocked",
+        (System.Net.HttpStatusCode.Conflict, "roles.transfer_conflict") => "rolecatalog.transfer-conflict",
         (System.Net.HttpStatusCode.Conflict, "roles.duplicate_name") => "errors.roles.duplicate.name",
         (System.Net.HttpStatusCode.Conflict, "verification.provenance_required") => "errors.verification-provenance-required",
         (System.Net.HttpStatusCode.BadRequest, "registry.bank_customer_not_found") => "legal.bank-customer-not-found",

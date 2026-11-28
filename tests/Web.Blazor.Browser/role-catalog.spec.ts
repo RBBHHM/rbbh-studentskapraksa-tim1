@@ -56,7 +56,7 @@ test("admin can create a DB-backed role with selected permission and search for 
   await page.locator("#rolecatalog-search").fill("qa_custom");
   await expect(page.getByRole("table").getByText("qa_custom", { exact: true })).toBeVisible();
   await page.getByRole("row", { name: /qa_custom/ }).getByRole("button", { name: "Obriši" }).click();
-  await page.getByRole("alertdialog").getByRole("button", { name: "Obriši" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Obriši" }).click();
   await expect(page.getByRole("status").getByText("Rola je obrisana.")).toBeVisible();
   await expect(page.getByRole("row", { name: /qa_custom/ })).toHaveCount(0);
 });
@@ -89,20 +89,33 @@ test("duplicate role shows an alert and fields adapt to smaller screens", async 
   expect(await page.locator(".rbi-table-scroll").evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
 });
 
-test("a referenced role is retained after deactivation", async ({ page, request }) => {
+test("a role linked only to requests can be deleted", async ({ page, request }) => {
   test.skip(!admin, "Requires database-owned admin grant");
-  expect((await request.post("/__fixtures/role-requests-seed", { headers })).status()).toBe(204);
+  await request.post("/__fixtures/role-requests-seed", { headers });
   await page.goto("/app/admin/role-catalog");
   await interactive(page);
   const row = page.getByRole("row", { name: /Fizička lica/ });
-  await expect(row.getByText(/Brisanje je nedostupno/)).toBeVisible();
-  await expect(row.getByRole("button", { name: "Obriši" })).toHaveCount(0);
-  await row.getByRole("button", { name: "Uredi rolu" }).click();
+  await row.getByRole("button", { name: "Obriši" }).click();
   const dialog = page.getByRole("dialog");
-  const active = dialog.getByRole("checkbox", { name: "Aktivna rola" });
-  await active.press("Space");
-  await expect(active).not.toBeChecked();
-  await dialog.getByRole("button", { name: "Sačuvaj" }).click();
-  await expect(row.getByText(/Deaktivirana rola ostaje u katalogu/)).toBeVisible();
-  await expect(row.getByRole("button", { name: "Obriši" })).toHaveCount(0);
+  await expect(dialog.getByText("Rola je spremna za brisanje.")).toBeVisible();
+  await dialog.getByRole("button", { name: "Obriši" }).click();
+  await expect(row).toHaveCount(0);
+});
+
+test("move users in the delete dialog before deleting the role", async ({ page, request }) => {
+  test.skip(!admin, "Requires database-owned admin grant");
+  await request.post("/__fixtures/users-reference", { headers });
+  await page.goto("/app/admin/role-catalog");
+  await interactive(page);
+  const row = page.getByRole("row", { name: /Fizička lica/ });
+  await row.getByRole("button", { name: "Obriši" }).click();
+  const dialog = page.getByRole("dialog");
+  const remove = dialog.getByRole("button", { name: "Obriši" });
+  await expect(remove).toBeDisabled();
+  const role = dialog.getByRole("combobox").first();
+  await role.selectOption({ label: "Pravna lica" });
+  await dialog.getByRole("button", { name: "Prebaci" }).first().click();
+  await expect(dialog.getByText("Rola je spremna za brisanje.")).toBeVisible();
+  await remove.click();
+  await expect(row).toHaveCount(0);
 });

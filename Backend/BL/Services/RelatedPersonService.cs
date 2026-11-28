@@ -276,6 +276,7 @@ public class RelatedPersonService(
         entity.PassportNumber = NormalizeIdentifier(entity.PassportNumber)?.ToUpperInvariant();
         entity.FBAId = NormalizeIdentifier(entity.FBAId);
         _dbContext.RelatedPersons.Add(entity);
+        await new HrRelationshipNotices(_dbContext).StageNewAsync(actor?.HttpContext?.RequestAborted ?? default);
         _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("RelatedPerson", "INSERT", korisnik, actor,
             newValues: entity.Adapt<RelatedPersonResponseDTO>()));
         await _dbContext.SaveChangesAsync(actor?.HttpContext?.RequestAborted ?? default);
@@ -799,6 +800,7 @@ public class RelatedPersonService(
 
         if (result.Imported > 0)
         {
+            await new HrRelationshipNotices(_dbContext).StageNewAsync(actor?.HttpContext?.RequestAborted ?? default);
             _dbContext.AuditLogs.Add(Helpers.BusinessAudit.Create("RelatedPerson", "IMPORT", createdBy, actor, newValues: new { result.Imported, result.Failed }));
             await _dbContext.SaveChangesAsync(actor?.HttpContext?.RequestAborted ?? default);
         }
