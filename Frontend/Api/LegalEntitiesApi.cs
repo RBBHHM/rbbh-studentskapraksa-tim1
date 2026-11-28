@@ -21,7 +21,7 @@ public sealed record LegalEntity(long Id, bool IsResident, string? TaxNumber, st
         return values.Any(value => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture)?.Contains(term, StringComparison.OrdinalIgnoreCase) == true);
     }
 }
-public sealed record LegalEntityPage(IReadOnlyList<LegalEntity> Items, int Total, int Page, int PageSize);
+public sealed record LegalEntityPage(IReadOnlyList<LegalEntity> Items, int Total, int Page, int PageSize, bool RequiresGcc = false);
 public sealed record LegalEntityRequest(bool IsResident, string? TaxNumber, string? MaticniBroj,
     string? FbaId, string Name, string? Matbroj, string BasisOfConnection,
     bool? ConnectedWithBank, DateTime? DateFrom, DateTime? DateTo, string? GccNumber = null, bool? IsLargeExposure = null);

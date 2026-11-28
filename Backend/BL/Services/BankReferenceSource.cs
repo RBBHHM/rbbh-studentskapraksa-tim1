@@ -50,7 +50,12 @@ public sealed class SqlBankReferenceSource(IOptions<BankReferenceOptions> option
         page = Math.Clamp(page, 1, 1_000_000); size = Math.Clamp(size, 1, 100);
         var source = Identifier(table); var fields = columns.Select(Identifier).ToArray();
         var projected = fields.Select(field => $"CONVERT(nvarchar(4000),{field})").ToArray();
-        var predicate = exactColumn is { } column ? $"{projected[column]} = @term" : string.Join(" OR ", projected.Select(field => $"{field} COLLATE Latin1_General_100_CI_AS LIKE @term ESCAPE '~'"));
+        var normalized = exactColumn.HasValue
+            ? projected.Select(field => $"COALESCE(LTRIM(RTRIM({field})), N'') COLLATE Latin1_General_100_BIN2").ToArray()
+            : projected;
+        var predicate = exactColumn is { } column
+            ? $"{normalized[column]} = @term"
+            : string.Join(" OR ", projected.Select(field => $"{field} COLLATE Latin1_General_100_CI_AS LIKE @term ESCAPE '~'"));
         var term = search?.Trim() ?? "";
         if (exactColumn is null) term = "%" + term.Replace("~", "~~").Replace("%", "~%").Replace("_", "~_").Replace("[", "~[") + "%";
         try
@@ -60,14 +65,30 @@ public sealed class SqlBankReferenceSource(IOptions<BankReferenceOptions> option
             var connectionOptions = new SqlConnectionStringBuilder(connectionString) { ConnectTimeout = 5 };
             await using var connection = new SqlConnection(connectionOptions.ConnectionString); await connection.OpenAsync(ct);
             await using var command = connection.CreateCommand(); command.CommandTimeout = 10;
-            command.CommandText = $"SELECT COUNT(*) FROM {source} WHERE {predicate}; SELECT {string.Join(',', projected)} FROM {source} WHERE {predicate} ORDER BY {string.Join(',', projected)} OFFSET @offset ROWS FETCH NEXT @take ROWS ONLY;";
+            var projection = string.Join(',', normalized);
+            if (exactColumn.HasValue)
+            {
+                // Matching rows are ambiguous only when their mapped values differ.
+                command.CommandText = $"SELECT DISTINCT TOP (2) {projection} FROM {source} WHERE {predicate};";
+            }
+            else
+            {
+                command.CommandText = $"SELECT COUNT(*) FROM {source} WHERE {predicate}; SELECT {projection} FROM {source} WHERE {predicate} ORDER BY {projection} OFFSET @offset ROWS FETCH NEXT @take ROWS ONLY;";
+                command.Parameters.Add("@offset", SqlDbType.Int).Value = (page - 1) * size;
+                command.Parameters.Add("@take", SqlDbType.Int).Value = size;
+            }
             command.Parameters.Add("@term", SqlDbType.NVarChar, 500).Value = term;
-            command.Parameters.Add("@offset", SqlDbType.Int).Value = (page - 1) * size;
-            command.Parameters.Add("@take", SqlDbType.Int).Value = size;
-            await using var reader = await command.ExecuteReaderAsync(ct); await reader.ReadAsync(ct); var total = reader.GetInt32(0);
-            await reader.NextResultAsync(ct); var rows = new List<T>();
+            await using var reader = await command.ExecuteReaderAsync(ct);
+            int? total = null;
+            if (!exactColumn.HasValue)
+            {
+                await reader.ReadAsync(ct);
+                total = reader.GetInt32(0);
+                await reader.NextResultAsync(ct);
+            }
+            var rows = new List<T>();
             while (await reader.ReadAsync(ct)) rows.Add(map(reader));
-            return new(rows, total, page, size);
+            return new(rows, total ?? rows.Count, page, size);
         }
         catch (Exception error) when (error is SqlException or InvalidOperationException or ArgumentException)
         {
@@ -103,7 +124,7 @@ public sealed class SqlBankReferenceSource(IOptions<BankReferenceOptions> option
 
     private static T? SingleMatch<T>(ReferencePage<T> result)
     {
-        if (result.Total > 1) throw new BusinessRuleException(409, "bank_reference.ambiguous");
+        if (result.Items.Count > 1) throw new BusinessRuleException(409, "bank_reference.ambiguous");
         return result.Items.SingleOrDefault();
     }
 }

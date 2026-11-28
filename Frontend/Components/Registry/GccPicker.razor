@@ -6,7 +6,7 @@
 <div class="app-typeahead">
     <input type="text" id="@Id" class="rbi-control rbi-input app-typeahead__input" autocomplete="off" data-app-combobox
            role="combobox" aria-autocomplete="list" aria-expanded="@(_open ? "true" : "false")" aria-controls="@(Id + "-list")" aria-activedescendant="@ActiveId"
-           disabled="@Disabled" placeholder="@T["legal.gcc-placeholder"]"
+           disabled="@Disabled" aria-required="@(Required ? "true" : null)" placeholder="@T["legal.gcc-placeholder"]"
            value="@_query" @oninput="TypedAsync" @onfocus="OpenList" @onblur="CloseList" @onkeydown="KeyAsync" />
     @if (_open)
     {
@@ -31,6 +31,7 @@
     /// <summary>Name the server resolved for the stored number (read-only display).</summary>
     [Parameter] public string? GccName { get; set; }
     [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool Required { get; set; }
     private readonly CancellationTokenSource _lifetime = new();
     private CancellationTokenSource? _typing;
     private IReadOnlyList<GccOption> _results = [];
@@ -45,8 +46,11 @@
     private async Task TypedAsync(ChangeEventArgs args)
     {
         _query = args.Value?.ToString() ?? string.Empty; _open = true; _active = -1;
-        // A cleared box clears the link; typing alone never changes the stored number until an option is chosen.
-        if (_query.Trim().Length == 0 && Value is not null) { Value = null; GccName = null; await Selected.InvokeAsync(null); }
+        // A change to the displayed number invalidates the selection until another option is picked.
+        if (Value is not null && !string.Equals(_query.Trim(), Value, StringComparison.Ordinal))
+        {
+            await Selected.InvokeAsync(null);
+        }
         _ = SearchAsync();
     }
     private async Task SearchAsync()

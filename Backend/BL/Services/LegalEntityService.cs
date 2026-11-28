@@ -69,6 +69,7 @@ public partial class LegalEntityService : ILegalEntityService
         return new LegalEntityListDTO
         {
             Items = items,
+            RequiresGcc = _bank?.IsConfigured == true,
             Total = total,
             Page = page,
             PageSize = pageSize

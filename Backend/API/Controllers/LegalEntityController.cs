@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using RBBH.ConnectedParties.Helpers.Excel;
 using RBBH.ConnectedParties.Helpers.Constants;
+using RBBH.ConnectedParties.Exceptions;
 
 namespace RBBH.ConnectedParties.API.Controllers;
 
@@ -137,9 +138,15 @@ public class LegalEntityController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        var created = await _legalEntityService.CreateAsync(dto, CurrentUser());
-
-        return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+        try
+        {
+            var created = await _legalEntityService.CreateAsync(dto, CurrentUser());
+            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+        }
+        catch (BusinessRuleException exception) when (IsBankInputError(exception))
+        {
+            return BankInputProblem(exception);
+        }
     }
 
     /// <summary>
@@ -159,9 +166,14 @@ public class LegalEntityController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        var updated = await _legalEntityService.UpdateAsync(id, dto, CurrentUser());
-
-        return Ok(updated);
+        try
+        {
+            return Ok(await _legalEntityService.UpdateAsync(id, dto, CurrentUser()));
+        }
+        catch (BusinessRuleException exception) when (IsBankInputError(exception))
+        {
+            return BankInputProblem(exception);
+        }
     }
 
     /// <summary>
@@ -207,6 +219,20 @@ public class LegalEntityController : ControllerBase
 
         return Ok(result);
     }
+
+    private static bool IsBankInputError(BusinessRuleException exception) =>
+        exception.Code is "registry.gcc_required" or "registry.invalid_gcc" or "registry.unknown_gcc"
+            or "registry.bank_customer_not_found" or "registry.bank_tax_mismatch" or "registry.bank_name_mismatch"
+            or "bank_reference.ambiguous";
+
+    private ObjectResult BankInputProblem(BusinessRuleException exception) =>
+        Problem(detail: exception.Message, statusCode: exception.Status,
+            title: BackendMessages.Message("errors.request.invalid.title"),
+            extensions: new Dictionary<string, object?>
+            {
+                ["code"] = exception.Code,
+                ["resourceKey"] = "errors." + exception.Code.Replace('_', '.')
+            });
 
     private static object Err(string message, string? field = null) =>
         new { errors = new[] { new { field, message } } };

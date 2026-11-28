@@ -169,11 +169,11 @@ test("outage remains redacted and retry recovers without synthetic data", async 
   await request.post("/__fixtures/available", { headers }); await page.getByRole("button", { name: "Pokušaj ponovo", exact: true }).click();
   await expect(page.getByRole("button", { name: "Novi zapis", exact: true })).toBeVisible();
 });
-test("codebook fallback is visible and Escape restores launcher focus", async ({ page, request }) => {
+test("codebook outage shows a warning without fallback values and Escape restores launcher focus", async ({ page, request }) => {
   await request.post("/__fixtures/codebooks-unavailable", { headers }); await open(page);
   const launcher = page.getByRole("button", { name: "Novi zapis", exact: true }); await launcher.click();
   const dialog = page.getByRole("dialog"); await expect(dialog.getByText("šifrarn", { exact: false }).first()).toBeVisible();
-  await expect(dialog.getByLabel("Osnov povezanosti", { exact: false }).locator("option")).toHaveCount(8);
+  await expect(dialog.getByLabel("Osnov povezanosti", { exact: false }).locator("option")).toHaveCount(1);
   await page.keyboard.press("Escape"); await expect(dialog).not.toBeVisible(); await expect(launcher).toBeFocused();
 });
 test("375px legal table and form remain usable without page overflow", async ({ page }, info) => {
@@ -202,18 +202,32 @@ test("GCC lookup: unavailable source is stated honestly; an available source off
   await expect(dialog.getByRole("listbox", { name: "GCC rezultati" }).getByRole("option")).toHaveCount(0); // nothing is invented
   await dialog.getByRole("button", { name: "Odustani", exact: true }).click();
   expect((await request.post("/__fixtures/bank-source-on", { headers })).status()).toBe(204);
+  await open(page);
   await page.getByRole("button", { name: "Novi zapis", exact: true }).click(); dialog = page.getByRole("dialog"); await fill(dialog, "Gcc Company");
   await dialog.getByLabel("Matični broj", { exact: true }).fill("");
-  const gcc = dialog.getByLabel("GCC", { exact: true }); await gcc.focus();
+  const gcc = dialog.getByRole("combobox", { name: /^GCC/ });
+  const save = dialog.getByRole("button", { name: "Sačuvaj", exact: true });
+  await expect(gcc).toHaveAttribute("aria-required", "true");
+  await save.click();
+  const required = dialog.getByRole("alert").filter({ hasText: "Odaberite GCC iz bankovnog izvora." });
+  await expect(required).toBeVisible();
+  expect((await (await request.get("/__fixtures/counts", { headers })).json()).mutations).toBe(0);
+  await gcc.focus();
   await expect(dialog.getByRole("listbox", { name: "GCC rezultati" }).getByRole("option")).toHaveCount(2);
   await gcc.fill("1002"); await expect(dialog.getByRole("listbox", { name: "GCC rezultati" }).getByRole("option")).toHaveCount(1);
   await dialog.getByRole("listbox", { name: "GCC rezultati" }).getByRole("option", { name: /1002/ }).click();
   await expect(dialog.getByText("Fixture Group B", { exact: false })).toBeVisible();
+  await gcc.fill("1001");
+  await save.click();
+  await expect(required).toBeVisible();
+  await gcc.focus();
+  await dialog.getByRole("option", { name: /1001/ }).click();
+  await expect(required).toHaveCount(0);
   await dialog.getByRole("radiogroup", { name: "Velika izloženost", exact: false }).getByRole("radio", { name: "Da", exact: true }).check();
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
   await dialog.getByRole("button", { name: "Sačuvaj", exact: true }).click(); await expect(dialog).not.toBeVisible();
   const row = page.getByRole("row", { name: /Gcc Company/ });
-  await expect(row).toContainText("1002 — Fixture Group B"); await expect(row.getByRole("cell", { name: "Da", exact: true })).toBeVisible();
+  await expect(row).toContainText("1001 — Fixture Group A"); await expect(row.getByRole("cell", { name: "Da", exact: true })).toBeVisible();
 });
 
 test("bank customer lookup never invents data and can fill the legal form from an available source", async ({ page, request }) => {

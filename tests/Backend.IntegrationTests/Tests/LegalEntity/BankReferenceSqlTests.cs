@@ -57,6 +57,25 @@ public sealed class BankReferenceSqlTests : IAsyncLifetime
         Assert.Empty((await Source().Customers("' OR 1=1;--", 1, 20, default)).Items);
     }
     [SqlServerFact]
+    public async Task ExactLookupsAcceptRepeatedMappedValuesAndPreserveLeadingZeros()
+    {
+        await _db.Database.ExecuteSqlRawAsync("""
+            INSERT FixtureCustomers VALUES ('1234567890123','001',N' Customer Mixed Case '), ('1234567890123','001',N'Customer Mixed Case');
+            INSERT FixtureGroups VALUES ('000004',N'Fixture group'), ('000004',N' Fixture group '), ('4',N'Other group');
+            """);
+
+        var source = Source();
+        var expectedCustomer = new BankCustomer("1234567890123", "001", "Customer Mixed Case");
+        Assert.Equal(expectedCustomer, await source.Customer("001", true, default));
+        Assert.Equal(expectedCustomer, await source.Customer("1234567890123", false, default));
+        Assert.Equal(new BankGroup("000004", "Fixture group"), await source.Group("000004", default));
+        Assert.Equal(new BankGroup("4", "Other group"), await source.Group("4", default));
+
+        await _db.Database.ExecuteSqlRawAsync("INSERT FixtureCustomers VALUES ('9876543210123','001',N'Another customer')");
+        Assert.Equal("bank_reference.ambiguous",
+            (await Assert.ThrowsAsync<BusinessRuleException>(() => source.Customer("001", true, default))).Code);
+    }
+    [SqlServerFact]
     public async Task ExactGccLookupRejectsAmbiguousSourceAndUnsafeIdentifierConfiguration()
     {
         Assert.Equal("Group Mixed Case", (await Source().Group("123", default))!.Name);

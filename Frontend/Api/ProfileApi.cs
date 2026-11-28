@@ -58,6 +58,9 @@ public sealed class RegistryApiException : Exception
         (System.Net.HttpStatusCode.BadRequest, "registry.bank_tax_mismatch") => "legal.bank-tax-mismatch",
         (System.Net.HttpStatusCode.BadRequest, "registry.bank_name_mismatch") => "legal.bank-name-mismatch",
         (System.Net.HttpStatusCode.ServiceUnavailable, "bank_reference.unavailable") => "legal.bank-unavailable",
+        (System.Net.HttpStatusCode.BadRequest, "registry.gcc_required") => "legal.gcc-required",
+        (System.Net.HttpStatusCode.BadRequest, "registry.invalid_gcc") => "legal.validation.gcc",
+        (System.Net.HttpStatusCode.BadRequest, "registry.unknown_gcc") => "legal.gcc-not-found",
         (System.Net.HttpStatusCode.Conflict, "bank_reference.ambiguous") => "legal.bank-ambiguous",
         _ => (int?)StatusCode switch
     {

@@ -39,12 +39,17 @@ public sealed class RegistryGccHttpTests : AuthenticatedApiFixture
     [InlineData("999", 400)]
     [InlineData("unavailable", 503)]
     [InlineData("invalidrecord", 503)]
+    [InlineData("ambiguous", 409)]
     public async Task InvalidOrUnavailableGccDoesNotCreateARecord(string input, int status)
     {
-        var gcc = input is "unavailable" or "invalidrecord" ? "123" : input;
+        var gcc = input is "unavailable" or "invalidrecord" or "ambiguous" ? "123" : input;
         if (input == "unavailable") _source.Setup(source => source.Group("123", It.IsAny<CancellationToken>())).ThrowsAsync(new BusinessRuleException(503, "bank_reference.unavailable", "Referentni izvor nije dostupan."));
         if (input == "invalidrecord") _source.Setup(source => source.Group("123", It.IsAny<CancellationToken>())).ReturnsAsync(new BankGroup("123", new string('x', 201)));
-        Assert.Equal((HttpStatusCode)status, (await Client.PostAsJsonAsync("/api/legal-entities", Legal(gcc))).StatusCode);
+        if (input == "ambiguous") _source.Setup(source => source.Group("123", It.IsAny<CancellationToken>())).ThrowsAsync(new BusinessRuleException(409, "bank_reference.ambiguous"));
+        var response = await Client.PostAsJsonAsync("/api/legal-entities", Legal(gcc));
+        Assert.Equal((HttpStatusCode)status, response.StatusCode);
+        if (input == "ambiguous")
+            Assert.Equal("bank_reference.ambiguous", (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
         await InDatabase(async db => { Assert.Empty(await db.LegalEntities.ToListAsync()); Assert.Empty(await db.AuditLogs.ToListAsync()); });
     }
     [Theory]
@@ -88,6 +93,8 @@ public sealed class RegistryGccHttpTests : AuthenticatedApiFixture
     public async Task ConfiguredBankSourceRequiresGccOnNewRecords()
     {
         _source.SetupGet(source => source.IsConfigured).Returns(true);
+        var page = await Client.GetFromJsonAsync<JsonElement>("/api/legal-entities");
+        Assert.True(page.GetProperty("requiresGcc").GetBoolean());
         var response = await Client.PostAsJsonAsync("/api/legal-entities", Legal(null)); Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Contains("registry.gcc_required", await response.Content.ReadAsStringAsync());
         await InDatabase(async db => { Assert.Empty(db.LegalEntities); Assert.Empty(db.AuditLogs); });

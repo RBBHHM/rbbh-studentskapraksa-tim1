@@ -71,7 +71,7 @@ else
     <RbiDialog Open Class="app-form-dialog" Title="@T[_editingId.HasValue ? "common.edit" : "common.new"]" CloseLabel="@T["common.close"]" Dismissible="@(!_busy)" OpenChanged="CloseEditor">
         <DialogBody>
             @if (_fallback) { <RbiAlert Title="@T["legal.bases-unavailable"]" /> }
-            <LegalEntityForm MutationBlocked="_periodLocked" @key="draft" Model="draft" Bases="_bases" Save="SaveAsync" Cancel="() => CloseEditor(false)" />
+            <LegalEntityForm MutationBlocked="_periodLocked" @key="draft" Model="draft" Bases="_bases" RequiresGcc="_requiresGcc" Save="SaveAsync" Cancel="() => CloseEditor(false)" />
         </DialogBody>
     </RbiDialog>
 }
@@ -111,6 +111,7 @@ else
     private string? _search, _error, _notice, _actionError, _importError;
     private string? _periodError;
     private bool _periodLocked = true;
+    private bool _requiresGcc;
     private int _page = 1, _total, _pageSize = 20;
     private int TotalPages => Math.Max(1, (int)Math.Ceiling(_total / (double)_pageSize));
     private bool _disposed, _authenticated, _loading = true, _busy, _canRead, _canCreate, _canEdit, _canDelete, _delete, _importOpen, _fallback;
@@ -160,6 +161,7 @@ else
             token.ThrowIfCancellationRequested();
             _entities = result.Items; _total = result.Total; _pageSize = result.PageSize;
             _page = result.Page;
+            _requiresGcc = result.RequiresGcc;
             _error = null;
         }, exception => _error = exception.MessageKey, () => _refreshing = false);
     }
